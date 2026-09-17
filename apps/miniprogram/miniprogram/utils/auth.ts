@@ -1,3 +1,4 @@
+import { runtimeConfig } from '../config/runtime'
 import { request } from './request'
 
 export type BootstrapUser = {
@@ -24,11 +25,18 @@ function getWechatLoginCode(): Promise<string> {
 }
 
 export async function bootstrapWechatUser(): Promise<BootstrapUser> {
-  const code = await getWechatLoginCode()
+  const payload: WechatMiniprogram.IAnyObject = {}
+
+  // CloudBase callContainer 会自动把可信的 x-wx-openid 注入到后端。
+  // 本地 HTTP 调试没有该 Header，因此仅在本地链路使用 wx.login code 兜底。
+  if (runtimeConfig.apiTransport === 'http') {
+    payload.code = await getWechatLoginCode()
+  }
+
   const result = await request<{ ok: true; user: BootstrapUser }>(
     '/auth/wechat/bootstrap',
     'POST',
-    { code },
+    payload,
   )
   return result.user
 }
