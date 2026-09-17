@@ -20,32 +20,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            apps/miniprogram/package-lock.json
-            apps/admin/package-lock.json
-            services/api/package-lock.json
 
       - name: Install and typecheck miniprogram
         working-directory: apps/miniprogram
         run: |
-          npm install --package-lock-only
-          npm ci
+          npm install
           npm run typecheck
 
       - name: Install and build admin
         working-directory: apps/admin
         run: |
-          npm install --package-lock-only
-          npm ci
+          npm install
           npm run typecheck
           npm run build
 
       - name: Install, test and build API
         working-directory: services/api
         run: |
-          npm install --package-lock-only
-          npm ci
+          npm install
           npm run typecheck
           npm test
           npm run build
