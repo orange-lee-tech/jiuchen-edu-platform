@@ -14,6 +14,17 @@ P1 需要先建立一个 **Test** 环境，用来完成：
 
 Production 暂不创建。
 
+## 当前 Test 环境
+
+- 小程序 AppID：`wxe0f480606408ae2e`
+- CloudBase 环境名称：`cloud1`
+- CloudBase 环境 ID：`cloud1-d3geim00r03edb212`
+- 云托管服务：`jiuchen-api`
+- 当前云托管版本：`001`，状态正常
+- MySQL：已开通，当前尚未执行项目 Migration / Seed
+
+这些均为非敏感标识。数据库账号、密码和连接字符串不得写入仓库。
+
 ## 推荐创建方式
 
 这是纯微信小程序项目，Test 环境优先从 **微信开发者工具 → 云开发** 创建。这样环境会自动与当前小程序关联，后续小程序可直接使用 `wx.cloud.callContainer` 访问云托管 API，无需额外维护 request 合法域名。
@@ -29,42 +40,31 @@ Production 暂不创建。
 - 小程序请求适配层支持本地 HTTP / Test 云托管两种传输；
 - 管理后台 API 健康检查与演示学员读取页面。
 
-## 需要由项目所有者提供 / 完成的内容
+## 数据库连接
 
-### 1. 微信小程序 AppID
+CloudBase MySQL 采用直连方式供 `jiuchen-api` 使用：
 
-- AppID 不是密钥，可以提供给开发者并写入 `apps/miniprogram/project.config.json`；
-- AppSecret 属于密钥，不提交 Git，也不需要为了 CloudBase 真机链路发送给开发者。
+1. 在 CloudBase「SQL 型数据库 → 数据库设置」开启直连服务；
+2. 为应用创建专用数据库账号；
+3. 云托管使用内网连接地址；
+4. 连接字符串只配置到 CloudBase 云托管环境变量 `DATABASE_URL`；
+5. 如本地需要执行 Migration，可临时开启外网连接，并仅将外网连接串写入本地 `services/api/.env`；调试结束后关闭外网连接。
 
-### 2. CloudBase Test 环境
+标准格式：
 
-在微信开发者工具中使用真实 AppID 打开项目后：
-
-1. 点击顶部「云开发」；
-2. 首次使用按提示开通云开发；
-3. 创建一个测试环境；
-4. 记录 CloudBase 环境 ID（非敏感）和地域；
-5. 开通云托管；
-6. 开通 MySQL / 关系型数据库能力。
-
-建议云托管服务名称使用：`jiuchen-api`。
-
-### 3. 数据库连接
-
-数据库连接字符串只放在：
-
-- 本地 `services/api/.env`；或
-- CloudBase 云托管的环境变量 `DATABASE_URL`。
+```text
+mysql://<username>:<password>@<host>:<port>/<database>
+```
 
 不得提交到 GitHub。
 
-### 4. 微信身份
+## 微信身份
 
 Test / Production 小程序通过 `wx.cloud.callContainer` 访问云托管时，平台会自动向后端注入可信的微信用户 Header（如 `x-wx-openid`）。因此主链路不需要把 AppSecret 交给小程序，也不需要自行在前端维护 Token。
 
 `WECHAT_APP_ID` / `WECHAT_APP_SECRET` 仅作为本地 HTTP 调试 `jscode2session` 的可选兜底，不是 CloudBase Test 环境的必需配置。
 
-### 5. P1 初始化命令
+## P1 初始化命令
 
 数据库可连接后，在 `services/api` 执行：
 
