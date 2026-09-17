@@ -5,6 +5,8 @@ const envSchema = z.object({
   HOST: z.string().default('0.0.0.0'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().min(1).optional(),
+  WECHAT_APP_ID: z.string().min(1).optional(),
+  WECHAT_APP_SECRET: z.string().min(1).optional(),
 })
 
 export type AppEnv = z.infer<typeof envSchema>
