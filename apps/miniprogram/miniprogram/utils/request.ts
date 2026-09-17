@@ -19,11 +19,44 @@ export type StudentSummary = {
 
 const DEMO_STUDENT_ID = '00000000-0000-4000-8000-000000000001'
 
-function get<T>(path: string): Promise<T> {
+type RequestMethod = 'GET' | 'POST'
+
+export function request<T>(
+  path: string,
+  method: RequestMethod = 'GET',
+  data?: WechatMiniprogram.IAnyObject,
+): Promise<T> {
+  if (runtimeConfig.apiTransport === 'cloud') {
+    return new Promise((resolve, reject) => {
+      wx.cloud.callContainer({
+        config: {
+          env: runtimeConfig.cloudEnvId,
+        },
+        path,
+        method,
+        header: {
+          'X-WX-SERVICE': runtimeConfig.cloudServiceName,
+        },
+        data,
+        success(response) {
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            resolve(response.data as T)
+            return
+          }
+          reject(new Error(`Request failed with HTTP ${response.statusCode}`))
+        },
+        fail(error) {
+          reject(new Error(error.errMsg || '无法连接云托管 API'))
+        },
+      })
+    })
+  }
+
   return new Promise((resolve, reject) => {
     wx.request({
       url: `${runtimeConfig.apiBaseUrl}${path}`,
-      method: 'GET',
+      method,
+      data,
       success(response) {
         if (response.statusCode >= 200 && response.statusCode < 300) {
           resolve(response.data as T)
@@ -40,11 +73,11 @@ function get<T>(path: string): Promise<T> {
 }
 
 export function getHealth(): Promise<HealthResponse> {
-  return get<HealthResponse>('/health')
+  return request<HealthResponse>('/health')
 }
 
 export async function getDemoStudent(): Promise<StudentSummary> {
-  const result = await get<{ ok: true; student: StudentSummary }>(
+  const result = await request<{ ok: true; student: StudentSummary }>(
     `/students/${DEMO_STUDENT_ID}`,
   )
   return result.student
