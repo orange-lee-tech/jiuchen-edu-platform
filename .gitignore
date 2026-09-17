@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+coverage/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+
+# Logs
+*.log
+logs/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+
+# WeChat Developer Tools private config
+**/project.private.config.json
+
+# Local databases / runtime data
+*.db
+*.sqlite
+*.sqlite3
+runtime/
+local-data/
+
+# Local business data imports (real data must not enter Git)
+data-source/
+imports/private/
+*.xlsx
+*.xls
+*.csv
+
+# Temporary files
+.tmp/
+tmp/
+*.tmp
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Misc
+*.swp
+*.swo
