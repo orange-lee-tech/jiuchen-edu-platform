@@ -25,3 +25,25 @@
   font-size: 26rpx;
   line-height: 1.7;
 }
+
+.status-list {
+  margin-top: 12rpx;
+  border-top: 1rpx solid #eeeeee;
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #eeeeee;
+  font-size: 26rpx;
+}
+
+.status-label {
+  color: #6b7280;
+}
+
+.status-value {
+  color: #111827;
+  text-align: right;
+}
