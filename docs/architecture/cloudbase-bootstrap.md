@@ -10,9 +10,13 @@ P1 需要先建立一个 **Test** 环境，用来完成：
 2. MySQL 测试数据库；
 3. 微信开发者工具与真机访问；
 4. 演示学员从数据库 → API → 后台 / 小程序的最小闭环；
-5. 微信 `wx.login` → 服务端身份映射的最小链路。
+5. CloudBase 自动注入的微信 OpenID → 业务用户映射。
 
 Production 暂不创建。
+
+## 推荐创建方式
+
+这是纯微信小程序项目，Test 环境优先从 **微信开发者工具 → 云开发** 创建。这样环境会自动与当前小程序关联，后续小程序可直接使用 `wx.cloud.callContainer` 访问云托管 API，无需额外维护 request 合法域名。
 
 ## 当前代码已经准备好的内容
 
@@ -20,8 +24,9 @@ Production 暂不创建。
 - `GET /health`：检查 API 与数据库状态；
 - Drizzle Schema 与演示学员 Seed；
 - `GET /students/:id`：读取测试学员；
-- `POST /auth/wechat/bootstrap`：将微信登录 code 映射为业务用户；
-- 小程序 API 请求与微信登录引导代码；
+- `POST /auth/wechat/bootstrap`：优先读取 CloudBase 自动注入的 `x-wx-openid` 并映射为业务用户；
+- 本地 HTTP 调试时保留 `wx.login` + `jscode2session` 兜底；
+- 小程序请求适配层支持本地 HTTP / Test 云托管两种传输；
 - 管理后台 API 健康检查与演示学员读取页面。
 
 ## 需要由项目所有者提供 / 完成的内容
@@ -29,16 +34,20 @@ Production 暂不创建。
 ### 1. 微信小程序 AppID
 
 - AppID 不是密钥，可以提供给开发者并写入 `apps/miniprogram/project.config.json`；
-- AppSecret 属于密钥，不提交 Git，也不需要发送到仓库 Issue / PR / 截图中。
+- AppSecret 属于密钥，不提交 Git，也不需要为了 CloudBase 真机链路发送给开发者。
 
 ### 2. CloudBase Test 环境
 
-在与本小程序对应的腾讯云 / 微信云开发体系中创建一个测试环境，并记录：
+在微信开发者工具中使用真实 AppID 打开项目后：
 
-- CloudBase 环境 ID（非敏感）；
-- 所在地域；
-- 是否已开通云托管；
-- 是否已开通 MySQL / 关系型数据库能力。
+1. 点击顶部「云开发」；
+2. 首次使用按提示开通云开发；
+3. 创建一个测试环境；
+4. 记录 CloudBase 环境 ID（非敏感）和地域；
+5. 开通云托管；
+6. 开通 MySQL / 关系型数据库能力。
+
+建议云托管服务名称使用：`jiuchen-api`。
 
 ### 3. 数据库连接
 
@@ -49,14 +58,11 @@ Production 暂不创建。
 
 不得提交到 GitHub。
 
-### 4. 微信服务端配置
+### 4. 微信身份
 
-云托管环境变量中设置：
+Test / Production 小程序通过 `wx.cloud.callContainer` 访问云托管时，平台会自动向后端注入可信的微信用户 Header（如 `x-wx-openid`）。因此主链路不需要把 AppSecret 交给小程序，也不需要自行在前端维护 Token。
 
-- `WECHAT_APP_ID`；
-- `WECHAT_APP_SECRET`。
-
-其中 `WECHAT_APP_SECRET` 不进入 GitHub，也不需要通过聊天长期留存。
+`WECHAT_APP_ID` / `WECHAT_APP_SECRET` 仅作为本地 HTTP 调试 `jscode2session` 的可选兜底，不是 CloudBase Test 环境的必需配置。
 
 ### 5. P1 初始化命令
 
@@ -76,7 +82,7 @@ npm run dev
 - `GET /students/00000000-0000-4000-8000-000000000001` 返回“演示学员”；
 - 管理后台能显示该演示学员；
 - 小程序测试页能显示该演示学员；
-- 使用真实 AppID 后，小程序可取得微信登录 code，并由服务端映射为业务用户。
+- 小程序通过 `callContainer` 调用身份初始化接口后，服务端能够把自动注入的 OpenID 映射为业务用户。
 
 ## 暂不做
 
