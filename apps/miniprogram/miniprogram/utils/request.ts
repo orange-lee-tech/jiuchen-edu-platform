@@ -21,12 +21,12 @@ const DEMO_STUDENT_ID = '00000000-0000-4000-8000-000000000001'
 
 function get<T>(path: string): Promise<T> {
   return new Promise((resolve, reject) => {
-    wx.request<T>({
+    wx.request({
       url: `${runtimeConfig.apiBaseUrl}${path}`,
       method: 'GET',
       success(response) {
         if (response.statusCode >= 200 && response.statusCode < 300) {
-          resolve(response.data)
+          resolve(response.data as T)
           return
         }
 
