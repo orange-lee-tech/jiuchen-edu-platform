@@ -2,6 +2,17 @@
   <view class="card">
     <text class="title">{{title}}</text>
     <text class="subtitle">{{subtitle}}</text>
-    <text class="hint">当前只验证微信小程序工程能够稳定运行，业务页面将在 P2 开始还原。</text>
+    <text class="hint">当前只验证微信小程序、API 与数据库基础链路，业务页面将在 P2 开始还原。</text>
+
+    <view class="status-list">
+      <view class="status-row">
+        <text class="status-label">API</text>
+        <text class="status-value">{{apiStatus}}</text>
+      </view>
+      <view class="status-row">
+        <text class="status-label">数据库</text>
+        <text class="status-value">{{databaseStatus}}</text>
+      </view>
+    </view>
   </view>
 </view>
