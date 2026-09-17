@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'p1/**'
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            apps/miniprogram/package-lock.json
+            apps/admin/package-lock.json
+            services/api/package-lock.json
+
+      - name: Install and typecheck miniprogram
+        working-directory: apps/miniprogram
+        run: |
+          npm install --package-lock-only
+          npm ci
+          npm run typecheck
+
+      - name: Install and build admin
+        working-directory: apps/admin
+        run: |
+          npm install --package-lock-only
+          npm ci
+          npm run typecheck
+          npm run build
+
+      - name: Install, test and build API
+        working-directory: services/api
+        run: |
+          npm install --package-lock-only
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
