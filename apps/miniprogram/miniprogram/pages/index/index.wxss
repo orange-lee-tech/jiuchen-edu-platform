@@ -1,0 +1,27 @@
+.page {
+  padding: 48rpx 32rpx;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  padding: 40rpx;
+  background: #ffffff;
+  border-radius: 20rpx;
+}
+
+.title {
+  font-size: 44rpx;
+  font-weight: 600;
+}
+
+.subtitle {
+  font-size: 30rpx;
+}
+
+.hint {
+  color: #6b7280;
+  font-size: 26rpx;
+  line-height: 1.7;
+}

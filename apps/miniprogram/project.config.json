@@ -1,0 +1,18 @@
+{
+  "description": "Jiuchen Education WeChat Mini Program",
+  "packOptions": {
+    "ignore": []
+  },
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "urlCheck": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.0.0",
+  "appid": "touristappid",
+  "projectname": "jiuchen-edu-platform",
+  "miniprogramRoot": "miniprogram/"
+}

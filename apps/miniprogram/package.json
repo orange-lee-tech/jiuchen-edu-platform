@@ -1,0 +1,13 @@
+{
+  "name": "@jiuchen/miniprogram",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Jiuchen WeChat Mini Program",
+  "dependencies": {
+    "tdesign-miniprogram": "^1.0.0"
+  },
+  "devDependencies": {
+    "miniprogram-api-typings": "^4.0.0",
+    "typescript": "^5.8.0"
+  }
+}
