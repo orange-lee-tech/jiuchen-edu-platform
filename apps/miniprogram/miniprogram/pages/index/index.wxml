@@ -14,5 +14,11 @@
         <text class="status-value">{{databaseStatus}}</text>
       </view>
     </view>
+
+    <view wx:if="{{studentName}}" class="demo-student">
+      <text class="status-label">演示学员</text>
+      <text class="student-name">{{studentName}}</text>
+      <text class="hint">{{studentMeta}}</text>
+    </view>
   </view>
 </view>
