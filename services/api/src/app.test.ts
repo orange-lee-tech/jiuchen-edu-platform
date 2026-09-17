@@ -7,6 +7,8 @@ const env = {
   HOST: '127.0.0.1',
   PORT: 3000,
   DATABASE_URL: undefined,
+  WECHAT_APP_ID: undefined,
+  WECHAT_APP_SECRET: undefined,
 }
 
 test('GET /health works before database is configured', async () => {
@@ -21,6 +23,39 @@ test('GET /health works before database is configured', async () => {
     dependencies: {
       database: 'not_configured',
     },
+  })
+
+  await app.close()
+})
+
+test('student endpoint fails safely before database is configured', async () => {
+  const app = buildApp(env)
+  const response = await app.inject({
+    method: 'GET',
+    url: '/students/00000000-0000-4000-8000-000000000001',
+  })
+
+  assert.equal(response.statusCode, 503)
+  assert.deepEqual(response.json(), {
+    ok: false,
+    error: 'database_not_configured',
+  })
+
+  await app.close()
+})
+
+test('WeChat bootstrap fails safely before infrastructure is configured', async () => {
+  const app = buildApp(env)
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/wechat/bootstrap',
+    payload: { code: 'test-code' },
+  })
+
+  assert.equal(response.statusCode, 503)
+  assert.deepEqual(response.json(), {
+    ok: false,
+    error: 'database_not_configured',
   })
 
   await app.close()
