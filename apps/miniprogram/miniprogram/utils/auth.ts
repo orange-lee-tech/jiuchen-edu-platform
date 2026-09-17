@@ -1,4 +1,4 @@
-import { runtimeConfig } from '../config/runtime'
+import { request } from './request'
 
 export type BootstrapUser = {
   id: string
@@ -25,23 +25,10 @@ function getWechatLoginCode(): Promise<string> {
 
 export async function bootstrapWechatUser(): Promise<BootstrapUser> {
   const code = await getWechatLoginCode()
-
-  return new Promise((resolve, reject) => {
-    wx.request({
-      url: `${runtimeConfig.apiBaseUrl}/auth/wechat/bootstrap`,
-      method: 'POST',
-      data: { code },
-      success(response) {
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          const data = response.data as { ok: true; user: BootstrapUser }
-          resolve(data.user)
-          return
-        }
-        reject(new Error(`微信身份初始化失败（HTTP ${response.statusCode}）`))
-      },
-      fail(error) {
-        reject(new Error(error.errMsg || '无法连接身份服务'))
-      },
-    })
-  })
+  const result = await request<{ ok: true; user: BootstrapUser }>(
+    '/auth/wechat/bootstrap',
+    'POST',
+    { code },
+  )
+  return result.user
 }
