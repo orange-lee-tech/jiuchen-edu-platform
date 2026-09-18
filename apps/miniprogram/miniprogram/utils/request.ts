@@ -23,6 +23,42 @@ export type StudentSummary = {
   currentStage: string | null
 }
 
+export type ClassroomPlanType =
+  | 'gpa'
+  | 'english'
+  | 'competition'
+  | 'research'
+  | 'internship'
+
+export type ClassroomStage = {
+  code: string
+  label: string
+  mode: 'term' | 'holiday' | 'internship'
+  description: string
+  planTypes: ClassroomPlanType[]
+}
+
+export type ClassroomPlan = {
+  id: string | null
+  type: ClassroomPlanType
+  title: string
+  items: Array<{
+    id: string
+    sortOrder: number
+    name: string
+    target: string | null
+    status: 'pending' | 'in_progress' | 'done'
+  }>
+}
+
+export type ClassroomView = {
+  ok: true
+  student: StudentSummary
+  stage: ClassroomStage
+  showGuidance: boolean
+  plans: ClassroomPlan[]
+}
+
 const DEMO_STUDENT_ID = '00000000-0000-4000-8000-000000000001'
 
 type RequestMethod = 'GET' | 'POST'
@@ -107,4 +143,16 @@ export async function getDemoStudent(): Promise<StudentSummary> {
     `/students/${DEMO_STUDENT_ID}`,
   )
   return result.student
+}
+
+
+export async function getClassroomStages(): Promise<ClassroomStage[]> {
+  const result = await request<{ ok: true; stages: ClassroomStage[] }>('/classroom/stages')
+  return result.stages
+}
+
+export function getDemoStudentClassroom(stageCode: string): Promise<ClassroomView> {
+  return request<ClassroomView>(
+    `/students/${DEMO_STUDENT_ID}/classroom?stage=${encodeURIComponent(stageCode)}`,
+  )
 }
