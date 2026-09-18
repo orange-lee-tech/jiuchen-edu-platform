@@ -1,19 +1,57 @@
 import { randomUUID } from 'node:crypto'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import type { DatabaseContext } from '../db/client.js'
-import { users } from '../db/schema.js'
+import { userAgreements, users } from '../db/schema.js'
+import {
+  LOGIN_PORTALS,
+  PLACEHOLDER_USER_AGREEMENT_VERSION,
+  canEnterPortal,
+  needsStudentBinding,
+  type LoginPortal,
+  type UserRole,
+} from '../domain/auth-policy.js'
 import { exchangeWechatLoginCode } from '../services/wechat.js'
 
 const bodySchema = z.object({
   code: z.string().min(1).optional(),
+  portal: z.enum(LOGIN_PORTALS),
+  agreementAccepted: z.literal(true),
+  agreementVersion: z.literal(PLACEHOLDER_USER_AGREEMENT_VERSION),
 })
 
 function headerValue(request: FastifyRequest, name: string): string | undefined {
   const value = request.headers[name]
   return Array.isArray(value) ? value[0] : value
+}
+
+async function recordUserAgreement(
+  database: DatabaseContext & { configured: true },
+  userId: string,
+  version: string,
+) {
+  const [existing] = await database.db
+    .select({ id: userAgreements.id })
+    .from(userAgreements)
+    .where(
+      and(
+        eq(userAgreements.userId, userId),
+        eq(userAgreements.type, 'user_terms'),
+        eq(userAgreements.version, version),
+      ),
+    )
+    .limit(1)
+
+  if (existing) return
+
+  await database.db.insert(userAgreements).values({
+    id: randomUUID(),
+    userId,
+    type: 'user_terms',
+    version,
+  })
 }
 
 export function registerAuthRoutes(
@@ -64,26 +102,49 @@ export function registerAuthRoutes(
         .where(eq(users.wechatOpenId, identity.openId))
         .limit(1)
 
-      if (existing) {
-        return {
-          ok: true,
-          user: existing,
-        }
+      const user = existing ?? {
+        id: randomUUID(),
+        role: 'user' as const,
+        displayName: null,
       }
 
-      const id = randomUUID()
-      await database.db.insert(users).values({
-        id,
-        wechatOpenId: identity.openId,
-        role: 'user',
-      })
+      if (!existing) {
+        await database.db.insert(users).values({
+          id: user.id,
+          wechatOpenId: identity.openId,
+          role: user.role,
+        })
+      }
+
+      const role = user.role as UserRole
+      const portal = body.data.portal as LoginPortal
+
+      if (!canEnterPortal(role, portal)) {
+        return reply.code(403).send({
+          ok: false,
+          error: 'role_not_authorized',
+          portal,
+        })
+      }
+
+      await recordUserAgreement(
+        database,
+        user.id,
+        body.data.agreementVersion,
+      )
 
       return {
         ok: true,
         user: {
-          id,
-          role: 'user',
-          displayName: null,
+          ...user,
+          role,
+        },
+        portal,
+        needsProfileBinding: needsStudentBinding(role, portal),
+        agreement: {
+          type: 'user_terms',
+          version: body.data.agreementVersion,
+          accepted: true,
         },
       }
     } catch (error) {
