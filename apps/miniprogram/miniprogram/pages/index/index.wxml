@@ -1,33 +1,86 @@
-<view class="page">
-  <view class="card">
-    <text class="title">{{title}}</text>
-    <text class="subtitle">{{subtitle}}</text>
-    <text class="hint">当前只验证微信小程序、API、数据库与微信身份基础链路，业务页面将在 P2 开始还原。</text>
-
-    <view class="status-list">
-      <view class="status-row">
-        <text class="status-label">云端 API</text>
-        <text class="status-value">{{apiStatus}}</text>
+<view class="page-shell">
+  <view class="hero surface">
+    <view class="brand-row">
+      <view>
+        <text class="brand">九辰保研</text>
+        <text class="brand-sub">陪你把保研每一步走清楚</text>
       </view>
-      <view class="status-row">
-        <text class="status-label">数据库</text>
-        <text class="status-value">{{databaseStatus}}</text>
-      </view>
-      <view class="status-row">
-        <text class="status-label">微信身份</text>
-        <text class="status-value">{{identityStatus}}</text>
-      </view>
+      <view class="consult">咨询</view>
     </view>
 
-    <view wx:if="{{identityMeta}}" class="demo-student">
-      <text class="status-label">当前业务用户</text>
-      <text class="hint">{{identityMeta}}</text>
+    <view class="search-box" bindtap="onSearchTap">
+      <text class="search-icon">⌕</text>
+      <text class="search-placeholder">搜索院校、项目、资讯</text>
     </view>
+  </view>
 
-    <view wx:if="{{studentName}}" class="demo-student">
-      <text class="status-label">演示学员</text>
-      <text class="student-name">{{studentName}}</text>
-      <text class="hint">{{studentMeta}}</text>
+  <view class="quick-grid">
+    <view
+      wx:for="{{quickEntries}}"
+      wx:key="title"
+      class="quick-item surface"
+      data-index="{{index}}"
+      bindtap="onEntryTap"
+    >
+      <view class="quick-icon {{item.tone}}">{{item.icon}}</view>
+      <text class="quick-title">{{item.title}}</text>
+      <text class="quick-desc">{{item.desc}}</text>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <text class="section-title">相似案例</text>
+      <text class="section-subtitle">先看与自己背景接近的人如何准备</text>
+    </view>
+    <text class="more">更多 ›</text>
+  </view>
+
+  <scroll-view class="case-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="case-row">
+      <view wx:for="{{cases}}" wx:key="title" class="case-card surface">
+        <text class="case-tag">{{item.tag}}</text>
+        <text class="case-title">{{item.title}}</text>
+        <text class="case-result">{{item.result}}</text>
+        <text class="case-note">来源与年份将在正式数据接入后展示</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="section-head">
+    <view>
+      <text class="section-title">精选课程</text>
+      <text class="section-subtitle">课程仅展示与咨询，不在小程序内售卖</text>
+    </view>
+    <text class="more">查看全部 ›</text>
+  </view>
+
+  <view class="course-list">
+    <view wx:for="{{courses}}" wx:key="title" class="course-card surface">
+      <view class="course-cover">{{item.badge}}</view>
+      <view class="course-main">
+        <text class="course-title">{{item.title}}</text>
+        <text class="course-meta">{{item.meta}}</text>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <text class="section-title">最新录取资讯</text>
+      <text class="section-subtitle">关注近期政策、夏令营与预推免动态</text>
+    </view>
+  </view>
+
+  <view class="update-list surface">
+    <view wx:for="{{updates}}" wx:key="title" class="update-row">
+      <view class="update-dot"></view>
+      <view class="update-main">
+        <text class="update-school">{{item.school}}</text>
+        <text class="update-title">{{item.title}}</text>
+      </view>
+      <text class="update-date">{{item.date}}</text>
     </view>
   </view>
 </view>
