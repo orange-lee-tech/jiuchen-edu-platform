@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import {
   int,
   mysqlEnum,
@@ -11,8 +12,8 @@ export const users = mysqlTable('users', {
   wechatOpenId: varchar('wechat_open_id', { length: 64 }).unique(),
   role: mysqlEnum('role', ['user', 'student', 'staff', 'admin']).notNull().default('user'),
   displayName: varchar('display_name', { length: 80 }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
 
 export const students = mysqlTable('students', {
@@ -22,8 +23,8 @@ export const students = mysqlTable('students', {
   university: varchar('university', { length: 160 }),
   major: varchar('major', { length: 160 }),
   currentStage: varchar('current_stage', { length: 32 }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
 
 export const studentPlans = mysqlTable('student_plans', {
@@ -34,8 +35,8 @@ export const studentPlans = mysqlTable('student_plans', {
   stageCode: varchar('stage_code', { length: 32 }).notNull(),
   type: mysqlEnum('type', ['gpa', 'english', 'competition', 'research', 'internship']).notNull(),
   title: varchar('title', { length: 160 }).notNull(),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
 
 export const planItems = mysqlTable('plan_items', {
@@ -47,6 +48,6 @@ export const planItems = mysqlTable('plan_items', {
   name: varchar('name', { length: 160 }).notNull(),
   target: varchar('target', { length: 255 }),
   status: mysqlEnum('status', ['pending', 'in_progress', 'done']).notNull().default('pending'),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
