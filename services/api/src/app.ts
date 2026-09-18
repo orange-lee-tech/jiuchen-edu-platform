@@ -17,6 +17,17 @@ export function buildApp(env: AppEnv) {
     environment: env.NODE_ENV,
   }))
 
+  app.get('/health/config', async () => ({
+    ok: true,
+    service: 'jiuchen-api',
+    environment: env.NODE_ENV,
+    config: {
+      databaseUrlConfigured: Boolean(env.DATABASE_URL),
+      wechatAppIdConfigured: Boolean(env.WECHAT_APP_ID),
+      wechatAppSecretConfigured: Boolean(env.WECHAT_APP_SECRET),
+    },
+  }))
+
   app.get('/health', async (_request, reply) => {
     if (!database.configured) {
       return {
