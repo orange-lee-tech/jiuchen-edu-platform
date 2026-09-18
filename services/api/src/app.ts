@@ -23,6 +23,9 @@ export function buildApp(env: AppEnv) {
     environment: env.NODE_ENV,
     config: {
       databaseUrlConfigured: Boolean(env.DATABASE_URL),
+      splitDatabaseConfigComplete: Boolean(
+        env.DB_HOST && env.DB_USER && env.DB_PASSWORD && env.DB_NAME,
+      ),
       wechatAppIdConfigured: Boolean(env.WECHAT_APP_ID),
       wechatAppSecretConfigured: Boolean(env.WECHAT_APP_SECRET),
     },
