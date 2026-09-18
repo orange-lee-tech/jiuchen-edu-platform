@@ -1,12 +1,29 @@
 {
   "pages": [
-    "pages/index/index"
+    "pages/index/index",
+    "pages/position/position",
+    "pages/classroom/classroom",
+    "pages/info/info",
+    "pages/profile/profile"
   ],
   "window": {
     "navigationBarTitleText": "九辰保研",
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f5f7fa"
+    "backgroundColor": "#f6f7fb"
+  },
+  "tabBar": {
+    "color": "#7b8190",
+    "selectedColor": "#246bfd",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/position/position", "text": "定位" },
+      { "pagePath": "pages/classroom/classroom", "text": "学堂" },
+      { "pagePath": "pages/info/info", "text": "资讯" },
+      { "pagePath": "pages/profile/profile", "text": "我的" }
+    ]
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"
