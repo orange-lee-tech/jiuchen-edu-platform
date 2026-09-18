@@ -107,90 +107,90 @@ try {
 
   await createMissingTable(
     'user_profiles',
-    `CREATE TABLE `user_profiles` (
-      `id` varchar(36) NOT NULL,
-      `user_id` varchar(36) NOT NULL,
-      `university` varchar(160) NULL,
-      `major` varchar(160) NULL,
-      `current_grade` varchar(40) NULL,
-      `gpa_text` varchar(80) NULL,
-      `rank_text` varchar(80) NULL,
-      `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      PRIMARY KEY (`id`),
-      UNIQUE KEY `user_profiles_user_id_unique` (`user_id`),
-      CONSTRAINT `user_profiles_user_id_users_id_fk`
-        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+    String.raw`CREATE TABLE \`user_profiles\` (
+      \`id\` varchar(36) NOT NULL,
+      \`user_id\` varchar(36) NOT NULL,
+      \`university\` varchar(160) NULL,
+      \`major\` varchar(160) NULL,
+      \`current_grade\` varchar(40) NULL,
+      \`gpa_text\` varchar(80) NULL,
+      \`rank_text\` varchar(80) NULL,
+      \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updated_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (\`id\`),
+      UNIQUE KEY \`user_profiles_user_id_unique\` (\`user_id\`),
+      CONSTRAINT \`user_profiles_user_id_users_id_fk\`
+        FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`)
     ) ENGINE=InnoDB`,
   )
 
   await createMissingTable(
     'user_sessions',
-    `CREATE TABLE `user_sessions` (
-      `id` varchar(36) NOT NULL,
-      `user_id` varchar(36) NOT NULL,
-      `token_hash` varchar(64) NOT NULL,
-      `expires_at` timestamp NOT NULL,
-      `revoked_at` timestamp NULL,
-      `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (`id`),
-      UNIQUE KEY `user_sessions_token_hash_unique` (`token_hash`),
-      KEY `user_sessions_user_id_idx` (`user_id`),
-      CONSTRAINT `user_sessions_user_id_users_id_fk`
-        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+    String.raw`CREATE TABLE \`user_sessions\` (
+      \`id\` varchar(36) NOT NULL,
+      \`user_id\` varchar(36) NOT NULL,
+      \`token_hash\` varchar(64) NOT NULL,
+      \`expires_at\` timestamp NOT NULL,
+      \`revoked_at\` timestamp NULL,
+      \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (\`id\`),
+      UNIQUE KEY \`user_sessions_token_hash_unique\` (\`token_hash\`),
+      KEY \`user_sessions_user_id_idx\` (\`user_id\`),
+      CONSTRAINT \`user_sessions_user_id_users_id_fk\`
+        FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`)
     ) ENGINE=InnoDB`,
   )
 
   await createMissingTable(
     'user_agreements',
-    `CREATE TABLE `user_agreements` (
-      `id` varchar(36) NOT NULL,
-      `user_id` varchar(36) NOT NULL,
-      `type` enum('user_terms','privacy_policy') NOT NULL,
-      `version` varchar(40) NOT NULL,
-      `accepted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (`id`),
-      KEY `user_agreements_user_id_idx` (`user_id`),
-      CONSTRAINT `user_agreements_user_id_users_id_fk`
-        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+    String.raw`CREATE TABLE \`user_agreements\` (
+      \`id\` varchar(36) NOT NULL,
+      \`user_id\` varchar(36) NOT NULL,
+      \`type\` enum('user_terms','privacy_policy') NOT NULL,
+      \`version\` varchar(40) NOT NULL,
+      \`accepted_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (\`id\`),
+      KEY \`user_agreements_user_id_idx\` (\`user_id\`),
+      CONSTRAINT \`user_agreements_user_id_users_id_fk\`
+        FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`)
     ) ENGINE=InnoDB`,
   )
 
   await createMissingTable(
     'teachers',
-    `CREATE TABLE `teachers` (
-      `id` varchar(36) NOT NULL,
-      `user_id` varchar(36) NULL,
-      `name` varchar(80) NOT NULL,
-      `title` varchar(120) NULL,
-      `bio` varchar(500) NULL,
-      `status` enum('active','inactive') NOT NULL DEFAULT 'active',
-      `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      PRIMARY KEY (`id`),
-      UNIQUE KEY `teachers_user_id_unique` (`user_id`),
-      CONSTRAINT `teachers_user_id_users_id_fk`
-        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+    String.raw`CREATE TABLE \`teachers\` (
+      \`id\` varchar(36) NOT NULL,
+      \`user_id\` varchar(36) NULL,
+      \`name\` varchar(80) NOT NULL,
+      \`title\` varchar(120) NULL,
+      \`bio\` varchar(500) NULL,
+      \`status\` enum('active','inactive') NOT NULL DEFAULT 'active',
+      \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updated_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (\`id\`),
+      UNIQUE KEY \`teachers_user_id_unique\` (\`user_id\`),
+      CONSTRAINT \`teachers_user_id_users_id_fk\`
+        FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`)
     ) ENGINE=InnoDB`,
   )
 
   await createMissingTable(
     'student_teacher_assignments',
-    `CREATE TABLE `student_teacher_assignments` (
-      `id` varchar(36) NOT NULL,
-      `student_id` varchar(36) NOT NULL,
-      `teacher_id` varchar(36) NOT NULL,
-      `stage_code` varchar(32) NULL,
-      `relationship` enum('primary','support') NOT NULL DEFAULT 'primary',
-      `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      PRIMARY KEY (`id`),
-      KEY `student_teacher_assignments_student_idx` (`student_id`),
-      KEY `student_teacher_assignments_teacher_idx` (`teacher_id`),
-      CONSTRAINT `student_teacher_assignments_student_id_students_id_fk`
-        FOREIGN KEY (`student_id`) REFERENCES `students` (`id`),
-      CONSTRAINT `student_teacher_assignments_teacher_id_teachers_id_fk`
-        FOREIGN KEY (`teacher_id`) REFERENCES `teachers` (`id`)
+    String.raw`CREATE TABLE \`student_teacher_assignments\` (
+      \`id\` varchar(36) NOT NULL,
+      \`student_id\` varchar(36) NOT NULL,
+      \`teacher_id\` varchar(36) NOT NULL,
+      \`stage_code\` varchar(32) NULL,
+      \`relationship\` enum('primary','support') NOT NULL DEFAULT 'primary',
+      \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updated_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (\`id\`),
+      KEY \`student_teacher_assignments_student_idx\` (\`student_id\`),
+      KEY \`student_teacher_assignments_teacher_idx\` (\`teacher_id\`),
+      CONSTRAINT \`student_teacher_assignments_student_id_students_id_fk\`
+        FOREIGN KEY (\`student_id\`) REFERENCES \`students\` (\`id\`),
+      CONSTRAINT \`student_teacher_assignments_teacher_id_teachers_id_fk\`
+        FOREIGN KEY (\`teacher_id\`) REFERENCES \`teachers\` (\`id\`)
     ) ENGINE=InnoDB`,
   )
 
