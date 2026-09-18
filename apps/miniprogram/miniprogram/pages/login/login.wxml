@@ -1,0 +1,52 @@
+<view class="login-page">
+  <view class="brand-block">
+    <view class="brand-mark">九</view>
+    <text class="brand-title">九辰保研</text>
+    <text class="brand-desc">请选择与你身份对应的入口</text>
+  </view>
+
+  <view class="login-card">
+    <view class="portal-tabs">
+      <view
+        class="portal-tab {{portal === 'student' ? 'active' : ''}}"
+        data-portal="student"
+        bindtap="onPortalChange"
+      >
+        <text class="portal-title">学员登录</text>
+        <text class="portal-desc">规划、评估与个人学习档案</text>
+      </view>
+      <view
+        class="portal-tab {{portal === 'teacher' ? 'active' : ''}}"
+        data-portal="teacher"
+        bindtap="onPortalChange"
+      >
+        <text class="portal-title">老师登录</text>
+        <text class="portal-desc">学员辅导与教学工作台</text>
+      </view>
+    </view>
+
+    <view class="identity-note">
+      <text wx:if="{{portal === 'student'}}">首次登录后，如尚未绑定正式学员档案，将进入待绑定状态。</text>
+      <text wx:else>老师身份必须由九辰后台预先授权，选择此入口不会自动获得老师权限。</text>
+    </view>
+
+    <checkbox-group class="agreement-row" bindchange="onAgreementChange">
+      <label class="agreement-label">
+        <checkbox value="accepted" checked="{{agreed}}" color="#6b53d8" />
+        <text>我已阅读并同意</text>
+      </label>
+      <text class="agreement-link" bindtap="onAgreementTap">《用户协议》</text>
+    </checkbox-group>
+
+    <button
+      class="login-button"
+      loading="{{loading}}"
+      disabled="{{loading}}"
+      bindtap="onLogin"
+    >
+      微信授权登录
+    </button>
+  </view>
+
+  <text class="login-footnote">当前为内部测试版本，用户协议正文暂以占位内容展示。</text>
+</view>
