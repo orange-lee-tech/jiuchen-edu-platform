@@ -1,0 +1,182 @@
+.classroom-hero {
+  padding: 32rpx;
+  background: linear-gradient(145deg, #ffffff, #f3f0ff);
+}
+
+.eyebrow,
+.hero-title,
+.hero-desc,
+.plan-title,
+.plan-note,
+.mentor-name,
+.mentor-desc,
+.record-title,
+.record-content {
+  display: block;
+}
+
+.eyebrow {
+  color: #7255e7;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.hero-title {
+  margin-top: 14rpx;
+  font-size: 38rpx;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.hero-desc {
+  margin-top: 16rpx;
+  color: #777e89;
+  font-size: 23rpx;
+  line-height: 1.7;
+}
+
+.stage-scroll {
+  margin-top: 22rpx;
+}
+
+.stage-row {
+  display: flex;
+  gap: 12rpx;
+  width: max-content;
+}
+
+.stage-pill {
+  padding: 14rpx 22rpx;
+  border-radius: 999rpx;
+  background: #ffffff;
+  color: #6f7682;
+  font-size: 23rpx;
+}
+
+.stage-pill.active {
+  background: #2f6fed;
+  color: #ffffff;
+}
+
+.section-head {
+  margin: 34rpx 4rpx 18rpx;
+}
+
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+}
+
+.plan-card {
+  padding: 24rpx;
+}
+
+.plan-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62rpx;
+  height: 62rpx;
+  border-radius: 16rpx;
+  background: #eef4ff;
+  color: #2f6fed;
+  font-size: 21rpx;
+  font-weight: 800;
+}
+
+.plan-title {
+  margin-top: 18rpx;
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.plan-note {
+  min-height: 62rpx;
+  margin-top: 8rpx;
+  color: #8a8f98;
+  font-size: 21rpx;
+  line-height: 1.5;
+}
+
+.plan-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18rpx;
+}
+
+.plan-progress {
+  color: #2f6fed;
+  font-size: 22rpx;
+}
+
+.plan-arrow,
+.arrow {
+  color: #b3b8c0;
+  font-size: 34rpx;
+}
+
+.mentor-card {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+}
+
+.mentor-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 78rpx;
+  height: 78rpx;
+  border-radius: 50%;
+  background: #f1edff;
+  color: #7255e7;
+  font-weight: 800;
+}
+
+.mentor-main {
+  flex: 1;
+  margin-left: 20rpx;
+}
+
+.mentor-name {
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.mentor-desc {
+  margin-top: 8rpx;
+  color: #8a8f98;
+  font-size: 21rpx;
+}
+
+.record-list {
+  padding: 6rpx 24rpx;
+}
+
+.record-row {
+  display: flex;
+  padding: 24rpx 0;
+}
+
+.record-date {
+  width: 92rpx;
+  color: #2f6fed;
+  font-size: 22rpx;
+}
+
+.record-main {
+  flex: 1;
+}
+
+.record-title {
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.record-content {
+  margin-top: 8rpx;
+  color: #858b95;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
