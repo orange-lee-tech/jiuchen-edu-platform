@@ -107,7 +107,7 @@ try {
 
   await createMissingTable(
     'user_profiles',
-    String.raw`CREATE TABLE \`user_profiles\` (
+    `CREATE TABLE \`user_profiles\` (
       \`id\` varchar(36) NOT NULL,
       \`user_id\` varchar(36) NOT NULL,
       \`university\` varchar(160) NULL,
@@ -126,7 +126,7 @@ try {
 
   await createMissingTable(
     'user_sessions',
-    String.raw`CREATE TABLE \`user_sessions\` (
+    `CREATE TABLE \`user_sessions\` (
       \`id\` varchar(36) NOT NULL,
       \`user_id\` varchar(36) NOT NULL,
       \`token_hash\` varchar(64) NOT NULL,
@@ -143,7 +143,7 @@ try {
 
   await createMissingTable(
     'user_agreements',
-    String.raw`CREATE TABLE \`user_agreements\` (
+    `CREATE TABLE \`user_agreements\` (
       \`id\` varchar(36) NOT NULL,
       \`user_id\` varchar(36) NOT NULL,
       \`type\` enum('user_terms','privacy_policy') NOT NULL,
@@ -158,7 +158,7 @@ try {
 
   await createMissingTable(
     'teachers',
-    String.raw`CREATE TABLE \`teachers\` (
+    `CREATE TABLE \`teachers\` (
       \`id\` varchar(36) NOT NULL,
       \`user_id\` varchar(36) NULL,
       \`name\` varchar(80) NOT NULL,
@@ -176,7 +176,7 @@ try {
 
   await createMissingTable(
     'student_teacher_assignments',
-    String.raw`CREATE TABLE \`student_teacher_assignments\` (
+    `CREATE TABLE \`student_teacher_assignments\` (
       \`id\` varchar(36) NOT NULL,
       \`student_id\` varchar(36) NOT NULL,
       \`teacher_id\` varchar(36) NOT NULL,
