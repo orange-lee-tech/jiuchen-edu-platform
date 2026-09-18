@@ -72,7 +72,6 @@ const STAGES: StageDefinition[] = [
   { code: 'junior-fall', label: '大三上', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: TERM_PLANS },
   { code: 'junior-winter', label: '大三寒假', mode: 'holiday', description: '假期 · 仅英语与竞赛规划', planTypes: HOLIDAY_PLANS },
   { code: 'junior-spring', label: '大三下', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: TERM_PLANS },
-  { code: 'junior-summer', label: '大三暑假', mode: 'holiday', description: '暑假阶段 · 仅英语与竞赛规划', planTypes: HOLIDAY_PLANS },
   { code: 'senior-fall', label: '大四上', mode: 'internship', description: '大四阶段 · 仅展示实习规划', planTypes: INTERNSHIP_PLANS },
   { code: 'senior-winter', label: '大四寒假', mode: 'internship', description: '大四寒假 · 仅展示实习规划', planTypes: INTERNSHIP_PLANS },
   { code: 'senior-spring', label: '大四下', mode: 'internship', description: '大四阶段 · 仅展示实习规划', planTypes: INTERNSHIP_PLANS },
