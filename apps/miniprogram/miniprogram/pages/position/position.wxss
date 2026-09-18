@@ -1,0 +1,143 @@
+.position-hero {
+  padding: 34rpx;
+  background: linear-gradient(145deg, #edf4ff 0%, #ffffff 72%);
+}
+
+.eyebrow,
+.hero-title,
+.hero-desc,
+.quota,
+.dimension-title,
+.dimension-desc,
+.notice-title,
+.notice-text {
+  display: block;
+}
+
+.eyebrow {
+  color: #2f6fed;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.hero-title {
+  margin-top: 16rpx;
+  font-size: 40rpx;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.hero-desc {
+  margin-top: 18rpx;
+  color: #707783;
+  font-size: 24rpx;
+  line-height: 1.75;
+}
+
+.primary-btn {
+  margin-top: 30rpx;
+  height: 84rpx;
+  border: 0;
+  border-radius: 18rpx;
+  background: #2f6fed;
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.primary-btn::after {
+  border: 0;
+}
+
+.quota {
+  margin-top: 14rpx;
+  text-align: center;
+  color: #8a8f98;
+  font-size: 21rpx;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 36rpx 4rpx 18rpx;
+}
+
+.edit {
+  color: #2f6fed;
+  font-size: 24rpx;
+}
+
+.profile-card {
+  padding: 4rpx 26rpx;
+}
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 25rpx 0;
+  border-bottom: 1rpx solid #eef0f4;
+}
+
+.profile-row:last-child {
+  border-bottom: 0;
+}
+
+.profile-label {
+  color: #6f7682;
+  font-size: 25rpx;
+}
+
+.profile-value {
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.dimension-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.dimension-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 26rpx;
+}
+
+.dimension-title {
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.dimension-desc {
+  margin-top: 7rpx;
+  color: #8a8f98;
+  font-size: 22rpx;
+}
+
+.dimension-status {
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
+  background: #f2f4f7;
+  color: #9298a1;
+  font-size: 20rpx;
+}
+
+.notice {
+  margin-top: 28rpx;
+  padding: 28rpx;
+}
+
+.notice-title {
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.notice-text {
+  margin-top: 12rpx;
+  color: #747b86;
+  font-size: 23rpx;
+  line-height: 1.7;
+}
