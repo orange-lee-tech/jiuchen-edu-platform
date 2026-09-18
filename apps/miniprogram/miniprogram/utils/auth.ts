@@ -85,3 +85,11 @@ export function clearSavedAuthResult() {
   wx.removeStorageSync(AUTH_STORAGE_KEY)
   clearApiSessionToken()
 }
+
+export async function logoutWechatUser() {
+  try {
+    await request<{ ok: true }>('/auth/logout', 'POST', {})
+  } finally {
+    clearSavedAuthResult()
+  }
+}
