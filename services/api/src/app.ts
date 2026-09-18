@@ -11,6 +11,12 @@ export function buildApp(env: AppEnv) {
 
   const database = createDatabaseContext(env)
 
+  app.get('/health/live', async () => ({
+    ok: true,
+    service: 'jiuchen-api',
+    environment: env.NODE_ENV,
+  }))
+
   app.get('/health', async (_request, reply) => {
     if (!database.configured) {
       return {
