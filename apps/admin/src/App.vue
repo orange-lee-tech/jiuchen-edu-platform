@@ -119,6 +119,11 @@ async function loadClassroom(stageCode = selectedStageCode.value) {
   }
 }
 
+async function onStudentChange(event: Event) {
+  const target = event.target as HTMLSelectElement
+  await selectStudent(target.value)
+}
+
 async function selectStudent(studentId: string) {
   selectedStudentId.value = studentId
   const student = students.value.find((item) => item.id === studentId)
@@ -258,7 +263,7 @@ onMounted(async () => {
             <span>选择学员</span>
             <select
               :value="selectedStudentId"
-              @change="selectStudent(($event.target as HTMLSelectElement).value)"
+              @change="onStudentChange"
             >
               <option v-for="student in students" :key="student.id" :value="student.id">
                 {{ student.name }} · {{ student.university || '未填写院校' }}
