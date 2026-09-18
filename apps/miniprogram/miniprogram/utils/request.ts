@@ -1,5 +1,11 @@
 import { runtimeConfig } from '../config/runtime'
 
+export type LivenessResponse = {
+  ok: boolean
+  service: string
+  environment: string
+}
+
 export type HealthResponse = {
   ok: boolean
   service: string
@@ -70,6 +76,10 @@ export function request<T>(
       },
     })
   })
+}
+
+export function getLiveness(): Promise<LivenessResponse> {
+  return request<LivenessResponse>('/health/live')
 }
 
 export function getHealth(): Promise<HealthResponse> {
