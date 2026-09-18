@@ -5,7 +5,7 @@ export type HealthResponse = {
   service: string
   environment: string
   dependencies: {
-    database: 'not_configured' | 'ok' | 'error'
+    database: 'not_configured' | 'schema_missing' | 'ok' | 'error'
   }
 }
 
