@@ -2,9 +2,14 @@ import { and, asc, eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
 import { planItems, studentPlans, students } from '../db/schema.js'
-import { DEFAULT_PLAN_TITLES, getStageDefinition } from '../domain/classroom.js'
+import { DEFAULT_PLAN_TITLES, STAGE_DEFINITIONS, getStageDefinition } from '../domain/classroom.js'
 
 export function registerStudentRoutes(app: FastifyInstance, database: DatabaseContext) {
+  app.get('/classroom/stages', async () => ({
+    ok: true,
+    stages: STAGE_DEFINITIONS,
+  }))
+
   app.get<{ Params: { id: string } }>('/students/:id', async (request, reply) => {
     if (!database.configured) {
       return reply.code(503).send({
