@@ -23,6 +23,6 @@ Page({
   },
 
   onEditProfile() {
-    wx.showToast({ title: '资料录入页将在本阶段补齐', icon: 'none' })
+    wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
   },
 })
