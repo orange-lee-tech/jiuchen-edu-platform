@@ -17,3 +17,12 @@ export function canEnterPortal(role: UserRole, portal: LoginPortal): boolean {
 export function needsStudentBinding(role: UserRole, portal: LoginPortal): boolean {
   return portal === 'student' && role === 'user'
 }
+
+
+export function canEditAcademicProfile(role: UserRole): boolean {
+  return role === 'user' || role === 'student'
+}
+
+export function canAccessTeacherWorkspace(role: UserRole): boolean {
+  return role === 'teacher' || role === 'staff' || role === 'admin'
+}
