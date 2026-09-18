@@ -117,3 +117,31 @@
   margin-top: 24rpx;
   padding: 26rpx;
 }
+
+
+.identity-line {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.role-chip {
+  padding: 5rpx 10rpx;
+  border-radius: 999rpx;
+  background: #f0edff;
+  color: #6a50d5;
+  font-size: 18rpx;
+  font-weight: 700;
+}
+
+.logout-button {
+  margin-top: 24rpx;
+  border-radius: 18rpx;
+  background: #ffffff;
+  color: #7b818b;
+  font-size: 23rpx;
+}
+
+.logout-button::after {
+  border-color: #eceef3;
+}
