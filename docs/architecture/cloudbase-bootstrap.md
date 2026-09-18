@@ -128,3 +128,14 @@ npm run dev
 - Test 环境停止使用后，应关闭 MySQL 外网直连。
 
 这一取舍的目标是减少开发期基础设施成本和配置阻塞，不改变应用层 Fastify + Drizzle + MySQL 架构。
+
+
+## P1 云端数据库阻塞不阻塞 P2
+
+截至 2026-09-18，以下链路已验证：
+- 本地 Fastify → CloudBase MySQL 外网：成功；
+- 小程序 → CloudBase 云托管 API：成功；
+- CloudBase 运行时环境变量注入：成功；
+- CloudBase 免费体验云托管 → MySQL：仍返回数据库连接错误。
+
+该阻塞被视为免费 Test 基础设施限制/网络配置问题，不再阻塞 P2 产品页面开发。P2 继续使用已验证的本地 API + Test 数据开发；云端数据库连接作为独立基础设施事项保留。Production 架构仍保持可迁移，可选择付费 CloudBase VPC 或公司现有服务器。
