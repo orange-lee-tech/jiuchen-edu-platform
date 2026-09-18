@@ -1,24 +1,20 @@
-type PlanType = 'gpa' | 'english' | 'competition' | 'research' | 'internship'
-
-type StageMode = 'term' | 'holiday' | 'internship'
-
-type StageDefinition = {
-  code: string
-  label: string
-  mode: StageMode
-  description: string
-  planTypes: PlanType[]
-}
+import {
+  getClassroomStages,
+  getDemoStudentClassroom,
+  type ClassroomPlan,
+  type ClassroomPlanType,
+  type ClassroomStage,
+} from '../../utils/request'
 
 type PlanCard = {
-  type: PlanType
+  type: ClassroomPlanType
   badge: string
   title: string
   progress: string
   note: string
 }
 
-const PLAN_CARDS: Record<PlanType, PlanCard> = {
+const PLAN_CARDS: Record<ClassroomPlanType, PlanCard> = {
   gpa: {
     type: 'gpa',
     badge: 'GPA',
@@ -56,11 +52,11 @@ const PLAN_CARDS: Record<PlanType, PlanCard> = {
   },
 }
 
-const TERM_PLANS: PlanType[] = ['gpa', 'english', 'competition', 'research']
-const HOLIDAY_PLANS: PlanType[] = ['english', 'competition']
-const INTERNSHIP_PLANS: PlanType[] = ['internship']
+const TERM_PLANS: ClassroomPlanType[] = ['gpa', 'english', 'competition', 'research']
+const HOLIDAY_PLANS: ClassroomPlanType[] = ['english', 'competition']
+const INTERNSHIP_PLANS: ClassroomPlanType[] = ['internship']
 
-const STAGES: StageDefinition[] = [
+const FALLBACK_STAGES: ClassroomStage[] = [
   { code: 'freshman-fall', label: '大一上', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: TERM_PLANS },
   { code: 'freshman-winter', label: '大一寒假', mode: 'holiday', description: '假期 · 仅英语与竞赛规划', planTypes: HOLIDAY_PLANS },
   { code: 'freshman-spring', label: '大一下', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: TERM_PLANS },
@@ -77,8 +73,7 @@ const STAGES: StageDefinition[] = [
   { code: 'senior-spring', label: '大四下', mode: 'internship', description: '大四阶段 · 仅展示实习规划', planTypes: INTERNSHIP_PLANS },
 ]
 
-function getStageView(index: number) {
-  const stage = STAGES[index] ?? STAGES[0]
+function getStageView(stage: ClassroomStage, index: number) {
   return {
     currentStage: index,
     currentStageCode: stage.code,
@@ -89,10 +84,22 @@ function getStageView(index: number) {
   }
 }
 
+function toPlanCard(plan: ClassroomPlan): PlanCard {
+  const template = PLAN_CARDS[plan.type]
+  const completed = plan.items.filter((item) => item.status === 'done').length
+  const progress = plan.id ? `${completed} / ${plan.items.length}` : template.progress
+
+  return {
+    ...template,
+    title: plan.title,
+    progress,
+  }
+}
+
 Page({
   data: {
-    stages: STAGES,
-    ...getStageView(0),
+    stages: FALLBACK_STAGES,
+    ...getStageView(FALLBACK_STAGES[0], 0),
     mentor: {
       name: '导师信息待录入',
       desc: '点击后查看导师介绍与指导安排',
@@ -102,19 +109,64 @@ Page({
     ],
   },
 
+  onLoad() {
+    void this.hydrateStageCatalog()
+    void this.hydratePlanData(this.data.currentStageCode)
+  },
+
+  async hydrateStageCatalog() {
+    try {
+      const stages = await getClassroomStages()
+      if (stages.length === 0) return
+
+      const currentCode = this.data.currentStageCode
+      const resolvedIndex = stages.findIndex((stage) => stage.code === currentCode)
+      const index = resolvedIndex >= 0 ? resolvedIndex : 0
+      const stage = stages[index]
+
+      this.setData({
+        stages,
+        ...getStageView(stage, index),
+      })
+    } catch (error) {
+      console.info('Classroom stage catalog unavailable; using local fallback.', error)
+    }
+  },
+
+  async hydratePlanData(stageCode: string) {
+    try {
+      const result = await getDemoStudentClassroom(stageCode)
+
+      if (this.data.currentStageCode !== stageCode) {
+        return
+      }
+
+      this.setData({
+        plans: result.plans.map(toPlanCard),
+        showGuidance: result.showGuidance,
+      })
+    } catch (error) {
+      console.info('Classroom data unavailable; keeping local placeholder plans.', error)
+    }
+  },
+
   onStageChange(event: WechatMiniprogram.BaseEvent) {
     const index = Number(event.currentTarget.dataset.index)
-    if (!Number.isInteger(index) || index < 0 || index >= STAGES.length) {
+    const stages = this.data.stages as ClassroomStage[]
+
+    if (!Number.isInteger(index) || index < 0 || index >= stages.length) {
       return
     }
 
-    this.setData(getStageView(index))
+    const stage = stages[index]
+    this.setData(getStageView(stage, index))
+    void this.hydratePlanData(stage.code)
   },
 
   onPlanTap(event: WechatMiniprogram.BaseEvent) {
     const planType = String(event.currentTarget.dataset.type ?? '')
     wx.showToast({
-      title: planType === 'internship' ? '实习规划详情页待接入数据' : '计划详情页待接入数据',
+      title: planType === 'internship' ? '实习规划详情页待完善' : '计划详情页待完善',
       icon: 'none',
     })
   },
