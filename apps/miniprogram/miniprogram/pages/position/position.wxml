@@ -1,0 +1,35 @@
+<view class="page-shell">
+  <view class="position-hero surface">
+    <text class="pill">AI 保研定位</text>
+    <text class="position-title">先把你的位置看清楚，再决定下一步怎么走</text>
+    <text class="position-desc">V1 将基于学生背景、目标院校、项目数据与案例信息生成结构化定位建议，不使用固定权重打分。</text>
+    <button class="primary-btn" bindtap="onStart">开始定位</button>
+  </view>
+
+  <view class="section-card surface">
+    <text class="section-title">我的背景</text>
+    <text class="section-subtitle">这些信息将作为后续 AI 分析输入</text>
+    <view class="profile-grid">
+      <view wx:for="{{profileItems}}" wx:key="label" class="profile-item">
+        <text class="profile-label">{{item.label}}</text>
+        <text class="profile-value">{{item.value}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-card surface">
+    <text class="section-title">定位流程</text>
+    <view class="steps">
+      <view wx:for="{{steps}}" wx:key="*this" class="step">
+        <view class="step-index">{{index + 1}}</view>
+        <text>{{item}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-card surface">
+    <text class="section-title">规划定位</text>
+    <text class="section-subtitle">定位完成后，将进一步拆解 GPA、英语、竞赛、科研与实习计划。</text>
+    <view class="plan-note">大一至大三按学期管理，大四聚焦实习；寒暑假按既定规则展示对应计划。</view>
+  </view>
+</view>
