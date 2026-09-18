@@ -1,3 +1,6 @@
+import { getSavedAuthResult } from '../../utils/auth'
+import { getMyAcademicProfile } from '../../utils/request'
+
 Page({
   data: {
     profile: [
@@ -14,6 +17,31 @@ Page({
     ],
   },
 
+  onShow() {
+    const auth = getSavedAuthResult()
+    if (auth?.portal === 'student') {
+      void this.loadAcademicProfile()
+    }
+  },
+
+  async loadAcademicProfile() {
+    try {
+      const profile = await getMyAcademicProfile()
+      const scoreSummary = [profile.gpaText, profile.rankText].filter(Boolean).join(' · ')
+
+      this.setData({
+        profile: [
+          { label: '本科院校', value: profile.university || '待填写' },
+          { label: '专业方向', value: profile.major || '待填写' },
+          { label: '当前年级', value: profile.currentGrade || '待填写' },
+          { label: '绩点 / 排名', value: scoreSummary || '待填写' },
+        ],
+      })
+    } catch (error) {
+      console.info('Academic profile is unavailable on position page.', error)
+    }
+  },
+
   onStartAssessment() {
     wx.showModal({
       title: 'AI 保研定位',
@@ -23,6 +51,13 @@ Page({
   },
 
   onEditProfile() {
+    const auth = getSavedAuthResult()
+
+    if (!auth || auth.portal !== 'student') {
+      wx.navigateTo({ url: '/pages/login/login' })
+      return
+    }
+
     wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
   },
 })
