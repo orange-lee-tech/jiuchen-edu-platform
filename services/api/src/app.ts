@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import type { AppEnv } from './config/env.js'
 import { createDatabaseContext } from './db/client.js'
 import { registerAuthRoutes } from './routes/auth.js'
+import { registerAdminRoutes } from './routes/admin.js'
 import { registerStudentRoutes } from './routes/students.js'
 
 export function buildApp(env: AppEnv) {
@@ -111,6 +112,7 @@ export function buildApp(env: AppEnv) {
 
   registerAuthRoutes(app, database, env)
   registerStudentRoutes(app, database)
+  registerAdminRoutes(app, database, env)
 
   app.addHook('onClose', async () => {
     if (database.configured) {
