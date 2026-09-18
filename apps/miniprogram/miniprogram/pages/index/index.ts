@@ -1,5 +1,5 @@
 import { bootstrapWechatUser } from '../../utils/auth'
-import { getDemoStudent, getHealth } from '../../utils/request'
+import { getDemoStudent, getHealth, getLiveness } from '../../utils/request'
 
 Page({
   data: {
@@ -16,9 +16,13 @@ Page({
 
   async onLoad() {
     try {
+      const live = await getLiveness()
+      this.setData({
+        apiStatus: live.ok ? '正常' : '异常',
+      })
+
       const health = await getHealth()
       this.setData({
-        apiStatus: health.ok ? '正常' : '异常',
         databaseStatus: health.dependencies.database,
       })
 
@@ -54,9 +58,12 @@ Page({
         }
       }
     } catch (error) {
-      this.setData({
-        apiStatus: error instanceof Error ? error.message : '无法连接 API',
-      })
+      const message = error instanceof Error ? error.message : '无法连接 API'
+      if (this.data.apiStatus === '检查中…') {
+        this.setData({ apiStatus: message })
+      } else {
+        this.setData({ databaseStatus: message })
+      }
     } finally {
       this.setData({ checking: false })
     }
