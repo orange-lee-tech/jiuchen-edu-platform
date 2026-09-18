@@ -48,7 +48,17 @@ export function buildApp(env: AppEnv) {
 
     try {
       await database.pool.query('SELECT 1')
-      const requiredTables = ['users', 'students', 'student_plans', 'plan_items']
+      const requiredTables = [
+        'users',
+        'user_profiles',
+        'user_sessions',
+        'user_agreements',
+        'students',
+        'teachers',
+        'student_teacher_assignments',
+        'student_plans',
+        'plan_items',
+      ]
 
       for (const table of requiredTables) {
         await database.pool.query(`SELECT 1 FROM \`${table}\` LIMIT 1`)
