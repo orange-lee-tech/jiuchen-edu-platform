@@ -13,7 +13,11 @@ import {
   type LoginPortal,
   type UserRole,
 } from '../domain/auth-policy.js'
-import { issueSession, resolveSessionUser, revokeCurrentSession } from '../services/session.js'
+import {
+  issueSession,
+  resolveSessionUser,
+  revokeCurrentSession,
+} from '../services/session.js'
 import { exchangeWechatLoginCode } from '../services/wechat.js'
 
 const bodySchema = z.object({
@@ -52,53 +56,6 @@ async function recordUserAgreement(
     userId,
     type: 'user_terms',
     version,
-  })
-
-  app.get('/auth/me', async (request, reply) => {
-    if (!database.configured) {
-      return reply.code(503).send({
-        ok: false,
-        error: 'database_not_configured',
-      })
-    }
-
-    const user = await resolveSessionUser(request, database)
-    if (!user) {
-      return reply.code(401).send({
-        ok: false,
-        error: 'unauthorized',
-      })
-    }
-
-    return {
-      ok: true,
-      user: {
-        id: user.userId,
-        role: user.role,
-        displayName: user.displayName,
-      },
-    }
-  })
-
-  app.post('/auth/logout', async (request, reply) => {
-    if (!database.configured) {
-      return reply.code(503).send({
-        ok: false,
-        error: 'database_not_configured',
-      })
-    }
-
-    const revoked = await revokeCurrentSession(request, database)
-    if (!revoked) {
-      return reply.code(401).send({
-        ok: false,
-        error: 'unauthorized',
-      })
-    }
-
-    return {
-      ok: true,
-    }
   })
 }
 
@@ -204,6 +161,53 @@ export function registerAuthRoutes(
         ok: false,
         error: 'wechat_login_failed',
       })
+    }
+  })
+
+  app.get('/auth/me', async (request, reply) => {
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const user = await resolveSessionUser(request, database)
+    if (!user) {
+      return reply.code(401).send({
+        ok: false,
+        error: 'unauthorized',
+      })
+    }
+
+    return {
+      ok: true,
+      user: {
+        id: user.userId,
+        role: user.role,
+        displayName: user.displayName,
+      },
+    }
+  })
+
+  app.post('/auth/logout', async (request, reply) => {
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const revoked = await revokeCurrentSession(request, database)
+    if (!revoked) {
+      return reply.code(401).send({
+        ok: false,
+        error: 'unauthorized',
+      })
+    }
+
+    return {
+      ok: true,
     }
   })
 }
