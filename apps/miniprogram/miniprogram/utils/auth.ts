@@ -1,10 +1,27 @@
 import { request } from './request'
 
+export type LoginPortal = 'student' | 'teacher'
+
 export type BootstrapUser = {
   id: string
-  role: 'user' | 'student' | 'staff' | 'admin'
+  role: 'user' | 'student' | 'teacher' | 'staff' | 'admin'
   displayName: string | null
 }
+
+export type BootstrapResult = {
+  ok: true
+  user: BootstrapUser
+  portal: LoginPortal
+  needsProfileBinding: boolean
+  agreement: {
+    type: 'user_terms'
+    version: string
+    accepted: true
+  }
+}
+
+export const USER_AGREEMENT_VERSION = 'placeholder-v0'
+export const AUTH_STORAGE_KEY = 'jiuchen-auth-session'
 
 function getWechatLoginCode(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -23,16 +40,38 @@ function getWechatLoginCode(): Promise<string> {
   })
 }
 
-export async function bootstrapWechatUser(): Promise<BootstrapUser> {
-  // 始终附带一次性 wx.login code：
-  // - 微信云托管若注入可信 x-wx-openid，后端优先使用 Header；
-  // - 腾讯云侧云托管没有该 Header 时，后端可安全回退到 jscode2session。
+export async function bootstrapWechatUser(
+  portal: LoginPortal,
+  agreementAccepted: boolean,
+): Promise<BootstrapResult> {
+  if (!agreementAccepted) {
+    throw new Error('请先阅读并同意用户协议')
+  }
+
   const code = await getWechatLoginCode()
 
-  const result = await request<{ ok: true; user: BootstrapUser }>(
+  return request<BootstrapResult>(
     '/auth/wechat/bootstrap',
     'POST',
-    { code },
+    {
+      code,
+      portal,
+      agreementAccepted: true,
+      agreementVersion: USER_AGREEMENT_VERSION,
+    },
   )
-  return result.user
+}
+
+export function saveAuthResult(result: BootstrapResult) {
+  wx.setStorageSync(AUTH_STORAGE_KEY, result)
+}
+
+export function getSavedAuthResult(): BootstrapResult | null {
+  const value = wx.getStorageSync(AUTH_STORAGE_KEY)
+  if (!value || typeof value !== 'object') return null
+  return value as BootstrapResult
+}
+
+export function clearSavedAuthResult() {
+  wx.removeStorageSync(AUTH_STORAGE_KEY)
 }
