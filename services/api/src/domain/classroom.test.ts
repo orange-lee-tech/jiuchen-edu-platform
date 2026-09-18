@@ -20,6 +20,8 @@ test('senior stages expose internship only', () => {
   assert.equal(isPlanTypeAllowed('senior-winter', 'research'), false)
 })
 
-test('junior summer remains intentionally undefined until product rules define it', () => {
-  assert.equal(getStageDefinition('junior-summer'), undefined)
+test('junior summer stays visible in the prototype timeline without invented plan rules', () => {
+  const stage = getStageDefinition('junior-summer')
+  assert.equal(stage?.label, '大三暑假')
+  assert.deepEqual(stage?.planTypes, [])
 })
