@@ -87,3 +87,39 @@ test('health error diagnostics never expose database credentials', async () => {
   const source = await import('./app.js')
   assert.equal(typeof source.buildApp, 'function')
 })
+
+
+test('classroom stage catalog is available without database access', async () => {
+  const app = buildApp(env)
+  const response = await app.inject({ method: 'GET', url: '/classroom/stages' })
+
+  assert.equal(response.statusCode, 200)
+  const body = response.json() as {
+    ok: boolean
+    stages: Array<{ code: string; mode: string; planTypes: string[] }>
+  }
+  assert.equal(body.ok, true)
+  assert.deepEqual(
+    body.stages.find((stage) => stage.code === 'senior-winter')?.planTypes,
+    ['internship'],
+  )
+  assert.equal(
+    body.stages.some((stage) => stage.code === 'junior-summer'),
+    false,
+  )
+
+  await app.close()
+})
+
+test('admin routes stay disabled outside local development', async () => {
+  const app = buildApp(env)
+  const response = await app.inject({ method: 'GET', url: '/admin/students' })
+
+  assert.equal(response.statusCode, 403)
+  assert.deepEqual(response.json(), {
+    ok: false,
+    error: 'admin_write_disabled',
+  })
+
+  await app.close()
+})
