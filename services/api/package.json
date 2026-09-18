@@ -12,7 +12,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/db/seed.ts",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:upgrade:auth": "tsx src/db/upgrade-auth-foundation.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.2",
