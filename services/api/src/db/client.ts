@@ -17,6 +17,7 @@ export function createDatabaseContext(env: AppEnv) {
   const pool = mysql.createPool({
     uri: env.DATABASE_URL,
     connectionLimit: 5,
+    connectTimeout: 3000,
     enableKeepAlive: true,
   })
 
