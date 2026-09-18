@@ -1,0 +1,30 @@
+<view class="page-shell">
+  <view class="profile-head surface">
+    <view class="avatar">九</view>
+    <view class="profile-main">
+      <text class="profile-name">九辰学员</text>
+      <text class="profile-meta">完善资料后获得更准确的规划建议</text>
+    </view>
+    <text class="edit-link">完善资料</text>
+  </view>
+
+  <view class="credit-card surface">
+    <view>
+      <text class="credit-label">AI 评估额度</text>
+      <text class="credit-value">免费次数待同步</text>
+    </view>
+    <text class="credit-action">了解规则</text>
+  </view>
+
+  <view class="service-list surface">
+    <view wx:for="{{services}}" wx:key="title" class="service-row">
+      <view>
+        <text class="service-title">{{item.title}}</text>
+        <text class="service-value">{{item.value}}</text>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="footer-note">九辰教育 · 保研规划与成长服务</view>
+</view>
