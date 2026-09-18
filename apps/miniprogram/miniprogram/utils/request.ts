@@ -1,3 +1,4 @@
+import { getApiSessionToken } from './session'
 import { runtimeConfig } from '../config/runtime'
 
 export type LivenessResponse = {
@@ -68,6 +69,8 @@ export function request<T>(
   method: RequestMethod = 'GET',
   data?: WechatMiniprogram.IAnyObject,
 ): Promise<T> {
+  const sessionToken = getApiSessionToken()
+
   if (runtimeConfig.apiTransport === 'cloud') {
     return new Promise((resolve, reject) => {
       wx.cloud.callContainer({
@@ -78,6 +81,7 @@ export function request<T>(
         method,
         header: {
           'X-WX-SERVICE': runtimeConfig.cloudServiceName,
+          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
         },
         data,
         success(response) {
@@ -107,6 +111,7 @@ export function request<T>(
       url: `${runtimeConfig.apiBaseUrl}${path}`,
       method,
       data,
+      header: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
       success(response) {
         if (response.statusCode >= 200 && response.statusCode < 300) {
           resolve(response.data as T)
