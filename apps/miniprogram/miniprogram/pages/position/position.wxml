@@ -1,0 +1,46 @@
+<view class="page-shell">
+  <view class="position-hero surface">
+    <text class="eyebrow">AI 保研定位</text>
+    <text class="hero-title">先认识自己，再决定冲哪里</text>
+    <text class="hero-desc">结合个人背景、目标院校与项目数据，形成结构化定位建议。结果用于辅助规划，不展示伪精确录取概率。</text>
+    <button class="primary-btn" bindtap="onStartAssessment">开始 AI 评估</button>
+    <text class="quota">新用户可获得免费评估次数</text>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <text class="section-title">我的背景</text>
+      <text class="section-subtitle">资料越完整，定位建议越有参考价值</text>
+    </view>
+    <text class="edit" bindtap="onEditProfile">编辑</text>
+  </view>
+
+  <view class="profile-card surface">
+    <view wx:for="{{profile}}" wx:key="label" class="profile-row">
+      <text class="profile-label">{{item.label}}</text>
+      <text class="profile-value">{{item.value}}</text>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <text class="section-title">评估维度</text>
+      <text class="section-subtitle">不采用固定权重公式，后续由服务端 AI 结合资料分析</text>
+    </view>
+  </view>
+
+  <view class="dimension-list">
+    <view wx:for="{{dimensions}}" wx:key="title" class="dimension-card surface">
+      <view>
+        <text class="dimension-title">{{item.title}}</text>
+        <text class="dimension-desc">{{item.desc}}</text>
+      </view>
+      <text class="dimension-status">{{item.status}}</text>
+    </view>
+  </view>
+
+  <view class="notice surface">
+    <text class="notice-title">定位结果会包含什么？</text>
+    <text class="notice-text">目标梯度建议、优势与短板、下一阶段行动重点，以及可核查的院校 / 项目 / 案例依据。</text>
+  </view>
+</view>
