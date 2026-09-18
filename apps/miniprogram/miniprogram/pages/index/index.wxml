@@ -1,33 +1,69 @@
-<view class="page">
-  <view class="card">
-    <text class="title">{{title}}</text>
-    <text class="subtitle">{{subtitle}}</text>
-    <text class="hint">当前只验证微信小程序、API、数据库与微信身份基础链路，业务页面将在 P2 开始还原。</text>
+<view class="page-shell home-page">
+  <view class="hero surface">
+    <view class="brand-row">
+      <view>
+        <text class="eyebrow">九辰教育 · 保研服务</text>
+        <text class="hero-title">更清晰地看见你的保研路径</text>
+      </view>
+      <view class="hero-badge">九辰</view>
+    </view>
+    <view class="search-box" bindtap="onSearchTap">
+      <text class="search-icon">⌕</text>
+      <text class="search-placeholder">搜索院校、项目、资讯</text>
+    </view>
+  </view>
 
-    <view class="status-list">
-      <view class="status-row">
-        <text class="status-label">云端 API</text>
-        <text class="status-value">{{apiStatus}}</text>
-      </view>
-      <view class="status-row">
-        <text class="status-label">数据库</text>
-        <text class="status-value">{{databaseStatus}}</text>
-      </view>
-      <view class="status-row">
-        <text class="status-label">微信身份</text>
-        <text class="status-value">{{identityStatus}}</text>
+  <view class="section-block">
+    <view class="section-heading">
+      <view>
+        <text class="section-title">核心服务</text>
+        <text class="section-subtitle">从定位到规划，先把关键问题理清楚</text>
       </view>
     </view>
-
-    <view wx:if="{{identityMeta}}" class="demo-student">
-      <text class="status-label">当前业务用户</text>
-      <text class="hint">{{identityMeta}}</text>
+    <view class="quick-grid">
+      <view
+        wx:for="{{quickActions}}"
+        wx:key="key"
+        class="quick-card surface"
+        data-key="{{item.key}}"
+        bindtap="onQuickTap"
+      >
+        <view class="quick-icon">{{index + 1}}</view>
+        <text class="quick-title">{{item.title}}</text>
+        <text class="quick-desc">{{item.desc}}</text>
+      </view>
     </view>
+  </view>
 
-    <view wx:if="{{studentName}}" class="demo-student">
-      <text class="status-label">演示学员</text>
-      <text class="student-name">{{studentName}}</text>
-      <text class="hint">{{studentMeta}}</text>
+  <view class="section-block">
+    <view class="section-heading row-between">
+      <view>
+        <text class="section-title">精选课程</text>
+        <text class="section-subtitle">课程仅展示与咨询，不在线售卖</text>
+      </view>
+      <text class="more-link">查看全部</text>
+    </view>
+    <scroll-view class="course-scroll" scroll-x enhanced>
+      <view class="course-row">
+        <view wx:for="{{courses}}" wx:key="title" class="course-card surface">
+          <view class="course-cover">
+            <text class="course-cover-tag">九辰学堂</text>
+          </view>
+          <text class="course-title">{{item.title}}</text>
+          <text class="course-meta">{{item.meta}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="section-block latest surface">
+    <view class="section-heading">
+      <text class="section-title">最新动态</text>
+      <text class="section-subtitle">重要招生节点与产品进展</text>
+    </view>
+    <view wx:for="{{updates}}" wx:key="*this" class="update-row">
+      <view class="dot"></view>
+      <text class="update-text">{{item}}</text>
     </view>
   </view>
 </view>
