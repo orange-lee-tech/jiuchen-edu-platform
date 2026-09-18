@@ -77,12 +77,33 @@ export function buildApp(env: AppEnv) {
       }
 
       app.log.error(error)
+
+      const diagnostic =
+        error && typeof error === 'object'
+          ? {
+              code: 'code' in error ? String(error.code) : undefined,
+              errno:
+                'errno' in error && typeof error.errno === 'number'
+                  ? error.errno
+                  : undefined,
+              sqlState:
+                'sqlState' in error && typeof error.sqlState === 'string'
+                  ? error.sqlState
+                  : undefined,
+              syscall:
+                'syscall' in error && typeof error.syscall === 'string'
+                  ? error.syscall
+                  : undefined,
+            }
+          : {}
+
       return reply.code(503).send({
         ok: false,
         service: 'jiuchen-api',
         environment: env.NODE_ENV,
         dependencies: {
           database: 'error',
+          databaseDiagnostic: diagnostic,
         },
       })
     }
