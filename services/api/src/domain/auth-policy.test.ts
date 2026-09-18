@@ -18,3 +18,19 @@ test('new ordinary users may enter student onboarding without gaining student pr
   assert.equal(needsStudentBinding('user', 'student'), true)
   assert.equal(needsStudentBinding('student', 'student'), false)
 })
+
+
+test('academic profile editing stays on the student side', async () => {
+  const { canEditAcademicProfile } = await import('./auth-policy.js')
+  assert.equal(canEditAcademicProfile('user'), true)
+  assert.equal(canEditAcademicProfile('student'), true)
+  assert.equal(canEditAcademicProfile('teacher'), false)
+})
+
+test('teacher workspace requires an internal teaching role', async () => {
+  const { canAccessTeacherWorkspace } = await import('./auth-policy.js')
+  assert.equal(canAccessTeacherWorkspace('student'), false)
+  assert.equal(canAccessTeacherWorkspace('teacher'), true)
+  assert.equal(canAccessTeacherWorkspace('staff'), true)
+  assert.equal(canAccessTeacherWorkspace('admin'), true)
+})
