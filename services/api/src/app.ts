@@ -25,6 +25,12 @@ export function buildApp(env: AppEnv) {
 
     try {
       await database.pool.query('SELECT 1')
+      const requiredTables = ['users', 'students', 'student_plans', 'plan_items']
+
+      for (const table of requiredTables) {
+        await database.pool.query(`SELECT 1 FROM \`${table}\` LIMIT 1`)
+      }
+
       return {
         ok: true,
         service: 'jiuchen-api',
@@ -34,6 +40,22 @@ export function buildApp(env: AppEnv) {
         },
       }
     } catch (error) {
+      const code =
+        error && typeof error === 'object' && 'code' in error
+          ? String(error.code)
+          : undefined
+
+      if (code === 'ER_NO_SUCH_TABLE') {
+        return reply.code(503).send({
+          ok: false,
+          service: 'jiuchen-api',
+          environment: env.NODE_ENV,
+          dependencies: {
+            database: 'schema_missing',
+          },
+        })
+      }
+
       app.log.error(error)
       return reply.code(503).send({
         ok: false,
