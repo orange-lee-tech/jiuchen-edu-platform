@@ -103,9 +103,10 @@ test('classroom stage catalog is available without database access', async () =>
     body.stages.find((stage) => stage.code === 'senior-winter')?.planTypes,
     ['internship'],
   )
-  assert.equal(
-    body.stages.some((stage) => stage.code === 'junior-summer'),
-    false,
+  assert.equal(body.stages.length, 15)
+  assert.deepEqual(
+    body.stages.find((stage) => stage.code === 'junior-summer')?.planTypes,
+    [],
   )
 
   await app.close()
