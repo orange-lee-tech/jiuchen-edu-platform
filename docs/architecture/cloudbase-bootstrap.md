@@ -112,3 +112,19 @@ npm run dev
 - AI API Key；
 - 真实学员数据；
 - 自动发布到微信正式版。
+
+
+## 免费 Test 环境的网络取舍
+
+当前 CloudBase 免费体验环境不启用付费「私有网络」能力。为避免为 P1/P2 开发测试额外购买套餐，Test 环境采用 MySQL 外网直连：
+
+- 云托管保持「公网访问」开启，以使用平台默认公网出口；
+- MySQL 保持外网直连开启；
+- 云托管使用 `DB_HOST=<MySQL 外网主机>`、`DB_PORT=<外网端口>`；
+- 仅使用应用账号 `jiuchen_app`，不使用 root；
+- 强密码仅保存在 CloudBase 版本环境变量中，不进入 Git 或聊天；
+- 该方案仅限 Test / 开发，不作为 Production 架构；
+- Production 优先使用同 VPC 内网连接，或迁移到公司现有服务器后使用独立 API/数据库运行环境；
+- Test 环境停止使用后，应关闭 MySQL 外网直连。
+
+这一取舍的目标是减少开发期基础设施成本和配置阻塞，不改变应用层 Fastify + Drizzle + MySQL 架构。
