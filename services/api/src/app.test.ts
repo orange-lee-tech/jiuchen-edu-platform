@@ -73,6 +73,7 @@ test('GET /health/config exposes only configuration presence', async () => {
     environment: 'test',
     config: {
       databaseUrlConfigured: false,
+      splitDatabaseConfigComplete: false,
       wechatAppIdConfigured: false,
       wechatAppSecretConfigured: false,
     },
