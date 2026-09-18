@@ -60,3 +60,23 @@ test('WeChat bootstrap fails safely before infrastructure is configured', async 
 
   await app.close()
 })
+
+
+test('GET /health/config exposes only configuration presence', async () => {
+  const app = buildApp(env)
+  const response = await app.inject({ method: 'GET', url: '/health/config' })
+
+  assert.equal(response.statusCode, 200)
+  assert.deepEqual(response.json(), {
+    ok: true,
+    service: 'jiuchen-api',
+    environment: 'test',
+    config: {
+      databaseUrlConfigured: false,
+      wechatAppIdConfigured: false,
+      wechatAppSecretConfigured: false,
+    },
+  })
+
+  await app.close()
+})
