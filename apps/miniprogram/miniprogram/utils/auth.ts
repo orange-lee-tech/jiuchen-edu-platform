@@ -1,4 +1,8 @@
 import { request } from './request'
+import {
+  clearApiSessionToken,
+  saveApiSessionToken,
+} from './session'
 
 export type LoginPortal = 'student' | 'teacher'
 
@@ -17,6 +21,10 @@ export type BootstrapResult = {
     type: 'user_terms'
     version: string
     accepted: true
+  }
+  session: {
+    token: string
+    expiresAt: string
   }
 }
 
@@ -64,6 +72,7 @@ export async function bootstrapWechatUser(
 
 export function saveAuthResult(result: BootstrapResult) {
   wx.setStorageSync(AUTH_STORAGE_KEY, result)
+  saveApiSessionToken(result.session.token)
 }
 
 export function getSavedAuthResult(): BootstrapResult | null {
@@ -74,4 +83,5 @@ export function getSavedAuthResult(): BootstrapResult | null {
 
 export function clearSavedAuthResult() {
   wx.removeStorageSync(AUTH_STORAGE_KEY)
+  clearApiSessionToken()
 }
