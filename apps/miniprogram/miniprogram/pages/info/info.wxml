@@ -1,0 +1,22 @@
+<view class="page-shell">
+  <view class="info-head">
+    <text class="section-title">保研资讯</text>
+    <text class="section-subtitle">院校、项目、招生节点与公开经验统一整理</text>
+  </view>
+  <view class="tab-row surface">
+    <view wx:for="{{tabs}}" wx:key="*this" data-index="{{index}}" bindtap="onTabTap" class="tab {{activeTab === index ? 'active' : ''}}">{{item}}</view>
+  </view>
+  <view class="news-list">
+    <view wx:for="{{news}}" wx:key="title" class="news-card surface">
+      <view class="news-cover"><text>{{item.tag}}</text></view>
+      <view class="news-body">
+        <text class="news-title">{{item.title}}</text>
+        <text class="news-source">{{item.source}}</text>
+      </view>
+    </view>
+  </view>
+  <view class="source-note surface">
+    <text class="source-title">案例来源说明</text>
+    <text class="source-text">外部公开案例不会包装成“九辰成功案例”；后续数据将保留来源、年份、所有权、公开状态与匿名化信息。</text>
+  </view>
+</view>
