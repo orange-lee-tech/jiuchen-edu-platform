@@ -1,5 +1,34 @@
 page {
-  background: #f5f7fa;
-  color: #1f2329;
+  min-height: 100%;
+  background: #f6f7fb;
+  color: #171a1f;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.page-shell {
+  padding: 28rpx 28rpx 44rpx;
+}
+
+.surface {
+  background: #ffffff;
+  border: 1rpx solid #edf0f5;
+  border-radius: 24rpx;
+  box-shadow: 0 10rpx 30rpx rgba(31, 45, 61, 0.04);
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #171a1f;
+}
+
+.section-subtitle {
+  margin-top: 8rpx;
+  color: #8a8f98;
+  font-size: 24rpx;
+  line-height: 1.6;
+}
+
+.muted {
+  color: #8a8f98;
 }
