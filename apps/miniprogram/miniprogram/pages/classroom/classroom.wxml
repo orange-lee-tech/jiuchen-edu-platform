@@ -1,0 +1,33 @@
+<view class="page-shell">
+  <view class="class-header surface">
+    <view>
+      <text class="pill">我的课堂</text>
+      <text class="class-title">{{semester}} · 学期规划</text>
+      <text class="section-subtitle">按阶段查看学习、竞赛、科研与辅导安排</text>
+    </view>
+    <view class="progress-ring">0%</view>
+  </view>
+
+  <view class="module-list">
+    <view wx:for="{{modules}}" wx:key="title" class="module-card surface">
+      <view class="module-top">
+        <text class="module-title">{{item.title}}</text>
+        <text class="module-status">{{item.status}}</text>
+      </view>
+      <text class="module-desc">{{item.desc}}</text>
+      <view class="module-line"><view class="module-line-active"></view></view>
+    </view>
+  </view>
+
+  <view class="section-card surface">
+    <text class="section-title">辅导记录</text>
+    <text class="section-subtitle">由后台工作人员维护，学生端只查看</text>
+    <view wx:for="{{records}}" wx:key="date" class="record-row">
+      <text class="record-date">{{item.date}}</text>
+      <view class="record-body">
+        <text class="record-title">{{item.title}}</text>
+        <text class="record-desc">{{item.desc}}</text>
+      </view>
+    </view>
+  </view>
+</view>
