@@ -6,7 +6,7 @@
 
     <view class="status-list">
       <view class="status-row">
-        <text class="status-label">API</text>
+        <text class="status-label">云端 API</text>
         <text class="status-value">{{apiStatus}}</text>
       </view>
       <view class="status-row">
