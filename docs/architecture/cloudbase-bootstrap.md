@@ -21,7 +21,7 @@ Production 暂不创建。
 - CloudBase 环境 ID：`cloud1-d3geim00r03edb212`
 - 云托管服务：`jiuchen-api`
 - 当前云托管版本：`001`，状态正常
-- MySQL：已开通，当前尚未执行项目 Migration / Seed
+- MySQL：已开通；Test Schema 已通过 Drizzle `db:push` 建立，演示学员 Seed 已写入
 
 这些均为非敏感标识。数据库账号、密码和连接字符串不得写入仓库。
 
@@ -66,23 +66,34 @@ Test / Production 小程序通过 `wx.cloud.callContainer` 访问云托管时，
 
 ## P1 初始化命令
 
-数据库可连接后，在 `services/api` 执行：
+数据库可连接后，Test 环境首次初始化在 `services/api` 执行：
 
 ```bash
 npm install
-npm run db:generate
-npm run db:migrate
+npm run db:push
 npm run db:seed
 npm run dev
 ```
 
+`db:push` 仅用于空的开发 / Test 数据库快速落 Schema。后续正式 Schema 演进仍需生成并提交 Migration，不能把 `push` 当作 Production 迁移策略。
+
 预期：
 
-- `GET /health` 返回 `database: ok`；
+- `GET /health` 返回 `database: ok`；如果数据库可连但核心表缺失，返回 `database: schema_missing`；
 - `GET /students/00000000-0000-4000-8000-000000000001` 返回“演示学员”；
 - 管理后台能显示该演示学员；
 - 小程序测试页能显示该演示学员；
 - 小程序通过 `callContainer` 调用身份初始化接口后，服务端能够把自动注入的 OpenID 映射为业务用户。
+
+## 当前已验证
+
+- 本机 → CloudBase MySQL 外网直连：通过；
+- `users` / `students` / `student_plans` / `plan_items` 四张核心表：已创建；
+- 演示学员 Seed：已写入；
+- 本地 Fastify `GET /health`：`database: ok`；
+- 本地 `GET /students/00000000-0000-4000-8000-000000000001`：成功返回“演示学员”。
+
+当前剩余 P1 闭环：将内网 `DATABASE_URL` 配置到云托管新版本，验证云端 `/health`、小程序 `callContainer` 和 OpenID 映射，然后关闭数据库外网直连。
 
 ## 暂不做
 
