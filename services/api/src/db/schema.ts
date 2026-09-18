@@ -18,6 +18,32 @@ export const users = mysqlTable('users', {
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
 
+export const userProfiles = mysqlTable('user_profiles', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 })
+    .notNull()
+    .unique()
+    .references(() => users.id),
+  university: varchar('university', { length: 160 }),
+  major: varchar('major', { length: 160 }),
+  currentGrade: varchar('current_grade', { length: 40 }),
+  gpaText: varchar('gpa_text', { length: 80 }),
+  rankText: varchar('rank_text', { length: 80 }),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
+export const userSessions = mysqlTable('user_sessions', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 })
+    .notNull()
+    .references(() => users.id),
+  tokenHash: varchar('token_hash', { length: 64 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  revokedAt: timestamp('revoked_at'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+})
+
 export const students = mysqlTable('students', {
   id: varchar('id', { length: 36 }).primaryKey(),
   userId: varchar('user_id', { length: 36 }).unique().references(() => users.id),
