@@ -1,11 +1,14 @@
 <view class="page-shell">
-  <view class="profile-hero surface">
-    <view class="avatar">九</view>
+  <view class="profile-hero surface" bindtap="onIdentityTap">
+    <view class="avatar">{{portal === 'teacher' ? '师' : '九'}}</view>
     <view class="identity">
-      <text class="user-name">{{user.name}}</text>
+      <view class="identity-line">
+        <text class="user-name">{{user.name}}</text>
+        <text class="role-chip">{{roleLabel}}</text>
+      </view>
       <text class="user-meta">{{user.meta}}</text>
     </view>
-    <text class="arrow">›</text>
+    <text class="arrow" wx:if="{{!loggedIn}}">›</text>
   </view>
 
   <view class="stats surface">
@@ -16,14 +19,15 @@
   </view>
 
   <view class="section-head">
-    <text class="section-title">我的服务</text>
+    <text class="section-title">{{portal === 'teacher' ? '教学工作台' : '我的服务'}}</text>
   </view>
 
   <view class="menu-list surface">
     <view
       wx:for="{{menus}}"
-      wx:key="title"
+      wx:key="key"
       class="menu-row"
+      data-key="{{item.key}}"
       data-title="{{item.title}}"
       bindtap="onMenuTap"
     >
@@ -35,8 +39,11 @@
     </view>
   </view>
 
+  <button wx:if="{{loggedIn}}" class="logout-button" bindtap="onLogout">退出登录</button>
+
   <view class="service-note surface">
     <text class="note-title">九辰保研</text>
-    <text class="note-text">课程模块仅用于内容展示与咨询；付费能力仅用于后续 AI 评估额度，不在本页面出售课程。</text>
+    <text class="note-text" wx:if="{{portal === 'teacher'}}">老师端权限由九辰后台分配，只能访问已授权的学员与辅导数据。</text>
+    <text class="note-text" wx:else>课程模块仅用于内容展示与咨询；付费能力仅用于后续 AI 评估额度，不在本页面出售课程。</text>
   </view>
 </view>
