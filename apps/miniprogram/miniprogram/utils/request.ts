@@ -60,9 +60,17 @@ export type ClassroomView = {
   plans: ClassroomPlan[]
 }
 
+export type AcademicProfile = {
+  university: string | null
+  major: string | null
+  currentGrade: string | null
+  gpaText: string | null
+  rankText: string | null
+}
+
 const DEMO_STUDENT_ID = '00000000-0000-4000-8000-000000000001'
 
-type RequestMethod = 'GET' | 'POST'
+type RequestMethod = 'GET' | 'POST' | 'PUT'
 
 export function request<T>(
   path: string,
@@ -160,4 +168,21 @@ export function getDemoStudentClassroom(stageCode: string): Promise<ClassroomVie
   return request<ClassroomView>(
     `/students/${DEMO_STUDENT_ID}/classroom?stage=${encodeURIComponent(stageCode)}`,
   )
+}
+
+
+export async function getMyAcademicProfile(): Promise<AcademicProfile> {
+  const result = await request<{ ok: true; profile: AcademicProfile }>('/me/profile')
+  return result.profile
+}
+
+export async function updateMyAcademicProfile(
+  profile: AcademicProfile,
+): Promise<AcademicProfile> {
+  const result = await request<{ ok: true; profile: AcademicProfile }>(
+    '/me/profile',
+    'PUT',
+    profile as unknown as WechatMiniprogram.IAnyObject,
+  )
+  return result.profile
 }
