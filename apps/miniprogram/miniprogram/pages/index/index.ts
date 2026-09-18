@@ -1,71 +1,37 @@
-import { bootstrapWechatUser } from '../../utils/auth'
-import { getDemoStudent, getHealth, getLiveness } from '../../utils/request'
-
 Page({
   data: {
-    title: '九辰保研',
-    subtitle: 'P1 基础骨架已启动',
-    checking: true,
-    apiStatus: '检查中…',
-    databaseStatus: '-',
-    identityStatus: '待验证',
-    identityMeta: '',
-    studentName: '',
-    studentMeta: '',
+    quickEntries: [
+      { icon: 'AI', title: 'AI 保研定位', desc: '结合背景与目标生成定位建议', tone: 'blue' },
+      { icon: '规', title: '规划定位', desc: '按阶段梳理保研准备路线', tone: 'violet' },
+      { icon: '校', title: '院校库', desc: '查看院校、项目与夏令营信息', tone: 'cyan' },
+      { icon: '讯', title: '资讯库', desc: '聚合保研政策与招生动态', tone: 'orange' },
+    ],
+    cases: [
+      { title: '工科 · 双非背景', result: '录取 985 学硕', tag: '相似案例' },
+      { title: '经管 · 英语突出', result: '录取财经强校', tag: '相似案例' },
+    ],
+    courses: [
+      { title: '保研全流程入门', meta: '13 节 · 规划基础', badge: '基础' },
+      { title: '夏令营材料准备', meta: '9 节 · 文书方法', badge: '材料' },
+      { title: '面试表达训练', meta: '11 节 · 高频问题', badge: '面试' },
+    ],
+    updates: [
+      { school: '示例大学', title: '2027 年推免招生预通知', date: '09-18' },
+      { school: '示例学院', title: '优秀大学生夏令营报名提醒', date: '09-17' },
+      { school: '示例研究院', title: '预推免材料清单更新', date: '09-16' },
+    ],
   },
 
-  async onLoad() {
-    try {
-      const live = await getLiveness()
-      this.setData({
-        apiStatus: live.ok ? '正常' : '异常',
-      })
+  onSearchTap() {
+    wx.showToast({ title: '搜索将在 P2 后续接入', icon: 'none' })
+  },
 
-      const health = await getHealth()
-      this.setData({
-        databaseStatus: health.dependencies.database,
-      })
-
-      if (health.dependencies.database === 'ok') {
-        const [studentResult, identityResult] = await Promise.allSettled([
-          getDemoStudent(),
-          bootstrapWechatUser(),
-        ])
-
-        if (studentResult.status === 'fulfilled') {
-          const student = studentResult.value
-          this.setData({
-            studentName: student.name,
-            studentMeta: [student.university, student.major, student.currentStage]
-              .filter(Boolean)
-              .join(' · '),
-          })
-        }
-
-        if (identityResult.status === 'fulfilled') {
-          const user = identityResult.value
-          this.setData({
-            identityStatus: '正常',
-            identityMeta: `${user.role} · ${user.id}`,
-          })
-        } else {
-          this.setData({
-            identityStatus:
-              identityResult.reason instanceof Error
-                ? identityResult.reason.message
-                : '微信身份验证失败',
-          })
-        }
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '无法连接 API'
-      if (this.data.apiStatus === '检查中…') {
-        this.setData({ apiStatus: message })
-      } else {
-        this.setData({ databaseStatus: message })
-      }
-    } finally {
-      this.setData({ checking: false })
+  onEntryTap(event: WechatMiniprogram.BaseEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (index === 0) {
+      wx.switchTab({ url: '/pages/position/position' })
+      return
     }
+    wx.showToast({ title: '功能骨架已预留', icon: 'none' })
   },
 })
