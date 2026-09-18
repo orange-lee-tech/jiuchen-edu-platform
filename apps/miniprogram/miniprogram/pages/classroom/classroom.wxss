@@ -37,15 +37,18 @@
 
 .stage-scroll {
   margin-top: 22rpx;
+  white-space: nowrap;
 }
 
 .stage-row {
   display: flex;
   gap: 12rpx;
   width: max-content;
+  padding-right: 24rpx;
 }
 
 .stage-pill {
+  flex-shrink: 0;
   padding: 14rpx 22rpx;
   border-radius: 999rpx;
   background: #ffffff;
@@ -66,6 +69,10 @@
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16rpx;
+}
+
+.plan-grid.single {
+  grid-template-columns: 1fr;
 }
 
 .plan-card {
@@ -97,6 +104,10 @@
   color: #8a8f98;
   font-size: 21rpx;
   line-height: 1.5;
+}
+
+.plan-grid.single .plan-note {
+  min-height: 0;
 }
 
 .plan-foot {
