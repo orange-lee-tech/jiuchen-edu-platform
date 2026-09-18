@@ -105,7 +105,14 @@ Page({
       return
     }
 
+    const key = String(event.currentTarget.dataset.key || '')
     const title = String(event.currentTarget.dataset.title || '')
+
+    if (key === 'profile' && this.data.portal === 'student') {
+      wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
+      return
+    }
+
     wx.showToast({ title: title + '功能已预留', icon: 'none' })
   },
 
