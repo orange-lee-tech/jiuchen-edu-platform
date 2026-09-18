@@ -1,6 +1,6 @@
 import {
-  clearSavedAuthResult,
   getSavedAuthResult,
+  logoutWechatUser,
   type BootstrapResult,
 } from '../../utils/auth'
 
@@ -116,8 +116,13 @@ Page({
     wx.showToast({ title: title + '功能已预留', icon: 'none' })
   },
 
-  onLogout() {
-    clearSavedAuthResult()
+  async onLogout() {
+    try {
+      await logoutWechatUser()
+    } catch (error) {
+      console.info('Server logout failed; local session was still cleared.', error)
+    }
+
     this.setData(getIdentityView(null))
     wx.showToast({ title: '已退出登录', icon: 'none' })
   },
