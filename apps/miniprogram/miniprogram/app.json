@@ -4,7 +4,8 @@
     "pages/position/position",
     "pages/classroom/classroom",
     "pages/news/news",
-    "pages/profile/profile"
+    "pages/profile/profile",
+    "pages/login/login"
   ],
   "window": {
     "navigationBarTitleText": "九辰保研",
