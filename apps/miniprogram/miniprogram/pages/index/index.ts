@@ -1,71 +1,33 @@
-import { bootstrapWechatUser } from '../../utils/auth'
-import { getDemoStudent, getHealth, getLiveness } from '../../utils/request'
-
 Page({
   data: {
-    title: '九辰保研',
-    subtitle: 'P1 基础骨架已启动',
-    checking: true,
-    apiStatus: '检查中…',
-    databaseStatus: '-',
-    identityStatus: '待验证',
-    identityMeta: '',
-    studentName: '',
-    studentMeta: '',
+    quickActions: [
+      { key: 'ai', title: 'AI 保研定位', desc: '结合背景与目标院校生成定位建议' },
+      { key: 'plan', title: '规划定位', desc: '按年级拆解 GPA、英语、竞赛与科研' },
+      { key: 'school', title: '院校库', desc: '快速了解目标院校与项目' },
+      { key: 'info', title: '资讯库', desc: '查看夏令营、预推免与招生动态' }
+    ],
+    courses: [
+      { title: '保研全流程入门', meta: '基础课 · 12 节' },
+      { title: '科研能力提升', meta: '进阶课 · 9 节' },
+      { title: '英语与材料准备', meta: '冲刺课 · 8 节' }
+    ],
+    updates: [
+      '近期院校招生与夏令营信息持续更新',
+      '个人规划建议将结合当前年级动态调整',
+      'AI 定位模块进入 P2 交互开发阶段'
+    ]
   },
 
-  async onLoad() {
-    try {
-      const live = await getLiveness()
-      this.setData({
-        apiStatus: live.ok ? '正常' : '异常',
-      })
-
-      const health = await getHealth()
-      this.setData({
-        databaseStatus: health.dependencies.database,
-      })
-
-      if (health.dependencies.database === 'ok') {
-        const [studentResult, identityResult] = await Promise.allSettled([
-          getDemoStudent(),
-          bootstrapWechatUser(),
-        ])
-
-        if (studentResult.status === 'fulfilled') {
-          const student = studentResult.value
-          this.setData({
-            studentName: student.name,
-            studentMeta: [student.university, student.major, student.currentStage]
-              .filter(Boolean)
-              .join(' · '),
-          })
-        }
-
-        if (identityResult.status === 'fulfilled') {
-          const user = identityResult.value
-          this.setData({
-            identityStatus: '正常',
-            identityMeta: `${user.role} · ${user.id}`,
-          })
-        } else {
-          this.setData({
-            identityStatus:
-              identityResult.reason instanceof Error
-                ? identityResult.reason.message
-                : '微信身份验证失败',
-          })
-        }
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '无法连接 API'
-      if (this.data.apiStatus === '检查中…') {
-        this.setData({ apiStatus: message })
-      } else {
-        this.setData({ databaseStatus: message })
-      }
-    } finally {
-      this.setData({ checking: false })
+  onQuickTap(event: WechatMiniprogram.BaseEvent) {
+    const key = event.currentTarget.dataset.key
+    if (key === 'ai' || key === 'plan') {
+      wx.switchTab({ url: '/pages/position/position' })
+      return
     }
+    wx.switchTab({ url: '/pages/info/info' })
   },
+
+  onSearchTap() {
+    wx.showToast({ title: '搜索将在下一迭代接入', icon: 'none' })
+  }
 })
