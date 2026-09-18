@@ -49,7 +49,15 @@ export function request<T>(
             resolve(response.data as T)
             return
           }
-          reject(new Error(`Request failed with HTTP ${response.statusCode}`))
+          const detail =
+            typeof response.data === 'string'
+              ? response.data
+              : JSON.stringify(response.data)
+          reject(
+            new Error(
+              `Request failed with HTTP ${response.statusCode}${detail ? `: ${detail}` : ''}`,
+            ),
+          )
         },
         fail(error) {
           reject(new Error(error.errMsg || '无法连接云托管 API'))
@@ -69,7 +77,15 @@ export function request<T>(
           return
         }
 
-        reject(new Error(`Request failed with HTTP ${response.statusCode}`))
+        const detail =
+          typeof response.data === 'string'
+            ? response.data
+            : JSON.stringify(response.data)
+        reject(
+          new Error(
+            `Request failed with HTTP ${response.statusCode}${detail ? `: ${detail}` : ''}`,
+          ),
+        )
       },
       fail(error) {
         reject(new Error(error.errMsg || '无法连接 API'))
