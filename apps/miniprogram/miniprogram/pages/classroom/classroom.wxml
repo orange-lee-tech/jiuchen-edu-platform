@@ -1,79 +1,109 @@
-<view class="page-shell">
-  <view class="classroom-hero surface">
-    <text class="eyebrow">我的课堂</text>
-    <text class="hero-title">把大学四年的准备拆成今天能做的事</text>
-    <text class="hero-desc">计划按阶段与类型统一配置，由后台持续维护，不为每个学期复制一套页面。</text>
-  </view>
-
-  <scroll-view class="stage-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-    <view class="stage-row">
-      <view
-        wx:for="{{stages}}"
-        wx:key="code"
-        class="stage-pill {{currentStage === index ? 'active' : ''}}"
-        data-index="{{index}}"
-        bindtap="onStageChange"
-      >{{item.label}}</view>
-    </view>
-  </scroll-view>
-
-  <view class="section-head">
+<view class="classroom-page">
+  <view class="classroom-top">
     <view>
-      <text class="section-title">阶段计划</text>
-      <text class="section-subtitle">{{currentStageLabel}} · {{stageDescription}}</text>
+      <text class="page-title">我的课堂</text>
+      <text class="page-subtitle">大学阶段规划与辅导进度</text>
     </view>
+    <view class="stage-badge">{{currentStageLabel}}</view>
   </view>
 
-  <view class="plan-grid {{plans.length === 1 ? 'single' : ''}}">
-    <view
-      wx:for="{{plans}}"
-      wx:key="type"
-      class="plan-card surface"
-      data-type="{{item.type}}"
-      bindtap="onPlanTap"
+  <view class="classroom-layout">
+    <scroll-view
+      class="stage-sidebar"
+      scroll-y
+      enhanced
+      show-scrollbar="{{false}}"
     >
-      <view class="plan-icon">{{item.badge}}</view>
-      <text class="plan-title">{{item.title}}</text>
-      <text class="plan-note">{{item.note}}</text>
-      <view class="plan-foot">
-        <text class="plan-progress">{{item.progress}}</text>
-        <text class="plan-arrow">›</text>
-      </view>
-    </view>
-  </view>
-
-  <block wx:if="{{showGuidance}}">
-    <view class="section-head">
-      <view>
-        <text class="section-title">指导老师</text>
-        <text class="section-subtitle">导师信息由后台维护</text>
-      </view>
-    </view>
-
-    <view class="mentor-card surface" bindtap="onMentorTap">
-      <view class="mentor-avatar">导</view>
-      <view class="mentor-main">
-        <text class="mentor-name">{{mentor.name}}</text>
-        <text class="mentor-desc">{{mentor.desc}}</text>
-      </view>
-      <text class="arrow">›</text>
-    </view>
-
-    <view class="section-head">
-      <view>
-        <text class="section-title">辅导记录</text>
-        <text class="section-subtitle">由工作人员记录关键沟通与行动项</text>
-      </view>
-    </view>
-
-    <view class="record-list surface">
-      <view wx:for="{{records}}" wx:key="date" class="record-row">
-        <text class="record-date">{{item.date}}</text>
-        <view class="record-main">
-          <text class="record-title">{{item.title}}</text>
-          <text class="record-content">{{item.content}}</text>
+      <view class="timeline">
+        <view
+          wx:for="{{stages}}"
+          wx:key="code"
+          class="timeline-item {{currentStage === index ? 'active' : ''}}"
+          data-index="{{index}}"
+          bindtap="onStageChange"
+        >
+          <view class="timeline-mark">
+            <view class="timeline-dot"></view>
+          </view>
+          <text class="timeline-label">{{item.label}}</text>
         </view>
       </view>
+    </scroll-view>
+
+    <view class="classroom-main">
+      <view class="stage-summary surface">
+        <view class="stage-summary-head">
+          <view>
+            <text class="stage-title">{{currentStageLabel}}</text>
+            <text class="stage-desc">{{stageDescription}}</text>
+          </view>
+          <view class="stage-state">当前阶段</view>
+        </view>
+      </view>
+
+      <view class="section-title-row">
+        <text class="section-title">阶段规划</text>
+        <text class="section-note">按阶段持续更新</text>
+      </view>
+
+      <view wx:if="{{plans.length > 0}}" class="plan-list">
+        <view
+          wx:for="{{plans}}"
+          wx:key="type"
+          class="plan-card surface"
+          data-type="{{item.type}}"
+          bindtap="onPlanTap"
+        >
+          <view class="plan-card-head">
+            <view class="plan-icon">{{item.badge}}</view>
+            <view class="plan-heading">
+              <text class="plan-title">{{item.title}}</text>
+              <text class="plan-note">{{item.note}}</text>
+            </view>
+            <text class="plan-arrow">›</text>
+          </view>
+          <view class="plan-card-foot">
+            <text class="progress-label">完成进度</text>
+            <text class="plan-progress">{{item.progress}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:else class="pending-card surface">
+        <text class="pending-title">本阶段规划待配置</text>
+        <text class="pending-desc">保留原型时间轴节点，具体规划内容由九辰后台确认后录入。</text>
+      </view>
+
+      <block wx:if="{{showGuidance}}">
+        <view class="section-title-row">
+          <text class="section-title">辅导老师</text>
+          <text class="section-note">查看老师介绍</text>
+        </view>
+
+        <view class="mentor-card surface" bindtap="onMentorTap">
+          <view class="mentor-avatar">导</view>
+          <view class="mentor-main">
+            <text class="mentor-name">{{mentor.name}}</text>
+            <text class="mentor-desc">{{mentor.desc}}</text>
+          </view>
+          <text class="arrow">›</text>
+        </view>
+
+        <view class="section-title-row">
+          <text class="section-title">辅导记录</text>
+          <text class="section-note">工作人员录入</text>
+        </view>
+
+        <view class="record-list surface">
+          <view wx:for="{{records}}" wx:key="date" class="record-row">
+            <view class="record-date">{{item.date}}</view>
+            <view class="record-main">
+              <text class="record-title">{{item.title}}</text>
+              <text class="record-content">{{item.content}}</text>
+            </view>
+          </view>
+        </view>
+      </block>
     </view>
-  </block>
+  </view>
 </view>
