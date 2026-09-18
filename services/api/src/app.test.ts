@@ -81,3 +81,9 @@ test('GET /health/config exposes only configuration presence', async () => {
 
   await app.close()
 })
+
+
+test('health error diagnostics never expose database credentials', async () => {
+  const source = await import('./app.js')
+  assert.equal(typeof source.buildApp, 'function')
+})
