@@ -1,0 +1,42 @@
+<view class="page-shell">
+  <view class="profile-hero surface">
+    <view class="avatar">九</view>
+    <view class="identity">
+      <text class="user-name">{{user.name}}</text>
+      <text class="user-meta">{{user.meta}}</text>
+    </view>
+    <text class="arrow">›</text>
+  </view>
+
+  <view class="stats surface">
+    <view wx:for="{{stats}}" wx:key="label" class="stat-item">
+      <text class="stat-value">{{item.value}}</text>
+      <text class="stat-label">{{item.label}}</text>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <text class="section-title">我的服务</text>
+  </view>
+
+  <view class="menu-list surface">
+    <view
+      wx:for="{{menus}}"
+      wx:key="title"
+      class="menu-row"
+      data-title="{{item.title}}"
+      bindtap="onMenuTap"
+    >
+      <view class="menu-main">
+        <text class="menu-title">{{item.title}}</text>
+        <text class="menu-desc">{{item.desc}}</text>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <view class="service-note surface">
+    <text class="note-title">九辰保研</text>
+    <text class="note-text">课程模块仅用于内容展示与咨询；付费能力仅用于后续 AI 评估额度，不在本页面出售课程。</text>
+  </view>
+</view>
