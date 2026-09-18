@@ -47,13 +47,23 @@ CloudBase MySQL 采用直连方式供 `jiuchen-api` 使用：
 1. 在 CloudBase「SQL 型数据库 → 数据库设置」开启直连服务；
 2. 为应用创建专用数据库账号；
 3. 云托管使用内网连接地址；
-4. 连接字符串只配置到 CloudBase 云托管环境变量 `DATABASE_URL`；
+4. 云托管优先按 CloudBase 官方推荐配置 `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME`；代码仍兼容单一 `DATABASE_URL`；
 5. 如本地需要执行 Migration，可临时开启外网连接，并仅将外网连接串写入本地 `services/api/.env`；调试结束后关闭外网连接。
 
-标准格式：
+CloudBase Test 推荐：
 
 ```text
-mysql://<username>:<password>@<host>:<port>/<database>
+DB_HOST=<内网主机>
+DB_PORT=3306
+DB_USER=<应用账号>
+DB_PASSWORD=<密码>
+DB_NAME=<数据库名>
+```
+
+本地开发也可继续使用：
+
+```text
+DATABASE_URL=mysql://<username>:<password>@<host>:<port>/<database>
 ```
 
 不得提交到 GitHub。
