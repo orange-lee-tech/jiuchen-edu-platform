@@ -110,6 +110,20 @@ export const studentTeacherAssignments = mysqlTable('student_teacher_assignments
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
 
+export const newsPosts = mysqlTable('news_posts', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  source: mysqlEnum('source', ['manual', 'wechat_official']).notNull(),
+  sourceKey: varchar('source_key', { length: 160 }).notNull().unique(),
+  title: varchar('title', { length: 255 }).notNull(),
+  summary: varchar('summary', { length: 500 }),
+  coverUrl: varchar('cover_url', { length: 1000 }),
+  articleUrl: varchar('article_url', { length: 1000 }),
+  publishedAt: timestamp('published_at'),
+  status: mysqlEnum('status', ['active', 'hidden']).notNull().default('active'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
 export const studentPlans = mysqlTable('student_plans', {
   id: varchar('id', { length: 36 }).primaryKey(),
   studentId: varchar('student_id', { length: 36 })
