@@ -2,32 +2,65 @@
   <view class="brand-block">
     <view class="brand-mark">九</view>
     <text class="brand-title">九辰保研</text>
-    <text class="brand-desc">请选择与你身份对应的入口</text>
+    <text class="brand-desc">登录后由系统自动识别你的身份与权限</text>
   </view>
 
   <view class="login-card">
-    <view class="portal-tabs">
+    <view class="method-tabs">
       <view
-        class="portal-tab {{portal === 'student' ? 'active' : ''}}"
-        data-portal="student"
-        bindtap="onPortalChange"
-      >
-        <text class="portal-title">学员登录</text>
-        <text class="portal-desc">规划、评估与个人学习档案</text>
-      </view>
+        class="method-tab {{method === 'wechat' ? 'active' : ''}}"
+        data-method="wechat"
+        bindtap="onMethodChange"
+      >微信</view>
       <view
-        class="portal-tab {{portal === 'teacher' ? 'active' : ''}}"
-        data-portal="teacher"
-        bindtap="onPortalChange"
-      >
-        <text class="portal-title">老师登录</text>
-        <text class="portal-desc">学员辅导与教学工作台</text>
-      </view>
+        class="method-tab {{method === 'password' ? 'active' : ''}}"
+        data-method="password"
+        bindtap="onMethodChange"
+      >账号密码</view>
+      <view
+        class="method-tab {{method === 'phone' ? 'active' : ''}}"
+        data-method="phone"
+        bindtap="onMethodChange"
+      >手机号</view>
     </view>
 
-    <view class="identity-note">
-      <text wx:if="{{portal === 'student'}}">首次登录后，如尚未绑定正式学员档案，将进入待绑定状态。</text>
-      <text wx:else>老师身份必须由九辰后台预先授权，选择此入口不会自动获得老师权限。</text>
+    <view wx:if="{{method === 'wechat'}}" class="method-panel">
+      <text class="method-title">微信快捷登录</text>
+      <text class="method-desc">首次登录会自动创建游客账号，不会自动分配学员、老师或管理员ID。</text>
+      <button
+        class="login-button"
+        loading="{{loading}}"
+        disabled="{{loading}}"
+        bindtap="onWechatLogin"
+      >
+        微信授权登录
+      </button>
+    </view>
+
+    <view wx:elif="{{method === 'password'}}" class="method-panel">
+      <label class="field">
+        <text>账号</text>
+        <input data-field="account" value="{{account}}" placeholder="请输入账号" bindinput="onInput" />
+      </label>
+      <label class="field">
+        <text>密码</text>
+        <input password data-field="password" value="{{password}}" placeholder="请输入密码" bindinput="onInput" />
+      </label>
+      <button class="login-button secondary" bindtap="onUnavailableLogin">账号登录</button>
+      <text class="pending-note">认证与找回密码机制接入后启用。</text>
+    </view>
+
+    <view wx:else class="method-panel">
+      <label class="field">
+        <text>手机号</text>
+        <input type="number" data-field="phone" value="{{phone}}" placeholder="请输入手机号" bindinput="onInput" />
+      </label>
+      <label class="field">
+        <text>验证码</text>
+        <input type="number" data-field="phoneCode" value="{{phoneCode}}" placeholder="请输入验证码" bindinput="onInput" />
+      </label>
+      <button class="login-button secondary" bindtap="onUnavailableLogin">手机号登录</button>
+      <text class="pending-note">短信认证服务接入后启用，不使用虚假验证码。</text>
     </view>
 
     <checkbox-group class="agreement-row" bindchange="onAgreementChange">
@@ -37,16 +70,7 @@
       </label>
       <text class="agreement-link" bindtap="onAgreementTap">《用户协议》</text>
     </checkbox-group>
-
-    <button
-      class="login-button"
-      loading="{{loading}}"
-      disabled="{{loading}}"
-      bindtap="onLogin"
-    >
-      微信授权登录
-    </button>
   </view>
 
-  <text class="login-footnote">当前为内部测试版本，用户协议正文暂以占位内容展示。</text>
+  <text class="login-footnote">游客可浏览公开内容；绑定九辰内部ID后，系统会自动切换到对应学员、老师或管理员界面。</text>
 </view>
