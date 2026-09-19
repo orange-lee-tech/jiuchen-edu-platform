@@ -32,6 +32,7 @@ export function buildApp(env: AppEnv) {
       ),
       wechatAppIdConfigured: Boolean(env.WECHAT_APP_ID),
       wechatAppSecretConfigured: Boolean(env.WECHAT_APP_SECRET),
+      officialAccountConfigured: Boolean(env.WECHAT_OA_APP_ID && env.WECHAT_OA_APP_SECRET),
     },
   }))
 
@@ -55,6 +56,7 @@ export function buildApp(env: AppEnv) {
         'user_sessions',
         'user_agreements',
         'internal_ids',
+        'news_posts',
         'students',
         'teachers',
         'student_teacher_assignments',
