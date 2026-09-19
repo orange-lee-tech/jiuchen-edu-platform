@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
+  bindInternalId,
   bindStudentIdentity,
   createStudent,
   createTeacher,
@@ -8,6 +9,7 @@ import {
   fetchClassroomStages,
   fetchHealth,
   fetchIdentities,
+  fetchInternalIds,
   fetchStudentClassroom,
   fetchStudents,
   fetchTeacherAssignments,
@@ -18,6 +20,7 @@ import {
   type ClassroomStage,
   type HealthResponse,
   type IdentitySummary,
+  type InternalIdSummary,
   type PlanStatus,
   type PlanType,
   type StudentSummary,
@@ -51,6 +54,7 @@ const selectedStageCode = ref('')
 const classroom = ref<Awaited<ReturnType<typeof fetchStudentClassroom>> | null>(null)
 
 const identities = ref<IdentitySummary[]>([])
+const internalIds = ref<InternalIdSummary[]>([])
 const teachers = ref<TeacherSummary[]>([])
 const assignments = ref<TeacherAssignment[]>([])
 
@@ -87,6 +91,11 @@ const assignmentForm = ref({
   relationship: 'primary' as 'primary' | 'support',
 })
 
+const adminBootstrapForm = ref({
+  internalId: '',
+  userId: '',
+})
+
 const planForm = ref<EditablePlan | null>(null)
 
 const selectedStudent = computed(
@@ -103,6 +112,12 @@ const unboundUsers = computed(() =>
       identity.role === 'user' &&
       identity.student === null &&
       identity.teacher === null,
+  ),
+)
+
+const availableAdminIds = computed(() =>
+  internalIds.value.filter(
+    (identity) => identity.type === 'admin' && identity.status === 'available',
   ),
 )
 
@@ -153,13 +168,15 @@ function removePlanItem(index: number) {
 }
 
 async function loadIdentityData() {
-  const [identityRows, teacherRows, assignmentRows] = await Promise.all([
+  const [identityRows, internalIdRows, teacherRows, assignmentRows] = await Promise.all([
     fetchIdentities(),
+    fetchInternalIds(),
     fetchTeachers(),
     fetchTeacherAssignments(),
   ])
 
   identities.value = identityRows
+  internalIds.value = internalIdRows
   teachers.value = teacherRows
   assignments.value = assignmentRows
 
@@ -177,6 +194,12 @@ async function loadIdentityData() {
   }
   if (!assignmentForm.value.teacherId && teachers.value[0]) {
     assignmentForm.value.teacherId = teachers.value[0].id
+  }
+  if (!adminBootstrapForm.value.internalId && availableAdminIds.value[0]) {
+    adminBootstrapForm.value.internalId = availableAdminIds.value[0].id
+  }
+  if (!adminBootstrapForm.value.userId && unboundUsers.value[0]) {
+    adminBootstrapForm.value.userId = unboundUsers.value[0].id
   }
 }
 
@@ -351,6 +374,32 @@ async function addTeacher() {
       bio: '',
     }
     notice.value = `已创建老师身份：${teacher.name}`
+    await loadIdentityData()
+  } catch (cause) {
+    showError(cause)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function bootstrapAdmin() {
+  if (!adminBootstrapForm.value.internalId || !adminBootstrapForm.value.userId) {
+    error.value = '请选择管理员ID与游客账号'
+    return
+  }
+
+  try {
+    saving.value = true
+    clearFeedback()
+    await bindInternalId(
+      adminBootstrapForm.value.internalId,
+      adminBootstrapForm.value.userId,
+    )
+    notice.value = '管理员身份已绑定；该账号重新登录后可进入手机管理员工作台'
+    adminBootstrapForm.value = {
+      internalId: '',
+      userId: '',
+    }
     await loadIdentityData()
   } catch (cause) {
     showError(cause)
@@ -597,6 +646,43 @@ onMounted(async () => {
               <span v-if="identity.student" class="bound-tag">学员：{{ identity.student.name }}</span>
               <span v-if="identity.teacher" class="bound-tag">老师：{{ identity.teacher.name }}</span>
             </div>
+          </div>
+        </t-card>
+
+        <t-card title="管理员ID绑定" :bordered="false">
+          <p class="muted small">
+            管理员ID不能在小程序个人资料中自助认领。首位及后续管理员均由内部后台绑定。
+          </p>
+          <div class="form-grid">
+            <label class="field">
+              <span>可用管理员ID</span>
+              <select v-model="adminBootstrapForm.internalId">
+                <option value="">请选择</option>
+                <option
+                  v-for="identity in availableAdminIds"
+                  :key="identity.id"
+                  :value="identity.id"
+                >
+                  {{ identity.businessId }}
+                </option>
+              </select>
+            </label>
+            <label class="field">
+              <span>游客账号</span>
+              <select v-model="adminBootstrapForm.userId">
+                <option value="">请选择</option>
+                <option
+                  v-for="identity in unboundUsers"
+                  :key="identity.id"
+                  :value="identity.id"
+                >
+                  {{ identity.displayName || '未命名微信用户' }} · {{ identity.id.slice(0, 8) }}
+                </option>
+              </select>
+            </label>
+          </div>
+          <div class="actions">
+            <t-button :loading="saving" @click="bootstrapAdmin">绑定管理员身份</t-button>
           </div>
         </t-card>
 
