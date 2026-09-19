@@ -55,7 +55,7 @@
       <picker range="{{teachers}}" range-key="name" value="{{teacherIndex}}" bindchange="onTeacherChange">
         <view class="picker-field">{{teachers.length ? teachers[teacherIndex].name : '暂无老师'}} ›</view>
       </picker>
-      <picker range="{{['主辅导','协助']}}" value="{{relationship === 'primary' ? 0 : 1}}" bindchange="onRelationshipChange">
+      <picker range="{{relationshipOptions}}" value="{{relationship === 'primary' ? 0 : 1}}" bindchange="onRelationshipChange">
         <view class="picker-field">{{relationship === 'primary' ? '主辅导' : '协助'}} ›</view>
       </picker>
       <button class="primary" loading="{{actionLoading}}" bindtap="onAddAssignment">添加分配</button>
