@@ -1,74 +1,71 @@
 <view class="profile-edit-page">
   <view class="intro-card">
-    <text class="intro-title">个人学业资料</text>
-    <text class="intro-desc">这些信息将用于 AI 定位、个人档案和后续规划。当前只收集已经明确需要的最小字段。</text>
+    <text class="intro-title">个人资料</text>
+    <text class="intro-desc">登录账号与九辰内部身份分开管理。首次登录默认为游客，填写正确内部ID后系统自动切换对应身份。</text>
   </view>
 
-  <view class="form-card">
-    <label class="field">
-      <text class="field-label">本科院校</text>
-      <input
-        class="field-input"
-        data-field="university"
-        value="{{form.university}}"
-        placeholder="例如：中南大学"
-        bindinput="onFieldInput"
-      />
-    </label>
+  <view class="identity-card">
+    <view class="identity-head">
+      <view>
+        <text class="identity-title">九辰内部ID</text>
+        <text class="identity-desc" wx:if="{{!identityLocked}}">由九辰提供。绑定成功后不可自行修改。</text>
+        <text class="identity-desc" wx:else>已绑定并锁定；如需变更，请联系管理员。</text>
+      </view>
+      <text class="identity-status">{{identityLocked ? '已绑定' : '未绑定'}}</text>
+    </view>
 
-    <label class="field">
-      <text class="field-label">专业方向</text>
-      <input
-        class="field-input"
-        data-field="major"
-        value="{{form.major}}"
-        placeholder="例如：人工智能"
-        bindinput="onFieldInput"
-      />
-    </label>
+    <view wx:if="{{identityLocked && identity}}" class="locked-id">
+      <text class="locked-code">{{identity.businessId}}</text>
+      <text class="locked-role">{{identity.type === 'student' ? '学员' : identity.type === 'teacher' ? '老师' : '管理员'}}</text>
+    </view>
 
-    <label class="field">
-      <text class="field-label">当前年级</text>
+    <view wx:else class="claim-row">
       <input
-        class="field-input"
-        data-field="currentGrade"
-        value="{{form.currentGrade}}"
-        placeholder="例如：大二"
-        bindinput="onFieldInput"
+        class="internal-id-input"
+        value="{{internalIdInput}}"
+        placeholder="请输入九辰内部ID"
+        bindinput="onInternalIdInput"
       />
-    </label>
-
-    <label class="field">
-      <text class="field-label">绩点 / 均分</text>
-      <input
-        class="field-input"
-        data-field="gpaText"
-        value="{{form.gpaText}}"
-        placeholder="例如：GPA 3.72 / 4.0"
-        bindinput="onFieldInput"
-      />
-    </label>
-
-    <label class="field">
-      <text class="field-label">专业排名</text>
-      <input
-        class="field-input"
-        data-field="rankText"
-        value="{{form.rankText}}"
-        placeholder="例如：12 / 103"
-        bindinput="onFieldInput"
-      />
-    </label>
+      <button
+        class="claim-button"
+        loading="{{claiming}}"
+        disabled="{{claiming}}"
+        bindtap="onClaimInternalId"
+      >确认绑定</button>
+    </view>
   </view>
 
-  <button
-    class="save-button"
-    loading="{{saving}}"
-    disabled="{{saving || loading}}"
-    bindtap="onSave"
-  >
-    保存资料
-  </button>
+  <block wx:if="{{canEditAcademic}}">
+    <view class="section-label">学业资料</view>
+    <view class="form-card">
+      <label class="field">
+        <text class="field-label">本科院校</text>
+        <input class="field-input" data-field="university" value="{{form.university}}" placeholder="例如：中南大学" bindinput="onFieldInput" />
+      </label>
+      <label class="field">
+        <text class="field-label">专业方向</text>
+        <input class="field-input" data-field="major" value="{{form.major}}" placeholder="例如：人工智能" bindinput="onFieldInput" />
+      </label>
+      <label class="field">
+        <text class="field-label">当前年级</text>
+        <input class="field-input" data-field="currentGrade" value="{{form.currentGrade}}" placeholder="例如：大二" bindinput="onFieldInput" />
+      </label>
+      <label class="field">
+        <text class="field-label">绩点 / 均分</text>
+        <input class="field-input" data-field="gpaText" value="{{form.gpaText}}" placeholder="例如：GPA 3.72 / 4.0" bindinput="onFieldInput" />
+      </label>
+      <label class="field">
+        <text class="field-label">专业排名</text>
+        <input class="field-input" data-field="rankText" value="{{form.rankText}}" placeholder="例如：12 / 103" bindinput="onFieldInput" />
+      </label>
+    </view>
 
-  <text class="privacy-note">后续新增资料字段时，应继续遵循“业务需要再收集”的原则，不把无关个人信息塞进档案。</text>
+    <button class="save-button" loading="{{saving}}" disabled="{{saving || loading}}" bindtap="onSave">保存资料</button>
+  </block>
+
+  <view wx:else class="role-note">
+    当前身份的业务资料由九辰后台维护；本页只展示你的内部ID绑定状态。
+  </view>
+
+  <text class="privacy-note">后续新增资料字段时继续遵循“业务需要再收集”的原则。</text>
 </view>
