@@ -90,7 +90,7 @@ export async function fetchLatestOfficialAccountPosts(
     body: JSON.stringify({
       offset: 0,
       count: 20,
-      no_content: 1,
+      no_content: 0,
     }),
   })
 
