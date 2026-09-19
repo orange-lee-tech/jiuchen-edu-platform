@@ -356,3 +356,30 @@ export async function syncOfficialAccountNews(): Promise<number> {
   )
   return result.synced
 }
+
+
+export type AdminUser = {
+  id: string
+  role: 'user' | 'student' | 'teacher' | 'staff' | 'admin'
+  status: 'active' | 'deleted'
+  displayName: string | null
+  createdAt: string
+}
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  const result = await request<{ ok: true; users: AdminUser[] }>(
+    '/me/admin/users',
+  )
+  return result.users
+}
+
+export async function bindAdminInternalId(
+  id: string,
+  userId: string,
+): Promise<void> {
+  await request<{ ok: true }>(
+    `/me/admin/internal-ids/${id}/bind`,
+    'POST',
+    { userId },
+  )
+}
