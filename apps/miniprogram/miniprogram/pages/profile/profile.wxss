@@ -145,3 +145,16 @@
 .logout-button::after {
   border-color: #eceef3;
 }
+
+
+.delete-account-button {
+  margin-top: 12rpx;
+  border-radius: 18rpx;
+  background: transparent;
+  color: #b4534b;
+  font-size: 22rpx;
+}
+
+.delete-account-button::after {
+  border-color: #ead7d4;
+}
