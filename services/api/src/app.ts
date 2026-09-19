@@ -6,6 +6,7 @@ import { registerAdminRoutes } from './routes/admin.js'
 import { registerStudentRoutes } from './routes/students.js'
 import { registerProfileRoutes } from './routes/profile.js'
 import { registerTeacherRoutes } from './routes/teacher.js'
+import { registerIdentityRoutes } from './routes/identity.js'
 
 export function buildApp(env: AppEnv) {
   const app = Fastify({
@@ -53,6 +54,7 @@ export function buildApp(env: AppEnv) {
         'user_profiles',
         'user_sessions',
         'user_agreements',
+        'internal_ids',
         'students',
         'teachers',
         'student_teacher_assignments',
@@ -125,6 +127,7 @@ export function buildApp(env: AppEnv) {
   registerAuthRoutes(app, database, env)
   registerStudentRoutes(app, database)
   registerProfileRoutes(app, database)
+  registerIdentityRoutes(app, database)
   registerTeacherRoutes(app, database)
   registerAdminRoutes(app, database, env)
 
