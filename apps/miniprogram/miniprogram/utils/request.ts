@@ -68,6 +68,12 @@ export type AcademicProfile = {
   rankText: string | null
 }
 
+export type InternalIdentity = {
+  businessId: string
+  type: 'student' | 'teacher' | 'admin'
+  status: 'available' | 'claimed' | 'disabled'
+}
+
 const DEMO_STUDENT_ID = '00000000-0000-4000-8000-000000000001'
 
 type RequestMethod = 'GET' | 'POST' | 'PUT'
@@ -185,4 +191,34 @@ export async function updateMyAcademicProfile(
     profile as unknown as WechatMiniprogram.IAnyObject,
   )
   return result.profile
+}
+
+
+export async function getMyInternalIdentity(): Promise<{
+  identity: InternalIdentity | null
+  locked: boolean
+}> {
+  return request<{ ok: true; identity: InternalIdentity | null; locked: boolean }>(
+    '/me/internal-id',
+  )
+}
+
+export async function claimMyInternalIdentity(
+  businessId: string,
+): Promise<{
+  identity: InternalIdentity
+  role: 'student' | 'teacher'
+  locked: true
+}> {
+  const result = await request<{
+    ok: true
+    identity: InternalIdentity
+    role: 'student' | 'teacher'
+    locked: true
+  }>(
+    '/me/internal-id/claim',
+    'POST',
+    { businessId },
+  )
+  return result
 }
