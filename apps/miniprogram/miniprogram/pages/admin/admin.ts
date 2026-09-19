@@ -50,6 +50,7 @@ Page({
     studentIndex: 0,
     teacherIndex: 0,
     relationship: 'primary' as 'primary' | 'support',
+    relationshipOptions: ['主辅导', '协助'],
   },
 
   onLoad(options: Record<string, string>) {
@@ -111,7 +112,7 @@ Page({
     this.setData({ section })
   },
 
-  onIdTypeChange(event: WechatMiniprogram.PickerChange) {
+  onIdTypeChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ newIdTypeIndex: Number(event.detail.value) })
   },
 
@@ -135,11 +136,11 @@ Page({
     }
   },
 
-  onBindIdChange(event: WechatMiniprogram.PickerChange) {
+  onBindIdChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ bindIdIndex: Number(event.detail.value) })
   },
 
-  onBindUserChange(event: WechatMiniprogram.PickerChange) {
+  onBindUserChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ bindUserIndex: Number(event.detail.value) })
   },
 
@@ -203,15 +204,15 @@ Page({
     })
   },
 
-  onStudentChange(event: WechatMiniprogram.PickerChange) {
+  onStudentChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ studentIndex: Number(event.detail.value) })
   },
 
-  onTeacherChange(event: WechatMiniprogram.PickerChange) {
+  onTeacherChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ teacherIndex: Number(event.detail.value) })
   },
 
-  onRelationshipChange(event: WechatMiniprogram.PickerChange) {
+  onRelationshipChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ relationship: Number(event.detail.value) === 0 ? 'primary' : 'support' })
   },
 
