@@ -13,7 +13,9 @@ export const users = mysqlTable('users', {
   role: mysqlEnum('role', ['user', 'student', 'teacher', 'staff', 'admin'])
     .notNull()
     .default('user'),
+  status: mysqlEnum('status', ['active', 'deleted']).notNull().default('active'),
   displayName: varchar('display_name', { length: 80 }),
+  deletedAt: timestamp('deleted_at'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
@@ -42,6 +44,22 @@ export const userSessions = mysqlTable('user_sessions', {
   expiresAt: timestamp('expires_at').notNull(),
   revokedAt: timestamp('revoked_at'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+})
+
+export const internalIds = mysqlTable('internal_ids', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  businessId: varchar('business_id', { length: 40 }).notNull().unique(),
+  type: mysqlEnum('type', ['student', 'teacher', 'admin']).notNull(),
+  claimMode: mysqlEnum('claim_mode', ['self', 'admin']).notNull().default('self'),
+  status: mysqlEnum('status', ['available', 'claimed', 'disabled'])
+    .notNull()
+    .default('available'),
+  userId: varchar('user_id', { length: 36 }).unique().references(() => users.id),
+  entityId: varchar('entity_id', { length: 36 }),
+  batch: varchar('batch', { length: 40 }),
+  claimedAt: timestamp('claimed_at'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
 
 export const students = mysqlTable('students', {
