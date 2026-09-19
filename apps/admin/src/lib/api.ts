@@ -7,6 +7,36 @@ export type HealthResponse = {
   }
 }
 
+export type UserRole = 'user' | 'student' | 'teacher' | 'staff' | 'admin'
+
+export type IdentitySummary = {
+  id: string
+  role: UserRole
+  displayName: string | null
+  createdAt: string
+  student: { id: string; name: string } | null
+  teacher: { id: string; name: string } | null
+}
+
+export type TeacherSummary = {
+  id: string
+  userId: string | null
+  name: string
+  title: string | null
+  bio: string | null
+  status: 'active' | 'inactive'
+}
+
+export type TeacherAssignment = {
+  id: string
+  studentId: string
+  studentName: string
+  teacherId: string
+  teacherName: string
+  stageCode: string | null
+  relationship: 'primary' | 'support'
+}
+
 export type StudentSummary = {
   id: string
   name: string
@@ -146,6 +176,88 @@ export async function saveClassroomPlan(
         title: plan.title,
         items: plan.items,
       }),
+    },
+  )
+}
+
+
+export async function createStudent(payload: {
+  name: string
+  university: string | null
+  major: string | null
+  currentStage: string | null
+}): Promise<StudentSummary> {
+  const result = await requestJson<{ ok: true; student: StudentSummary }>(
+    '/api/admin/students',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  )
+  return result.student
+}
+
+export async function fetchIdentities(): Promise<IdentitySummary[]> {
+  const result = await requestJson<{ ok: true; identities: IdentitySummary[] }>(
+    '/api/admin/identities',
+  )
+  return result.identities
+}
+
+export async function fetchTeachers(): Promise<TeacherSummary[]> {
+  const result = await requestJson<{ ok: true; teachers: TeacherSummary[] }>(
+    '/api/admin/teachers',
+  )
+  return result.teachers
+}
+
+export async function createTeacher(payload: {
+  userId: string
+  name: string
+  title: string | null
+  bio: string | null
+}): Promise<TeacherSummary> {
+  const result = await requestJson<{ ok: true; teacher: TeacherSummary }>(
+    '/api/admin/teachers',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  )
+  return result.teacher
+}
+
+export async function bindStudentIdentity(
+  studentId: string,
+  userId: string,
+): Promise<void> {
+  await requestJson(
+    `/api/admin/students/${studentId}/identity`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ userId }),
+    },
+  )
+}
+
+export async function fetchTeacherAssignments(): Promise<TeacherAssignment[]> {
+  const result = await requestJson<{ ok: true; assignments: TeacherAssignment[] }>(
+    '/api/admin/student-teacher-assignments',
+  )
+  return result.assignments
+}
+
+export async function createTeacherAssignment(payload: {
+  studentId: string
+  teacherId: string
+  stageCode: string | null
+  relationship: 'primary' | 'support'
+}): Promise<void> {
+  await requestJson(
+    '/api/admin/student-teacher-assignments',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
     },
   )
 }
