@@ -18,6 +18,17 @@ export type IdentitySummary = {
   teacher: { id: string; name: string } | null
 }
 
+export type InternalIdSummary = {
+  id: string
+  businessId: string
+  type: 'student' | 'teacher' | 'admin'
+  claimMode: 'self' | 'admin'
+  status: 'available' | 'claimed' | 'disabled'
+  userId: string | null
+  entityId: string | null
+  batch: string | null
+}
+
 export type TeacherSummary = {
   id: string
   userId: string | null
@@ -258,6 +269,27 @@ export async function createTeacherAssignment(payload: {
     {
       method: 'POST',
       body: JSON.stringify(payload),
+    },
+  )
+}
+
+
+export async function fetchInternalIds(): Promise<InternalIdSummary[]> {
+  const result = await requestJson<{ ok: true; internalIds: InternalIdSummary[] }>(
+    '/api/admin/internal-ids',
+  )
+  return result.internalIds
+}
+
+export async function bindInternalId(
+  internalId: string,
+  userId: string,
+): Promise<void> {
+  await requestJson(
+    `/api/admin/internal-ids/${internalId}/bind`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
     },
   )
 }
