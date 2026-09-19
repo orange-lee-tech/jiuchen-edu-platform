@@ -1,8 +1,15 @@
-import { getSavedAuthResult } from '../../utils/auth'
 import {
+  getSavedAuthResult,
+  updateSavedIdentity,
+  type UserRole,
+} from '../../utils/auth'
+import {
+  claimMyInternalIdentity,
   getMyAcademicProfile,
+  getMyInternalIdentity,
   updateMyAcademicProfile,
   type AcademicProfile,
+  type InternalIdentity,
 } from '../../utils/request'
 
 type ProfileField = keyof AcademicProfile
@@ -19,38 +26,99 @@ Page({
   data: {
     loading: true,
     saving: false,
+    claiming: false,
+    role: 'user' as UserRole,
+    canEditAcademic: true,
+    internalIdInput: '',
+    identity: null as InternalIdentity | null,
+    identityLocked: false,
     form: { ...EMPTY_FORM },
   },
 
   onLoad() {
     const auth = getSavedAuthResult()
 
-    if (!auth || auth.portal !== 'student') {
-      wx.showToast({ title: '请先使用学员入口登录', icon: 'none' })
+    if (!auth) {
+      wx.showToast({ title: '请先登录', icon: 'none' })
       wx.navigateTo({ url: '/pages/login/login' })
       this.setData({ loading: false })
       return
     }
 
-    void this.loadProfile()
+    const canEditAcademic = auth.user.role === 'user' || auth.user.role === 'student'
+    this.setData({
+      role: auth.user.role,
+      canEditAcademic,
+    })
+
+    void this.loadAll()
   },
 
-  async loadProfile() {
+  async loadAll() {
     try {
-      const profile = await getMyAcademicProfile()
+      const identityResult = await getMyInternalIdentity()
       this.setData({
-        form: {
-          university: profile.university ?? '',
-          major: profile.major ?? '',
-          currentGrade: profile.currentGrade ?? '',
-          gpaText: profile.gpaText ?? '',
-          rankText: profile.rankText ?? '',
-        },
+        identity: identityResult.identity,
+        identityLocked: identityResult.locked,
       })
+
+      if (this.data.canEditAcademic) {
+        const profile = await getMyAcademicProfile()
+        this.setData({
+          form: {
+            university: profile.university ?? '',
+            major: profile.major ?? '',
+            currentGrade: profile.currentGrade ?? '',
+            gpaText: profile.gpaText ?? '',
+            rankText: profile.rankText ?? '',
+          },
+        })
+      }
     } catch (error) {
-      console.info('Academic profile is not available yet.', error)
+      console.info('Profile data is not available yet.', error)
     } finally {
       this.setData({ loading: false })
+    }
+  },
+
+  onInternalIdInput(event: WechatMiniprogram.Input) {
+    this.setData({ internalIdInput: event.detail.value.toUpperCase() })
+  },
+
+  async onClaimInternalId() {
+    const businessId = this.data.internalIdInput.trim()
+
+    if (!businessId) {
+      wx.showToast({ title: '请填写内部ID', icon: 'none' })
+      return
+    }
+
+    try {
+      this.setData({ claiming: true })
+      const result = await claimMyInternalIdentity(businessId)
+      updateSavedIdentity(result.role, result.identity)
+      this.setData({
+        role: result.role,
+        canEditAcademic: result.role === 'student',
+        identity: result.identity,
+        identityLocked: true,
+        internalIdInput: '',
+      })
+      wx.showModal({
+        title: '身份绑定成功',
+        content: `已绑定内部ID：${result.identity.businessId}。此ID已锁定，如需变更请联系管理员。`,
+        showCancel: false,
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ''
+      const title = message.includes('invalid_internal_id')
+        ? '填写错误，请核对重新填写'
+        : message.includes('internal_id_locked')
+          ? '内部ID已绑定，如需变更请联系管理员'
+          : '身份绑定失败'
+      wx.showToast({ title, icon: 'none', duration: 2600 })
+    } finally {
+      this.setData({ claiming: false })
     }
   },
 
@@ -64,6 +132,8 @@ Page({
   },
 
   async onSave() {
+    if (!this.data.canEditAcademic) return
+
     try {
       this.setData({ saving: true })
       const form = this.data.form
