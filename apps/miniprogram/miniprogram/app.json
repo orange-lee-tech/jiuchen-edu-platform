@@ -6,7 +6,8 @@
     "pages/news/news",
     "pages/profile/profile",
     "pages/login/login",
-    "pages/profile-edit/profile-edit"
+    "pages/profile-edit/profile-edit",
+    "pages/admin/admin"
   ],
   "window": {
     "navigationBarTitleText": "九辰保研",
