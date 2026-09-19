@@ -4,19 +4,24 @@ import {
   saveApiSessionToken,
 } from './session'
 
-export type LoginPortal = 'student' | 'teacher'
+export type UserRole = 'user' | 'student' | 'teacher' | 'staff' | 'admin'
+
+export type BusinessIdentity = {
+  businessId: string
+  type: 'student' | 'teacher' | 'admin'
+  status: 'available' | 'claimed' | 'disabled'
+}
 
 export type BootstrapUser = {
   id: string
-  role: 'user' | 'student' | 'teacher' | 'staff' | 'admin'
+  role: UserRole
   displayName: string | null
 }
 
 export type BootstrapResult = {
   ok: true
   user: BootstrapUser
-  portal: LoginPortal
-  needsProfileBinding: boolean
+  businessIdentity: BusinessIdentity | null
   agreement: {
     type: 'user_terms'
     version: string
@@ -49,7 +54,6 @@ function getWechatLoginCode(): Promise<string> {
 }
 
 export async function bootstrapWechatUser(
-  portal: LoginPortal,
   agreementAccepted: boolean,
 ): Promise<BootstrapResult> {
   if (!agreementAccepted) {
@@ -63,7 +67,6 @@ export async function bootstrapWechatUser(
     'POST',
     {
       code,
-      portal,
       agreementAccepted: true,
       agreementVersion: USER_AGREEMENT_VERSION,
     },
@@ -81,6 +84,25 @@ export function getSavedAuthResult(): BootstrapResult | null {
   return value as BootstrapResult
 }
 
+export function updateSavedIdentity(
+  role: UserRole,
+  businessIdentity: BusinessIdentity,
+) {
+  const current = getSavedAuthResult()
+  if (!current) return
+
+  const updated: BootstrapResult = {
+    ...current,
+    user: {
+      ...current.user,
+      role,
+    },
+    businessIdentity,
+  }
+
+  wx.setStorageSync(AUTH_STORAGE_KEY, updated)
+}
+
 export function clearSavedAuthResult() {
   wx.removeStorageSync(AUTH_STORAGE_KEY)
   clearApiSessionToken()
@@ -89,6 +111,14 @@ export function clearSavedAuthResult() {
 export async function logoutWechatUser() {
   try {
     await request<{ ok: true }>('/auth/logout', 'POST', {})
+  } finally {
+    clearSavedAuthResult()
+  }
+}
+
+export async function deleteCurrentAccount() {
+  try {
+    await request<{ ok: true }>('/auth/delete-account', 'POST', {})
   } finally {
     clearSavedAuthResult()
   }
