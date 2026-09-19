@@ -40,16 +40,8 @@ const assignmentSchema = z.object({
 async function requireAdmin(
   request: FastifyRequest,
   reply: FastifyReply,
-  database: DatabaseContext,
+  database: DatabaseContext & { configured: true },
 ) {
-  if (!database.configured) {
-    reply.code(503).send({
-      ok: false,
-      error: 'database_not_configured',
-    })
-    return null
-  }
-
   const user = await resolveSessionUser(request, database)
   if (!user) {
     reply.code(401).send({
@@ -75,10 +67,15 @@ export function registerMobileAdminRoutes(
   database: DatabaseContext,
   env: AppEnv,
 ) {
-  app.get('/me/admin/internal-ids', async (request, reply) => {
-    if (!(await requireAdmin(request, reply, database))) return
+  if (!database.configured) {
+    return
+  }
 
-    const rows = await database.db
+  const configuredDatabase = database
+  app.get('/me/admin/internal-ids', async (request, reply) => {
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
+
+    const rows = await configuredDatabase.db
       .select({
         id: internalIds.id,
         businessId: internalIds.businessId,
@@ -100,7 +97,7 @@ export function registerMobileAdminRoutes(
   })
 
   app.post<{ Body: unknown }>('/me/admin/internal-ids', async (request, reply) => {
-    if (!(await requireAdmin(request, reply, database))) return
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
     const parsed = createIdSchema.safeParse(request.body)
     if (!parsed.success) {
@@ -110,7 +107,7 @@ export function registerMobileAdminRoutes(
       })
     }
 
-    const identity = await createInternalIdentity(database, {
+    const identity = await createInternalIdentity(configuredDatabase, {
       type: parsed.data.type,
       name: parsed.data.name ?? null,
     })
@@ -125,7 +122,7 @@ export function registerMobileAdminRoutes(
     Params: { id: string }
     Body: unknown
   }>('/me/admin/internal-ids/:id/bind', async (request, reply) => {
-    if (!(await requireAdmin(request, reply, database))) return
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
     const parsed = bindSchema.safeParse(request.body)
     if (!parsed.success) {
@@ -137,7 +134,7 @@ export function registerMobileAdminRoutes(
 
     try {
       const identity = await bindInternalIdentity(
-        database,
+        configuredDatabase,
         request.params.id,
         parsed.data.userId,
       )
@@ -158,10 +155,10 @@ export function registerMobileAdminRoutes(
   app.post<{ Params: { id: string } }>(
     '/me/admin/internal-ids/:id/unbind',
     async (request, reply) => {
-      if (!(await requireAdmin(request, reply, database))) return
+      if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
       try {
-        await unbindInternalIdentity(database, request.params.id)
+        await unbindInternalIdentity(configuredDatabase, request.params.id)
         return { ok: true }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'unbind_failed'
@@ -176,9 +173,9 @@ export function registerMobileAdminRoutes(
   app.delete<{ Params: { id: string } }>(
     '/me/admin/internal-ids/:id',
     async (request, reply) => {
-      if (!(await requireAdmin(request, reply, database))) return
+      if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
-      const [identity] = await database.db
+      const [identity] = await configuredDatabase.db
         .select({
           status: internalIds.status,
           userId: internalIds.userId,
@@ -203,7 +200,7 @@ export function registerMobileAdminRoutes(
         })
       }
 
-      await database.db.transaction(async (tx) => {
+      await configuredDatabase.db.transaction(async (tx) => {
         await tx.delete(internalIds).where(eq(internalIds.id, request.params.id))
 
         if (identity.type === 'student' && identity.entityId) {
@@ -218,9 +215,9 @@ export function registerMobileAdminRoutes(
   )
 
   app.get('/me/admin/users', async (request, reply) => {
-    if (!(await requireAdmin(request, reply, database))) return
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
-    const rows = await database.db
+    const rows = await configuredDatabase.db
       .select({
         id: users.id,
         role: users.role,
@@ -238,9 +235,9 @@ export function registerMobileAdminRoutes(
   })
 
   app.get('/me/admin/students', async (request, reply) => {
-    if (!(await requireAdmin(request, reply, database))) return
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
-    const rows = await database.db
+    const rows = await configuredDatabase.db
       .select({
         id: students.id,
         name: students.name,
@@ -258,9 +255,9 @@ export function registerMobileAdminRoutes(
   })
 
   app.get('/me/admin/teachers', async (request, reply) => {
-    if (!(await requireAdmin(request, reply, database))) return
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
-    const rows = await database.db
+    const rows = await configuredDatabase.db
       .select({
         id: teachers.id,
         name: teachers.name,
@@ -277,9 +274,9 @@ export function registerMobileAdminRoutes(
   })
 
   app.get('/me/admin/assignments', async (request, reply) => {
-    if (!(await requireAdmin(request, reply, database))) return
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
-    const rows = await database.db
+    const rows = await configuredDatabase.db
       .select({
         id: studentTeacherAssignments.id,
         studentId: students.id,
@@ -301,7 +298,7 @@ export function registerMobileAdminRoutes(
   })
 
   app.post<{ Body: unknown }>('/me/admin/assignments', async (request, reply) => {
-    if (!(await requireAdmin(request, reply, database))) return
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
     const parsed = assignmentSchema.safeParse(request.body)
     if (!parsed.success) {
@@ -311,13 +308,13 @@ export function registerMobileAdminRoutes(
       })
     }
 
-    const [student] = await database.db
+    const [student] = await configuredDatabase.db
       .select({ id: students.id })
       .from(students)
       .where(eq(students.id, parsed.data.studentId))
       .limit(1)
 
-    const [teacher] = await database.db
+    const [teacher] = await configuredDatabase.db
       .select({ id: teachers.id })
       .from(teachers)
       .where(eq(teachers.id, parsed.data.teacherId))
@@ -331,7 +328,7 @@ export function registerMobileAdminRoutes(
     }
 
     const id = randomUUID()
-    await database.db.insert(studentTeacherAssignments).values({
+    await configuredDatabase.db.insert(studentTeacherAssignments).values({
       id,
       studentId: parsed.data.studentId,
       teacherId: parsed.data.teacherId,
@@ -351,9 +348,9 @@ export function registerMobileAdminRoutes(
   app.delete<{ Params: { id: string } }>(
     '/me/admin/assignments/:id',
     async (request, reply) => {
-      if (!(await requireAdmin(request, reply, database))) return
+      if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
-      await database.db
+      await configuredDatabase.db
         .delete(studentTeacherAssignments)
         .where(eq(studentTeacherAssignments.id, request.params.id))
 
@@ -362,9 +359,9 @@ export function registerMobileAdminRoutes(
   )
 
   app.get('/me/admin/news', async (request, reply) => {
-    if (!(await requireAdmin(request, reply, database))) return
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
-    const rows = await database.db
+    const rows = await configuredDatabase.db
       .select({
         id: newsPosts.id,
         title: newsPosts.title,
@@ -386,7 +383,7 @@ export function registerMobileAdminRoutes(
   })
 
   app.post('/me/admin/news/sync', async (request, reply) => {
-    if (!(await requireAdmin(request, reply, database))) return
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
     if (!env.WECHAT_OA_APP_ID || !env.WECHAT_OA_APP_SECRET) {
       return reply.code(503).send({
@@ -399,14 +396,14 @@ export function registerMobileAdminRoutes(
       const posts = await fetchLatestOfficialAccountPosts(env)
 
       for (const post of posts) {
-        const [existing] = await database.db
+        const [existing] = await configuredDatabase.db
           .select({ id: newsPosts.id })
           .from(newsPosts)
           .where(eq(newsPosts.sourceKey, post.sourceKey))
           .limit(1)
 
         if (existing) {
-          await database.db
+          await configuredDatabase.db
             .update(newsPosts)
             .set({
               title: post.title,
@@ -418,7 +415,7 @@ export function registerMobileAdminRoutes(
             })
             .where(eq(newsPosts.id, existing.id))
         } else {
-          await database.db.insert(newsPosts).values({
+          await configuredDatabase.db.insert(newsPosts).values({
             id: randomUUID(),
             source: 'wechat_official',
             sourceKey: post.sourceKey,
