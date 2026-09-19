@@ -1,0 +1,150 @@
+.admin-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 24rpx;
+  background: #f6f7fb;
+}
+
+.admin-head {
+  padding: 12rpx 4rpx 22rpx;
+}
+
+.admin-title,
+.admin-desc,
+.card-title,
+.card-note,
+.row-title,
+.row-desc {
+  display: block;
+}
+
+.admin-title {
+  color: #252830;
+  font-size: 34rpx;
+  font-weight: 800;
+}
+
+.admin-desc {
+  margin-top: 8rpx;
+  color: #8b919b;
+  font-size: 21rpx;
+  line-height: 1.5;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8rpx;
+  margin-bottom: 18rpx;
+  padding: 6rpx;
+  border-radius: 18rpx;
+  background: #ebeef3;
+}
+
+.tab {
+  padding: 14rpx 6rpx;
+  border-radius: 14rpx;
+  color: #737985;
+  font-size: 21rpx;
+  text-align: center;
+}
+
+.tab.active {
+  background: #ffffff;
+  color: #654bd1;
+  font-weight: 800;
+}
+
+.card {
+  margin-bottom: 18rpx;
+  padding: 24rpx;
+  border: 1rpx solid #eceef3;
+  border-radius: 22rpx;
+  background: #ffffff;
+}
+
+.card-title {
+  margin-bottom: 16rpx;
+  color: #30333a;
+  font-size: 27rpx;
+  font-weight: 800;
+}
+
+.card-note {
+  margin-bottom: 18rpx;
+  color: #858b95;
+  font-size: 21rpx;
+  line-height: 1.6;
+}
+
+.picker-field,
+.input {
+  min-height: 72rpx;
+  box-sizing: border-box;
+  margin-top: 12rpx;
+  padding: 20rpx 18rpx;
+  border: 1rpx solid #e0e3e9;
+  border-radius: 14rpx;
+  background: #fafbfc;
+  color: #4b515a;
+  font-size: 23rpx;
+}
+
+.input {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.primary {
+  margin-top: 18rpx;
+  border-radius: 16rpx;
+  background: #6b53d8;
+  color: #ffffff;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.primary::after,
+.mini::after {
+  border: 0;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 18rpx 0;
+  border-top: 1rpx solid #eef0f4;
+}
+
+.row-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.row-title {
+  color: #30333a;
+  font-size: 23rpx;
+  font-weight: 700;
+}
+
+.row-desc {
+  margin-top: 5rpx;
+  color: #9297a0;
+  font-size: 19rpx;
+}
+
+.mini {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 16rpx;
+  background: #f0edff;
+  color: #674fd0;
+  font-size: 20rpx;
+  line-height: 54rpx;
+}
+
+.mini.danger {
+  background: #fff1ef;
+  color: #b4534b;
+}
