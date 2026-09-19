@@ -1,20 +1,25 @@
 import {
   bootstrapWechatUser,
   saveAuthResult,
-  type LoginPortal,
 } from '../../utils/auth'
+
+type LoginMethod = 'wechat' | 'password' | 'phone'
 
 Page({
   data: {
-    portal: 'student' as LoginPortal,
+    method: 'wechat' as LoginMethod,
     agreed: false,
     loading: false,
+    account: '',
+    password: '',
+    phone: '',
+    phoneCode: '',
   },
 
-  onPortalChange(event: WechatMiniprogram.BaseEvent) {
-    const portal = String(event.currentTarget.dataset.portal) as LoginPortal
-    if (portal !== 'student' && portal !== 'teacher') return
-    this.setData({ portal })
+  onMethodChange(event: WechatMiniprogram.BaseEvent) {
+    const method = String(event.currentTarget.dataset.method) as LoginMethod
+    if (!['wechat', 'password', 'phone'].includes(method)) return
+    this.setData({ method })
   },
 
   onAgreementChange(event: WechatMiniprogram.CustomEvent<{ value: string[] }>) {
@@ -30,7 +35,20 @@ Page({
     })
   },
 
-  async onLogin() {
+  onInput(event: WechatMiniprogram.Input) {
+    const field = String(event.currentTarget.dataset.field)
+    if (!['account', 'password', 'phone', 'phoneCode'].includes(field)) return
+    this.setData({ [field]: event.detail.value })
+  },
+
+  onUnavailableLogin() {
+    wx.showToast({
+      title: this.data.method === 'phone' ? '手机号认证服务待接入' : '账号密码登录待接入',
+      icon: 'none',
+    })
+  },
+
+  async onWechatLogin() {
     if (!this.data.agreed) {
       wx.showToast({ title: '请先勾选用户协议', icon: 'none' })
       return
@@ -38,14 +56,14 @@ Page({
 
     try {
       this.setData({ loading: true })
-      const result = await bootstrapWechatUser(this.data.portal, true)
+      const result = await bootstrapWechatUser(true)
       saveAuthResult(result)
 
-      if (result.needsProfileBinding) {
+      if (result.user.role === 'user') {
         await new Promise<void>((resolve) => {
           wx.showModal({
             title: '登录成功',
-            content: '当前微信账号尚未绑定正式学员档案，后续由九辰后台完成身份绑定。',
+            content: '当前账号为游客。可在“我的 → 个人资料”填写九辰内部ID完成身份绑定。',
             showCancel: false,
             success: () => resolve(),
             fail: () => resolve(),
@@ -58,10 +76,7 @@ Page({
       wx.switchTab({ url: '/pages/profile/profile' })
     } catch (error) {
       const message = error instanceof Error ? error.message : '登录失败'
-      const title = message.includes('role_not_authorized')
-        ? '当前微信未绑定老师身份'
-        : message
-      wx.showToast({ title, icon: 'none', duration: 2500 })
+      wx.showToast({ title: message, icon: 'none', duration: 2500 })
     } finally {
       this.setData({ loading: false })
     }
