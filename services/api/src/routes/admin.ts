@@ -19,6 +19,13 @@ import {
   type PlanType,
 } from '../domain/classroom.js'
 
+const studentCreateSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  university: z.string().trim().max(160).nullable().optional(),
+  major: z.string().trim().max(160).nullable().optional(),
+  currentStage: z.string().trim().max(32).nullable().optional(),
+})
+
 const studentPatchSchema = z
   .object({
     name: z.string().trim().min(1).max(80).optional(),
@@ -98,6 +105,56 @@ export function registerAdminRoutes(
     return {
       ok: true,
       students: rows,
+    }
+  })
+
+  app.post<{ Body: unknown }>('/admin/students', async (request, reply) => {
+    if (!ensureLocalAdmin(env, reply)) return
+
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const parsed = studentCreateSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_student_payload',
+        issues: parsed.error.issues,
+      })
+    }
+
+    if (
+      parsed.data.currentStage &&
+      !getStageDefinition(parsed.data.currentStage)
+    ) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_stage',
+      })
+    }
+
+    const id = randomUUID()
+    await database.db.insert(students).values({
+      id,
+      name: parsed.data.name,
+      university: parsed.data.university ?? null,
+      major: parsed.data.major ?? null,
+      currentStage: parsed.data.currentStage ?? null,
+    })
+
+    return {
+      ok: true,
+      student: {
+        id,
+        name: parsed.data.name,
+        university: parsed.data.university ?? null,
+        major: parsed.data.major ?? null,
+        currentStage: parsed.data.currentStage ?? null,
+      },
     }
   })
 
@@ -228,6 +285,19 @@ export function registerAdminRoutes(
       })
     }
 
+    const [studentBinding] = await database.db
+      .select({ id: students.id })
+      .from(students)
+      .where(eq(students.userId, parsed.data.userId))
+      .limit(1)
+
+    if (studentBinding) {
+      return reply.code(409).send({
+        ok: false,
+        error: 'user_already_bound_to_student',
+      })
+    }
+
     const id = randomUUID()
     await database.db.transaction(async (tx) => {
       await tx.insert(teachers).values({
@@ -303,6 +373,32 @@ export function registerAdminRoutes(
       })
     }
 
+    const [existingStudentBinding] = await database.db
+      .select({ id: students.id })
+      .from(students)
+      .where(eq(students.userId, parsed.data.userId))
+      .limit(1)
+
+    if (existingStudentBinding && existingStudentBinding.id !== request.params.id) {
+      return reply.code(409).send({
+        ok: false,
+        error: 'user_already_bound_to_student',
+      })
+    }
+
+    const [teacherBinding] = await database.db
+      .select({ id: teachers.id })
+      .from(teachers)
+      .where(eq(teachers.userId, parsed.data.userId))
+      .limit(1)
+
+    if (teacherBinding) {
+      return reply.code(409).send({
+        ok: false,
+        error: 'user_already_bound_to_teacher',
+      })
+    }
+
     await database.db.transaction(async (tx) => {
       await tx
         .update(students)
@@ -316,6 +412,37 @@ export function registerAdminRoutes(
 
     return {
       ok: true,
+    }
+  })
+
+  app.get('/admin/student-teacher-assignments', async (_request, reply) => {
+    if (!ensureLocalAdmin(env, reply)) return
+
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const rows = await database.db
+      .select({
+        id: studentTeacherAssignments.id,
+        studentId: students.id,
+        studentName: students.name,
+        teacherId: teachers.id,
+        teacherName: teachers.name,
+        stageCode: studentTeacherAssignments.stageCode,
+        relationship: studentTeacherAssignments.relationship,
+      })
+      .from(studentTeacherAssignments)
+      .innerJoin(students, eq(studentTeacherAssignments.studentId, students.id))
+      .innerJoin(teachers, eq(studentTeacherAssignments.teacherId, teachers.id))
+      .orderBy(asc(studentTeacherAssignments.createdAt))
+
+    return {
+      ok: true,
+      assignments: rows,
     }
   })
 
