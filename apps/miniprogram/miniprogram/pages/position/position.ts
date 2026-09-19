@@ -19,7 +19,7 @@ Page({
 
   onShow() {
     const auth = getSavedAuthResult()
-    if (auth?.portal === 'student') {
+    if (auth && (auth.user.role === 'user' || auth.user.role === 'student')) {
       void this.loadAcademicProfile()
     }
   },
@@ -53,8 +53,13 @@ Page({
   onEditProfile() {
     const auth = getSavedAuthResult()
 
-    if (!auth || auth.portal !== 'student') {
+    if (!auth) {
       wx.navigateTo({ url: '/pages/login/login' })
+      return
+    }
+
+    if (auth.user.role !== 'user' && auth.user.role !== 'student') {
+      wx.showToast({ title: '当前身份不使用学业资料', icon: 'none' })
       return
     }
 
