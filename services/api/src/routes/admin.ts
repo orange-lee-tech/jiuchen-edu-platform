@@ -5,6 +5,7 @@ import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import type { DatabaseContext } from '../db/client.js'
 import {
+  internalIds,
   planItems,
   studentPlans,
   students,
@@ -18,6 +19,7 @@ import {
   isPlanTypeAllowed,
   type PlanType,
 } from '../domain/classroom.js'
+import { bindInternalIdentity, unbindInternalIdentity } from '../services/internal-identities.js'
 
 const studentCreateSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -211,6 +213,101 @@ export function registerAdminRoutes(
       identities,
     }
   })
+
+  app.get('/admin/internal-ids', async (_request, reply) => {
+    if (!ensureLocalAdmin(env, reply)) return
+
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const rows = await database.db
+      .select({
+        id: internalIds.id,
+        businessId: internalIds.businessId,
+        type: internalIds.type,
+        claimMode: internalIds.claimMode,
+        status: internalIds.status,
+        userId: internalIds.userId,
+        entityId: internalIds.entityId,
+        batch: internalIds.batch,
+      })
+      .from(internalIds)
+      .orderBy(asc(internalIds.createdAt))
+
+    return {
+      ok: true,
+      internalIds: rows,
+    }
+  })
+
+  app.post<{
+    Params: { id: string }
+    Body: unknown
+  }>('/admin/internal-ids/:id/bind', async (request, reply) => {
+    if (!ensureLocalAdmin(env, reply)) return
+
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const parsed = studentIdentitySchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_identity_payload',
+      })
+    }
+
+    try {
+      const identity = await bindInternalIdentity(
+        database,
+        request.params.id,
+        parsed.data.userId,
+      )
+      return {
+        ok: true,
+        identity,
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'bind_failed'
+      return reply.code(409).send({
+        ok: false,
+        error: message,
+      })
+    }
+  })
+
+  app.post<{ Params: { id: string } }>(
+    '/admin/internal-ids/:id/unbind',
+    async (request, reply) => {
+      if (!ensureLocalAdmin(env, reply)) return
+
+      if (!database.configured) {
+        return reply.code(503).send({
+          ok: false,
+          error: 'database_not_configured',
+        })
+      }
+
+      try {
+        await unbindInternalIdentity(database, request.params.id)
+        return { ok: true }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'unbind_failed'
+        return reply.code(409).send({
+          ok: false,
+          error: message,
+        })
+      }
+    },
+  )
 
   app.get('/admin/teachers', async (_request, reply) => {
     if (!ensureLocalAdmin(env, reply)) return
