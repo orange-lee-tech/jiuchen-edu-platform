@@ -237,6 +237,45 @@ export function registerMobileAdminRoutes(
     }
   })
 
+  app.get('/me/admin/students', async (request, reply) => {
+    if (!(await requireAdmin(request, reply, database))) return
+
+    const rows = await database.db
+      .select({
+        id: students.id,
+        name: students.name,
+        university: students.university,
+        major: students.major,
+        currentStage: students.currentStage,
+      })
+      .from(students)
+      .orderBy(asc(students.createdAt))
+
+    return {
+      ok: true,
+      students: rows,
+    }
+  })
+
+  app.get('/me/admin/teachers', async (request, reply) => {
+    if (!(await requireAdmin(request, reply, database))) return
+
+    const rows = await database.db
+      .select({
+        id: teachers.id,
+        name: teachers.name,
+        title: teachers.title,
+        status: teachers.status,
+      })
+      .from(teachers)
+      .orderBy(asc(teachers.createdAt))
+
+    return {
+      ok: true,
+      teachers: rows,
+    }
+  })
+
   app.get('/me/admin/assignments', async (request, reply) => {
     if (!(await requireAdmin(request, reply, database))) return
 
