@@ -9,6 +9,8 @@ const env = {
   DATABASE_URL: undefined,
   WECHAT_APP_ID: undefined,
   WECHAT_APP_SECRET: undefined,
+  WECHAT_OA_APP_ID: undefined,
+  WECHAT_OA_APP_SECRET: undefined,
 }
 
 test('GET /health works before database is configured', async () => {
@@ -76,6 +78,7 @@ test('GET /health/config exposes only configuration presence', async () => {
       splitDatabaseConfigComplete: false,
       wechatAppIdConfigured: false,
       wechatAppSecretConfigured: false,
+      officialAccountConfigured: false,
     },
   })
 
