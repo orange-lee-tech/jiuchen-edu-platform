@@ -22,6 +22,8 @@ const envSchema = z.object({
   DB_NAME: optionalNonEmptyString,
   WECHAT_APP_ID: optionalNonEmptyString,
   WECHAT_APP_SECRET: optionalNonEmptyString,
+  WECHAT_OA_APP_ID: optionalNonEmptyString,
+  WECHAT_OA_APP_SECRET: optionalNonEmptyString,
 })
 
 export type AppEnv = z.infer<typeof envSchema>
