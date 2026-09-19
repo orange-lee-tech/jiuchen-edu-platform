@@ -1,18 +1,28 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
+  bindStudentIdentity,
+  createStudent,
+  createTeacher,
+  createTeacherAssignment,
   fetchClassroomStages,
   fetchHealth,
+  fetchIdentities,
   fetchStudentClassroom,
   fetchStudents,
+  fetchTeacherAssignments,
+  fetchTeachers,
   saveClassroomPlan,
   updateStudent,
   type ClassroomPlan,
   type ClassroomStage,
   type HealthResponse,
+  type IdentitySummary,
   type PlanStatus,
   type PlanType,
   type StudentSummary,
+  type TeacherAssignment,
+  type TeacherSummary,
 } from './lib/api'
 
 type EditableItem = {
@@ -31,18 +41,50 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 const notice = ref('')
+const activeSection = ref<'classroom' | 'identity'>('classroom')
 const health = ref<HealthResponse | null>(null)
+
 const students = ref<StudentSummary[]>([])
 const stages = ref<ClassroomStage[]>([])
 const selectedStudentId = ref('')
 const selectedStageCode = ref('')
 const classroom = ref<Awaited<ReturnType<typeof fetchStudentClassroom>> | null>(null)
 
+const identities = ref<IdentitySummary[]>([])
+const teachers = ref<TeacherSummary[]>([])
+const assignments = ref<TeacherAssignment[]>([])
+
 const studentForm = ref({
   name: '',
   university: '',
   major: '',
   currentStage: '',
+})
+
+const newStudentForm = ref({
+  name: '',
+  university: '',
+  major: '',
+  currentStage: '',
+})
+
+const bindForm = ref({
+  studentId: '',
+  userId: '',
+})
+
+const teacherForm = ref({
+  userId: '',
+  name: '',
+  title: '',
+  bio: '',
+})
+
+const assignmentForm = ref({
+  studentId: '',
+  teacherId: '',
+  stageCode: '',
+  relationship: 'primary' as 'primary' | 'support',
 })
 
 const planForm = ref<EditablePlan | null>(null)
@@ -55,8 +97,22 @@ const stageLabel = computed(
   () => stages.value.find((stage) => stage.code === selectedStageCode.value)?.label ?? '',
 )
 
+const unboundUsers = computed(() =>
+  identities.value.filter(
+    (identity) =>
+      identity.role === 'user' &&
+      identity.student === null &&
+      identity.teacher === null,
+  ),
+)
+
 function showError(cause: unknown) {
   error.value = cause instanceof Error ? cause.message : '操作失败'
+  notice.value = ''
+}
+
+function clearFeedback() {
+  error.value = ''
   notice.value = ''
 }
 
@@ -94,6 +150,34 @@ function addPlanItem() {
 function removePlanItem(index: number) {
   if (!planForm.value) return
   planForm.value.items.splice(index, 1)
+}
+
+async function loadIdentityData() {
+  const [identityRows, teacherRows, assignmentRows] = await Promise.all([
+    fetchIdentities(),
+    fetchTeachers(),
+    fetchTeacherAssignments(),
+  ])
+
+  identities.value = identityRows
+  teachers.value = teacherRows
+  assignments.value = assignmentRows
+
+  if (!bindForm.value.studentId && students.value[0]) {
+    bindForm.value.studentId = students.value[0].id
+  }
+  if (!bindForm.value.userId && unboundUsers.value[0]) {
+    bindForm.value.userId = unboundUsers.value[0].id
+  }
+  if (!teacherForm.value.userId && unboundUsers.value[0]) {
+    teacherForm.value.userId = unboundUsers.value[0].id
+  }
+  if (!assignmentForm.value.studentId && students.value[0]) {
+    assignmentForm.value.studentId = students.value[0].id
+  }
+  if (!assignmentForm.value.teacherId && teachers.value[0]) {
+    assignmentForm.value.teacherId = teachers.value[0].id
+  }
 }
 
 async function loadClassroom(stageCode = selectedStageCode.value) {
@@ -145,7 +229,7 @@ async function saveStudent() {
 
   try {
     saving.value = true
-    error.value = ''
+    clearFeedback()
     const updated = await updateStudent(selectedStudentId.value, {
       name: studentForm.value.name,
       university: studentForm.value.university || null,
@@ -178,7 +262,7 @@ async function savePlan() {
 
   try {
     saving.value = true
-    error.value = ''
+    clearFeedback()
     await saveClassroomPlan(selectedStudentId.value, selectedStageCode.value, {
       type: planForm.value.type,
       title: planForm.value.title.trim(),
@@ -186,6 +270,112 @@ async function savePlan() {
     })
     notice.value = `${stageLabel.value} · ${planForm.value.title} 已保存`
     await loadClassroom()
+  } catch (cause) {
+    showError(cause)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function addStudent() {
+  if (!newStudentForm.value.name.trim()) {
+    error.value = '请填写学员姓名'
+    return
+  }
+
+  try {
+    saving.value = true
+    clearFeedback()
+    const student = await createStudent({
+      name: newStudentForm.value.name.trim(),
+      university: newStudentForm.value.university.trim() || null,
+      major: newStudentForm.value.major.trim() || null,
+      currentStage: newStudentForm.value.currentStage || null,
+    })
+    students.value.push(student)
+    bindForm.value.studentId = student.id
+    assignmentForm.value.studentId = student.id
+    newStudentForm.value = {
+      name: '',
+      university: '',
+      major: '',
+      currentStage: '',
+    }
+    notice.value = `已创建学员：${student.name}`
+  } catch (cause) {
+    showError(cause)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function bindStudent() {
+  if (!bindForm.value.studentId || !bindForm.value.userId) {
+    error.value = '请选择学员和待绑定微信身份'
+    return
+  }
+
+  try {
+    saving.value = true
+    clearFeedback()
+    await bindStudentIdentity(bindForm.value.studentId, bindForm.value.userId)
+    notice.value = '微信身份已绑定为正式学员'
+    await loadIdentityData()
+  } catch (cause) {
+    showError(cause)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function addTeacher() {
+  if (!teacherForm.value.userId || !teacherForm.value.name.trim()) {
+    error.value = '请选择微信身份并填写老师姓名'
+    return
+  }
+
+  try {
+    saving.value = true
+    clearFeedback()
+    const teacher = await createTeacher({
+      userId: teacherForm.value.userId,
+      name: teacherForm.value.name.trim(),
+      title: teacherForm.value.title.trim() || null,
+      bio: teacherForm.value.bio.trim() || null,
+    })
+    assignmentForm.value.teacherId = teacher.id
+    teacherForm.value = {
+      userId: '',
+      name: '',
+      title: '',
+      bio: '',
+    }
+    notice.value = `已创建老师身份：${teacher.name}`
+    await loadIdentityData()
+  } catch (cause) {
+    showError(cause)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function addAssignment() {
+  if (!assignmentForm.value.studentId || !assignmentForm.value.teacherId) {
+    error.value = '请选择老师和学员'
+    return
+  }
+
+  try {
+    saving.value = true
+    clearFeedback()
+    await createTeacherAssignment({
+      studentId: assignmentForm.value.studentId,
+      teacherId: assignmentForm.value.teacherId,
+      stageCode: assignmentForm.value.stageCode || null,
+      relationship: assignmentForm.value.relationship,
+    })
+    notice.value = '老师—学员分配关系已建立'
+    assignments.value = await fetchTeacherAssignments()
   } catch (cause) {
     showError(cause)
   } finally {
@@ -209,6 +399,8 @@ onMounted(async () => {
     students.value = studentRows
     stages.value = stageRows
 
+    await loadIdentityData()
+
     if (students.value[0]) {
       await selectStudent(students.value[0].id)
     }
@@ -225,13 +417,34 @@ onMounted(async () => {
     <header class="topbar">
       <div>
         <p class="eyebrow">九辰教育 · 内部工作台</p>
-        <h1>我的课堂管理</h1>
-        <p class="muted">先完成学员、阶段计划与任务编辑；复杂 CMS 暂不进入本轮。</p>
+        <h1>{{ activeSection === 'classroom' ? '我的课堂管理' : '账号与身份管理' }}</h1>
+        <p class="muted">
+          {{ activeSection === 'classroom'
+            ? '维护学员阶段、计划与具体任务。'
+            : '管理微信身份、正式学员、辅导老师及授权关系。' }}
+        </p>
       </div>
       <div class="status-chip" :class="{ ok: health?.dependencies.database === 'ok' }">
         数据库 {{ health?.dependencies.database ?? 'checking' }}
       </div>
     </header>
+
+    <nav class="section-tabs">
+      <button
+        type="button"
+        :class="{ active: activeSection === 'classroom' }"
+        @click="activeSection = 'classroom'"
+      >
+        课堂管理
+      </button>
+      <button
+        type="button"
+        :class="{ active: activeSection === 'identity' }"
+        @click="activeSection = 'identity'"
+      >
+        账号与身份
+      </button>
+    </nav>
 
     <t-alert
       v-if="error"
@@ -253,18 +466,15 @@ onMounted(async () => {
       title="本地数据库尚未就绪"
       :bordered="false"
     >
-      <p>当前后台编辑依赖本地 API + MySQL。CloudBase 免费环境的数据库网络问题不阻塞页面开发。</p>
+      <p>当前后台编辑依赖本地 API + MySQL。</p>
     </t-card>
 
-    <template v-else>
+    <template v-else-if="activeSection === 'classroom'">
       <section class="workspace">
         <t-card title="学员" :bordered="false">
           <label class="field">
             <span>选择学员</span>
-            <select
-              :value="selectedStudentId"
-              @change="onStudentChange"
-            >
+            <select :value="selectedStudentId" @change="onStudentChange">
               <option v-for="student in students" :key="student.id" :value="student.id">
                 {{ student.name }} · {{ student.university || '未填写院校' }}
               </option>
@@ -369,6 +579,172 @@ onMounted(async () => {
         </t-card>
       </section>
     </template>
+
+    <template v-else>
+      <section class="identity-grid">
+        <t-card title="微信登录身份" :bordered="false">
+          <p class="muted small">
+            这里只显示业务 ID 与角色，不展示 OpenID。首次微信登录默认是 user。
+          </p>
+          <div v-if="identities.length === 0" class="empty">还没有微信用户登录过。</div>
+          <div v-for="identity in identities" :key="identity.id" class="identity-row">
+            <div>
+              <strong>{{ identity.displayName || '未命名微信用户' }}</strong>
+              <p class="muted small mono">{{ identity.id }}</p>
+            </div>
+            <div class="identity-tags">
+              <span class="role-tag">{{ identity.role }}</span>
+              <span v-if="identity.student" class="bound-tag">学员：{{ identity.student.name }}</span>
+              <span v-if="identity.teacher" class="bound-tag">老师：{{ identity.teacher.name }}</span>
+            </div>
+          </div>
+        </t-card>
+
+        <t-card title="新建学员档案" :bordered="false">
+          <div class="form-grid">
+            <label class="field">
+              <span>姓名</span>
+              <input v-model="newStudentForm.name" placeholder="必填" />
+            </label>
+            <label class="field">
+              <span>本科院校</span>
+              <input v-model="newStudentForm.university" />
+            </label>
+            <label class="field">
+              <span>专业</span>
+              <input v-model="newStudentForm.major" />
+            </label>
+            <label class="field">
+              <span>当前阶段</span>
+              <select v-model="newStudentForm.currentStage">
+                <option value="">未设置</option>
+                <option v-for="stage in stages" :key="stage.code" :value="stage.code">
+                  {{ stage.label }}
+                </option>
+              </select>
+            </label>
+          </div>
+          <div class="actions">
+            <t-button :loading="saving" @click="addStudent">创建学员</t-button>
+          </div>
+        </t-card>
+
+        <t-card title="绑定正式学员身份" :bordered="false">
+          <p class="muted small">
+            将首次登录产生的普通 user 与九辰正式 Student 档案绑定。
+          </p>
+          <div class="form-grid">
+            <label class="field">
+              <span>学员档案</span>
+              <select v-model="bindForm.studentId">
+                <option value="">请选择</option>
+                <option v-for="student in students" :key="student.id" :value="student.id">
+                  {{ student.name }} · {{ student.university || '未填写院校' }}
+                </option>
+              </select>
+            </label>
+            <label class="field">
+              <span>未绑定微信身份</span>
+              <select v-model="bindForm.userId">
+                <option value="">请选择</option>
+                <option v-for="identity in unboundUsers" :key="identity.id" :value="identity.id">
+                  {{ identity.displayName || '未命名微信用户' }} · {{ identity.id.slice(0, 8) }}
+                </option>
+              </select>
+            </label>
+          </div>
+          <div class="actions">
+            <t-button :loading="saving" @click="bindStudent">绑定为正式学员</t-button>
+          </div>
+        </t-card>
+
+        <t-card title="创建老师身份" :bordered="false">
+          <div class="form-grid">
+            <label class="field">
+              <span>未绑定微信身份</span>
+              <select v-model="teacherForm.userId">
+                <option value="">请选择</option>
+                <option v-for="identity in unboundUsers" :key="identity.id" :value="identity.id">
+                  {{ identity.displayName || '未命名微信用户' }} · {{ identity.id.slice(0, 8) }}
+                </option>
+              </select>
+            </label>
+            <label class="field">
+              <span>老师姓名</span>
+              <input v-model="teacherForm.name" placeholder="必填" />
+            </label>
+            <label class="field">
+              <span>职称 / 角色</span>
+              <input v-model="teacherForm.title" placeholder="例如：保研规划老师" />
+            </label>
+            <label class="field field-wide">
+              <span>展示简介</span>
+              <textarea v-model="teacherForm.bio" rows="3" placeholder="供学员查看的老师介绍"></textarea>
+            </label>
+          </div>
+          <div class="actions">
+            <t-button :loading="saving" @click="addTeacher">创建老师身份</t-button>
+          </div>
+        </t-card>
+
+        <t-card title="老师—学员分配" :bordered="false">
+          <div class="form-grid">
+            <label class="field">
+              <span>老师</span>
+              <select v-model="assignmentForm.teacherId">
+                <option value="">请选择</option>
+                <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
+                  {{ teacher.name }}{{ teacher.title ? ' · ' + teacher.title : '' }}
+                </option>
+              </select>
+            </label>
+            <label class="field">
+              <span>学员</span>
+              <select v-model="assignmentForm.studentId">
+                <option value="">请选择</option>
+                <option v-for="student in students" :key="student.id" :value="student.id">
+                  {{ student.name }}
+                </option>
+              </select>
+            </label>
+            <label class="field">
+              <span>阶段（可选）</span>
+              <select v-model="assignmentForm.stageCode">
+                <option value="">全阶段</option>
+                <option v-for="stage in stages" :key="stage.code" :value="stage.code">
+                  {{ stage.label }}
+                </option>
+              </select>
+            </label>
+            <label class="field">
+              <span>关系</span>
+              <select v-model="assignmentForm.relationship">
+                <option value="primary">主辅导</option>
+                <option value="support">协助</option>
+              </select>
+            </label>
+          </div>
+          <div class="actions">
+            <t-button :loading="saving" @click="addAssignment">建立分配关系</t-button>
+          </div>
+
+          <div class="assignment-list">
+            <div v-if="assignments.length === 0" class="empty">暂无老师—学员分配关系。</div>
+            <div v-for="assignment in assignments" :key="assignment.id" class="assignment-row">
+              <strong>{{ assignment.teacherName }}</strong>
+              <span>→</span>
+              <strong>{{ assignment.studentName }}</strong>
+              <span class="bound-tag">
+                {{ assignment.relationship === 'primary' ? '主辅导' : '协助' }}
+              </span>
+              <span v-if="assignment.stageCode" class="role-tag">
+                {{ stages.find((stage) => stage.code === assignment.stageCode)?.label || assignment.stageCode }}
+              </span>
+            </div>
+          </div>
+        </t-card>
+      </section>
+    </template>
   </main>
 </template>
 
@@ -381,12 +757,19 @@ onMounted(async () => {
   color: #1f2937;
 }
 
-.topbar {
+.topbar,
+.editor-head,
+.identity-row,
+.assignment-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  gap: 16px;
+}
+
+.topbar {
   gap: 24px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .eyebrow {
@@ -410,6 +793,10 @@ h1 {
   font-size: 12px;
 }
 
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
 .status-chip {
   flex-shrink: 0;
   padding: 8px 12px;
@@ -424,6 +811,30 @@ h1 {
   color: #166534;
 }
 
+.section-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.section-tabs button,
+.plan-tab {
+  padding: 9px 14px;
+  border: 1px solid #d9ddea;
+  border-radius: 999px;
+  background: #fff;
+  color: #606775;
+  cursor: pointer;
+}
+
+.section-tabs button.active,
+.plan-tab.active {
+  border-color: #7255e7;
+  background: #f1edff;
+  color: #6245d8;
+  font-weight: 700;
+}
+
 .feedback {
   margin-bottom: 16px;
 }
@@ -431,6 +842,12 @@ h1 {
 .workspace {
   display: grid;
   grid-template-columns: minmax(280px, 0.8fr) minmax(520px, 1.6fr);
+  gap: 20px;
+}
+
+.identity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -449,12 +866,17 @@ h1 {
   font-size: 13px;
 }
 
+.field-wide {
+  grid-column: 1 / -1;
+}
+
 .stage-field {
   margin-bottom: 18px;
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-height: 38px;
   box-sizing: border-box;
@@ -463,11 +885,17 @@ select {
   border-radius: 8px;
   background: #fff;
   color: #1f2937;
+  font: inherit;
   outline: none;
 }
 
+textarea {
+  resize: vertical;
+}
+
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: #7255e7;
 }
 
@@ -484,31 +912,12 @@ select:focus {
   margin-bottom: 18px;
 }
 
-.plan-tab {
-  padding: 8px 13px;
-  border: 1px solid #d9ddea;
-  border-radius: 999px;
-  background: #fff;
-  color: #606775;
-  cursor: pointer;
-}
-
-.plan-tab.active {
-  border-color: #7255e7;
-  background: #f1edff;
-  color: #6245d8;
-  font-weight: 700;
-}
-
 .plan-editor {
   padding-top: 4px;
 }
 
 .editor-head {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
   margin: 20px 0 10px;
 }
 
@@ -541,17 +950,62 @@ select:focus {
   color: #8a5a16;
 }
 
+.identity-row {
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.identity-row:last-child {
+  border-bottom: 0;
+}
+
+.identity-tags {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.role-tag,
+.bound-tag {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4f46a5;
+  font-size: 12px;
+}
+
+.bound-tag {
+  background: #edf8f1;
+  color: #217145;
+}
+
+.assignment-list {
+  margin-top: 20px;
+}
+
+.assignment-row {
+  align-items: center;
+  justify-content: flex-start;
+  padding: 12px 0;
+  border-top: 1px solid #eef0f4;
+  font-size: 13px;
+}
+
 @media (max-width: 960px) {
-  .workspace {
+  .workspace,
+  .identity-grid {
     grid-template-columns: 1fr;
   }
 
-  .item-row {
-    grid-template-columns: 1fr;
-  }
-
+  .item-row,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .field-wide {
+    grid-column: auto;
   }
 }
 </style>
