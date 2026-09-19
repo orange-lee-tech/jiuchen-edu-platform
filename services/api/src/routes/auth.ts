@@ -4,15 +4,16 @@ import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import type { DatabaseContext } from '../db/client.js'
-import { userAgreements, users } from '../db/schema.js'
 import {
-  LOGIN_PORTALS,
-  PLACEHOLDER_USER_AGREEMENT_VERSION,
-  canEnterPortal,
-  needsStudentBinding,
-  type LoginPortal,
-  type UserRole,
-} from '../domain/auth-policy.js'
+  internalIds,
+  students,
+  teachers,
+  userAgreements,
+  userProfiles,
+  userSessions,
+  users,
+} from '../db/schema.js'
+import { PLACEHOLDER_USER_AGREEMENT_VERSION } from '../domain/auth-policy.js'
 import {
   issueSession,
   resolveSessionUser,
@@ -22,7 +23,6 @@ import { exchangeWechatLoginCode } from '../services/wechat.js'
 
 const bodySchema = z.object({
   code: z.string().min(1).optional(),
-  portal: z.enum(LOGIN_PORTALS),
   agreementAccepted: z.literal(true),
   agreementVersion: z.literal(PLACEHOLDER_USER_AGREEMENT_VERSION),
 })
@@ -57,6 +57,23 @@ async function recordUserAgreement(
     type: 'user_terms',
     version,
   })
+}
+
+async function loadBusinessIdentity(
+  database: DatabaseContext & { configured: true },
+  userId: string,
+) {
+  const [identity] = await database.db
+    .select({
+      businessId: internalIds.businessId,
+      type: internalIds.type,
+      status: internalIds.status,
+    })
+    .from(internalIds)
+    .where(eq(internalIds.userId, userId))
+    .limit(1)
+
+  return identity ?? null
 }
 
 export function registerAuthRoutes(
@@ -101,6 +118,7 @@ export function registerAuthRoutes(
         .select({
           id: users.id,
           role: users.role,
+          status: users.status,
           displayName: users.displayName,
         })
         .from(users)
@@ -110,25 +128,23 @@ export function registerAuthRoutes(
       const user = existing ?? {
         id: randomUUID(),
         role: 'user' as const,
+        status: 'active' as const,
         displayName: null,
+      }
+
+      if (existing?.status === 'deleted') {
+        return reply.code(403).send({
+          ok: false,
+          error: 'account_deleted',
+        })
       }
 
       if (!existing) {
         await database.db.insert(users).values({
           id: user.id,
           wechatOpenId: identity.openId,
-          role: user.role,
-        })
-      }
-
-      const role = user.role as UserRole
-      const portal = body.data.portal as LoginPortal
-
-      if (!canEnterPortal(role, portal)) {
-        return reply.code(403).send({
-          ok: false,
-          error: 'role_not_authorized',
-          portal,
+          role: 'user',
+          status: 'active',
         })
       }
 
@@ -139,15 +155,16 @@ export function registerAuthRoutes(
       )
 
       const session = await issueSession(database, user.id)
+      const businessIdentity = await loadBusinessIdentity(database, user.id)
 
       return {
         ok: true,
         user: {
-          ...user,
-          role,
+          id: user.id,
+          role: user.role,
+          displayName: user.displayName,
         },
-        portal,
-        needsProfileBinding: needsStudentBinding(role, portal),
+        businessIdentity,
         agreement: {
           type: 'user_terms',
           version: body.data.agreementVersion,
@@ -187,6 +204,7 @@ export function registerAuthRoutes(
         role: user.role,
         displayName: user.displayName,
       },
+      businessIdentity: await loadBusinessIdentity(database, user.userId),
     }
   })
 
@@ -206,8 +224,67 @@ export function registerAuthRoutes(
       })
     }
 
-    return {
-      ok: true,
+    return { ok: true }
+  })
+
+  app.post('/auth/delete-account', async (request, reply) => {
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
     }
+
+    const user = await resolveSessionUser(request, database)
+    if (!user) {
+      return reply.code(401).send({
+        ok: false,
+        error: 'unauthorized',
+      })
+    }
+
+    const now = new Date()
+
+    await database.db.transaction(async (tx) => {
+      await tx
+        .update(userSessions)
+        .set({ revokedAt: now })
+        .where(eq(userSessions.userId, user.userId))
+
+      await tx
+        .update(internalIds)
+        .set({
+          status: 'disabled',
+          userId: null,
+        })
+        .where(eq(internalIds.userId, user.userId))
+
+      await tx
+        .update(students)
+        .set({ userId: null })
+        .where(eq(students.userId, user.userId))
+
+      await tx
+        .update(teachers)
+        .set({ userId: null })
+        .where(eq(teachers.userId, user.userId))
+
+      await tx
+        .delete(userProfiles)
+        .where(eq(userProfiles.userId, user.userId))
+
+      await tx
+        .update(users)
+        .set({
+          wechatOpenId: null,
+          role: 'user',
+          status: 'deleted',
+          displayName: null,
+          deletedAt: now,
+        })
+        .where(eq(users.id, user.userId))
+    })
+
+    return { ok: true }
   })
 }
