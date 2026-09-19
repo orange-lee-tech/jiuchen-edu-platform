@@ -75,6 +75,30 @@ try {
     console.log('✓ internal_ids already exists')
   }
 
+
+  if (!(await tableExists('news_posts'))) {
+    await connection.query(
+      `CREATE TABLE \`news_posts\` (
+        \`id\` varchar(36) NOT NULL,
+        \`source\` enum('manual','wechat_official') NOT NULL,
+        \`source_key\` varchar(160) NOT NULL,
+        \`title\` varchar(255) NOT NULL,
+        \`summary\` varchar(500) NULL,
+        \`cover_url\` varchar(1000) NULL,
+        \`article_url\` varchar(1000) NULL,
+        \`published_at\` timestamp NULL,
+        \`status\` enum('active','hidden') NOT NULL DEFAULT 'active',
+        \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (\`id\`),
+        UNIQUE KEY \`news_posts_source_key_unique\` (\`source_key\`)
+      ) ENGINE=InnoDB`,
+    )
+    console.log('✓ news_posts created')
+  } else {
+    console.log('✓ news_posts already exists')
+  }
+
   console.log('✓ identity v2 schema is ready')
 } finally {
   await connection.end()
