@@ -76,7 +76,7 @@ export type InternalIdentity = {
 
 const DEMO_STUDENT_ID = '00000000-0000-4000-8000-000000000001'
 
-type RequestMethod = 'GET' | 'POST' | 'PUT'
+type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 export function request<T>(
   path: string,
@@ -221,4 +221,138 @@ export async function claimMyInternalIdentity(
     { businessId },
   )
   return result
+}
+
+
+export type AdminInternalId = {
+  id: string
+  businessId: string
+  type: 'student' | 'teacher' | 'admin'
+  claimMode: 'self' | 'admin'
+  status: 'available' | 'claimed' | 'disabled'
+  userId: string | null
+  entityId: string | null
+  batch: string | null
+  claimedAt: string | null
+}
+
+export type AdminTeacher = {
+  id: string
+  name: string
+  title: string | null
+  status: 'active' | 'inactive'
+}
+
+export type AdminAssignment = {
+  id: string
+  studentId: string
+  studentName: string
+  teacherId: string
+  teacherName: string
+  stageCode: string | null
+  relationship: 'primary' | 'support'
+}
+
+export type AdminNewsPost = {
+  id: string
+  title: string
+  summary: string | null
+  coverUrl: string | null
+  articleUrl: string | null
+  publishedAt: string | null
+  source: 'manual' | 'wechat_official'
+  status: 'active' | 'hidden'
+}
+
+export async function getAdminInternalIds(): Promise<AdminInternalId[]> {
+  const result = await request<{ ok: true; internalIds: AdminInternalId[] }>(
+    '/me/admin/internal-ids',
+  )
+  return result.internalIds
+}
+
+export async function createAdminInternalId(
+  type: 'student' | 'teacher' | 'admin',
+  name: string | null,
+): Promise<AdminInternalId> {
+  const result = await request<{ ok: true; identity: AdminInternalId }>(
+    '/me/admin/internal-ids',
+    'POST',
+    { type, name },
+  )
+  return result.identity
+}
+
+export async function unbindAdminInternalId(id: string): Promise<void> {
+  await request<{ ok: true }>(
+    `/me/admin/internal-ids/${id}/unbind`,
+    'POST',
+    {},
+  )
+}
+
+export async function deleteAdminInternalId(id: string): Promise<void> {
+  await request<{ ok: true }>(
+    `/me/admin/internal-ids/${id}`,
+    'DELETE',
+    {},
+  )
+}
+
+export async function getAdminStudents(): Promise<StudentSummary[]> {
+  const result = await request<{ ok: true; students: StudentSummary[] }>(
+    '/me/admin/students',
+  )
+  return result.students
+}
+
+export async function getAdminTeachers(): Promise<AdminTeacher[]> {
+  const result = await request<{ ok: true; teachers: AdminTeacher[] }>(
+    '/me/admin/teachers',
+  )
+  return result.teachers
+}
+
+export async function getAdminAssignments(): Promise<AdminAssignment[]> {
+  const result = await request<{ ok: true; assignments: AdminAssignment[] }>(
+    '/me/admin/assignments',
+  )
+  return result.assignments
+}
+
+export async function createAdminAssignment(payload: {
+  studentId: string
+  teacherId: string
+  stageCode: string | null
+  relationship: 'primary' | 'support'
+}): Promise<void> {
+  await request<{ ok: true }>(
+    '/me/admin/assignments',
+    'POST',
+    payload as unknown as WechatMiniprogram.IAnyObject,
+  )
+}
+
+export async function deleteAdminAssignment(id: string): Promise<void> {
+  await request<{ ok: true }>(
+    `/me/admin/assignments/${id}`,
+    'DELETE',
+    {},
+  )
+}
+
+export async function getAdminNews(): Promise<AdminNewsPost[]> {
+  const result = await request<{ ok: true; posts: AdminNewsPost[] }>(
+    '/me/admin/news',
+  )
+  return result.posts
+}
+
+export async function syncOfficialAccountNews(): Promise<number> {
+  const result = await request<{ ok: true; synced: number }>(
+    '/me/admin/news/sync',
+    'POST',
+    {},
+  )
+  return result.synced
 }
