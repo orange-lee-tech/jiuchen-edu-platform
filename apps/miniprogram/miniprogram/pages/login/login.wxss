@@ -27,8 +27,10 @@
 
 .brand-title,
 .brand-desc,
-.portal-title,
-.portal-desc {
+.method-title,
+.method-desc,
+.pending-note,
+.field text {
   display: block;
 }
 
@@ -54,49 +56,67 @@
   box-shadow: 0 16rpx 42rpx rgba(36, 41, 55, 0.06);
 }
 
-.portal-tabs {
+.method-tabs {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14rpx;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8rpx;
+  padding: 6rpx;
+  border-radius: 18rpx;
+  background: #f5f6f8;
 }
 
-.portal-tab {
-  padding: 24rpx 18rpx;
-  border: 2rpx solid #eceef3;
-  border-radius: 20rpx;
-  background: #fafbfc;
+.method-tab {
+  padding: 14rpx 8rpx;
+  border-radius: 14rpx;
+  color: #7c828c;
+  font-size: 21rpx;
+  text-align: center;
 }
 
-.portal-tab.active {
-  border-color: #765ede;
-  background: #f1edff;
+.method-tab.active {
+  background: #ffffff;
+  color: #654bd1;
+  font-weight: 800;
+  box-shadow: 0 4rpx 16rpx rgba(40, 45, 60, 0.06);
 }
 
-.portal-title {
+.method-panel {
+  margin-top: 24rpx;
+}
+
+.method-title {
   color: #30333a;
-  font-size: 27rpx;
+  font-size: 28rpx;
   font-weight: 800;
 }
 
-.portal-tab.active .portal-title {
-  color: #654bd1;
-}
-
-.portal-desc {
-  margin-top: 8rpx;
-  color: #9398a2;
-  font-size: 19rpx;
-  line-height: 1.45;
-}
-
-.identity-note {
-  margin-top: 22rpx;
-  padding: 18rpx 20rpx;
-  border-radius: 16rpx;
-  background: #f7f8fb;
-  color: #7b818b;
+.method-desc,
+.pending-note {
+  margin-top: 10rpx;
+  color: #8b919b;
   font-size: 20rpx;
   line-height: 1.55;
+}
+
+.field {
+  display: block;
+  margin-top: 18rpx;
+}
+
+.field text {
+  margin-bottom: 8rpx;
+  color: #616771;
+  font-size: 21rpx;
+}
+
+.field input {
+  height: 72rpx;
+  box-sizing: border-box;
+  padding: 0 18rpx;
+  border: 1rpx solid #e0e3e9;
+  border-radius: 14rpx;
+  background: #fafbfc;
+  font-size: 24rpx;
 }
 
 .agreement-row {
@@ -129,6 +149,11 @@
   color: #ffffff;
   font-size: 27rpx;
   font-weight: 700;
+}
+
+.login-button.secondary {
+  background: #ece9f8;
+  color: #6b53d8;
 }
 
 .login-button::after {
