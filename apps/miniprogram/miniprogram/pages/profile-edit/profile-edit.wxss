@@ -85,3 +85,122 @@
   line-height: 1.55;
   text-align: center;
 }
+
+
+.identity-card {
+  margin-top: 20rpx;
+  padding: 26rpx;
+  border: 1rpx solid #eceef3;
+  border-radius: 24rpx;
+  background: #ffffff;
+  box-shadow: 0 8rpx 24rpx rgba(33, 40, 58, 0.04);
+}
+
+.identity-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.identity-title,
+.identity-desc,
+.locked-code,
+.locked-role,
+.section-label {
+  display: block;
+}
+
+.identity-title {
+  color: #292c33;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.identity-desc {
+  margin-top: 8rpx;
+  color: #90959e;
+  font-size: 20rpx;
+  line-height: 1.5;
+}
+
+.identity-status {
+  flex-shrink: 0;
+  padding: 7rpx 12rpx;
+  border-radius: 999rpx;
+  background: #f0edff;
+  color: #6b53d8;
+  font-size: 18rpx;
+}
+
+.claim-row {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 22rpx;
+}
+
+.internal-id-input {
+  flex: 1;
+  height: 72rpx;
+  box-sizing: border-box;
+  padding: 0 18rpx;
+  border: 1rpx solid #dfe2e8;
+  border-radius: 14rpx;
+  background: #fafbfc;
+  font-size: 24rpx;
+}
+
+.claim-button {
+  flex-shrink: 0;
+  width: 176rpx;
+  min-height: 72rpx;
+  margin: 0;
+  border-radius: 14rpx;
+  background: #6b53d8;
+  color: #ffffff;
+  font-size: 22rpx;
+}
+
+.claim-button::after {
+  border: 0;
+}
+
+.locked-id {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 22rpx;
+  padding: 20rpx;
+  border-radius: 16rpx;
+  background: #f7f8fb;
+}
+
+.locked-code {
+  color: #30333a;
+  font-size: 27rpx;
+  font-weight: 800;
+  letter-spacing: 1rpx;
+}
+
+.locked-role {
+  color: #6b53d8;
+  font-size: 21rpx;
+  font-weight: 700;
+}
+
+.section-label {
+  margin: 30rpx 4rpx 12rpx;
+  color: #5f6570;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.role-note {
+  margin-top: 20rpx;
+  padding: 24rpx;
+  border-radius: 20rpx;
+  background: #f0edff;
+  color: #6f668d;
+  font-size: 21rpx;
+  line-height: 1.6;
+}
