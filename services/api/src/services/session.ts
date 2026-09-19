@@ -52,6 +52,7 @@ export async function resolveSessionUser(
       userId: users.id,
       role: users.role,
       displayName: users.displayName,
+      status: users.status,
       expiresAt: userSessions.expiresAt,
     })
     .from(userSessions)
@@ -60,6 +61,7 @@ export async function resolveSessionUser(
       and(
         eq(userSessions.tokenHash, hashToken(token)),
         isNull(userSessions.revokedAt),
+        eq(users.status, 'active'),
       ),
     )
     .limit(1)
