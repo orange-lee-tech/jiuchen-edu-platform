@@ -73,6 +73,32 @@ export async function bootstrapWechatUser(
   )
 }
 
+export async function bootstrapPhoneUser(
+  phoneCode: string,
+  agreementAccepted: boolean,
+): Promise<BootstrapResult> {
+  if (!agreementAccepted) {
+    throw new Error('请先阅读并同意用户协议')
+  }
+
+  if (!phoneCode) {
+    throw new Error('未取得手机号授权')
+  }
+
+  const wechatCode = await getWechatLoginCode()
+
+  return request<BootstrapResult>(
+    '/auth/phone/bootstrap',
+    'POST',
+    {
+      phoneCode,
+      wechatCode,
+      agreementAccepted: true,
+      agreementVersion: USER_AGREEMENT_VERSION,
+    },
+  )
+}
+
 export function saveAuthResult(result: BootstrapResult) {
   wx.setStorageSync(AUTH_STORAGE_KEY, result)
   saveApiSessionToken(result.session.token)
