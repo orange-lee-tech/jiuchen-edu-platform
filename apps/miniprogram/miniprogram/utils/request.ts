@@ -399,3 +399,153 @@ export async function getNewsPosts(): Promise<NewsPost[]> {
   const result = await request<{ ok: true; posts: NewsPost[] }>('/news')
   return result.posts
 }
+
+
+export type AssessmentEnglishRecord = {
+  type: 'cet4' | 'cet6' | 'ielts' | 'toefl' | 'gre' | 'other'
+  score: string
+  note?: string | null
+}
+
+export type AssessmentResearchExperience = {
+  title: string
+  type?: 'project' | 'paper' | 'patent' | 'lab' | 'other' | null
+  role?: string | null
+  organization?: string | null
+  level?: 'school' | 'provincial' | 'national' | 'international' | 'other' | null
+  description?: string | null
+  output?: string | null
+}
+
+export type AssessmentCompetitionExperience = {
+  name: string
+  level?: 'school' | 'provincial' | 'national' | 'international' | 'other' | null
+  award?: string | null
+  role?: string | null
+  description?: string | null
+}
+
+export type AssessmentTarget = {
+  schoolName: string
+  programName?: string | null
+  researchDirection?: string | null
+  note?: string | null
+}
+
+export type AssessmentInput = {
+  profile: {
+    university: string
+    major: string
+    currentGrade: string
+    gpaText?: string | null
+    rankText?: string | null
+    backgroundNote?: string | null
+  }
+  english?: AssessmentEnglishRecord[]
+  research?: AssessmentResearchExperience[]
+  competitions?: AssessmentCompetitionExperience[]
+  targets: AssessmentTarget[]
+  preferences?: {
+    preferredRegions?: string[]
+    researchDirection?: string | null
+    note?: string | null
+  }
+}
+
+export type AssessmentRecord = {
+  id: string
+  status: 'draft' | 'running' | 'succeeded' | 'failed'
+  versions: {
+    inputSchema: string
+    outputSchema: string
+    agent: string
+    knowledge: string | null
+  }
+  model: {
+    provider: string | null
+    name: string | null
+  }
+  input: AssessmentInput
+  evidence: unknown
+  output: unknown
+  failureCode: string | null
+  creditConsumed: boolean
+  startedAt: string | null
+  completedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export async function getAssessmentMeta(): Promise<{
+  versions: {
+    inputSchema: string
+    outputSchema: string
+    agent: string
+  }
+  limits: {
+    targets: number
+    englishRecords: number
+    researchExperiences: number
+    competitionExperiences: number
+  }
+  providerConfigured: boolean
+  outputPolicy: {
+    preciseAdmissionProbability: false
+    evidenceRequiredForClaims: true
+  }
+}> {
+  const result = await request<{
+    ok: true
+    versions: {
+      inputSchema: string
+      outputSchema: string
+      agent: string
+    }
+    limits: {
+      targets: number
+      englishRecords: number
+      researchExperiences: number
+      competitionExperiences: number
+    }
+    providerConfigured: boolean
+    outputPolicy: {
+      preciseAdmissionProbability: false
+      evidenceRequiredForClaims: true
+    }
+  }>('/assessments/meta')
+  return result
+}
+
+export async function createAssessmentDraft(
+  input: AssessmentInput,
+): Promise<AssessmentRecord> {
+  const result = await request<{ ok: true; assessment: AssessmentRecord }>(
+    '/me/assessments',
+    'POST',
+    { input } as unknown as WechatMiniprogram.IAnyObject,
+  )
+  return result.assessment
+}
+
+export async function getMyAssessments(): Promise<AssessmentRecord[]> {
+  const result = await request<{ ok: true; assessments: AssessmentRecord[] }>(
+    '/me/assessments',
+  )
+  return result.assessments
+}
+
+export async function getMyAssessment(id: string): Promise<AssessmentRecord> {
+  const result = await request<{ ok: true; assessment: AssessmentRecord }>(
+    `/me/assessments/${id}`,
+  )
+  return result.assessment
+}
+
+export async function runMyAssessment(id: string): Promise<AssessmentRecord> {
+  const result = await request<{ ok: true; assessment: AssessmentRecord }>(
+    `/me/assessments/${id}/run`,
+    'POST',
+    {},
+  )
+  return result.assessment
+}
