@@ -49,3 +49,8 @@ export function getStageDefinition(code: string | null | undefined): StageDefini
 export function isPlanTypeAllowed(stageCode: string, planType: PlanType): boolean {
   return getStageDefinition(stageCode)?.planTypes.includes(planType) ?? false
 }
+
+
+export function isGuidanceAllowed(stageCode: string): boolean {
+  return getStageDefinition(stageCode)?.mode !== 'internship'
+}
