@@ -164,6 +164,10 @@ export function registerAssessmentRoutes(
         )
         .limit(1)
 
+      if (!created) {
+        throw new Error('assessment_create_readback_failed')
+      }
+
       return reply.code(201).send({
         ok: true,
         assessment: serializeAssessment(created),
@@ -398,6 +402,10 @@ export function registerAssessmentRoutes(
           .from(assessments)
           .where(eq(assessments.id, row.id))
           .limit(1)
+
+        if (!completed) {
+          throw new Error('assessment_complete_readback_failed')
+        }
 
         return {
           ok: true,
