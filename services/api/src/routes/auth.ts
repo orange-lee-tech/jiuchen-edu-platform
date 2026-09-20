@@ -19,13 +19,35 @@ import {
   resolveSessionUser,
   revokeCurrentSession,
 } from '../services/session.js'
-import { exchangeWechatLoginCode } from '../services/wechat.js'
+import {
+  exchangeWechatLoginCode,
+  exchangeWechatPhoneCode,
+} from '../services/wechat.js'
 
-const bodySchema = z.object({
-  code: z.string().min(1).optional(),
+const agreementFields = {
   agreementAccepted: z.literal(true),
   agreementVersion: z.literal(PLACEHOLDER_USER_AGREEMENT_VERSION),
+}
+
+const wechatBodySchema = z.object({
+  code: z.string().min(1).optional(),
+  ...agreementFields,
 })
+
+const phoneBodySchema = z.object({
+  phoneCode: z.string().min(1),
+  wechatCode: z.string().min(1).optional(),
+  ...agreementFields,
+})
+
+type LoginUser = {
+  id: string
+  role: 'user' | 'student' | 'teacher' | 'staff' | 'admin'
+  status: 'active' | 'deleted'
+  displayName: string | null
+  wechatOpenId: string | null
+  phoneNumber: string | null
+}
 
 function headerValue(request: FastifyRequest, name: string): string | undefined {
   const value = request.headers[name]
@@ -76,6 +98,73 @@ async function loadBusinessIdentity(
   return identity ?? null
 }
 
+async function loadLoginUserByOpenId(
+  database: DatabaseContext & { configured: true },
+  openId: string,
+): Promise<LoginUser | null> {
+  const [user] = await database.db
+    .select({
+      id: users.id,
+      role: users.role,
+      status: users.status,
+      displayName: users.displayName,
+      wechatOpenId: users.wechatOpenId,
+      phoneNumber: users.phoneNumber,
+    })
+    .from(users)
+    .where(eq(users.wechatOpenId, openId))
+    .limit(1)
+
+  return user ?? null
+}
+
+async function loadLoginUserByPhone(
+  database: DatabaseContext & { configured: true },
+  phoneNumber: string,
+): Promise<LoginUser | null> {
+  const [user] = await database.db
+    .select({
+      id: users.id,
+      role: users.role,
+      status: users.status,
+      displayName: users.displayName,
+      wechatOpenId: users.wechatOpenId,
+      phoneNumber: users.phoneNumber,
+    })
+    .from(users)
+    .where(eq(users.phoneNumber, phoneNumber))
+    .limit(1)
+
+  return user ?? null
+}
+
+async function finalizeLogin(
+  database: DatabaseContext & { configured: true },
+  user: Pick<LoginUser, 'id' | 'role' | 'displayName'>,
+  agreementVersion: string,
+) {
+  await recordUserAgreement(database, user.id, agreementVersion)
+
+  const session = await issueSession(database, user.id)
+  const businessIdentity = await loadBusinessIdentity(database, user.id)
+
+  return {
+    ok: true as const,
+    user: {
+      id: user.id,
+      role: user.role,
+      displayName: user.displayName,
+    },
+    businessIdentity,
+    agreement: {
+      type: 'user_terms' as const,
+      version: agreementVersion,
+      accepted: true as const,
+    },
+    session,
+  }
+}
+
 export function registerAuthRoutes(
   app: FastifyInstance,
   database: DatabaseContext,
@@ -89,7 +178,7 @@ export function registerAuthRoutes(
       })
     }
 
-    const body = bodySchema.safeParse(request.body ?? {})
+    const body = wechatBodySchema.safeParse(request.body ?? {})
     if (!body.success) {
       return reply.code(400).send({
         ok: false,
@@ -114,29 +203,22 @@ export function registerAuthRoutes(
         })
       }
 
-      const [existing] = await database.db
-        .select({
-          id: users.id,
-          role: users.role,
-          status: users.status,
-          displayName: users.displayName,
-        })
-        .from(users)
-        .where(eq(users.wechatOpenId, identity.openId))
-        .limit(1)
-
-      const user = existing ?? {
-        id: randomUUID(),
-        role: 'user' as const,
-        status: 'active' as const,
-        displayName: null,
-      }
+      const existing = await loadLoginUserByOpenId(database, identity.openId)
 
       if (existing?.status === 'deleted') {
         return reply.code(403).send({
           ok: false,
           error: 'account_deleted',
         })
+      }
+
+      const user = existing ?? {
+        id: randomUUID(),
+        role: 'user' as const,
+        status: 'active' as const,
+        displayName: null,
+        wechatOpenId: identity.openId,
+        phoneNumber: null,
       }
 
       if (!existing) {
@@ -148,35 +230,124 @@ export function registerAuthRoutes(
         })
       }
 
-      await recordUserAgreement(
-        database,
-        user.id,
-        body.data.agreementVersion,
-      )
-
-      const session = await issueSession(database, user.id)
-      const businessIdentity = await loadBusinessIdentity(database, user.id)
-
-      return {
-        ok: true,
-        user: {
-          id: user.id,
-          role: user.role,
-          displayName: user.displayName,
-        },
-        businessIdentity,
-        agreement: {
-          type: 'user_terms',
-          version: body.data.agreementVersion,
-          accepted: true,
-        },
-        session,
-      }
+      return finalizeLogin(database, user, body.data.agreementVersion)
     } catch (error) {
       app.log.warn({ err: error }, 'WeChat identity bootstrap failed')
       return reply.code(502).send({
         ok: false,
         error: 'wechat_login_failed',
+      })
+    }
+  })
+
+  app.post('/auth/phone/bootstrap', async (request, reply) => {
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const body = phoneBodySchema.safeParse(request.body ?? {})
+    if (!body.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_phone_login_payload',
+      })
+    }
+
+    try {
+      const cloudOpenId = headerValue(request, 'x-wx-openid')
+      const cloudUnionId = headerValue(request, 'x-wx-unionid')
+
+      const identity = cloudOpenId
+        ? { openId: cloudOpenId, unionId: cloudUnionId }
+        : body.data.wechatCode
+          ? await exchangeWechatLoginCode(body.data.wechatCode, env)
+          : null
+
+      if (!identity) {
+        return reply.code(401).send({
+          ok: false,
+          error: 'wechat_identity_missing',
+        })
+      }
+
+      const phone = await exchangeWechatPhoneCode(body.data.phoneCode, env)
+
+      const [openIdUser, phoneUser] = await Promise.all([
+        loadLoginUserByOpenId(database, identity.openId),
+        loadLoginUserByPhone(database, phone.phoneNumber),
+      ])
+
+      if (openIdUser?.status === 'deleted' || phoneUser?.status === 'deleted') {
+        return reply.code(403).send({
+          ok: false,
+          error: 'account_deleted',
+        })
+      }
+
+      if (openIdUser && phoneUser && openIdUser.id !== phoneUser.id) {
+        return reply.code(409).send({
+          ok: false,
+          error: 'auth_identity_conflict',
+        })
+      }
+
+      if (
+        !openIdUser &&
+        phoneUser?.wechatOpenId &&
+        phoneUser.wechatOpenId !== identity.openId
+      ) {
+        return reply.code(409).send({
+          ok: false,
+          error: 'phone_bound_to_other_wechat',
+        })
+      }
+
+      let user = openIdUser ?? phoneUser
+
+      if (!user) {
+        user = {
+          id: randomUUID(),
+          role: 'user',
+          status: 'active',
+          displayName: null,
+          wechatOpenId: identity.openId,
+          phoneNumber: phone.phoneNumber,
+        }
+
+        await database.db.insert(users).values({
+          id: user.id,
+          wechatOpenId: identity.openId,
+          phoneNumber: phone.phoneNumber,
+          phoneCountryCode: phone.countryCode,
+          role: 'user',
+          status: 'active',
+        })
+      } else {
+        await database.db
+          .update(users)
+          .set({
+            wechatOpenId: identity.openId,
+            phoneNumber: phone.phoneNumber,
+            phoneCountryCode: phone.countryCode,
+          })
+          .where(eq(users.id, user.id))
+
+        user = {
+          ...user,
+          wechatOpenId: identity.openId,
+          phoneNumber: phone.phoneNumber,
+        }
+      }
+
+      return finalizeLogin(database, user, body.data.agreementVersion)
+    } catch (error) {
+      app.log.warn({ err: error }, 'WeChat phone bootstrap failed')
+      return reply.code(502).send({
+        ok: false,
+        error: 'phone_login_failed',
       })
     }
   })
@@ -277,6 +448,8 @@ export function registerAuthRoutes(
         .update(users)
         .set({
           wechatOpenId: null,
+          phoneNumber: null,
+          phoneCountryCode: null,
           role: 'user',
           status: 'deleted',
           displayName: null,
