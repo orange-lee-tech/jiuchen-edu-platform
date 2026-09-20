@@ -4,6 +4,7 @@ import {
   canAccessAdminWorkspace,
   canAccessTeacherWorkspace,
   canEditAcademicProfile,
+  canUseAssessment,
   roleLabel,
 } from './auth-policy.js'
 
@@ -11,6 +12,14 @@ test('guest and student may edit academic profile', () => {
   assert.equal(canEditAcademicProfile('user'), true)
   assert.equal(canEditAcademicProfile('student'), true)
   assert.equal(canEditAcademicProfile('teacher'), false)
+})
+
+test('AI assessment is available only to guest/user and student roles', () => {
+  assert.equal(canUseAssessment('user'), true)
+  assert.equal(canUseAssessment('student'), true)
+  assert.equal(canUseAssessment('teacher'), false)
+  assert.equal(canUseAssessment('staff'), false)
+  assert.equal(canUseAssessment('admin'), false)
 })
 
 test('teacher workspace requires teaching or internal role', () => {
