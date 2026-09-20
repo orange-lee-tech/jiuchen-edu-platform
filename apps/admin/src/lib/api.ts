@@ -50,7 +50,7 @@ export type TeacherAssignment = {
 
 export type CoachingRecord = {
   id: string
-  studentId: string
+  studentId?: string
   teacherId: string | null
   teacherName: string | null
   stageCode: string
