@@ -87,7 +87,7 @@ const findingSchema = z
   .object({
     title: z.string().trim().min(1).max(160),
     detail: z.string().trim().min(1).max(1000),
-    evidenceRefs: z.array(evidenceReferenceSchema).max(12).default([]),
+    evidenceRefs: z.array(evidenceReferenceSchema).min(1).max(12),
   })
   .strict()
 
@@ -99,7 +99,7 @@ const targetAssessmentSchema = z
     rationale: z.string().trim().min(1).max(1600),
     gapItems: z.array(z.string().trim().min(1).max(500)).max(12).default([]),
     actions: z.array(z.string().trim().min(1).max(500)).max(12).default([]),
-    evidenceRefs: z.array(evidenceReferenceSchema).max(20).default([]),
+    evidenceRefs: z.array(evidenceReferenceSchema).min(1).max(20),
   })
   .strict()
 
