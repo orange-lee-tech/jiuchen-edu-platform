@@ -36,6 +36,13 @@ export class AssessmentProviderUnavailableError extends Error {
   }
 }
 
+export class AssessmentEvidenceReferenceError extends Error {
+  constructor(message = 'assessment_evidence_reference_invalid') {
+    super(message)
+    this.name = 'AssessmentEvidenceReferenceError'
+  }
+}
+
 class EmptyAssessmentRetriever implements AssessmentRetriever {
   async retrieve(): Promise<AssessmentKnowledgeContext> {
     return {
@@ -85,6 +92,37 @@ export async function executeAssessment(
     knowledge,
   })
   const output = validateAssessmentOutput(rawOutput)
+  const availableEvidence = new Set(knowledge.evidence.map((item) => item.ref))
+
+  const validateGeneralRefs = (refs: string[]) => {
+    for (const ref of refs) {
+      if (ref.startsWith('input:')) continue
+      if (!availableEvidence.has(ref)) {
+        throw new AssessmentEvidenceReferenceError()
+      }
+    }
+  }
+
+  for (const finding of [...output.strengths, ...output.risks]) {
+    validateGeneralRefs(finding.evidenceRefs)
+  }
+
+  for (const target of output.targetAssessments) {
+    validateGeneralRefs(target.evidenceRefs)
+    if (!target.evidenceRefs.some((ref) => availableEvidence.has(ref))) {
+      throw new AssessmentEvidenceReferenceError(
+        'target_assessment_requires_retrieved_evidence',
+      )
+    }
+  }
+
+  for (const similarCase of output.similarCases) {
+    if (!availableEvidence.has(similarCase.evidenceRef)) {
+      throw new AssessmentEvidenceReferenceError(
+        'similar_case_reference_invalid',
+      )
+    }
+  }
 
   return {
     output,
