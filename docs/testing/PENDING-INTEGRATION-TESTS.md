@@ -22,7 +22,7 @@
 ## 2. 基础设施 / 数据库
 
 ### DB-01 Identity V2 Schema 升级
-**状态：TODO**
+**状态：PASS**
 
 **前置条件**
 - 本地 `services/api/.env` 已配置 Test MySQL `DATABASE_URL`
@@ -276,7 +276,7 @@ npm.cmd run db:seed:test-internal-ids
 ## 8. 九辰教育服务号 → 小程序资讯同步
 
 ### NEWS-01 服务号开发凭据配置
-**状态：TODO**
+**状态：PASS**
 
 **服务端环境变量**
 ```env
@@ -417,4 +417,4 @@ WECHAT_OA_APP_SECRET=
 
 | 日期 | 环境 | 模块 | 测试人 | 结果 | 问题/备注 | 对应修复提交 |
 |---|---|---|---|---|---|---|
-| 待填写 | Test | - | - | TODO | - | - |
+| 2026-09-20 | Test | DB-01 | 当前开发机 | PASS | Identity V2 升级完成；一次 ECONNRESET 由自动重连恢复 | c9f8e5f |\n| 2026-09-20 | Test | NEWS-01 | 当前开发机 | PASS | /health/config 显示 officialAccountConfigured=true | c9f8e5f |
