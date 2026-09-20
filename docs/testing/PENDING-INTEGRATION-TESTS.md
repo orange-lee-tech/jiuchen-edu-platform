@@ -419,6 +419,24 @@ WECHAT_OA_APP_SECRET=
 
 ## 11. AI 评估（未来集中测试）
 
+### AI-00 Assessment Foundation Schema
+**状态：TODO**
+
+**前置条件**
+- 选择合适的数据库维护窗口；当前不要求立即执行。
+
+**执行**
+```powershell
+cd services\\api
+npm.cmd run db:upgrade:assessment
+```
+
+**成功条件**
+- `assessments` 表创建成功；
+- 重复执行幂等；
+- 未执行该升级时，现有登录/课堂/资讯不受影响；
+- 调用 Assessment 持久化接口时若表不存在，明确返回 `assessment_schema_not_ready`。
+
 ### AI-01 输入标准化
 **状态：TODO**
 
