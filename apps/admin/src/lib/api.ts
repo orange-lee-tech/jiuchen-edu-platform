@@ -94,11 +94,22 @@ export type ClassroomPlan = {
   items: ClassroomPlanItem[]
 }
 
+export type ClassroomMentor = {
+  id: string
+  name: string
+  title: string | null
+  bio: string | null
+  relationship: 'primary' | 'support'
+  stageCode: string | null
+}
+
 export type ClassroomView = {
   ok: true
   student: StudentSummary
   stage: ClassroomStage
   showGuidance: boolean
+  mentors: ClassroomMentor[]
+  records: CoachingRecord[]
   plans: ClassroomPlan[]
 }
 
