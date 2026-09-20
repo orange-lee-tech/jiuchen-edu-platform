@@ -1,141 +1,103 @@
 # CloudBase Test 环境接入清单
 
-本文件只记录接入步骤与非敏感标识。任何数据库密码、微信 AppSecret、支付密钥、AI API Key 都不得写入仓库。
+本文件只记录 CloudBase Test 的现状与历史验证结果。任何数据库密码、微信 AppSecret、支付密钥、AI API Key 都不得写入仓库。
 
-## 目标
+> 2026-09-20 起，CloudBase 不再被视为 Production 唯一目标。Production 方向见 Proposed ADR-0008。
 
-P1 需要先建立一个 **Test** 环境，用来完成：
-
-1. API 云托管部署；
-2. MySQL 测试数据库；
-3. 微信开发者工具与真机访问；
-4. 演示学员从数据库 → API → 后台 / 小程序的最小闭环；
-5. CloudBase 自动注入的微信 OpenID → 业务用户映射。
-
-Production 暂不创建。
-
-## 当前 Test 环境
+## 1. 当前 Test 环境
 
 - 小程序 AppID：`wxe0f480606408ae2e`
 - CloudBase 环境名称：`cloud1`
 - CloudBase 环境 ID：`cloud1-d3geim00r03edb212`
 - 云托管服务：`jiuchen-api`
-- 当前云托管版本：`001`，状态正常
-- MySQL：已开通；Test Schema 已通过 Drizzle `db:push` 建立，演示学员 Seed 已写入
+- MySQL：已开通，当前主要通过本地 API + Test MySQL 进行开发联调
 
 这些均为非敏感标识。数据库账号、密码和连接字符串不得写入仓库。
 
-## 推荐创建方式
+## 2. 已验证能力
 
-这是纯微信小程序项目，Test 环境优先从 **微信开发者工具 → 云开发** 创建。这样环境会自动与当前小程序关联，后续小程序可直接使用 `wx.cloud.callContainer` 访问云托管 API，无需额外维护 request 合法域名。
+已验证：
+- 本机 Fastify → Test MySQL：可连接；
+- `GET /health` 可返回数据库状态；
+- 演示学员数据库链路可工作；
+- 小程序 → CloudBase 云托管 API：可访问；
+- CloudBase 运行时环境变量注入：可用；
+- 小程序请求层可在本地 HTTP 与 CloudBase 之间切换。
 
-## 当前代码已经准备好的内容
+另已完成：
+- Auth Foundation Schema；
+- Identity V2 Schema；
+- 测试 Student / Teacher / Admin 内部ID Seed。
 
-- `services/api/Dockerfile`：用于部署 API 容器；
-- `GET /health`：检查 API 与数据库状态；
-- Drizzle Schema 与演示学员 Seed；
-- `GET /students/:id`：读取测试学员；
-- `POST /auth/wechat/bootstrap`：优先读取 CloudBase 自动注入的 `x-wx-openid` 并映射为业务用户；
-- 本地 HTTP 调试时保留 `wx.login` + `jscode2session` 兜底；
-- 小程序请求适配层支持本地 HTTP / Test 云托管两种传输；
-- 管理后台 API 健康检查与演示学员读取页面。
+## 3. 已知限制
 
-## 数据库连接
+CloudBase 免费体验云托管 → MySQL 的链路曾持续返回数据库连接错误，而同一个 MySQL 从本地可正常访问。
 
-CloudBase MySQL 采用直连方式供 `jiuchen-api` 使用：
+因此当前判断：
+- 该问题属于 Test 基础设施/网络能力限制；
+- 不再为免费 CloudBase 套餐持续堆叠 workaround；
+- 不阻塞 P2/P3 产品开发；
+- 需要真机验证时仍可使用 CloudBase API 或本地调试链路；
+- Production 不以该免费网络模型为基础。
 
-1. 在 CloudBase「SQL 型数据库 → 数据库设置」开启直连服务；
-2. 为应用创建专用数据库账号；
-3. 云托管使用内网连接地址；
-4. 云托管优先按 CloudBase 官方推荐配置 `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME`；代码仍兼容单一 `DATABASE_URL`；
-5. 如本地需要执行 Migration，可临时开启外网连接，并仅将外网连接串写入本地 `services/api/.env`；调试结束后关闭外网连接。
+## 4. 当前请求传输策略
 
-CloudBase Test 推荐：
-
-```text
-DB_HOST=<内网主机>
-DB_PORT=3306
-DB_USER=<应用账号>
-DB_PASSWORD=<密码>
-DB_NAME=<数据库名>
-```
-
-本地开发也可继续使用：
+请求适配层必须保持三种传输可替换：
 
 ```text
-DATABASE_URL=mysql://<username>:<password>@<host>:<port>/<database>
+local:
+wx.request -> http://127.0.0.1:3000
+
+CloudBase Test:
+wx.cloud.callContainer -> jiuchen-api
+
+Production（Proposed）:
+wx.request -> HTTPS API domain -> Alibaba Cloud jiuchen-api
 ```
 
-不得提交到 GitHub。
+页面业务代码不得直接绑定某一种传输方式。
 
-## 微信身份
+## 5. 数据库初始化与演进
 
-Test / Production 小程序通过 `wx.cloud.callContainer` 访问云托管时，平台会自动向后端注入可信的微信用户 Header（如 `x-wx-openid`）。因此主链路不需要把 AppSecret 交给小程序，也不需要自行在前端维护 Token。
+早期空 Test 数据库曾使用 `db:push` 快速建立 Schema。
 
-`WECHAT_APP_ID` / `WECHAT_APP_SECRET` 仅作为本地 HTTP 调试 `jscode2session` 的可选兜底，不是 CloudBase Test 环境的必需配置。
+当前已进入受控演进阶段：
+- 不再把 `db:push` 作为正常升级策略；
+- 现有临时升级脚本必须幂等、可审阅、可重复执行；
+- Production 前要收敛为正式 Migration；
+- 真实学员数据不得进入 Git。
 
-## P1 初始化命令
+目前使用过：
+- `db:upgrade:auth`
+- `db:upgrade:identity-v2`
+- `db:seed:test-internal-ids`
 
-数据库可连接后，Test 环境首次初始化在 `services/api` 执行：
+## 6. 微信身份
 
-```bash
-npm install
-npm run db:push
-npm run db:seed
-npm run dev
+CloudBase Test 可以利用平台注入的可信微信 Header。
+
+本地/未来普通 HTTPS API 则使用：
+```text
+wx.login code
+  -> 服务端 jscode2session
+  -> User
+  -> UserSession
+  -> Bearer session
 ```
 
-`db:push` 仅用于空的开发 / Test 数据库快速落 Schema。后续正式 Schema 演进仍需生成并提交 Migration，不能把 `push` 当作 Production 迁移策略。
+因此业务身份与会话不能依赖 CloudBase 专属 Header。
 
-预期：
+## 7. Production 迁移关系
 
-- `GET /health` 返回 `database: ok`；如果数据库可连但核心表缺失，返回 `database: schema_missing`；
-- `GET /students/00000000-0000-4000-8000-000000000001` 返回“演示学员”；
-- 管理后台能显示该演示学员；
-- 小程序测试页能显示该演示学员；
-- 小程序通过 `callContainer` 调用身份初始化接口后，服务端能够把自动注入的 OpenID 映射为业务用户。
+当前 Production 方向：
+- 公司官网继续维持现有静态部署；
+- 小程序 API 作为独立容器/系统服务部署到公司阿里云主机；
+- 使用独立 API 域名；
+- 服务号同步从固定公网出口 IP 发起；
+- 官网与 API 独立目录、配置、日志、发布、回滚。
 
-## 当前已验证
+详细方案见：
+- `docs/adr/0008-alibaba-shared-host-isolation.md`
+- `docs/architecture/construction-map.md`
 
-- 本机 → CloudBase MySQL 外网直连：通过；
-- `users` / `students` / `student_plans` / `plan_items` 四张核心表：已创建；
-- 演示学员 Seed：已写入；
-- 本地 Fastify `GET /health`：`database: ok`；
-- 本地 `GET /students/00000000-0000-4000-8000-000000000001`：成功返回“演示学员”。
-
-当前剩余 P1 闭环：将内网 `DATABASE_URL` 配置到云托管新版本，验证云端 `/health`、小程序 `callContainer` 和 OpenID 映射，然后关闭数据库外网直连。
-
-## 暂不做
-
-- Production 环境；
-- 微信支付；
-- AI API Key；
-- 真实学员数据；
-- 自动发布到微信正式版。
-
-
-## 免费 Test 环境的网络取舍
-
-当前 CloudBase 免费体验环境不启用付费「私有网络」能力。为避免为 P1/P2 开发测试额外购买套餐，Test 环境采用 MySQL 外网直连：
-
-- 云托管保持「公网访问」开启，以使用平台默认公网出口；
-- MySQL 保持外网直连开启；
-- 云托管使用 `DB_HOST=<MySQL 外网主机>`、`DB_PORT=<外网端口>`；
-- 仅使用应用账号 `jiuchen_app`，不使用 root；
-- 强密码仅保存在 CloudBase 版本环境变量中，不进入 Git 或聊天；
-- 该方案仅限 Test / 开发，不作为 Production 架构；
-- Production 优先使用同 VPC 内网连接，或迁移到公司现有服务器后使用独立 API/数据库运行环境；
-- Test 环境停止使用后，应关闭 MySQL 外网直连。
-
-这一取舍的目标是减少开发期基础设施成本和配置阻塞，不改变应用层 Fastify + Drizzle + MySQL 架构。
-
-
-## P1 云端数据库阻塞不阻塞 P2
-
-截至 2026-09-18，以下链路已验证：
-- 本地 Fastify → CloudBase MySQL 外网：成功；
-- 小程序 → CloudBase 云托管 API：成功；
-- CloudBase 运行时环境变量注入：成功；
-- CloudBase 免费体验云托管 → MySQL：仍返回数据库连接错误。
-
-该阻塞被视为免费 Test 基础设施限制/网络配置问题，不再阻塞 P2 产品页面开发。P2 继续使用已验证的本地 API + Test 数据开发；云端数据库连接作为独立基础设施事项保留。Production 架构仍保持可迁移，可选择付费 CloudBase VPC 或公司现有服务器。
+在服务器规格、Docker/Nginx Proxy Manager 实际状态、Production MySQL 方案确认之前，不执行迁移。
