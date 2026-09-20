@@ -1,6 +1,8 @@
 import {
   getClassroomStages,
   getDemoStudentClassroom,
+  type ClassroomCoachingRecord,
+  type ClassroomMentor,
   type ClassroomPlan,
   type ClassroomPlanType,
   type ClassroomStage,
@@ -82,6 +84,8 @@ function getStageView(stage: ClassroomStage, index: number) {
     stageDescription: stage.description,
     plans: stage.planTypes.map((type) => PLAN_CARDS[type]),
     showGuidance: stage.mode !== 'internship',
+    mentors: [] as ClassroomMentor[],
+    records: [] as Array<ClassroomCoachingRecord & { dateLabel: string }>,
   }
 }
 
@@ -101,13 +105,8 @@ Page({
   data: {
     stages: FALLBACK_STAGES,
     ...getStageView(FALLBACK_STAGES[0], 0),
-    mentor: {
-      name: '导师信息待录入',
-      desc: '点击后查看导师介绍与指导安排',
-    },
-    records: [
-      { date: '09-12', title: '辅导记录待后台录入', content: '由九辰工作人员维护本阶段辅导记录。' },
-    ],
+    mentors: [] as ClassroomMentor[],
+    records: [] as Array<ClassroomCoachingRecord & { dateLabel: string }>,
   },
 
   onLoad() {
@@ -145,6 +144,11 @@ Page({
       this.setData({
         plans: result.plans.map(toPlanCard),
         showGuidance: result.showGuidance,
+        mentors: result.mentors,
+        records: result.records.map((record) => ({
+          ...record,
+          dateLabel: this.formatRecordDate(record.occurredAt),
+        })),
       })
     } catch (error) {
       console.info('Classroom data unavailable; keeping local placeholder plans.', error)
@@ -172,7 +176,30 @@ Page({
     })
   },
 
-  onMentorTap() {
-    wx.showToast({ title: '导师介绍页已预留', icon: 'none' })
+  formatRecordDate(value: string) {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${month}-${day}`
+  },
+
+  onMentorTap(event: WechatMiniprogram.BaseEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    const mentors = this.data.mentors as ClassroomMentor[]
+    const mentor = mentors[index]
+
+    if (!mentor) return
+
+    wx.showModal({
+      title: mentor.name,
+      content: [
+        mentor.title || '九辰辅导老师',
+        mentor.bio || '老师介绍待后台完善。',
+        mentor.relationship === 'primary' ? '当前关系：主辅导' : '当前关系：协助',
+      ].join('\n\n'),
+      showCancel: false,
+      confirmText: '知道了',
+    })
   },
 })
