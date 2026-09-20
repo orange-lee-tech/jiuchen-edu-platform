@@ -80,13 +80,28 @@
           <text class="section-note">查看老师介绍</text>
         </view>
 
-        <view class="mentor-card surface" bindtap="onMentorTap">
-          <view class="mentor-avatar">导</view>
-          <view class="mentor-main">
-            <text class="mentor-name">{{mentor.name}}</text>
-            <text class="mentor-desc">{{mentor.desc}}</text>
+        <view wx:if="{{mentors.length > 0}}" class="mentor-list">
+          <view
+            wx:for="{{mentors}}"
+            wx:key="id"
+            class="mentor-card surface"
+            data-index="{{index}}"
+            bindtap="onMentorTap"
+          >
+            <view class="mentor-avatar">导</view>
+            <view class="mentor-main">
+              <text class="mentor-name">{{item.name}}</text>
+              <text class="mentor-desc">
+                {{item.title || '九辰辅导老师'}} · {{item.relationship === 'primary' ? '主辅导' : '协助'}}
+              </text>
+            </view>
+            <text class="arrow">›</text>
           </view>
-          <text class="arrow">›</text>
+        </view>
+
+        <view wx:else class="pending-card surface">
+          <text class="pending-title">辅导老师待分配</text>
+          <text class="pending-desc">老师由九辰后台维护并按学员/阶段授权。</text>
         </view>
 
         <view class="section-title-row">
@@ -94,14 +109,20 @@
           <text class="section-note">工作人员录入</text>
         </view>
 
-        <view class="record-list surface">
-          <view wx:for="{{records}}" wx:key="date" class="record-row">
-            <view class="record-date">{{item.date}}</view>
+        <view wx:if="{{records.length > 0}}" class="record-list surface">
+          <view wx:for="{{records}}" wx:key="id" class="record-row">
+            <view class="record-date">{{item.dateLabel}}</view>
             <view class="record-main">
               <text class="record-title">{{item.title}}</text>
+              <text wx:if="{{item.teacherName}}" class="record-teacher">记录老师：{{item.teacherName}}</text>
               <text class="record-content">{{item.content}}</text>
             </view>
           </view>
+        </view>
+
+        <view wx:else class="pending-card surface">
+          <text class="pending-title">暂无辅导记录</text>
+          <text class="pending-desc">辅导完成后由九辰工作人员在后台录入，学员端只读。</text>
         </view>
       </block>
     </view>
