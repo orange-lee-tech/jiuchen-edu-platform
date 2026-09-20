@@ -48,6 +48,18 @@ export type TeacherAssignment = {
   relationship: 'primary' | 'support'
 }
 
+export type CoachingRecord = {
+  id: string
+  studentId: string
+  teacherId: string | null
+  teacherName: string | null
+  stageCode: string
+  title: string
+  content: string
+  occurredAt: string
+  createdAt?: string
+}
+
 export type StudentSummary = {
   id: string
   name: string
@@ -290,6 +302,66 @@ export async function bindInternalId(
     {
       method: 'POST',
       body: JSON.stringify({ userId }),
+    },
+  )
+}
+
+
+export async function fetchCoachingRecords(
+  studentId: string,
+  stageCode?: string,
+): Promise<CoachingRecord[]> {
+  const query = stageCode ? `?stage=${encodeURIComponent(stageCode)}` : ''
+  const result = await requestJson<{ ok: true; records: CoachingRecord[] }>(
+    `/api/admin/students/${studentId}/coaching-records${query}`,
+  )
+  return result.records
+}
+
+export async function createCoachingRecord(
+  studentId: string,
+  payload: {
+    stageCode: string
+    teacherId: string | null
+    title: string
+    content: string
+    occurredAt: string
+  },
+): Promise<CoachingRecord> {
+  const result = await requestJson<{ ok: true; record: CoachingRecord }>(
+    `/api/admin/students/${studentId}/coaching-records`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  )
+  return result.record
+}
+
+export async function updateCoachingRecord(
+  id: string,
+  payload: {
+    stageCode: string
+    teacherId: string | null
+    title: string
+    content: string
+    occurredAt: string
+  },
+): Promise<void> {
+  await requestJson(
+    `/api/admin/coaching-records/${id}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+export async function deleteCoachingRecord(id: string): Promise<void> {
+  await requestJson(
+    `/api/admin/coaching-records/${id}`,
+    {
+      method: 'DELETE',
     },
   )
 }
