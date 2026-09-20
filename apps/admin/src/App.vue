@@ -155,6 +155,11 @@ function clearFeedback() {
   notice.value = ''
 }
 
+function formatDateTime(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
+}
+
 function fillStudentForm(student: StudentSummary) {
   studentForm.value = {
     name: student.name,
@@ -784,7 +789,7 @@ onMounted(async () => {
                   <div>
                     <strong>{{ record.title }}</strong>
                     <p class="muted small">
-                      {{ new Date(record.occurredAt).toLocaleString() }}
+                      {{ formatDateTime(record.occurredAt) }}
                       <template v-if="record.teacherName"> · {{ record.teacherName }}</template>
                     </p>
                     <p class="coaching-content">{{ record.content }}</p>
