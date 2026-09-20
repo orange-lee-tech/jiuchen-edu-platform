@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm'
 import {
+  boolean,
   int,
+  json,
   mysqlEnum,
   mysqlTable,
   timestamp,
@@ -122,6 +124,31 @@ export const newsPosts = mysqlTable('news_posts', {
   articleUrl: varchar('article_url', { length: 1000 }),
   publishedAt: timestamp('published_at'),
   status: mysqlEnum('status', ['active', 'hidden']).notNull().default('active'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
+export const assessments = mysqlTable('assessments', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 })
+    .notNull()
+    .references(() => users.id),
+  status: mysqlEnum('status', ['draft', 'running', 'succeeded', 'failed'])
+    .notNull()
+    .default('draft'),
+  inputSchemaVersion: varchar('input_schema_version', { length: 64 }).notNull(),
+  outputSchemaVersion: varchar('output_schema_version', { length: 64 }).notNull(),
+  agentVersion: varchar('agent_version', { length: 64 }).notNull(),
+  provider: varchar('provider', { length: 80 }),
+  model: varchar('model', { length: 160 }),
+  knowledgeVersion: varchar('knowledge_version', { length: 120 }),
+  inputJson: json('input_json').notNull(),
+  evidenceJson: json('evidence_json'),
+  outputJson: json('output_json'),
+  failureCode: varchar('failure_code', { length: 120 }),
+  creditConsumed: boolean('credit_consumed').notNull().default(false),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
