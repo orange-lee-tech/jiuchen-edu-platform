@@ -1,6 +1,6 @@
 # ADR-0005：V1 采用 CloudBase 优先的托管基础设施
 
-- 状态：Accepted
+- 状态：Amended
 - 日期：2026-09-17
 
 ## 决策
@@ -26,3 +26,16 @@ V1 不自行维护 CVM、Nginx、Kubernetes、Redis、ELK、Prometheus、消息�
 ## 可迁移性
 
 业务逻辑仍写成普通 Node.js 应用；CloudBase 负责托管而不主导领域模型，避免把核心业务写死成大量平台专属函数。
+
+
+## 2026-09-20 修订
+
+该 ADR 不再代表 Production 的唯一目标拓扑。
+
+实际联调表明，CloudBase 免费 Test 云托管到 MySQL 的网络能力存在限制；与此同时，公司已有阿里云生产主机承载正式官网，业务方期望小程序 Production 与官网共用该主机但严格隔离运行。
+
+因此：
+- CloudBase 继续作为 Test / 过渡方案；
+- 核心 API 仍保持普通 Node.js HTTP 服务，继续满足可迁移性要求；
+- Production 部署方向由 Proposed ADR-0008 评估；
+- 在 ADR-0008 正式 Accepted 前，不进行 Production 迁移。
