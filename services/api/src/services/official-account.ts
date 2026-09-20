@@ -53,7 +53,7 @@ async function getAccessToken(env: AppEnv) {
   if (!response.ok || !payload.access_token) {
     throw new Error(
       payload.errcode
-        ? `official_account_token_${payload.errcode}`
+        ? `official_account_token_${payload.errcode}:${payload.errmsg ?? 'unknown'}`
         : 'official_account_token_failed',
     )
   }
@@ -99,7 +99,7 @@ export async function fetchLatestOfficialAccountPosts(
   if (!response.ok || payload.errcode) {
     throw new Error(
       payload.errcode
-        ? `official_account_publish_${payload.errcode}`
+        ? `official_account_publish_${payload.errcode}:${payload.errmsg ?? 'unknown'}`
         : 'official_account_publish_failed',
     )
   }
