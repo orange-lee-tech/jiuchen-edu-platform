@@ -52,11 +52,32 @@ export type ClassroomPlan = {
   }>
 }
 
+export type ClassroomMentor = {
+  id: string
+  name: string
+  title: string | null
+  bio: string | null
+  relationship: 'primary' | 'support'
+  stageCode: string | null
+}
+
+export type ClassroomCoachingRecord = {
+  id: string
+  teacherId: string | null
+  teacherName: string | null
+  stageCode: string
+  title: string
+  content: string
+  occurredAt: string
+}
+
 export type ClassroomView = {
   ok: true
   student: StudentSummary
   stage: ClassroomStage
   showGuidance: boolean
+  mentors: ClassroomMentor[]
+  records: ClassroomCoachingRecord[]
   plans: ClassroomPlan[]
 }
 
