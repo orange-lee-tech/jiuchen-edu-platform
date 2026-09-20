@@ -1,7 +1,14 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull, or } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
-import { planItems, studentPlans, students } from '../db/schema.js'
+import {
+  coachingRecords,
+  planItems,
+  studentPlans,
+  students,
+  studentTeacherAssignments,
+  teachers,
+} from '../db/schema.js'
 import { DEFAULT_PLAN_TITLES, STAGE_DEFINITIONS, getStageDefinition } from '../domain/classroom.js'
 
 export function registerStudentRoutes(app: FastifyInstance, database: DatabaseContext) {
@@ -97,6 +104,58 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
         ),
       )
 
+    const showGuidance = stage.mode !== 'internship'
+
+    const mentors = showGuidance
+      ? await database.db
+          .select({
+            id: teachers.id,
+            name: teachers.name,
+            title: teachers.title,
+            bio: teachers.bio,
+            relationship: studentTeacherAssignments.relationship,
+            stageCode: studentTeacherAssignments.stageCode,
+          })
+          .from(studentTeacherAssignments)
+          .innerJoin(
+            teachers,
+            eq(studentTeacherAssignments.teacherId, teachers.id),
+          )
+          .where(
+            and(
+              eq(studentTeacherAssignments.studentId, student.id),
+              eq(teachers.status, 'active'),
+              or(
+                isNull(studentTeacherAssignments.stageCode),
+                eq(studentTeacherAssignments.stageCode, stage.code),
+              ),
+            ),
+          )
+          .orderBy(asc(studentTeacherAssignments.createdAt))
+      : []
+
+    const records = showGuidance
+      ? await database.db
+          .select({
+            id: coachingRecords.id,
+            teacherId: coachingRecords.teacherId,
+            teacherName: teachers.name,
+            stageCode: coachingRecords.stageCode,
+            title: coachingRecords.title,
+            content: coachingRecords.content,
+            occurredAt: coachingRecords.occurredAt,
+          })
+          .from(coachingRecords)
+          .leftJoin(teachers, eq(coachingRecords.teacherId, teachers.id))
+          .where(
+            and(
+              eq(coachingRecords.studentId, student.id),
+              eq(coachingRecords.stageCode, stage.code),
+            ),
+          )
+          .orderBy(desc(coachingRecords.occurredAt), desc(coachingRecords.createdAt))
+      : []
+
     const plans = await Promise.all(
       stage.planTypes.map(async (type) => {
         const storedPlan = storedPlans.find((plan) => plan.type === type)
@@ -133,7 +192,12 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
       ok: true,
       student,
       stage,
-      showGuidance: stage.mode !== 'internship',
+      showGuidance,
+      mentors,
+      records: records.map((record) => ({
+        ...record,
+        occurredAt: record.occurredAt.toISOString(),
+      })),
       plans,
     }
   })
