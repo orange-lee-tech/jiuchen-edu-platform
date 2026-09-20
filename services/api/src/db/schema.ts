@@ -114,6 +114,20 @@ export const studentTeacherAssignments = mysqlTable('student_teacher_assignments
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
 
+export const coachingRecords = mysqlTable('coaching_records', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  studentId: varchar('student_id', { length: 36 })
+    .notNull()
+    .references(() => students.id),
+  teacherId: varchar('teacher_id', { length: 36 }).references(() => teachers.id),
+  stageCode: varchar('stage_code', { length: 32 }).notNull(),
+  title: varchar('title', { length: 160 }).notNull(),
+  content: varchar('content', { length: 2000 }).notNull(),
+  occurredAt: timestamp('occurred_at').notNull(),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
 export const newsPosts = mysqlTable('news_posts', {
   id: varchar('id', { length: 36 }).primaryKey(),
   source: mysqlEnum('source', ['manual', 'wechat_official']).notNull(),
