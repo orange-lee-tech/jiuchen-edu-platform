@@ -122,7 +122,7 @@ const similarCaseSchema = z
   })
   .strict()
 
-export const assessmentOutputSchema = z
+const assessmentOutputBaseSchema = z
   .object({
     profileSummary: z.string().trim().min(1).max(1800),
     strengths: z.array(findingSchema).max(12).default([]),
@@ -134,6 +134,37 @@ export const assessmentOutputSchema = z
     disclaimer: z.string().trim().min(1).max(1000),
   })
   .strict()
+
+function containsPreciseAdmissionProbability(value: unknown): boolean {
+  if (typeof value === 'string') {
+    const forward =
+      /(?:录取|上岸|通过|offer|admission|acceptance)[^。.!?]{0,28}\d{1,3}(?:\.\d+)?\s*%/i
+    const backward =
+      /\d{1,3}(?:\.\d+)?\s*%[^。.!?]{0,28}(?:录取|上岸|通过|offer|admission|acceptance)/i
+    return forward.test(value) || backward.test(value)
+  }
+
+  if (Array.isArray(value)) {
+    return value.some(containsPreciseAdmissionProbability)
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.values(value).some(containsPreciseAdmissionProbability)
+  }
+
+  return false
+}
+
+export const assessmentOutputSchema = assessmentOutputBaseSchema.superRefine(
+  (value, context) => {
+    if (containsPreciseAdmissionProbability(value)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'precise admission probability is not allowed',
+      })
+    }
+  },
+)
 
 export const assessmentEvidenceItemSchema = z
   .object({
