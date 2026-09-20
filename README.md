@@ -60,7 +60,8 @@ V1 不引入微服务、Kubernetes、Redis、复杂消息队列、向量数据�
 - [`docs/architecture/system-overview.md`](./docs/architecture/system-overview.md)：系统总览
 - [`docs/architecture/domain-model.md`](./docs/architecture/domain-model.md)：核心领域模型
 - [`docs/architecture/data-flow.md`](./docs/architecture/data-flow.md)：数据与 AI 流程
-- [`docs/architecture/construction-map.md`](./docs/architecture/construction-map.md)：当前施工地图、进展与下一步\n- [`docs/architecture/p1-acceptance.md`](./docs/architecture/p1-acceptance.md)：P1 验收标准与当前状态
+- [`docs/architecture/construction-map.md`](./docs/architecture/construction-map.md)：当前施工地图、进展与下一步
+- [`docs/architecture/wechat-native-capabilities.md`](./docs/architecture/wechat-native-capabilities.md)：微信官方能力优先清单\n- [`docs/architecture/p1-acceptance.md`](./docs/architecture/p1-acceptance.md)：P1 验收标准与当前状态
 - [`docs/architecture/cloudbase-bootstrap.md`](./docs/architecture/cloudbase-bootstrap.md)：CloudBase Test 接入清单\n- [`docs/testing/PENDING-INTEGRATION-TESTS.md`](./docs/testing/PENDING-INTEGRATION-TESTS.md)：集中人工测试清单\n- [`docs/reference/provided-prototype-audit.md`](./docs/reference/provided-prototype-audit.md)：九辰提供外部原型源码审计
 - [`docs/adr/`](./docs/adr/)：关键架构决策记录
 
