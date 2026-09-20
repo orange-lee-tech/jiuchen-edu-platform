@@ -25,7 +25,7 @@
       loading="{{loading}}"
       disabled="{{loading || !agreed}}"
     >
-      本机号码登录
+      手机号快捷登录
     </button>
 
     <text class="native-note">手机号由微信官方快速验证能力提供，无需设置密码或输入短信验证码。</text>
