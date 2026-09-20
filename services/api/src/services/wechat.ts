@@ -58,7 +58,7 @@ function assertWechatConfigured(env: AppEnv) {
 
 function throwWechatApiError(payload: unknown, prefix: string) {
   const error = errorSchema.safeParse(payload)
-  if (!error.success) return
+  if (!error.success || error.data.errcode === 0) return
 
   throw new Error(
     `${prefix}_${error.data.errcode}:${error.data.errmsg ?? 'unknown'}`,
