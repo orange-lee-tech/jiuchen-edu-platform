@@ -113,3 +113,28 @@ test('assessment output accepts evidence-linked qualitative result', () => {
 
   assert.equal(result.success, true)
 })
+
+
+test('assessment output rejects precise probability hidden inside prose', () => {
+  const result = assessmentOutputSchema.safeParse({
+    profileSummary: '背景摘要',
+    strengths: [],
+    risks: [],
+    targetAssessments: [
+      {
+        schoolName: '目标大学',
+        tier: 'match',
+        rationale: '综合判断录取概率约为72%，因此建议继续申请。',
+        gapItems: [],
+        actions: [],
+        evidenceRefs: [],
+      },
+    ],
+    recommendedActions: [],
+    similarCases: [],
+    uncertainties: [],
+    disclaimer: '本结果为规划辅助。',
+  })
+
+  assert.equal(result.success, false)
+})
