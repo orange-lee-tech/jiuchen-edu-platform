@@ -10,6 +10,8 @@ import {
 export const users = mysqlTable('users', {
   id: varchar('id', { length: 36 }).primaryKey(),
   wechatOpenId: varchar('wechat_open_id', { length: 64 }).unique(),
+  phoneNumber: varchar('phone_number', { length: 32 }).unique(),
+  phoneCountryCode: varchar('phone_country_code', { length: 8 }),
   role: mysqlEnum('role', ['user', 'student', 'teacher', 'staff', 'admin'])
     .notNull()
     .default('user'),
