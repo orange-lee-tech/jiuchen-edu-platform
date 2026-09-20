@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull } from 'drizzle-orm'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
@@ -13,6 +13,7 @@ import {
   users,
 } from '../db/schema.js'
 import { canAccessAdminWorkspace } from '../domain/auth-policy.js'
+import { getStageDefinition } from '../domain/classroom.js'
 import {
   bindInternalIdentity,
   createInternalIdentity,
@@ -324,6 +325,35 @@ export function registerMobileAdminRoutes(
       return reply.code(404).send({
         ok: false,
         error: 'student_or_teacher_not_found',
+      })
+    }
+
+    if (parsed.data.stageCode && !getStageDefinition(parsed.data.stageCode)) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_stage',
+      })
+    }
+
+    const [duplicate] = await configuredDatabase.db
+      .select({ id: studentTeacherAssignments.id })
+      .from(studentTeacherAssignments)
+      .where(
+        and(
+          eq(studentTeacherAssignments.studentId, parsed.data.studentId),
+          eq(studentTeacherAssignments.teacherId, parsed.data.teacherId),
+          parsed.data.stageCode
+            ? eq(studentTeacherAssignments.stageCode, parsed.data.stageCode)
+            : isNull(studentTeacherAssignments.stageCode),
+          eq(studentTeacherAssignments.relationship, parsed.data.relationship),
+        ),
+      )
+      .limit(1)
+
+    if (duplicate) {
+      return reply.code(409).send({
+        ok: false,
+        error: 'assignment_already_exists',
       })
     }
 
