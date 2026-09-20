@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull, or } from 'drizzle-orm'
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import type { DatabaseContext } from '../db/client.js'
 import {
+  coachingRecords,
   internalIds,
   planItems,
   studentPlans,
@@ -65,6 +66,16 @@ const planPayloadSchema = z.object({
   title: z.string().trim().min(1).max(160),
   items: z.array(planItemSchema).max(100).default([]),
 })
+
+const coachingRecordSchema = z
+  .object({
+    stageCode: z.string().trim().min(1).max(32),
+    teacherId: z.string().uuid().nullable().optional(),
+    title: z.string().trim().min(1).max(160),
+    content: z.string().trim().min(1).max(2000),
+    occurredAt: z.coerce.date(),
+  })
+  .strict()
 
 function ensureLocalAdmin(env: AppEnv, reply: FastifyReply) {
   if (env.NODE_ENV === 'development') {
@@ -583,6 +594,38 @@ export function registerAdminRoutes(
         })
       }
 
+      if (
+        parsed.data.stageCode &&
+        !getStageDefinition(parsed.data.stageCode)
+      ) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'invalid_stage',
+        })
+      }
+
+      const [duplicate] = await database.db
+        .select({ id: studentTeacherAssignments.id })
+        .from(studentTeacherAssignments)
+        .where(
+          and(
+            eq(studentTeacherAssignments.studentId, parsed.data.studentId),
+            eq(studentTeacherAssignments.teacherId, parsed.data.teacherId),
+            parsed.data.stageCode
+              ? eq(studentTeacherAssignments.stageCode, parsed.data.stageCode)
+              : isNull(studentTeacherAssignments.stageCode),
+            eq(studentTeacherAssignments.relationship, parsed.data.relationship),
+          ),
+        )
+        .limit(1)
+
+      if (duplicate) {
+        return reply.code(409).send({
+          ok: false,
+          error: 'assignment_already_exists',
+        })
+      }
+
       const id = randomUUID()
       await database.db.insert(studentTeacherAssignments).values({
         id,
@@ -599,6 +642,299 @@ export function registerAdminRoutes(
           ...parsed.data,
         },
       }
+    },
+  )
+
+  app.get<{
+    Params: { studentId: string }
+    Querystring: { stage?: string }
+  }>('/admin/students/:studentId/coaching-records', async (request, reply) => {
+    if (!ensureLocalAdmin(env, reply)) return
+
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    if (request.query.stage && !getStageDefinition(request.query.stage)) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_stage',
+      })
+    }
+
+    try {
+      const rows = await database.db
+        .select({
+          id: coachingRecords.id,
+          studentId: coachingRecords.studentId,
+          teacherId: coachingRecords.teacherId,
+          teacherName: teachers.name,
+          stageCode: coachingRecords.stageCode,
+          title: coachingRecords.title,
+          content: coachingRecords.content,
+          occurredAt: coachingRecords.occurredAt,
+          createdAt: coachingRecords.createdAt,
+        })
+        .from(coachingRecords)
+        .leftJoin(teachers, eq(coachingRecords.teacherId, teachers.id))
+        .where(
+          request.query.stage
+            ? and(
+                eq(coachingRecords.studentId, request.params.studentId),
+                eq(coachingRecords.stageCode, request.query.stage),
+              )
+            : eq(coachingRecords.studentId, request.params.studentId),
+        )
+        .orderBy(desc(coachingRecords.occurredAt), desc(coachingRecords.createdAt))
+
+      return {
+        ok: true,
+        records: rows.map((row) => ({
+          ...row,
+          occurredAt: row.occurredAt.toISOString(),
+          createdAt: row.createdAt.toISOString(),
+        })),
+      }
+    } catch (error) {
+      const code =
+        error && typeof error === 'object' && 'code' in error
+          ? String((error as { code?: unknown }).code ?? '')
+          : ''
+      if (code === 'ER_NO_SUCH_TABLE') {
+        return reply.code(503).send({
+          ok: false,
+          error: 'classroom_guidance_schema_not_ready',
+        })
+      }
+      throw error
+    }
+  })
+
+  app.post<{
+    Params: { studentId: string }
+    Body: unknown
+  }>('/admin/students/:studentId/coaching-records', async (request, reply) => {
+    if (!ensureLocalAdmin(env, reply)) return
+
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const parsed = coachingRecordSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_coaching_record_payload',
+        issues: parsed.error.issues,
+      })
+    }
+
+    const stage = getStageDefinition(parsed.data.stageCode)
+    if (!stage) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_stage',
+      })
+    }
+
+    if (stage.mode === 'internship') {
+      return reply.code(400).send({
+        ok: false,
+        error: 'guidance_not_allowed_for_stage',
+      })
+    }
+
+    const [student] = await database.db
+      .select({ id: students.id })
+      .from(students)
+      .where(eq(students.id, request.params.studentId))
+      .limit(1)
+
+    if (!student) {
+      return reply.code(404).send({
+        ok: false,
+        error: 'student_not_found',
+      })
+    }
+
+    if (parsed.data.teacherId) {
+      const [assignment] = await database.db
+        .select({ id: studentTeacherAssignments.id })
+        .from(studentTeacherAssignments)
+        .where(
+          and(
+            eq(studentTeacherAssignments.studentId, request.params.studentId),
+            eq(studentTeacherAssignments.teacherId, parsed.data.teacherId),
+            or(
+              isNull(studentTeacherAssignments.stageCode),
+              eq(studentTeacherAssignments.stageCode, stage.code),
+            ),
+          ),
+        )
+        .limit(1)
+
+      if (!assignment) {
+        return reply.code(409).send({
+          ok: false,
+          error: 'teacher_not_assigned_to_student_stage',
+        })
+      }
+    }
+
+    const id = randomUUID()
+
+    try {
+      await database.db.insert(coachingRecords).values({
+        id,
+        studentId: request.params.studentId,
+        teacherId: parsed.data.teacherId ?? null,
+        stageCode: stage.code,
+        title: parsed.data.title,
+        content: parsed.data.content,
+        occurredAt: parsed.data.occurredAt,
+      })
+    } catch (error) {
+      const code =
+        error && typeof error === 'object' && 'code' in error
+          ? String((error as { code?: unknown }).code ?? '')
+          : ''
+      if (code === 'ER_NO_SUCH_TABLE') {
+        return reply.code(503).send({
+          ok: false,
+          error: 'classroom_guidance_schema_not_ready',
+        })
+      }
+      throw error
+    }
+
+    return {
+      ok: true,
+      record: {
+        id,
+        studentId: request.params.studentId,
+        teacherId: parsed.data.teacherId ?? null,
+        stageCode: stage.code,
+        title: parsed.data.title,
+        content: parsed.data.content,
+        occurredAt: parsed.data.occurredAt.toISOString(),
+      },
+    }
+  })
+
+  app.put<{
+    Params: { id: string }
+    Body: unknown
+  }>('/admin/coaching-records/:id', async (request, reply) => {
+    if (!ensureLocalAdmin(env, reply)) return
+
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const parsed = coachingRecordSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_coaching_record_payload',
+        issues: parsed.error.issues,
+      })
+    }
+
+    const stage = getStageDefinition(parsed.data.stageCode)
+    if (!stage) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_stage',
+      })
+    }
+
+    if (stage.mode === 'internship') {
+      return reply.code(400).send({
+        ok: false,
+        error: 'guidance_not_allowed_for_stage',
+      })
+    }
+
+    const [existing] = await database.db
+      .select({
+        id: coachingRecords.id,
+        studentId: coachingRecords.studentId,
+      })
+      .from(coachingRecords)
+      .where(eq(coachingRecords.id, request.params.id))
+      .limit(1)
+
+    if (!existing) {
+      return reply.code(404).send({
+        ok: false,
+        error: 'coaching_record_not_found',
+      })
+    }
+
+    if (parsed.data.teacherId) {
+      const [assignment] = await database.db
+        .select({ id: studentTeacherAssignments.id })
+        .from(studentTeacherAssignments)
+        .where(
+          and(
+            eq(studentTeacherAssignments.studentId, existing.studentId),
+            eq(studentTeacherAssignments.teacherId, parsed.data.teacherId),
+            or(
+              isNull(studentTeacherAssignments.stageCode),
+              eq(studentTeacherAssignments.stageCode, stage.code),
+            ),
+          ),
+        )
+        .limit(1)
+
+      if (!assignment) {
+        return reply.code(409).send({
+          ok: false,
+          error: 'teacher_not_assigned_to_student_stage',
+        })
+      }
+    }
+
+    await database.db
+      .update(coachingRecords)
+      .set({
+        teacherId: parsed.data.teacherId ?? null,
+        stageCode: stage.code,
+        title: parsed.data.title,
+        content: parsed.data.content,
+        occurredAt: parsed.data.occurredAt,
+      })
+      .where(eq(coachingRecords.id, request.params.id))
+
+    return { ok: true }
+  })
+
+  app.delete<{ Params: { id: string } }>(
+    '/admin/coaching-records/:id',
+    async (request, reply) => {
+      if (!ensureLocalAdmin(env, reply)) return
+
+      if (!database.configured) {
+        return reply.code(503).send({
+          ok: false,
+          error: 'database_not_configured',
+        })
+      }
+
+      await database.db
+        .delete(coachingRecords)
+        .where(eq(coachingRecords.id, request.params.id))
+
+      return { ok: true }
     },
   )
 
