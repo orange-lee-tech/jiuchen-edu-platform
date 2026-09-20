@@ -53,7 +53,7 @@ npm.cmd run db:upgrade:identity-v2
 - 出现非预期 DROP / TRUNCATE / 数据丢失提示
 
 ### DB-02 Test 内部ID生成
-**状态：TODO**
+**状态：PASS**
 
 **执行**
 ```powershell
@@ -294,7 +294,7 @@ WECHAT_OA_APP_SECRET=
 - 不在响应中暴露 AppSecret 内容。
 
 ### NEWS-02 API IP白名单
-**状态：TODO**
+**状态：BLOCKED**
 
 **成功条件**
 - 当前调用微信公众号 API 的服务器出口公网 IP 已加入九辰教育服务号 API IP 白名单。
@@ -417,4 +417,4 @@ WECHAT_OA_APP_SECRET=
 
 | 日期 | 环境 | 模块 | 测试人 | 结果 | 问题/备注 | 对应修复提交 |
 |---|---|---|---|---|---|---|
-| 2026-09-20 | Test | DB-01 | 当前开发机 | PASS | Identity V2 升级完成；一次 ECONNRESET 由自动重连恢复 | c9f8e5f |\n| 2026-09-20 | Test | NEWS-01 | 当前开发机 | PASS | /health/config 显示 officialAccountConfigured=true | c9f8e5f |
+| 2026-09-20 | Test | DB-01 | 当前开发机 | PASS | Identity V2 升级完成；一次 ECONNRESET 由自动重连恢复 | c9f8e5f |\n| 2026-09-20 | Test | NEWS-01 | 当前开发机 | PASS | /health/config 显示 officialAccountConfigured=true | c9f8e5f |\n| 2026-09-20 | Test | DB-02 | 当前开发机 | PASS | 10 个 JCS、10 个 JCT、5 个 JCA 已存在且 seed 幂等 | - |\n| 2026-09-20 | Test | NEWS-02 | 当前开发机 | BLOCKED | 微信返回 40164：当前调用方公网 IP 未加入服务号 API IP 白名单 | - |
