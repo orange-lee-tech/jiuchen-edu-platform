@@ -417,4 +417,4 @@ WECHAT_OA_APP_SECRET=
 
 | 日期 | 环境 | 模块 | 测试人 | 结果 | 问题/备注 | 对应修复提交 |
 |---|---|---|---|---|---|---|
-| 2026-09-20 | Test | DB-01 | 当前开发机 | PASS | Identity V2 升级完成；一次 ECONNRESET 由自动重连恢复 | c9f8e5f |\n| 2026-09-20 | Test | NEWS-01 | 当前开发机 | PASS | /health/config 显示 officialAccountConfigured=true | c9f8e5f |\n| 2026-09-20 | Test | DB-02 | 当前开发机 | PASS | 10 个 JCS、10 个 JCT、5 个 JCA 已存在且 seed 幂等 | - |\n| 2026-09-20 | Test | NEWS-02 | 当前开发机 | BLOCKED | 微信返回 40164：当前调用方公网 IP 未加入服务号 API IP 白名单 | - |
+| 2026-09-20 | Test | DB-01 | 当前开发机 | PASS | Identity V2 升级完成；一次 ECONNRESET 由自动重连恢复 | c9f8e5f |\n| 2026-09-20 | Test | NEWS-01 | 当前开发机 | PASS | /health/config 显示 officialAccountConfigured=true | c9f8e5f |\n| 2026-09-20 | Test | DB-02 | 当前开发机 | PASS | 10 个 JCS、10 个 JCT、5 个 JCA 已存在且 seed 幂等 | - |\n| 2026-09-20 | Test | NEWS-02 | 当前开发机 | BLOCKED | 微信返回 40164，并明确给出当前开发机实际出口 IPv4 未加入服务号 API IP 白名单 | - |
