@@ -9,7 +9,7 @@ import {
   studentTeacherAssignments,
   teachers,
 } from '../db/schema.js'
-import { DEFAULT_PLAN_TITLES, STAGE_DEFINITIONS, getStageDefinition } from '../domain/classroom.js'
+import { DEFAULT_PLAN_TITLES, STAGE_DEFINITIONS, getStageDefinition, isGuidanceAllowed } from '../domain/classroom.js'
 
 export function registerStudentRoutes(app: FastifyInstance, database: DatabaseContext) {
   app.get('/classroom/stages', async () => ({
@@ -104,7 +104,7 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
         ),
       )
 
-    const showGuidance = stage.mode !== 'internship'
+    const showGuidance = isGuidanceAllowed(stage.code)
 
     const mentors = showGuidance
       ? await database.db
