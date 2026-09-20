@@ -1,6 +1,6 @@
 # ADR-0009：AI 保研评估采用“检索增强优先”，不默认训练自有大模型
 
-- 状态：Proposed
+- 状态：Accepted
 - 日期：2026-09-20
 
 ## 背景
@@ -75,3 +75,22 @@ V1 评估结果至少包含：
 - 微调收益能通过离线评测证明。
 
 在此之前，训练自有大模型不是 V1 依赖。
+
+
+## 2026-09-20 实施记录
+
+业务方已确认：
+- AI 分析评估接口可以先完成；
+- 案例数据已经准备，后续经独立分支预处理后接入；
+- 模型训练不是当前施工项。
+
+因此本 ADR 由 Proposed 转为 Accepted。
+
+当前已开始实现：
+- Assessment 输入/输出严格 Schema；
+- Evidence Schema；
+- Draft/History/Run API；
+- Retriever / Model Provider Adapter；
+- Assessment 历史可追溯字段。
+
+Case Schema 仍等待真实预处理数据后再冻结。
