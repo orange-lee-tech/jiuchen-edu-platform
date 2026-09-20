@@ -1,7 +1,10 @@
 <view class="page-shell">
   <view class="news-head">
-    <text class="page-title">保研资讯</text>
-    <text class="page-desc">把分散的信息，整理成可行动的时间线</text>
+    <view>
+      <text class="page-title">保研资讯</text>
+      <text class="page-desc">把分散的信息，整理成可行动的时间线</text>
+    </view>
+    <text class="source-chip">{{sourceLabel}}</text>
   </view>
 
   <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
@@ -16,23 +19,38 @@
     </view>
   </scroll-view>
 
-  <view class="featured surface" bindtap="onArticleTap">
+  <view
+    class="featured surface"
+    data-url="{{featured.articleUrl}}"
+    bindtap="onArticleTap"
+  >
     <text class="featured-tag">{{featured.tag}}</text>
     <text class="featured-title">{{featured.title}}</text>
     <text class="featured-summary">{{featured.summary}}</text>
-    <text class="featured-more">阅读全文 ›</text>
+    <text class="featured-more">查看原文 ›</text>
   </view>
 
   <view class="section-head">
     <text class="section-title">最新内容</text>
+    <text wx:if="{{loading}}" class="section-note">同步中…</text>
   </view>
 
   <view class="article-list">
-    <view wx:for="{{articles}}" wx:key="title" class="article-card surface" bindtap="onArticleTap">
+    <view
+      wx:for="{{articles}}"
+      wx:key="id"
+      class="article-card surface"
+      data-url="{{item.articleUrl}}"
+      bindtap="onArticleTap"
+    >
       <view class="article-tag">{{item.tag}}</view>
       <text class="article-school">{{item.school}}</text>
       <text class="article-title">{{item.title}}</text>
       <text class="article-meta">{{item.meta}}</text>
+    </view>
+
+    <view wx:if="{{!loading && articles.length === 0}}" class="empty surface">
+      当前分类暂无内容。
     </view>
   </view>
 </view>
