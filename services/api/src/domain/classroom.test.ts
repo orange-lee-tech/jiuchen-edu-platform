@@ -25,3 +25,12 @@ test('junior summer stays visible in the prototype timeline without invented pla
   assert.equal(stage?.label, '大三暑假')
   assert.deepEqual(stage?.planTypes, [])
 })
+
+
+test('guidance is hidden for every senior internship stage', () => {
+  assert.equal(isGuidanceAllowed('senior-fall'), false)
+  assert.equal(isGuidanceAllowed('senior-winter'), false)
+  assert.equal(isGuidanceAllowed('senior-spring'), false)
+  assert.equal(isGuidanceAllowed('junior-spring'), true)
+  assert.equal(isGuidanceAllowed('junior-summer'), true)
+})
