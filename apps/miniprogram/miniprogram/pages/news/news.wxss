@@ -1,4 +1,8 @@
 .news-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
   padding: 12rpx 4rpx 22rpx;
 }
 
@@ -119,4 +123,32 @@
   margin-top: 18rpx;
   color: #9aa0a9;
   font-size: 21rpx;
+}
+
+
+.source-chip {
+  flex-shrink: 0;
+  padding: 8rpx 12rpx;
+  border-radius: 999rpx;
+  background: #edf4ff;
+  color: #2f6fed;
+  font-size: 18rpx;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-note {
+  color: #9aa0a9;
+  font-size: 20rpx;
+}
+
+.empty {
+  padding: 30rpx;
+  color: #949aa4;
+  font-size: 22rpx;
+  text-align: center;
 }
