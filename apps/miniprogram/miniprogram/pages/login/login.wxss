@@ -29,8 +29,8 @@
 .brand-desc,
 .method-title,
 .method-desc,
-.pending-note,
-.field text {
+.native-note,
+.agreement-hint {
   display: block;
 }
 
@@ -49,39 +49,11 @@
 
 .login-card {
   margin-top: 54rpx;
-  padding: 26rpx;
+  padding: 30rpx 26rpx;
   border: 1rpx solid #eceef3;
   border-radius: 28rpx;
   background: #ffffff;
   box-shadow: 0 16rpx 42rpx rgba(36, 41, 55, 0.06);
-}
-
-.method-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8rpx;
-  padding: 6rpx;
-  border-radius: 18rpx;
-  background: #f5f6f8;
-}
-
-.method-tab {
-  padding: 14rpx 8rpx;
-  border-radius: 14rpx;
-  color: #7c828c;
-  font-size: 21rpx;
-  text-align: center;
-}
-
-.method-tab.active {
-  background: #ffffff;
-  color: #654bd1;
-  font-weight: 800;
-  box-shadow: 0 4rpx 16rpx rgba(40, 45, 60, 0.06);
-}
-
-.method-panel {
-  margin-top: 24rpx;
 }
 
 .method-title {
@@ -91,32 +63,40 @@
 }
 
 .method-desc,
-.pending-note {
+.native-note,
+.agreement-hint {
   margin-top: 10rpx;
   color: #8b919b;
   font-size: 20rpx;
   line-height: 1.55;
 }
 
-.field {
-  display: block;
+.login-button {
+  margin-top: 28rpx;
+  border-radius: 999rpx;
+  background: #6b53d8;
+  color: #ffffff;
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.login-button.phone {
   margin-top: 18rpx;
+  background: #ece9f8;
+  color: #6b53d8;
 }
 
-.field text {
-  margin-bottom: 8rpx;
-  color: #616771;
-  font-size: 21rpx;
+.login-button[disabled] {
+  opacity: 0.55;
 }
 
-.field input {
-  height: 72rpx;
-  box-sizing: border-box;
-  padding: 0 18rpx;
-  border: 1rpx solid #e0e3e9;
-  border-radius: 14rpx;
-  background: #fafbfc;
-  font-size: 24rpx;
+.login-button::after {
+  border: 0;
+}
+
+.native-note {
+  margin-top: 18rpx;
+  text-align: center;
 }
 
 .agreement-row {
@@ -142,22 +122,8 @@
   color: #694fd4;
 }
 
-.login-button {
-  margin-top: 28rpx;
-  border-radius: 999rpx;
-  background: #6b53d8;
-  color: #ffffff;
-  font-size: 27rpx;
-  font-weight: 700;
-}
-
-.login-button.secondary {
-  background: #ece9f8;
-  color: #6b53d8;
-}
-
-.login-button::after {
-  border: 0;
+.agreement-hint {
+  color: #9b7a36;
 }
 
 .login-footnote {
