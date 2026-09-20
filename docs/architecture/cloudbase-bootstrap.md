@@ -70,6 +70,7 @@ wx.request -> HTTPS API domain -> Alibaba Cloud jiuchen-api
 目前使用过：
 - `db:upgrade:auth`
 - `db:upgrade:identity-v2`
+- `db:upgrade:native-auth`（为微信手机号快速验证增加可选手机号身份字段）
 - `db:seed:test-internal-ids`
 
 ## 6. 微信身份
