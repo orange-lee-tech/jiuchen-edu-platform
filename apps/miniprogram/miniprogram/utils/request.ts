@@ -383,3 +383,19 @@ export async function bindAdminInternalId(
     { userId },
   )
 }
+
+
+export type NewsPost = {
+  id: string
+  title: string
+  summary: string | null
+  coverUrl: string | null
+  articleUrl: string | null
+  publishedAt: string | null
+  source: 'manual' | 'wechat_official'
+}
+
+export async function getNewsPosts(): Promise<NewsPost[]> {
+  const result = await request<{ ok: true; posts: NewsPost[] }>('/news')
+  return result.posts
+}
