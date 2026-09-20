@@ -8,6 +8,7 @@ import { registerProfileRoutes } from './routes/profile.js'
 import { registerTeacherRoutes } from './routes/teacher.js'
 import { registerIdentityRoutes } from './routes/identity.js'
 import { registerMobileAdminRoutes } from './routes/mobile-admin.js'
+import { registerNewsRoutes } from './routes/news.js'
 
 export function buildApp(env: AppEnv) {
   const app = Fastify({
@@ -133,6 +134,7 @@ export function buildApp(env: AppEnv) {
   registerIdentityRoutes(app, database)
   registerTeacherRoutes(app, database)
   registerMobileAdminRoutes(app, database, env)
+  registerNewsRoutes(app, database)
   registerAdminRoutes(app, database, env)
 
   app.addHook('onClose', async () => {
