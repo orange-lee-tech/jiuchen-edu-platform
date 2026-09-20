@@ -17,6 +17,7 @@ import {
 import {
   PLAN_TYPES,
   getStageDefinition,
+  isGuidanceAllowed,
   isPlanTypeAllowed,
   type PlanType,
 } from '../domain/classroom.js'
@@ -743,7 +744,7 @@ export function registerAdminRoutes(
       })
     }
 
-    if (stage.mode === 'internship') {
+    if (!isGuidanceAllowed(stage.code)) {
       return reply.code(400).send({
         ok: false,
         error: 'guidance_not_allowed_for_stage',
@@ -857,7 +858,7 @@ export function registerAdminRoutes(
       })
     }
 
-    if (stage.mode === 'internship') {
+    if (!isGuidanceAllowed(stage.code)) {
       return reply.code(400).send({
         ok: false,
         error: 'guidance_not_allowed_for_stage',
