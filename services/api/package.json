@@ -18,7 +18,8 @@
     "db:seed:test-internal-ids": "tsx src/db/seed-test-internal-ids.ts",
     "news:test:official-account": "tsx src/scripts/test-official-account.ts",
     "news:sync:official-account": "tsx src/scripts/sync-official-account.ts",
-    "db:upgrade:native-auth": "tsx src/db/upgrade-native-auth.ts"
+    "db:upgrade:native-auth": "tsx src/db/upgrade-native-auth.ts",
+    "db:upgrade:assessment": "tsx src/db/upgrade-assessment-foundation.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.2",
