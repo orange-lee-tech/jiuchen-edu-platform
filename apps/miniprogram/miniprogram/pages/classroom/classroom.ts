@@ -110,8 +110,12 @@ Page({
   },
 
   onLoad() {
-    void this.hydrateStageCatalog()
-    void this.hydratePlanData(this.data.currentStageCode)
+    void this.initializeClassroom()
+  },
+
+  async initializeClassroom() {
+    await this.hydrateStageCatalog()
+    await this.hydratePlanData(this.data.currentStageCode)
   },
 
   async hydrateStageCatalog() {
