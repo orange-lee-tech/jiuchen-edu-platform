@@ -294,7 +294,7 @@ WECHAT_OA_APP_SECRET=
 - 不在响应中暴露 AppSecret 内容。
 
 ### NEWS-02 API IP白名单
-**状态：BLOCKED**
+**状态：PASS**
 
 **成功条件**
 - 当前调用微信公众号 API 的服务器出口公网 IP 已加入九辰教育服务号 API IP 白名单。
@@ -302,7 +302,7 @@ WECHAT_OA_APP_SECRET=
 - 生产环境切换后改为正式服务器出口 IP，不依赖开发者个人网络。
 
 ### NEWS-03 发布能力权限
-**状态：TODO**
+**状态：PASS**
 
 **检查项**
 - 九辰教育服务号已认证。
@@ -332,7 +332,7 @@ WECHAT_OA_APP_SECRET=
 - 重复同步产生重复记录。
 
 ### NEWS-05 群发与“发布”口径确认
-**状态：TODO**
+**状态：PASS**
 
 **说明**
 微信“发布能力”接口主要围绕已发布内容。九辰实际运营流程必须用一篇近期真实文章验证：
@@ -417,4 +417,4 @@ WECHAT_OA_APP_SECRET=
 
 | 日期 | 环境 | 模块 | 测试人 | 结果 | 问题/备注 | 对应修复提交 |
 |---|---|---|---|---|---|---|
-| 2026-09-20 | Test | DB-01 | 当前开发机 | PASS | Identity V2 升级完成；一次 ECONNRESET 由自动重连恢复 | c9f8e5f |\n| 2026-09-20 | Test | NEWS-01 | 当前开发机 | PASS | /health/config 显示 officialAccountConfigured=true | c9f8e5f |\n| 2026-09-20 | Test | DB-02 | 当前开发机 | PASS | 10 个 JCS、10 个 JCT、5 个 JCA 已存在且 seed 幂等 | - |\n| 2026-09-20 | Test | NEWS-02 | 当前开发机 | BLOCKED | 微信返回 40164，并明确给出当前开发机实际出口 IPv4 未加入服务号 API IP 白名单 | - |
+| 2026-09-20 | Test | DB-01 | 当前开发机 | PASS | Identity V2 升级完成；一次 ECONNRESET 由自动重连恢复 | c9f8e5f |\n| 2026-09-20 | Test | NEWS-01 | 当前开发机 | PASS | /health/config 显示 officialAccountConfigured=true | c9f8e5f |\n| 2026-09-20 | Test | DB-02 | 当前开发机 | PASS | 10 个 JCS、10 个 JCT、5 个 JCA 已存在且 seed 幂等 | - |\n| 2026-09-20 | Test | NEWS-02 | 当前开发机 | PASS | 加入 API IP 白名单后 access_token 获取成功 | - |\n| 2026-09-20 | Test | NEWS-03 | 当前开发机 | PASS | freepublish/batchget 调用成功并返回真实已发布内容 | - |\n| 2026-09-20 | Test | NEWS-05 | 当前开发机 | PASS | 九辰近期真实服务号文章可通过发布能力接口读取，本次返回 21 篇 | - |
