@@ -7,6 +7,10 @@ export function canEditAcademicProfile(role: UserRole): boolean {
   return role === 'user' || role === 'student'
 }
 
+export function canUseAssessment(role: UserRole): boolean {
+  return role === 'user' || role === 'student'
+}
+
 export function canAccessTeacherWorkspace(role: UserRole): boolean {
   return role === 'teacher' || role === 'staff' || role === 'admin'
 }
