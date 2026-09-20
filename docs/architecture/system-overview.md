@@ -118,7 +118,51 @@ AI 模型供应商通过适配层隔离，避免核心业务绑定某一家 API�
 
 因此不会等所有功能完成后再第一次部署服务器。P1 基础链路完成后应尽早建立测试环境，用于真机验证微信登录、网络域名、权限和后续支付链路。
 
-## 8. 环境
+## 8. 外部内容源
+
+### 九辰教育微信服务号
+
+服务号已被验证可以通过微信官方发布能力 API 获取真实已发布文章。
+
+生产链路：
+
+```text
+九辰教育服务号
+  -> 微信官方 access_token / freepublish API
+  -> jiuchen-api 同步任务
+  -> news_posts
+  -> /news
+  -> 小程序资讯
+```
+
+服务号 AppSecret 只存在服务端。Production 调用必须来自固定公网出口 IP。
+
+## 9. Production 物理部署方向
+
+公司官网当前是 Next.js 静态导出，现网由 Nginx Proxy Manager + 宿主机 Nginx 提供服务。
+
+小程序 Production 预计与官网共用公司阿里云主机，但必须保持独立运行单元：
+
+```text
+Nginx Proxy Manager :80/:443
+   ├─ jiuchenedu.com -> Host Nginx :8088 -> website out/
+   ├─ api.<domain>   -> jiuchen-api container/service
+   └─ admin.<domain> -> admin static assets / protected route
+```
+
+隔离原则：
+- 独立目录；
+- 独立进程/容器；
+- 独立环境变量；
+- 独立日志；
+- 独立发布与回滚；
+- API CPU/内存限制；
+- MySQL 不直接暴露公网；
+- 共享主机不等于共享应用生命周期。
+
+完整方案见 Proposed ADR-0008。
+
+## 10. 环境
 
 至少区分：
 
