@@ -466,8 +466,6 @@ export function registerAuthRoutes(
         .update(users)
         .set({
           wechatOpenId: null,
-          phoneNumber: null,
-          phoneCountryCode: null,
           role: 'user',
           status: 'deleted',
           displayName: null,
@@ -475,6 +473,24 @@ export function registerAuthRoutes(
         })
         .where(eq(users.id, user.userId))
     })
+
+    // Native phone auth is rolled out with a separate idempotent schema upgrade.
+    // Clear verified phone identity when those columns already exist, while
+    // keeping account deletion compatible with databases not upgraded yet.
+    try {
+      await database.pool.query(
+        'UPDATE `users` SET `phone_number` = NULL, `phone_country_code` = NULL WHERE `id` = ?',
+        [user.userId],
+      )
+    } catch (error) {
+      const code =
+        error && typeof error === 'object' && 'code' in error
+          ? String((error as { code?: unknown }).code ?? '')
+          : ''
+      if (code !== 'ER_BAD_FIELD_ERROR') {
+        app.log.warn({ err: error }, 'Failed to clear verified phone identity')
+      }
+    }
 
     return { ok: true }
   })
