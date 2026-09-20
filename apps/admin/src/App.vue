@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import {
   bindInternalId,
   bindStudentIdentity,
+  createCoachingRecord,
   createStudent,
   createTeacher,
   createTeacherAssignment,
@@ -14,6 +15,7 @@ import {
   fetchStudents,
   fetchTeacherAssignments,
   fetchTeachers,
+  deleteCoachingRecord,
   saveClassroomPlan,
   updateStudent,
   type ClassroomPlan,
@@ -97,6 +99,28 @@ const adminBootstrapForm = ref({
 })
 
 const planForm = ref<EditablePlan | null>(null)
+
+function toLocalDateTimeInput(date = new Date()) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return [
+    date.getFullYear(),
+    '-',
+    pad(date.getMonth() + 1),
+    '-',
+    pad(date.getDate()),
+    'T',
+    pad(date.getHours()),
+    ':',
+    pad(date.getMinutes()),
+  ].join('')
+}
+
+const coachingForm = ref({
+  teacherId: '',
+  title: '',
+  content: '',
+  occurredAt: toLocalDateTimeInput(),
+})
 
 const selectedStudent = computed(
   () => students.value.find((student) => student.id === selectedStudentId.value) ?? null,
@@ -221,6 +245,11 @@ async function loadClassroom(stageCode = selectedStageCode.value) {
           })),
         }
       : null
+
+    const mentorIds = classroom.value.mentors.map((mentor) => mentor.id)
+    if (!mentorIds.includes(coachingForm.value.teacherId)) {
+      coachingForm.value.teacherId = mentorIds[0] ?? ''
+    }
   } catch (cause) {
     showError(cause)
   }
@@ -292,6 +321,65 @@ async function savePlan() {
       items: cleanItems,
     })
     notice.value = `${stageLabel.value} · ${planForm.value.title} 已保存`
+    await loadClassroom()
+  } catch (cause) {
+    showError(cause)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function addCoaching() {
+  if (
+    !selectedStudentId.value ||
+    !selectedStageCode.value ||
+    !classroom.value?.showGuidance
+  ) {
+    error.value = '当前阶段不允许录入辅导记录'
+    return
+  }
+
+  if (!coachingForm.value.title.trim() || !coachingForm.value.content.trim()) {
+    error.value = '请填写辅导记录标题和内容'
+    return
+  }
+
+  const occurredAt = new Date(coachingForm.value.occurredAt)
+  if (Number.isNaN(occurredAt.getTime())) {
+    error.value = '请填写有效的辅导时间'
+    return
+  }
+
+  try {
+    saving.value = true
+    clearFeedback()
+    await createCoachingRecord(selectedStudentId.value, {
+      stageCode: selectedStageCode.value,
+      teacherId: coachingForm.value.teacherId || null,
+      title: coachingForm.value.title.trim(),
+      content: coachingForm.value.content.trim(),
+      occurredAt: occurredAt.toISOString(),
+    })
+    coachingForm.value.title = ''
+    coachingForm.value.content = ''
+    coachingForm.value.occurredAt = toLocalDateTimeInput()
+    notice.value = `${stageLabel.value}辅导记录已保存`
+    await loadClassroom()
+  } catch (cause) {
+    showError(cause)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function removeCoachingRecord(id: string) {
+  if (!window.confirm('确定删除这条辅导记录吗？')) return
+
+  try {
+    saving.value = true
+    clearFeedback()
+    await deleteCoachingRecord(id)
+    notice.value = '辅导记录已删除'
     await loadClassroom()
   } catch (cause) {
     showError(cause)
@@ -623,6 +711,94 @@ onMounted(async () => {
 
             <div v-if="!classroom.showGuidance" class="rule-note">
               当前为大四实习阶段：学员端只展示实习规划，不展示辅导老师与辅导记录。
+            </div>
+
+            <div v-else class="guidance-editor">
+              <div class="editor-head">
+                <div>
+                  <strong>辅导老师与记录</strong>
+                  <p class="muted small">
+                    老师来自“账号与身份”中的授权关系；辅导记录由工作人员录入，学员端只读。
+                  </p>
+                </div>
+              </div>
+
+              <div class="mentor-summary">
+                <span v-if="classroom.mentors.length === 0" class="muted small">
+                  当前阶段尚未分配辅导老师。
+                </span>
+                <span
+                  v-for="mentor in classroom.mentors"
+                  :key="mentor.id"
+                  class="bound-tag"
+                >
+                  {{ mentor.name }} · {{ mentor.relationship === 'primary' ? '主辅导' : '协助' }}
+                </span>
+              </div>
+
+              <div class="form-grid">
+                <label class="field">
+                  <span>记录老师（可选）</span>
+                  <select v-model="coachingForm.teacherId">
+                    <option value="">不指定老师</option>
+                    <option
+                      v-for="mentor in classroom.mentors"
+                      :key="mentor.id"
+                      :value="mentor.id"
+                    >
+                      {{ mentor.name }}{{ mentor.title ? ' · ' + mentor.title : '' }}
+                    </option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>辅导时间</span>
+                  <input v-model="coachingForm.occurredAt" type="datetime-local" />
+                </label>
+                <label class="field field-wide">
+                  <span>标题</span>
+                  <input v-model="coachingForm.title" placeholder="例如：大二上阶段规划沟通" />
+                </label>
+                <label class="field field-wide">
+                  <span>内容</span>
+                  <textarea
+                    v-model="coachingForm.content"
+                    rows="4"
+                    placeholder="记录本次辅导重点、结论与后续动作"
+                  ></textarea>
+                </label>
+              </div>
+
+              <div class="actions">
+                <t-button :loading="saving" @click="addCoaching">新增辅导记录</t-button>
+              </div>
+
+              <div class="coaching-list">
+                <div v-if="classroom.records.length === 0" class="empty">
+                  当前阶段暂无辅导记录。
+                </div>
+                <div
+                  v-for="record in classroom.records"
+                  :key="record.id"
+                  class="coaching-row"
+                >
+                  <div>
+                    <strong>{{ record.title }}</strong>
+                    <p class="muted small">
+                      {{ new Date(record.occurredAt).toLocaleString() }}
+                      <template v-if="record.teacherName"> · {{ record.teacherName }}</template>
+                    </p>
+                    <p class="coaching-content">{{ record.content }}</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="remove"
+                    :disabled="saving"
+                    @click="removeCoachingRecord(record.id)"
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
             </div>
           </template>
         </t-card>
@@ -1065,6 +1241,40 @@ textarea:focus {
 .bound-tag {
   background: #edf8f1;
   color: #217145;
+}
+
+.guidance-editor {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #eef0f4;
+}
+
+.mentor-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.coaching-list {
+  margin-top: 20px;
+}
+
+.coaching-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid #eef0f4;
+}
+
+.coaching-content {
+  margin: 8px 0 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .assignment-list {
