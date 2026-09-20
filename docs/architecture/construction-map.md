@@ -38,7 +38,7 @@
 | 服务号读取 | 已实现 | 真实 21 篇文章读取 PASS | 已证明可行 |
 | 服务号 → news_posts | 已实现 | TODO | 待复测动态 IP 后验证 |
 | 小程序资讯读取 | 已实现 + fallback | TODO | 待入库后真机验证 |
-| AI 保研评估 | 仅架构/产品基线 | 未施工 | P4 |
+| AI 保研评估 | 输入/输出 Schema、Draft/History/Run API、Provider/Retriever 接口已施工 | Provider/案例检索未接 | P4 进行中 |
 | 评估额度账本 | 领域设计 | 未施工 | P5 |
 | 微信支付 | 未施工 | 未测试 | P5 |
 | Production 部署 | 方案重审中 | 未施工 | 见 ADR-0008 |
@@ -101,9 +101,9 @@
 阶段规则、课堂 API、后台编辑、老师授权关系已有第一版；真实课程、导师、辅导记录和完整后台操作仍待建设/验证。
 
 ### P4 AI 保研评估
-**状态：未正式施工**
+**状态：基础接口施工中**
 
-先完成数据 Schema、案例治理、输出 Schema 和模型适配层，再接模型 API。默认采用“检索增强 + 大模型推理”，不默认训练自有大模型。
+已开始完成 Assessment 输入/输出 Schema、Evidence Schema、历史持久化、Draft/Run API、Retriever / Provider Adapter。当前不接假模型，Provider 未配置时明确返回不可用。Case Schema 等真实案例预处理结果后再冻结。默认采用“检索增强 + 大模型推理”，不默认训练自有大模型。
 
 ### P5 评估额度与支付
 **状态：未施工**
