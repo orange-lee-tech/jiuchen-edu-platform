@@ -3,6 +3,7 @@ import 'dotenv/config'
 
 const databaseUrl = process.env.DATABASE_URL
 if (!databaseUrl) throw new Error('DATABASE_URL is required')
+const connectionUri: string = databaseUrl
 
 const MAX_ATTEMPTS = 5
 const RETRYABLE_CODES = new Set([
@@ -31,7 +32,7 @@ async function withFreshConnection<T>(
     let connection: mysql.Connection | null = null
 
     try {
-      connection = await mysql.createConnection(databaseUrl)
+      connection = await mysql.createConnection(connectionUri)
       return await operation(connection)
     } catch (error) {
       lastError = error
