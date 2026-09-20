@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  AssessmentEvidenceReferenceError,
   AssessmentProviderUnavailableError,
   createUnconfiguredAssessmentRuntime,
   executeAssessment,
@@ -95,4 +96,108 @@ test('assessment runtime passes retrieved evidence into provider and validates o
   assert.equal(result.knowledgeVersion, 'case-dataset-v1')
   assert.equal(result.evidence.length, 1)
   assert.equal(result.output.targetAssessments[0].tier, 'match')
+})
+
+
+test('assessment runtime rejects target analysis without retrieved evidence', async () => {
+  const retriever: AssessmentRetriever = {
+    async retrieve() {
+      return {
+        version: 'knowledge-empty-v1',
+        evidence: [],
+      }
+    },
+  }
+
+  const provider: AssessmentModelProvider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async analyze() {
+      return {
+        profileSummary: '背景摘要',
+        strengths: [
+          {
+            title: '排名较好',
+            detail: '来自用户输入。',
+            evidenceRefs: ['input:rank'],
+          },
+        ],
+        risks: [],
+        targetAssessments: [
+          {
+            schoolName: '目标大学',
+            tier: 'match',
+            rationale: '缺少真实检索证据。',
+            gapItems: [],
+            actions: [],
+            evidenceRefs: ['input:rank'],
+          },
+        ],
+        recommendedActions: [],
+        similarCases: [],
+        uncertainties: [],
+        disclaimer: '本结果用于规划辅助。',
+      }
+    },
+  }
+
+  await assert.rejects(
+    executeAssessment({ retriever, provider }, input),
+    (error: unknown) =>
+      error instanceof AssessmentEvidenceReferenceError &&
+      error.message === 'target_assessment_requires_retrieved_evidence',
+  )
+})
+
+test('assessment runtime rejects invented evidence ids', async () => {
+  const retriever: AssessmentRetriever = {
+    async retrieve() {
+      return {
+        version: 'knowledge-v1',
+        evidence: [
+          {
+            ref: 'case:real',
+            kind: 'case',
+            sourceType: 'external',
+            sourceId: 'real',
+            title: '真实案例',
+            sourceLabel: '案例库',
+          },
+        ],
+      }
+    },
+  }
+
+  const provider: AssessmentModelProvider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async analyze() {
+      return {
+        profileSummary: '背景摘要',
+        strengths: [],
+        risks: [],
+        targetAssessments: [
+          {
+            schoolName: '目标大学',
+            tier: 'match',
+            rationale: '引用了不存在的案例。',
+            gapItems: [],
+            actions: [],
+            evidenceRefs: ['case:invented'],
+          },
+        ],
+        recommendedActions: [],
+        similarCases: [],
+        uncertainties: [],
+        disclaimer: '本结果用于规划辅助。',
+      }
+    },
+  }
+
+  await assert.rejects(
+    executeAssessment({ retriever, provider }, input),
+    AssessmentEvidenceReferenceError,
+  )
 })
