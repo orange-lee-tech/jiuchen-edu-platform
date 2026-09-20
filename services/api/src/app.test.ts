@@ -127,3 +127,32 @@ test('admin routes stay disabled outside local development', async () => {
 
   await app.close()
 })
+
+
+test('assessment metadata is available without database or model provider', async () => {
+  const app = buildApp(env)
+  const response = await app.inject({ method: 'GET', url: '/assessments/meta' })
+
+  assert.equal(response.statusCode, 200)
+  assert.deepEqual(response.json(), {
+    ok: true,
+    versions: {
+      inputSchema: 'assessment-input-v1',
+      outputSchema: 'assessment-output-v1',
+      agent: 'assessment-agent-v0',
+    },
+    limits: {
+      targets: 5,
+      englishRecords: 6,
+      researchExperiences: 12,
+      competitionExperiences: 12,
+    },
+    providerConfigured: false,
+    outputPolicy: {
+      preciseAdmissionProbability: false,
+      evidenceRequiredForClaims: true,
+    },
+  })
+
+  await app.close()
+})
