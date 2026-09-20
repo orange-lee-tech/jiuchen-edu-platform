@@ -134,8 +134,19 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
           .orderBy(asc(studentTeacherAssignments.createdAt))
       : []
 
-    const records = showGuidance
-      ? await database.db
+    let records: Array<{
+      id: string
+      teacherId: string | null
+      teacherName: string | null
+      stageCode: string
+      title: string
+      content: string
+      occurredAt: Date
+    }> = []
+
+    if (showGuidance) {
+      try {
+        records = await database.db
           .select({
             id: coachingRecords.id,
             teacherId: coachingRecords.teacherId,
@@ -154,7 +165,16 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
             ),
           )
           .orderBy(desc(coachingRecords.occurredAt), desc(coachingRecords.createdAt))
-      : []
+      } catch (error) {
+        const code =
+          error && typeof error === 'object' && 'code' in error
+            ? String((error as { code?: unknown }).code ?? '')
+            : ''
+        if (code !== 'ER_NO_SUCH_TABLE') {
+          throw error
+        }
+      }
+    }
 
     const plans = await Promise.all(
       stage.planTypes.map(async (type) => {
