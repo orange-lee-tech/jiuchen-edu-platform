@@ -98,7 +98,25 @@ async function loadBusinessIdentity(
   return identity ?? null
 }
 
-async function loadLoginUserByOpenId(
+async function loadWechatUserByOpenId(
+  database: DatabaseContext & { configured: true },
+  openId: string,
+) {
+  const [user] = await database.db
+    .select({
+      id: users.id,
+      role: users.role,
+      status: users.status,
+      displayName: users.displayName,
+    })
+    .from(users)
+    .where(eq(users.wechatOpenId, openId))
+    .limit(1)
+
+  return user ?? null
+}
+
+async function loadPhoneLoginUserByOpenId(
   database: DatabaseContext & { configured: true },
   openId: string,
 ): Promise<LoginUser | null> {
@@ -203,7 +221,7 @@ export function registerAuthRoutes(
         })
       }
 
-      const existing = await loadLoginUserByOpenId(database, identity.openId)
+      const existing = await loadWechatUserByOpenId(database, identity.openId)
 
       if (existing?.status === 'deleted') {
         return reply.code(403).send({
@@ -276,7 +294,7 @@ export function registerAuthRoutes(
       const phone = await exchangeWechatPhoneCode(body.data.phoneCode, env)
 
       const [openIdUser, phoneUser] = await Promise.all([
-        loadLoginUserByOpenId(database, identity.openId),
+        loadPhoneLoginUserByOpenId(database, identity.openId),
         loadLoginUserByPhone(database, phone.phoneNumber),
       ])
 
