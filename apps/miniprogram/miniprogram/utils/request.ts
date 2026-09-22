@@ -630,3 +630,26 @@ export async function getProduct(documentKey: string): Promise<ProductDetail> {
     `/products/${encodeURIComponent(documentKey)}`,
   )
 }
+
+
+export type BrandContent = {
+  document: Record<string, unknown>
+  brand: Record<string, unknown>
+  product: Record<string, unknown>
+  audience: Array<Record<string, unknown>>
+  highlights: Array<Record<string, unknown>>
+  timeline: Array<Record<string, unknown>>
+  core_services: Array<Record<string, unknown>>
+  teacher_summary: {
+    source_record_count: number
+    verification_status: string
+    source_pages: number[]
+  }
+  office_achievements: Array<Record<string, unknown>>
+  marketing_claims: Array<Record<string, unknown>>
+}
+
+export async function getBrandContent(): Promise<BrandContent> {
+  const result = await request<{ ok: true; content: BrandContent }>('/brand')
+  return result.content
+}
