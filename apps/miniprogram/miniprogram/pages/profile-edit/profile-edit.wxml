@@ -23,7 +23,7 @@
       <input
         class="internal-id-input"
         value="{{internalIdInput}}"
-        placeholder="请输入九辰内部ID"
+        placeholder="例如：JCS-XXXX-XXXX"
         bindinput="onInternalIdInput"
       />
       <button
