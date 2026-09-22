@@ -1,6 +1,6 @@
 # 九辰教育平台施工地图
 
-> 更新时间：2026-09-20  
+> 更新时间：2026-09-22  
 > 本文是当前工程状态的唯一高层施工地图。它回答三个问题：现在做到哪里、哪些已经验证、下一步按什么顺序施工。
 
 ## 1. 当前结论
@@ -38,7 +38,7 @@
 | 服务号读取 | 已实现 | 真实 21 篇文章读取 PASS | 已证明可行 |
 | 服务号 → news_posts | 已实现 | TODO | 待复测动态 IP 后验证 |\n| 产品知识库 | handbook-v1 校验、入库、chunk、审核发布、公开读取已实现 | 未执行 Test DB 升级/批量导入 | 进行中 |
 | 小程序资讯读取 | 已实现 + fallback | TODO | 待入库后真机验证 |
-| AI 保研评估 | 输入/输出 Schema、Draft/History/Run API、Provider/Retriever 接口已施工 | Provider/案例检索未接 | P4 进行中 |
+| AI 保研评估 | 输入/输出 Schema、Draft/History/Run API、Composite Retriever、真实 Draft 表单已施工 | Provider/案例检索未接 | P4 进行中 |
 | 评估额度账本 | 领域设计 | 未施工 | P5 |
 | 微信支付 | 未施工 | 未测试 | P5 |
 | Production 部署 | 方案重审中 | 未施工 | 见 ADR-0008 |
@@ -93,7 +93,7 @@
 ### P2 原型主体页面
 **状态：进行中**
 
-五主入口已有可运行页面，但距离外部参考原型的信息密度与细节仍有明显差距。
+五主入口已有可运行页面；首页已由占位“精选课程”切换为真实“九辰服务方案”，首批接入“大三冲顶计划”和“九辰保研导航卡”，并增加结构化产品列表/详情页。距离外部参考原型的其它信息密度与细节仍有差距。
 
 ### P3 我的课堂与运营后台
 **状态：进行中**
@@ -103,7 +103,7 @@
 ### P4 AI 保研评估
 **状态：基础接口施工中**
 
-已开始完成 Assessment 输入/输出 Schema、Evidence Schema、历史持久化、Draft/Run API、Retriever / Provider Adapter。当前不接假模型，Provider 未配置时明确返回不可用。Case Schema 等真实案例预处理结果后再冻结。默认采用“检索增强 + 大模型推理”，不默认训练自有大模型。
+已完成 Assessment 输入/输出 Schema、Evidence Schema、历史持久化、Draft/Create/Update/Run API、Composite Retriever / Provider Adapter，并接入真实小程序 Draft 录入页。当前不接假模型，Provider 未配置时只允许保存 Draft 并明确提示不可运行。Case Schema 等真实案例预处理结果后再冻结。默认采用“检索增强 + 大模型推理”，不默认训练自有大模型。
 
 ### P5 评估额度与支付
 **状态：未施工**
