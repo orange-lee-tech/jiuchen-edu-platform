@@ -21,7 +21,7 @@
       </view>
       <view wx:if="{{view.pathways.length}}" class="pathway-row">
         <text class="label">路径统筹</text>
-        <text class="value">{{view.pathways.join(' · ')}}</text>
+        <text class="value">{{view.pathwayText}}</text>
       </view>
     </view>
 
