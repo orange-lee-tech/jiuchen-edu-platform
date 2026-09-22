@@ -9,12 +9,19 @@ import { buildPublicProductContent } from '../domain/product-knowledge.js'
 const CHONGDING_ID = 'jiuchen-dasan-chongding-product-manual-2026-sample-v1'
 const NAVIGATION_ID = 'jiuchen-baoyan-navigation-card-product-manual-2026-v1'
 const QINGBEI_ID = 'jiuchen-qingbei-huawu-plan-2026-v1'
+const RESEARCH_ID =
+  'jiuchen-domestic-international-research-project-product-manual-2026-v1'
+const WENLU_ID = 'jiuchen-wenlu-plan-2026-v1'
+const YUESHENG_ID = 'jiuchen-yuesheng-plan-2026-v1'
 
 test('bundled product catalog contains reviewed handbooks', () => {
-  assert.equal(BUNDLED_PRODUCT_HANDBOOKS.length, 3)
+  assert.equal(BUNDLED_PRODUCT_HANDBOOKS.length, 6)
   assert.ok(findBundledProduct(CHONGDING_ID))
   assert.ok(findBundledProduct(NAVIGATION_ID))
   assert.ok(findBundledProduct(QINGBEI_ID))
+  assert.ok(findBundledProduct(RESEARCH_ID))
+  assert.ok(findBundledProduct(WENLU_ID))
+  assert.ok(findBundledProduct(YUESHENG_ID))
 })
 
 test('bundled handbooks use normalized product_handbook contract', () => {
@@ -107,6 +114,78 @@ test('qingbei huawu keeps long-term plan structure and source display values', (
   const record = handbook.product as Record<string, unknown>
   const serviceHours = record.service_hours as Record<string, unknown>
   assert.equal(serviceHours.display, '200+N小时专项课程')
+})
+
+test('research paper handbook keeps package tiers and source ambiguity', () => {
+  const handbook = findBundledProduct(RESEARCH_ID)
+  assert.ok(handbook)
+
+  assert.equal(handbook.document.source_page_count, 18)
+  assert.equal(handbook.audience.length, 4)
+  assert.equal(handbook.highlights.length, 10)
+  assert.equal(handbook.timeline.length, 6)
+  assert.equal(handbook.modules.length, 15)
+  assert.equal(handbook.core_services.length, 5)
+  assert.equal(handbook.teachers.length, 36)
+  assert.equal(handbook.marketing_claims.length, 4)
+
+  const product = handbook.product as Record<string, unknown>
+  const researchPackages = product.research_product_packages as unknown[]
+  const paperPackages = product.paper_service_packages as Array<Record<string, unknown>>
+
+  assert.equal(researchPackages.length, 5)
+  assert.equal(paperPackages.length, 18)
+  assert.equal(paperPackages[0]?.period, '68个月 [待核对：原图如此显示，存在排版/识别歧义]')
+  assert.equal(
+    paperPackages.some(
+      (item) =>
+        item.content === 'SCI/SSCI一区' &&
+        item.fee === '29800起',
+    ),
+    true,
+  )
+})
+
+test('wenlu keeps full-cycle planning structure and source display values', () => {
+  const handbook = findBundledProduct(WENLU_ID)
+  assert.ok(handbook)
+
+  assert.equal(handbook.document.source_page_count, 12)
+  assert.equal(handbook.audience.length, 3)
+  assert.equal(handbook.highlights.length, 4)
+  assert.equal(handbook.timeline.length, 18)
+  assert.equal(handbook.modules.length, 12)
+  assert.equal(handbook.core_services.length, 3)
+  assert.equal(handbook.teachers.length, 7)
+  assert.equal(handbook.marketing_claims.length, 4)
+
+  assert.equal(handbook.product.price?.display, '39800元')
+  assert.equal(handbook.product.service_period?.display, '至获取保研offer')
+
+  const serviceHours = (handbook.product as Record<string, unknown>)
+    .service_hours as Record<string, unknown>
+  assert.equal(serviceHours.display, '80+N小时专项课程')
+})
+
+test('yuesheng keeps full-cycle planning structure and source display values', () => {
+  const handbook = findBundledProduct(YUESHENG_ID)
+  assert.ok(handbook)
+
+  assert.equal(handbook.document.source_page_count, 12)
+  assert.equal(handbook.audience.length, 3)
+  assert.equal(handbook.highlights.length, 4)
+  assert.equal(handbook.timeline.length, 18)
+  assert.equal(handbook.modules.length, 12)
+  assert.equal(handbook.core_services.length, 3)
+  assert.equal(handbook.teachers.length, 7)
+  assert.equal(handbook.marketing_claims.length, 4)
+
+  assert.equal(handbook.product.price?.display, '79800元')
+  assert.equal(handbook.product.service_period?.display, '至获取保研offer')
+
+  const serviceHours = (handbook.product as Record<string, unknown>)
+    .service_hours as Record<string, unknown>
+  assert.equal(serviceHours.display, '180+N小时专项课程')
 })
 
 test('navigation handbook example module cannot enter the real case dataset', () => {
