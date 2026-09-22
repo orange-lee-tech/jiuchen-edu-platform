@@ -1,8 +1,19 @@
 import { z } from 'zod'
 
-const sourcedSchema = z.object({
-  source_page: z.number().int().positive(),
-}).passthrough()
+const sourcedSchema = z
+  .object({
+    source_page: z.number().int().positive().optional(),
+    source_pages: z.array(z.number().int().positive()).min(1).optional(),
+  })
+  .passthrough()
+  .superRefine((value, ctx) => {
+    if (value.source_page === undefined && !value.source_pages?.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'source_page or source_pages is required',
+      })
+    }
+  })
 
 const displayValueSchema = z.object({
   amount: z.number().nullable().optional(),
@@ -122,10 +133,23 @@ export const productHandbookV1Schema = z.object({
     ['visual_blocks', value.visual_blocks],
   ] as const) {
     rows.forEach((row, index) => {
-      pages.push({
-        page: row.source_page,
-        path: [key, index, 'source_page'],
-      })
+      if ('source_page' in row && typeof row.source_page === 'number') {
+        pages.push({
+          page: row.source_page,
+          path: [key, index, 'source_page'],
+        })
+      }
+
+      if ('source_pages' in row && Array.isArray(row.source_pages)) {
+        row.source_pages.forEach((page, pageIndex) => {
+          if (typeof page === 'number') {
+            pages.push({
+              page,
+              path: [key, index, 'source_pages', pageIndex],
+            })
+          }
+        })
+      }
     })
   }
 
