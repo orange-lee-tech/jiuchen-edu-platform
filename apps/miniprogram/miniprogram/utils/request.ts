@@ -570,3 +570,48 @@ export async function runMyAssessment(id: string): Promise<AssessmentRecord> {
   )
   return result.assessment
 }
+
+
+export type ProductSummary = {
+  documentKey: string
+  title: string
+  productName: string
+  sourceDate: string | null
+  conversionVersion: string
+  product: Record<string, unknown>
+  highlights: Array<Record<string, unknown>>
+}
+
+export type ProductDetail = {
+  documentKey: string
+  title: string
+  sourceDate: string | null
+  conversionVersion: string
+  content: {
+    document: Record<string, unknown>
+    brand: Record<string, unknown>
+    product: Record<string, unknown>
+    audience: Array<Record<string, unknown>>
+    highlights: Array<Record<string, unknown>>
+    timeline: Array<Record<string, unknown>>
+    modules: Array<Record<string, unknown>>
+    core_services: Array<Record<string, unknown>>
+    teachers: Array<Record<string, unknown>>
+    marketing_claims: Array<Record<string, unknown>>
+    contact: Record<string, unknown> | null
+    visual_blocks: Array<Record<string, unknown>>
+  }
+}
+
+export async function getProducts(): Promise<ProductSummary[]> {
+  const result = await request<{ ok: true; products: ProductSummary[] }>(
+    '/products',
+  )
+  return result.products
+}
+
+export async function getProduct(documentKey: string): Promise<ProductDetail> {
+  return request<ProductDetail & { ok: true }>(
+    `/products/${encodeURIComponent(documentKey)}`,
+  )
+}
