@@ -46,7 +46,7 @@ test('navigation card keeps rich supplemental content and example safeguards', (
   const record = handbook as unknown as Record<string, unknown>
   assert.ok(Array.isArray(record.course_resources))
   assert.ok(Array.isArray(record.training_items))
-  assert.ok(Array.isArray(record.example_plans))
+  assert.ok(record.example_plans && typeof record.example_plans === 'object' && !Array.isArray(record.example_plans))
 
   const serialized = JSON.stringify(record.example_plans)
   assert.match(serialized, /real_case_dataset/)
