@@ -53,13 +53,16 @@ Page({
           const price = asString(asRecord(product.price).display)
           const periodDisplay =
             asString(period.display) || asString(period.description)
+          const category = asString(product.category)
 
           return {
             documentKey: item.documentKey,
             name: item.productName,
             coverAsset: asString(product.cover_asset),
             taglines: asStrings(product.tagline),
-            meta: [serviceCount, periodDisplay, price].filter(Boolean).join(' · '),
+            meta: [serviceCount, periodDisplay, price, category]
+              .filter(Boolean)
+              .join(' · '),
             source: item.source,
           }
         }),
