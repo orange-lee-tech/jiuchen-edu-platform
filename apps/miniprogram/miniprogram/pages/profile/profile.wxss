@@ -158,3 +158,19 @@
 .delete-account-button::after {
   border-color: #ead7d4;
 }
+
+
+.menu-button {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  line-height: normal;
+  text-align: left;
+}
+
+.menu-button::after {
+  border: 0;
+}
