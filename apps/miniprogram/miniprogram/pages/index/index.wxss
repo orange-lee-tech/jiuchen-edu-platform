@@ -265,3 +265,44 @@
   border-radius: 18rpx;
   background: #eef4ff;
 }
+
+
+.brand-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-top: 22rpx;
+  padding: 24rpx 26rpx;
+  background: linear-gradient(145deg, #f8fbff 0%, #eef4ff 100%);
+}
+
+.brand-intro-eyebrow,
+.brand-intro-title,
+.brand-intro-desc {
+  display: block;
+}
+
+.brand-intro-eyebrow {
+  color: #7d8eaa;
+  font-size: 18rpx;
+  letter-spacing: 2rpx;
+}
+
+.brand-intro-title {
+  margin-top: 8rpx;
+  color: #253a60;
+  font-size: 27rpx;
+  font-weight: 800;
+}
+
+.brand-intro-desc {
+  margin-top: 7rpx;
+  color: #7f8792;
+  font-size: 21rpx;
+}
+
+.brand-intro-arrow {
+  color: #2f6fed;
+  font-size: 42rpx;
+}
