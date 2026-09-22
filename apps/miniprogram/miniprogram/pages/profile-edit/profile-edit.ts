@@ -5,6 +5,7 @@ import {
 } from '../../utils/auth'
 import {
   claimMyInternalIdentity,
+  friendlyRequestError,
   getMyAcademicProfile,
   getMyInternalIdentity,
   updateMyAcademicProfile,
@@ -20,6 +21,17 @@ const EMPTY_FORM = {
   currentGrade: '',
   gpaText: '',
   rankText: '',
+}
+
+function normalizeInternalId(value: string) {
+  const compact = value.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const match = compact.match(/^(JC[STA])([A-Z0-9]{4})([A-Z0-9]{4})$/)
+
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`
+  }
+
+  return value.toUpperCase().replace(/\s+/g, '')
 }
 
 Page({
@@ -40,7 +52,7 @@ Page({
 
     if (!auth) {
       wx.showToast({ title: '请先登录', icon: 'none' })
-      wx.navigateTo({ url: '/pages/login/login' })
+      wx.redirectTo({ url: '/pages/login/login' })
       this.setData({ loading: false })
       return
     }
@@ -82,11 +94,11 @@ Page({
   },
 
   onInternalIdInput(event: WechatMiniprogram.Input) {
-    this.setData({ internalIdInput: event.detail.value.toUpperCase() })
+    this.setData({ internalIdInput: normalizeInternalId(event.detail.value) })
   },
 
   async onClaimInternalId() {
-    const businessId = this.data.internalIdInput.trim()
+    const businessId = normalizeInternalId(this.data.internalIdInput.trim())
 
     if (!businessId) {
       wx.showToast({ title: '请填写内部ID', icon: 'none' })
@@ -110,13 +122,11 @@ Page({
         showCancel: false,
       })
     } catch (error) {
-      const message = error instanceof Error ? error.message : ''
-      const title = message.includes('invalid_internal_id')
-        ? '填写错误，请核对重新填写'
-        : message.includes('internal_id_locked')
-          ? '内部ID已绑定，如需变更请联系管理员'
-          : '身份绑定失败'
-      wx.showToast({ title, icon: 'none', duration: 2600 })
+      wx.showToast({
+        title: friendlyRequestError(error, '身份绑定失败，请稍后重试'),
+        icon: 'none',
+        duration: 2600,
+      })
     } finally {
       this.setData({ claiming: false })
     }
@@ -157,8 +167,11 @@ Page({
 
       wx.showToast({ title: '资料已保存', icon: 'success' })
     } catch (error) {
-      const message = error instanceof Error ? error.message : '保存失败'
-      wx.showToast({ title: message, icon: 'none', duration: 2500 })
+      wx.showToast({
+        title: friendlyRequestError(error, '保存失败，请稍后重试'),
+        icon: 'none',
+        duration: 2600,
+      })
     } finally {
       this.setData({ saving: false })
     }
