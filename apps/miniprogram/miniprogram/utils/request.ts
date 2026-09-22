@@ -5,6 +5,7 @@ export type LivenessResponse = {
   ok: boolean
   service: string
   environment: string
+  release?: string
 }
 
 export type HealthResponse = {
@@ -99,6 +100,85 @@ const DEMO_STUDENT_ID = '00000000-0000-4000-8000-000000000001'
 
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
+export class ApiRequestError extends Error {
+  readonly statusCode: number
+  readonly code: string
+  readonly detail: string
+
+  constructor(statusCode: number, code: string, detail = '') {
+    super(code)
+    this.name = 'ApiRequestError'
+    this.statusCode = statusCode
+    this.code = code
+    this.detail = detail
+  }
+}
+
+function asErrorRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function responseError(statusCode: number, payload: unknown) {
+  const record = asErrorRecord(payload)
+  const message = typeof record.message === 'string' ? record.message : ''
+  const apiError = typeof record.error === 'string' ? record.error : ''
+
+  if (
+    statusCode === 404 &&
+    (message.includes('Route ') || message.includes('not found'))
+  ) {
+    return new ApiRequestError(statusCode, 'backend_version_mismatch', message)
+  }
+
+  const code =
+    apiError && apiError !== 'Not Found'
+      ? apiError
+      : statusCode === 401
+        ? 'unauthorized'
+        : statusCode >= 500
+          ? 'service_unavailable'
+          : `http_${statusCode}`
+
+  return new ApiRequestError(
+    statusCode,
+    code,
+    message || (typeof payload === 'string' ? payload : JSON.stringify(payload)),
+  )
+}
+
+export function friendlyRequestError(
+  error: unknown,
+  fallback = '操作失败，请稍后重试',
+) {
+  const code =
+    error instanceof ApiRequestError
+      ? error.code
+      : error instanceof Error
+        ? error.message
+        : ''
+
+  const messages: Record<string, string> = {
+    backend_version_mismatch: '测试服务尚未更新到当前版本，请稍后重试',
+    network_unavailable: '暂时无法连接服务，请检查网络后重试',
+    unauthorized: '登录已失效，请重新登录',
+    wechat_login_failed: '微信登录服务暂不可用，请稍后重试',
+    phone_login_failed: '手机号登录暂不可用，请稍后重试',
+    database_not_configured: '测试数据库尚未配置完成',
+    schema_missing: '测试数据库正在升级，请稍后重试',
+    service_unavailable: '服务暂不可用，请稍后重试',
+    invalid_internal_id: '内部ID不正确，请核对后重试',
+    internal_id_locked: '内部ID已绑定，如需变更请联系管理员',
+    internal_id_not_ready: '内部ID尚未准备完成，请联系九辰工作人员',
+    role_already_assigned: '当前账号已有内部身份',
+  }
+
+  if (messages[code]) return messages[code]
+  if (code && /[\u4e00-\u9fff]/.test(code)) return code
+  return fallback
+}
+
 export function request<T>(
   path: string,
   method: RequestMethod = 'GET',
@@ -124,18 +204,11 @@ export function request<T>(
             resolve(response.data as T)
             return
           }
-          const detail =
-            typeof response.data === 'string'
-              ? response.data
-              : JSON.stringify(response.data)
-          reject(
-            new Error(
-              `Request failed with HTTP ${response.statusCode}${detail ? `: ${detail}` : ''}`,
-            ),
-          )
+
+          reject(responseError(response.statusCode, response.data))
         },
         fail(error) {
-          reject(new Error(error.errMsg || '无法连接云托管 API'))
+          reject(new ApiRequestError(0, 'network_unavailable', error.errMsg || ''))
         },
       })
     })
@@ -153,18 +226,10 @@ export function request<T>(
           return
         }
 
-        const detail =
-          typeof response.data === 'string'
-            ? response.data
-            : JSON.stringify(response.data)
-        reject(
-          new Error(
-            `Request failed with HTTP ${response.statusCode}${detail ? `: ${detail}` : ''}`,
-          ),
-        )
+        reject(responseError(response.statusCode, response.data))
       },
       fail(error) {
-        reject(new Error(error.errMsg || '无法连接 API'))
+        reject(new ApiRequestError(0, 'network_unavailable', error.errMsg || ''))
       },
     })
   })
