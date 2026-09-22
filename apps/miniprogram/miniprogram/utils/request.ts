@@ -548,6 +548,18 @@ export async function createAssessmentDraft(
   return result.assessment
 }
 
+export async function updateAssessmentDraft(
+  id: string,
+  input: AssessmentInput,
+): Promise<AssessmentRecord> {
+  const result = await request<{ ok: true; assessment: AssessmentRecord }>(
+    `/me/assessments/${id}`,
+    'PUT',
+    { input } as unknown as WechatMiniprogram.IAnyObject,
+  )
+  return result.assessment
+}
+
 export async function getMyAssessments(): Promise<AssessmentRecord[]> {
   const result = await request<{ ok: true; assessments: AssessmentRecord[] }>(
     '/me/assessments',
