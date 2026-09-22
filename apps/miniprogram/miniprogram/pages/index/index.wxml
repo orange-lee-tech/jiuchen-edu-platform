@@ -5,7 +5,7 @@
         <text class="brand">九辰保研</text>
         <text class="brand-sub">陪你把保研每一步走清楚</text>
       </view>
-      <view class="consult">咨询</view>
+      <button class="consult" open-type="contact">咨询</button>
     </view>
 
     <view class="search-box" bindtap="onSearchTap">
@@ -42,7 +42,7 @@
       <text class="section-title">相似案例</text>
       <text class="section-subtitle">先看与自己背景接近的人如何准备</text>
     </view>
-    <text class="more">更多 ›</text>
+    <text class="more muted">审核后开放</text>
   </view>
 
   <scroll-view class="case-scroll" scroll-x enhanced show-scrollbar="{{false}}">
