@@ -4,6 +4,7 @@ import {
   getAssessmentMeta,
   getMyAcademicProfile,
   runMyAssessment,
+  updateAssessmentDraft,
   type AssessmentCompetitionExperience,
   type AssessmentEnglishRecord,
   type AssessmentResearchExperience,
@@ -304,7 +305,9 @@ Page({
     try {
       this.setData({ saving: true })
       const input = this.buildInput()
-      const draft = await createAssessmentDraft(input)
+      const draft = this.data.draftId
+        ? await updateAssessmentDraft(this.data.draftId, input)
+        : await createAssessmentDraft(input)
       this.setData({ draftId: draft.id })
       wx.showToast({ title: '评估草稿已保存', icon: 'success' })
     } catch (error) {
