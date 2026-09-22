@@ -183,6 +183,114 @@ export function registerAssessmentRoutes(
     }
   })
 
+  app.put<{
+    Params: { id: string }
+    Body: unknown
+  }>('/me/assessments/:id', async (request, reply) => {
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const user = await resolveSessionUser(request, database)
+    if (!user) {
+      return reply.code(401).send({
+        ok: false,
+        error: 'unauthorized',
+      })
+    }
+
+    if (!canUseAssessment(user.role)) {
+      return reply.code(403).send({
+        ok: false,
+        error: 'assessment_not_available_for_role',
+      })
+    }
+
+    const parsed = createAssessmentSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_assessment_input',
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          message: issue.message,
+        })),
+      })
+    }
+
+    try {
+      const [existing] = await database.db
+        .select()
+        .from(assessments)
+        .where(
+          and(
+            eq(assessments.id, request.params.id),
+            eq(assessments.userId, user.userId),
+          ),
+        )
+        .limit(1)
+
+      if (!existing) {
+        return reply.code(404).send({
+          ok: false,
+          error: 'assessment_not_found',
+        })
+      }
+
+      if (existing.status !== 'draft') {
+        return reply.code(409).send({
+          ok: false,
+          error: 'assessment_not_editable',
+        })
+      }
+
+      await database.db
+        .update(assessments)
+        .set({
+          inputSchemaVersion: ASSESSMENT_INPUT_SCHEMA_VERSION,
+          outputSchemaVersion: ASSESSMENT_OUTPUT_SCHEMA_VERSION,
+          agentVersion: ASSESSMENT_AGENT_VERSION,
+          inputJson: parsed.data.input,
+          evidenceJson: null,
+          outputJson: null,
+          provider: null,
+          model: null,
+          knowledgeVersion: null,
+          failureCode: null,
+          creditConsumed: false,
+          startedAt: null,
+          completedAt: null,
+        })
+        .where(eq(assessments.id, existing.id))
+
+      const [updated] = await database.db
+        .select()
+        .from(assessments)
+        .where(eq(assessments.id, existing.id))
+        .limit(1)
+
+      if (!updated) {
+        throw new Error('assessment_update_readback_failed')
+      }
+
+      return {
+        ok: true,
+        assessment: serializeAssessment(updated),
+      }
+    } catch (error) {
+      if (isMissingTable(error)) {
+        return reply.code(503).send({
+          ok: false,
+          error: 'assessment_schema_not_ready',
+        })
+      }
+      throw error
+    }
+  })
+
   app.get('/me/assessments', async (request, reply) => {
     if (!database.configured) {
       return reply.code(503).send({
