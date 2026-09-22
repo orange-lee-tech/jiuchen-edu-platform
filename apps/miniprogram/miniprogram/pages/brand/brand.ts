@@ -57,6 +57,7 @@ Page({
       serviceScope: string[]
       planningModel: string
       pathways: string[]
+      pathwayText: string
       audience: Array<{ text: string; source: string }>
       highlights: Array<{ title: string; detail: string; source: string }>
       timeline: Array<{
@@ -102,6 +103,7 @@ Page({
           serviceScope: asStrings(product.service_scope),
           planningModel: asString(product.planning_model),
           pathways: asStrings(product.related_pathways),
+          pathwayText: asStrings(product.related_pathways).join(' · '),
           audience: content.audience.map((item) => {
             const record = asRecord(item)
             return {
