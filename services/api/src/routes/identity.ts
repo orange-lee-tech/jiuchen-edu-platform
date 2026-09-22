@@ -8,6 +8,7 @@ import {
   teachers,
   users,
 } from '../db/schema.js'
+import { normalizeInternalBusinessId } from '../domain/internal-id.js'
 import { resolveSessionUser } from '../services/session.js'
 
 const claimSchema = z.object({
@@ -99,7 +100,7 @@ export function registerIdentityRoutes(
       })
     }
 
-    const normalized = parsed.data.businessId.toUpperCase()
+    const normalized = normalizeInternalBusinessId(parsed.data.businessId)
 
     const [identity] = await database.db
       .select({
