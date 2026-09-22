@@ -1,0 +1,186 @@
+.assessment-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 28rpx 24rpx 70rpx;
+  background: #f6f7fb;
+}
+
+.hero {
+  padding: 16rpx 6rpx 24rpx;
+}
+
+.eyebrow,
+.title,
+.desc,
+.section-title,
+.status-title,
+.status-desc {
+  display: block;
+}
+
+.eyebrow {
+  color: #2f6fed;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.title {
+  margin-top: 12rpx;
+  color: #252830;
+  font-size: 36rpx;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.desc {
+  margin-top: 12rpx;
+  color: #7d838e;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+
+.card,
+.status-card {
+  margin-bottom: 18rpx;
+  padding: 24rpx;
+  border: 1rpx solid #eceef3;
+  border-radius: 22rpx;
+  background: #ffffff;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.section-title {
+  color: #30333a;
+  font-size: 27rpx;
+  font-weight: 800;
+}
+
+.link {
+  color: #2f6fed;
+  font-size: 21rpx;
+}
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #eff1f4;
+  color: #666d77;
+  font-size: 22rpx;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1.3fr auto;
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+
+.entry.vertical {
+  display: flex;
+  flex-direction: column;
+}
+
+.input,
+.picker-field,
+.textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 70rpx;
+  padding: 0 16rpx;
+  border: 1rpx solid #e1e4e9;
+  border-radius: 14rpx;
+  background: #fafbfc;
+  color: #40454d;
+  font-size: 21rpx;
+}
+
+.picker-field {
+  display: flex;
+  align-items: center;
+}
+
+.textarea {
+  min-height: 150rpx;
+  margin-top: 18rpx;
+  padding-top: 16rpx;
+  line-height: 1.55;
+}
+
+.textarea.compact {
+  min-height: 110rpx;
+  margin-top: 0;
+}
+
+.remove {
+  margin: 0;
+  padding: 0 16rpx;
+  border-radius: 12rpx;
+  background: #fff1ef;
+  color: #b4534b;
+  font-size: 20rpx;
+  line-height: 70rpx;
+}
+
+.remove::after {
+  border: 0;
+}
+
+.empty {
+  padding: 18rpx 0;
+  color: #9aa0aa;
+  font-size: 21rpx;
+}
+
+.status-card {
+  background: #f1f5ff;
+}
+
+.status-title {
+  color: #355cad;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.status-desc {
+  margin-top: 8rpx;
+  color: #68748a;
+  font-size: 21rpx;
+  line-height: 1.55;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14rpx;
+  margin-top: 24rpx;
+}
+
+.primary,
+.secondary {
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.primary {
+  background: #2f6fed;
+  color: #ffffff;
+}
+
+.secondary {
+  background: #eceff5;
+  color: #4f5661;
+}
+
+.primary::after,
+.secondary::after {
+  border: 0;
+}
