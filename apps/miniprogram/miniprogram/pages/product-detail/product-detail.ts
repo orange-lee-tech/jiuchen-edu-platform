@@ -171,6 +171,7 @@ Page({
         details: string
         hours: string
         period: string
+        periodPending: boolean
         fee: string
         teacher: string
         source: string
@@ -425,6 +426,7 @@ Page({
               details: asString(record.details),
               hours: asString(record.hours),
               period: asString(record.period),
+              periodPending: asString(record.period).includes('待核对'),
               fee:
                 typeof record.fee_cny === 'number'
                   ? `${record.fee_cny}元`
