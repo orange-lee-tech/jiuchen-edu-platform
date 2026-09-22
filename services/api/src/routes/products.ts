@@ -26,7 +26,7 @@ function applyRuntimeAssets(
   handbook: ProductHandbookV1,
   source: ProductSource,
 ) {
-  const publicContent = applyRuntimeAssets(handbook, source)
+  const publicContent = buildPublicProductContent(handbook)
 
   if (source !== 'bundled') return publicContent
 
@@ -55,7 +55,7 @@ function serializeProductSummary(
   handbook: ProductHandbookV1,
   source: ProductSource,
 ) {
-  const publicContent = buildPublicProductContent(handbook)
+  const publicContent = applyRuntimeAssets(handbook, source)
 
   return {
     documentKey: handbook.document.document_id,
