@@ -127,10 +127,16 @@ Markdown 中：
 {
   "name": "九辰保研·大三冲顶计划",
   "short_name": "大三冲顶计划",
-  "price_cny": 13800,
+  "price": {
+    "amount": 13800,
+    "currency": "CNY",
+    "display": "13800元"
+  },
   "service_period": {
-    "months": 14,
-    "display": "大三9月至大四10月"
+    "duration_months": 14,
+    "from": "大三9月",
+    "to": "大四10月",
+    "display": "14个月（大三9月大四10月）"
   },
   "one_to_one_hours": 12,
   "positioning": "...",
@@ -216,13 +222,16 @@ Markdown 中：
 师资信息作为**时点快照**，不是永久事实。
 
 字段：
-- display_name
-- education
-- offers[]
+- display_name / name
+- education_raw：视觉原文，必须保留
+- education_items[]：只有能可靠拆分时才结构化
+- offers_claimed[]：保持“来源声明”语义
 - specialties[]
 - source_page
 - source_date
 - verification_status
+
+若视觉排版中的学校、学历、学科边界不够明确，education_items 留空，禁止根据常识猜测。
 
 上线前必须允许后台修改/下架。
 
@@ -238,8 +247,9 @@ Markdown 中：
 
 ```json
 {
-  "claim": "学员保研整体录取率达96%",
+  "claim_id": "claim-overall-admission-rate",
   "claim_type": "marketing_performance",
+  "source_text": "学员保研整体录取率达96%",
   "source_page": 2,
   "verification_status": "unverified",
   "display_allowed": false
@@ -436,3 +446,20 @@ Markdown 中：
 7. AI 建议与九辰产品服务之间的适配层。
 
 因此批量转换时最重要的是“语义结构 + 来源 + 视觉证据”，而不是追求复刻宣传册设计。
+
+
+## 14. 黄金样例审计结论
+
+`jiuchen-dasan-chongding-sample` 已通过第一轮黄金样例审计。
+
+批量转换从该样例继续时，额外强制：
+- `document.document_type = product_handbook`；
+- 价格、周期等数值同时保留原始 display 文本；
+- `marketing_claims[].display_allowed` 必须显式存在，默认 false；
+- 师资学历保留 education_raw，结构化 education_items 仅在可可靠拆分时填写。
+
+JSON 结构基线：
+`docs/data/schemas/product-handbook-v1.schema.json`
+
+审计记录：
+`docs/data/golden-sample-review-chongding.md`
