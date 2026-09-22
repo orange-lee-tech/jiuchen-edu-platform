@@ -405,7 +405,9 @@ Page({
               source: sourcePage(record),
             }
           }),
-          modules: content.modules.map((item) => {
+          modules: content.modules
+            .filter((item) => asRecord(item).include_in_product_body !== false)
+            .map((item) => {
             const record = asRecord(item)
             return {
               name: asString(record.name),
