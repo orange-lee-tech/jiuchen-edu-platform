@@ -590,6 +590,7 @@ export type ProductSummary = {
   productName: string
   sourceDate: string | null
   conversionVersion: string
+  source: 'bundled' | 'database'
   product: Record<string, unknown>
   highlights: Array<Record<string, unknown>>
 }
@@ -599,6 +600,7 @@ export type ProductDetail = {
   title: string
   sourceDate: string | null
   conversionVersion: string
+  source: 'bundled' | 'database'
   content: {
     document: Record<string, unknown>
     brand: Record<string, unknown>
@@ -612,6 +614,7 @@ export type ProductDetail = {
     marketing_claims: Array<Record<string, unknown>>
     contact: Record<string, unknown> | null
     visual_blocks: Array<Record<string, unknown>>
+    extensions: Record<string, unknown>
   }
 }
 
