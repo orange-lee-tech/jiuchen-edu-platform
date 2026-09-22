@@ -27,11 +27,18 @@
 }
 
 .consult {
+  margin: 0;
   padding: 12rpx 22rpx;
+  border: 0;
   border-radius: 999rpx;
   background: #2f6fed;
   color: #ffffff;
   font-size: 24rpx;
+  line-height: 1.4;
+}
+
+.consult::after {
+  border: 0;
 }
 
 .search-box {
@@ -305,4 +312,9 @@
 .brand-intro-arrow {
   color: #2f6fed;
   font-size: 42rpx;
+}
+
+
+.more.muted {
+  color: #a0a5ad;
 }
