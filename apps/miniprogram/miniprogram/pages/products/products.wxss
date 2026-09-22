@@ -1,0 +1,114 @@
+.products-page {
+  min-height: 100vh;
+  padding: 28rpx 24rpx 70rpx;
+  box-sizing: border-box;
+  background: #f6f7fb;
+  color: #262a32;
+}
+
+.hero {
+  padding: 18rpx 6rpx 28rpx;
+}
+
+.eyebrow,
+.title,
+.desc,
+.name,
+.tagline,
+.meta {
+  display: block;
+}
+
+.eyebrow {
+  color: #2f6fed;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.title {
+  margin-top: 12rpx;
+  font-size: 38rpx;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.desc {
+  margin-top: 14rpx;
+  color: #707783;
+  font-size: 23rpx;
+  line-height: 1.65;
+}
+
+.state-card,
+.product-card {
+  margin-bottom: 20rpx;
+  overflow: hidden;
+  border: 1rpx solid #e9ebf0;
+  border-radius: 24rpx;
+  background: #fff;
+}
+
+.state-card {
+  padding: 32rpx;
+  color: #727984;
+  font-size: 24rpx;
+}
+
+.state-card.error {
+  color: #ad4f49;
+}
+
+.cover {
+  width: 100%;
+  height: 300rpx;
+  background: #e9eef9;
+}
+
+.body {
+  padding: 26rpx;
+}
+
+.name {
+  font-size: 31rpx;
+  font-weight: 800;
+}
+
+.tagline {
+  margin-top: 8rpx;
+  color: #5d6572;
+  font-size: 23rpx;
+}
+
+.meta {
+  margin-top: 18rpx;
+  color: #8a909a;
+  font-size: 21rpx;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24rpx;
+}
+
+.detail-link {
+  color: #2f6fed;
+  font-size: 23rpx;
+  font-weight: 700;
+}
+
+.consult {
+  margin: 0;
+  padding: 0 24rpx;
+  border: 0;
+  border-radius: 999rpx;
+  background: #eef3ff;
+  color: #2f6fed;
+  font-size: 22rpx;
+  line-height: 62rpx;
+}
+
+.consult::after {
+  border: 0;
+}
