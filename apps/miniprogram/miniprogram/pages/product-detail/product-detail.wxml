@@ -58,7 +58,7 @@
         </view>
         <view class="package-meta-row">
           <text wx:if="{{item.hours}}" class="resource-meta">课时：{{item.hours}}</text>
-          <text wx:if="{{item.period}}" class="{{item.period.indexOf('待核对') >= 0 ? 'pending' : 'resource-meta'}}">周期：{{item.period}}</text>
+          <text wx:if="{{item.period}}" class="{{item.periodPending ? 'pending' : 'resource-meta'}}">周期：{{item.period}}</text>
           <text wx:if="{{item.teacher}}" class="resource-meta">导师：{{item.teacher}}</text>
         </view>
         <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
