@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { BUNDLED_BRAND_PUBLIC } from '../data/bundled-brand-public.js'
 
-function publicBrandContent() {
+export function buildPublicBrandContent() {
   return {
     document: BUNDLED_BRAND_PUBLIC.document,
     brand: BUNDLED_BRAND_PUBLIC.brand,
@@ -25,6 +25,6 @@ function publicBrandContent() {
 export function registerBrandRoutes(app: FastifyInstance) {
   app.get('/brand', async () => ({
     ok: true,
-    content: publicBrandContent(),
+    content: buildPublicBrandContent(),
   }))
 }
