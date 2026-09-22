@@ -36,7 +36,7 @@
 | 电脑管理后台 | 已实现第一版 | TODO | P3 进行中 |
 | 手机管理员工作台 | 已实现第一版 | TODO | 待集中测试 |
 | 服务号读取 | 已实现 | 真实 21 篇文章读取 PASS | 已证明可行 |
-| 服务号 → news_posts | 已实现 | TODO | 待复测动态 IP 后验证 |
+| 服务号 → news_posts | 已实现 | TODO | 待复测动态 IP 后验证 |\n| 产品知识库 | handbook-v1 校验、入库、chunk、审核发布、公开读取已实现 | 未执行 Test DB 升级/批量导入 | 进行中 |
 | 小程序资讯读取 | 已实现 + fallback | TODO | 待入库后真机验证 |
 | AI 保研评估 | 输入/输出 Schema、Draft/History/Run API、Provider/Retriever 接口已施工 | Provider/案例检索未接 | P4 进行中 |
 | 评估额度账本 | 领域设计 | 未施工 | P5 |
