@@ -80,7 +80,7 @@ export function buildProductKnowledgeChunks(
     title: handbook.product.name,
     text: joinParts([
       asString(product.short_name),
-      asString(product.positioning),
+      asString(product.positioning) ?? asString(product.positioning_statement),
       displayText(product.price),
       displayText(product.service_period),
       typeof product.one_to_one_hours === 'number'
@@ -119,7 +119,9 @@ export function buildProductKnowledgeChunks(
       text:
         joinParts([
           asString(record.title),
-          asString(record.description),
+          asString(record.description) ??
+            asString(record.text) ??
+            asStringArray(record.details).join('、'),
         ]) || JSON.stringify(record),
       sourcePage: sourcePage(record),
       retrievalAllowed: true,
@@ -159,7 +161,11 @@ export function buildProductKnowledgeChunks(
         joinParts([
           asString(record.name),
           asString(record.summary),
-          ...asStringArray(record.details),
+          ...(
+            asStringArray(record.details).length
+              ? asStringArray(record.details)
+              : asStringArray(record.core_content)
+          ),
           asString(record.teacher_requirement),
         ]) || JSON.stringify(record),
       sourcePage: sourcePage(record),
@@ -177,8 +183,12 @@ export function buildProductKnowledgeChunks(
       text:
         joinParts([
           asString(record.name),
-          asString(record.summary),
-          ...asStringArray(record.bullets),
+          asString(record.summary) ?? asString(record.description),
+          ...(
+            asStringArray(record.bullets).length
+              ? asStringArray(record.bullets)
+              : asStringArray(record.items)
+          ),
         ]) || JSON.stringify(record),
       sourcePage: sourcePage(record),
       retrievalAllowed: true,
