@@ -184,3 +184,21 @@
 .secondary::after {
   border: 0;
 }
+
+
+.inline-profile-input {
+  flex: 1;
+  margin-left: 24rpx;
+  color: #3f454e;
+  font-size: 22rpx;
+  text-align: right;
+}
+
+.inline-profile-input::placeholder {
+  color: #a0a5ad;
+}
+
+.saving-note {
+  color: #8a8f98;
+  font-size: 20rpx;
+}
