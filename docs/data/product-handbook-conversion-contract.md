@@ -463,3 +463,29 @@ JSON 结构基线：
 
 审计记录：
 `docs/data/golden-sample-review-chongding.md`
+
+
+## 15. 导入与发布边界
+
+转换完成不等于上线。
+
+正式数据链：
+
+```text
+转换包
+  -> handbook-v1 严格校验
+  -> product_knowledge_documents(status=draft)
+  -> product_knowledge_chunks
+  -> 内部后台人工审核
+  -> 发布前服务端再次校验
+  -> status=active
+  -> GET /products
+```
+
+约束：
+- 导入器永不自动发布；
+- 相同 document_id 重复导入保留已有发布状态；
+- draft / archived 不进入公开产品接口；
+- active 前必须重新通过 handbook-v1；
+- 未核验 marketing_claims 不进入公开内容；
+- 所有产品知识 chunk 默认 `assessmentEvidenceAllowed=false`，不能作为录取判断依据。
