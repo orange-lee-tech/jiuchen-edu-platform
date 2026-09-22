@@ -22,6 +22,7 @@ import {
   isPlanTypeAllowed,
   type PlanType,
 } from '../domain/classroom.js'
+import { productHandbookV1Schema } from '../domain/product-handbook.js'
 import { bindInternalIdentity, unbindInternalIdentity } from '../services/internal-identities.js'
 
 const studentCreateSchema = z.object({
@@ -169,7 +170,10 @@ export function registerAdminRoutes(
     }
 
     const [existing] = await database.db
-      .select({ id: productKnowledgeDocuments.id })
+      .select({
+        id: productKnowledgeDocuments.id,
+        contentJson: productKnowledgeDocuments.contentJson,
+      })
       .from(productKnowledgeDocuments)
       .where(eq(productKnowledgeDocuments.id, request.params.id))
       .limit(1)
@@ -178,6 +182,16 @@ export function registerAdminRoutes(
       return reply.code(404).send({
         ok: false,
         error: 'product_knowledge_not_found',
+      })
+    }
+
+    if (
+      parsed.data.status === 'active' &&
+      !productHandbookV1Schema.safeParse(existing.contentJson).success
+    ) {
+      return reply.code(409).send({
+        ok: false,
+        error: 'product_knowledge_content_invalid',
       })
     }
 
