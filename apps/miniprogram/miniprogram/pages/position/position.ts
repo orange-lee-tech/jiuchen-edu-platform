@@ -43,11 +43,19 @@ Page({
   },
 
   onStartAssessment() {
-    wx.showModal({
-      title: 'AI 保研定位',
-      content: 'P2 先完成资料录入与结果页骨架，真实 AI 分析将在服务端 Agent 接入后启用。',
-      showCancel: false,
-    })
+    const auth = getSavedAuthResult()
+
+    if (!auth) {
+      wx.navigateTo({ url: '/pages/login/login' })
+      return
+    }
+
+    if (auth.user.role !== 'user' && auth.user.role !== 'student') {
+      wx.showToast({ title: '当前身份不使用 AI 定位', icon: 'none' })
+      return
+    }
+
+    wx.navigateTo({ url: '/pages/assessment-form/assessment-form' })
   },
 
   onEditProfile() {
