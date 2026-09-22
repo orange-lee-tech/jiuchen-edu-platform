@@ -7,7 +7,8 @@
     "pages/profile/profile",
     "pages/login/login",
     "pages/profile-edit/profile-edit",
-    "pages/admin/admin"
+    "pages/admin/admin",
+    "pages/assessment-form/assessment-form"
   ],
   "window": {
     "navigationBarTitleText": "九辰保研",
