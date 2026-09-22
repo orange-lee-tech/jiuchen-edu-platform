@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import type {
   AssessmentEvidenceItem,
   AssessmentInput,
@@ -11,6 +12,11 @@ export type AssessmentKnowledgeContext = {
 }
 
 export interface AssessmentRetriever {
+  retrieve(input: AssessmentInput): Promise<AssessmentKnowledgeContext>
+}
+
+export interface AssessmentKnowledgeSource {
+  readonly sourceId: string
   retrieve(input: AssessmentInput): Promise<AssessmentKnowledgeContext>
 }
 
@@ -43,6 +49,63 @@ export class AssessmentEvidenceReferenceError extends Error {
   }
 }
 
+export class AssessmentEvidenceConflictError extends Error {
+  constructor(ref: string) {
+    super(`assessment_evidence_ref_conflict:${ref}`)
+    this.name = 'AssessmentEvidenceConflictError'
+  }
+}
+
+export class CompositeAssessmentRetriever implements AssessmentRetriever {
+  constructor(
+    private readonly sources: readonly AssessmentKnowledgeSource[],
+  ) {}
+
+  async retrieve(input: AssessmentInput): Promise<AssessmentKnowledgeContext> {
+    if (this.sources.length === 0) {
+      return {
+        version: 'knowledge-empty-v0',
+        evidence: [],
+      }
+    }
+
+    const contexts = await Promise.all(
+      this.sources.map(async (source) => ({
+        sourceId: source.sourceId,
+        context: await source.retrieve(input),
+      })),
+    )
+
+    const refs = new Set<string>()
+    const evidence: AssessmentEvidenceItem[] = []
+
+    for (const { context } of contexts) {
+      for (const item of context.evidence) {
+        if (refs.has(item.ref)) {
+          throw new AssessmentEvidenceConflictError(item.ref)
+        }
+        refs.add(item.ref)
+        evidence.push(item)
+      }
+    }
+
+    const fingerprint = contexts.map(({ sourceId, context }) => ({
+      sourceId,
+      version: context.version,
+    }))
+
+    const digest = createHash('sha256')
+      .update(JSON.stringify(fingerprint))
+      .digest('hex')
+      .slice(0, 20)
+
+    return {
+      version: `knowledge-composite-${digest}`,
+      evidence,
+    }
+  }
+}
+
 class EmptyAssessmentRetriever implements AssessmentRetriever {
   async retrieve(): Promise<AssessmentKnowledgeContext> {
     return {
@@ -67,7 +130,7 @@ class UnconfiguredAssessmentProvider implements AssessmentModelProvider {
 
 export function createUnconfiguredAssessmentRuntime(): AssessmentRuntime {
   return {
-    retriever: new EmptyAssessmentRetriever(),
+    retriever: new CompositeAssessmentRetriever([]),
     provider: new UnconfiguredAssessmentProvider(),
   }
 }
