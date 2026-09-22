@@ -63,9 +63,9 @@
   margin: 36rpx 4rpx 18rpx;
 }
 
-.edit {
-  color: #2f6fed;
-  font-size: 24rpx;
+.saving-label {
+  color: #8a8f98;
+  font-size: 21rpx;
 }
 
 .profile-card {
@@ -88,9 +88,18 @@
   font-size: 25rpx;
 }
 
-.profile-value {
+.profile-input {
+  flex: 1;
+  margin-left: 24rpx;
+  color: #30333a;
   font-size: 25rpx;
   font-weight: 600;
+  text-align: right;
+}
+
+.profile-input::placeholder {
+  color: #a0a5ad;
+  font-weight: 400;
 }
 
 .dimension-list {
