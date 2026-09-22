@@ -256,3 +256,12 @@
   color: #a0a6af;
   font-size: 21rpx;
 }
+
+
+.course-cover-image {
+  width: 104rpx;
+  height: 104rpx;
+  flex-shrink: 0;
+  border-radius: 18rpx;
+  background: #eef4ff;
+}
