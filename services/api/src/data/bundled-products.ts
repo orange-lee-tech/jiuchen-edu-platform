@@ -5,6 +5,9 @@ import part2 from './bundled-products.part2.js'
 import part3 from './bundled-products.part3.js'
 import part4 from './bundled-products.part4.js'
 import qingbeiHuawu from './bundled-product-qingbei.js'
+import researchPaper from './bundled-product-research.js'
+import wenlu from './bundled-product-wenlu.js'
+import yuesheng from './bundled-product-yuesheng.js'
 
 const compressedCatalog = [part1, part2, part3, part4].join('')
 
@@ -19,6 +22,9 @@ if (!Array.isArray(decoded)) {
 export const BUNDLED_PRODUCT_HANDBOOKS: ProductHandbookV1[] = [
   ...decoded.map((entry) => productHandbookV1Schema.parse(entry)),
   qingbeiHuawu,
+  researchPaper,
+  wenlu,
+  yuesheng,
 ]
 
 export function findBundledProduct(documentKey: string) {
