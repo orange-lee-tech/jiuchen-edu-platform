@@ -142,6 +142,49 @@ export const newsPosts = mysqlTable('news_posts', {
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
 
+export const productKnowledgeDocuments = mysqlTable('product_knowledge_documents', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  documentKey: varchar('document_key', { length: 160 }).notNull().unique(),
+  title: varchar('title', { length: 255 }).notNull(),
+  productName: varchar('product_name', { length: 255 }).notNull(),
+  sourceFile: varchar('source_file', { length: 255 }).notNull(),
+  sourceDate: varchar('source_date', { length: 40 }),
+  conversionVersion: varchar('conversion_version', { length: 64 }).notNull(),
+  status: mysqlEnum('status', ['draft', 'active', 'archived']).notNull().default('draft'),
+  contentJson: json('content_json').notNull(),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
+export const productKnowledgeChunks = mysqlTable('product_knowledge_chunks', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  documentId: varchar('document_id', { length: 36 })
+    .notNull()
+    .references(() => productKnowledgeDocuments.id),
+  chunkKey: varchar('chunk_key', { length: 220 }).notNull().unique(),
+  kind: mysqlEnum('kind', [
+    'product',
+    'audience',
+    'highlight',
+    'timeline',
+    'module',
+    'core_service',
+    'teacher',
+    'marketing_claim',
+    'contact',
+    'other',
+  ]).notNull(),
+  title: varchar('title', { length: 255 }).notNull(),
+  text: varchar('text', { length: 4000 }).notNull(),
+  sourcePage: int('source_page'),
+  retrievalAllowed: boolean('retrieval_allowed').notNull().default(true),
+  assessmentEvidenceAllowed: boolean('assessment_evidence_allowed').notNull().default(false),
+  displayAllowed: boolean('display_allowed').notNull().default(true),
+  metadataJson: json('metadata_json'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
 export const assessments = mysqlTable('assessments', {
   id: varchar('id', { length: 36 }).primaryKey(),
   userId: varchar('user_id', { length: 36 })
