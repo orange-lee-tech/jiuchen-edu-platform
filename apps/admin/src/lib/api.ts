@@ -376,3 +376,38 @@ export async function deleteCoachingRecord(id: string): Promise<void> {
     },
   )
 }
+
+
+export type ProductKnowledgeDocument = {
+  id: string
+  documentKey: string
+  title: string
+  productName: string
+  sourceFile: string
+  sourceDate: string | null
+  conversionVersion: string
+  status: 'draft' | 'active' | 'archived'
+  createdAt: string
+  updatedAt: string
+}
+
+export async function fetchProductKnowledge(): Promise<ProductKnowledgeDocument[]> {
+  const result = await requestJson<{
+    ok: true
+    documents: ProductKnowledgeDocument[]
+  }>('/api/admin/product-knowledge')
+  return result.documents
+}
+
+export async function updateProductKnowledgeStatus(
+  id: string,
+  status: ProductKnowledgeDocument['status'],
+): Promise<void> {
+  await requestJson(
+    `/api/admin/product-knowledge/${id}/status`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    },
+  )
+}
