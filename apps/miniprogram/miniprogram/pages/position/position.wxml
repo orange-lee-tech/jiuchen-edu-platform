@@ -10,16 +10,32 @@
   <view class="section-head">
     <view>
       <text class="section-title">我的背景</text>
-      <text class="section-subtitle">资料越完整，定位建议越有参考价值</text>
+      <text class="section-subtitle">{{canEditProfile ? '点击内容直接填写，离开输入框自动保存' : '登录后可直接填写个人背景'}}</text>
     </view>
-    <text class="edit" bindtap="onEditProfile">编辑</text>
+    <text wx:if="{{profileSaving}}" class="saving-label">保存中…</text>
   </view>
 
-  <view class="profile-card surface">
-    <view wx:for="{{profile}}" wx:key="label" class="profile-row">
-      <text class="profile-label">{{item.label}}</text>
-      <text class="profile-value">{{item.value}}</text>
-    </view>
+  <view class="profile-card surface" bindtap="onProfileCardTap">
+    <label class="profile-row">
+      <text class="profile-label">本科院校</text>
+      <input class="profile-input" data-field="university" value="{{profileForm.university}}" placeholder="待填写" disabled="{{!canEditProfile}}" bindinput="onProfileInput" bindblur="onProfileBlur" />
+    </label>
+    <label class="profile-row">
+      <text class="profile-label">专业方向</text>
+      <input class="profile-input" data-field="major" value="{{profileForm.major}}" placeholder="待填写" disabled="{{!canEditProfile}}" bindinput="onProfileInput" bindblur="onProfileBlur" />
+    </label>
+    <label class="profile-row">
+      <text class="profile-label">当前年级</text>
+      <input class="profile-input" data-field="currentGrade" value="{{profileForm.currentGrade}}" placeholder="待填写" disabled="{{!canEditProfile}}" bindinput="onProfileInput" bindblur="onProfileBlur" />
+    </label>
+    <label class="profile-row">
+      <text class="profile-label">绩点 / 均分</text>
+      <input class="profile-input" data-field="gpaText" value="{{profileForm.gpaText}}" placeholder="待填写" disabled="{{!canEditProfile}}" bindinput="onProfileInput" bindblur="onProfileBlur" />
+    </label>
+    <label class="profile-row">
+      <text class="profile-label">专业排名</text>
+      <input class="profile-input" data-field="rankText" value="{{profileForm.rankText}}" placeholder="待填写" disabled="{{!canEditProfile}}" bindinput="onProfileInput" bindblur="onProfileBlur" />
+    </label>
   </view>
 
   <view class="section-head">
