@@ -73,6 +73,7 @@ test('GET /health/config exposes only configuration presence', async () => {
     ok: true,
     service: 'jiuchen-api',
     environment: 'test',
+    release: '0.2.1-experience',
     config: {
       databaseUrlConfigured: false,
       splitDatabaseConfigComplete: false,
@@ -173,12 +174,16 @@ test('bundled product catalog is available before product database upgrade', asy
   }
 
   assert.equal(body.ok, true)
-  assert.equal(body.products.length, 2)
+  assert.equal(body.products.length, 6)
   assert.deepEqual(
     new Set(body.products.map((item) => item.documentKey)),
     new Set([
       'jiuchen-dasan-chongding-product-manual-2026-sample-v1',
       'jiuchen-baoyan-navigation-card-product-manual-2026-v1',
+      'jiuchen-qingbei-huawu-plan-2026-v1',
+      'jiuchen-domestic-international-research-project-product-manual-2026-v1',
+      'jiuchen-wenlu-plan-2026-v1',
+      'jiuchen-yuesheng-plan-2026-v1',
     ]),
   )
   assert.equal(body.products.every((item) => item.source === 'bundled'), true)
