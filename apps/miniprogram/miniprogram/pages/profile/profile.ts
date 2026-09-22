@@ -5,6 +5,7 @@ import {
   type BootstrapResult,
   type UserRole,
 } from '../../utils/auth'
+import { friendlyRequestError } from '../../utils/request'
 
 const GUEST_STATS = [
   { value: '—', label: '当前身份' },
@@ -185,6 +186,11 @@ Page({
       return
     }
 
+    if (key === 'assessment') {
+      wx.switchTab({ url: '/pages/position/position' })
+      return
+    }
+
     if (key.startsWith('admin-')) {
       wx.navigateTo({
         url: `/pages/admin/admin?section=${encodeURIComponent(key)}`,
@@ -204,6 +210,7 @@ Page({
 
     this.setData(getIdentityView(null))
     wx.showToast({ title: '已退出登录', icon: 'none' })
+    wx.navigateTo({ url: '/pages/login/login' })
   },
 
   onDeleteAccount() {
@@ -227,9 +234,13 @@ Page({
               await deleteCurrentAccount()
               this.setData(getIdentityView(null))
               wx.showToast({ title: '账号已注销', icon: 'none' })
+              wx.reLaunch({ url: '/pages/login/login' })
             } catch (error) {
-              const message = error instanceof Error ? error.message : '注销失败'
-              wx.showToast({ title: message, icon: 'none' })
+              wx.showToast({
+                title: friendlyRequestError(error, '注销失败，请稍后重试'),
+                icon: 'none',
+                duration: 2600,
+              })
             }
           },
         })
