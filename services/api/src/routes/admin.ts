@@ -8,6 +8,7 @@ import {
   coachingRecords,
   internalIds,
   planItems,
+  productKnowledgeDocuments,
   studentPlans,
   students,
   studentTeacherAssignments,
@@ -68,6 +69,10 @@ const planPayloadSchema = z.object({
   items: z.array(planItemSchema).max(100).default([]),
 })
 
+const productKnowledgeStatusSchema = z.object({
+  status: z.enum(['draft', 'active', 'archived']),
+})
+
 const coachingRecordSchema = z
   .object({
     stageCode: z.string().trim().min(1).max(32),
@@ -95,6 +100,98 @@ export function registerAdminRoutes(
   database: DatabaseContext,
   env: AppEnv,
 ) {
+  app.get('/admin/product-knowledge', async (_request, reply) => {
+    if (!ensureLocalAdmin(env, reply)) return
+
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    try {
+      const rows = await database.db
+        .select({
+          id: productKnowledgeDocuments.id,
+          documentKey: productKnowledgeDocuments.documentKey,
+          title: productKnowledgeDocuments.title,
+          productName: productKnowledgeDocuments.productName,
+          sourceFile: productKnowledgeDocuments.sourceFile,
+          sourceDate: productKnowledgeDocuments.sourceDate,
+          conversionVersion: productKnowledgeDocuments.conversionVersion,
+          status: productKnowledgeDocuments.status,
+          createdAt: productKnowledgeDocuments.createdAt,
+          updatedAt: productKnowledgeDocuments.updatedAt,
+        })
+        .from(productKnowledgeDocuments)
+        .orderBy(desc(productKnowledgeDocuments.updatedAt))
+
+      return {
+        ok: true,
+        documents: rows,
+      }
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        String((error as { code?: unknown }).code ?? '') === 'ER_NO_SUCH_TABLE'
+      ) {
+        return reply.code(503).send({
+          ok: false,
+          error: 'product_knowledge_schema_not_ready',
+        })
+      }
+      throw error
+    }
+  })
+
+  app.put<{
+    Params: { id: string }
+    Body: unknown
+  }>('/admin/product-knowledge/:id/status', async (request, reply) => {
+    if (!ensureLocalAdmin(env, reply)) return
+
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const parsed = productKnowledgeStatusSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_product_knowledge_status',
+      })
+    }
+
+    const [existing] = await database.db
+      .select({ id: productKnowledgeDocuments.id })
+      .from(productKnowledgeDocuments)
+      .where(eq(productKnowledgeDocuments.id, request.params.id))
+      .limit(1)
+
+    if (!existing) {
+      return reply.code(404).send({
+        ok: false,
+        error: 'product_knowledge_not_found',
+      })
+    }
+
+    await database.db
+      .update(productKnowledgeDocuments)
+      .set({ status: parsed.data.status })
+      .where(eq(productKnowledgeDocuments.id, request.params.id))
+
+    return {
+      ok: true,
+      status: parsed.data.status,
+    }
+  })
+
   app.get('/admin/students', async (_request, reply) => {
     if (!ensureLocalAdmin(env, reply)) return
 
