@@ -48,12 +48,65 @@ function flattenOrientation(value: unknown): string[] {
   })
 }
 
+function workflowLines(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((item) => {
+    const record = asRecord(item)
+    const stage = asString(record.stage) || asString(record.name)
+    const content =
+      asString(record.content) ||
+      asString(record.description) ||
+      asString(record.can_provide)
+    const student = asString(record.student_must_complete)
+    const parts = [
+      stage,
+      content,
+      student ? `学生需完成：${student}` : '',
+    ].filter(Boolean)
+
+    return parts.length ? [parts.join('｜')] : []
+  })
+}
+
+function structuredItemLines(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((item) => {
+    if (typeof item === 'string' && item.trim()) return [item.trim()]
+
+    const record = asRecord(item)
+    if (!Object.keys(record).length) return []
+
+    const name = asString(record.name) || asString(record.title)
+    const description =
+      asString(record.description) ||
+      asString(record.summary) ||
+      asString(record.content)
+    const delivery =
+      asString(record.delivery) ||
+      asString(record.deliverables) ||
+      asString(record.purpose)
+    const stages = workflowLines(record.stages)
+
+    const lines: string[] = []
+    if (name && description) lines.push(`${name}：${description}`)
+    else if (name) lines.push(name)
+    else if (description) lines.push(description)
+
+    if (delivery) lines.push(`交付/形式：${delivery}`)
+    lines.push(...stages.map((line) => (name ? `${name}｜${line}` : line)))
+    return lines
+  })
+}
+
 function moduleDetails(value: AnyRecord): string[] {
   const lines = [
     ...asStrings(value.core_content),
     ...asStrings(value.details),
     ...asStrings(value.description),
     ...flattenTargetSchools(value.target_schools),
+    ...workflowLines(value.workflow),
   ]
 
   const directions = asStrings(value.future_research_directions)
@@ -86,7 +139,7 @@ function moduleDetails(value: AnyRecord): string[] {
 
 function serviceDetails(value: AnyRecord): string[] {
   return [
-    ...asStrings(value.items),
+    ...structuredItemLines(value.items),
     ...asStrings(value.bullets),
     ...asStrings(value.details),
   ]
@@ -313,7 +366,9 @@ Page({
           name: asString(product.name) || detail.title,
           coverAsset: asString(product.cover_asset),
           taglines: asStrings(product.tagline),
-          serviceModel: asString(product.service_model),
+          serviceModel:
+            asString(product.service_model) ||
+            asString(asRecord(product.service_hours).display),
           priceDisplay: asString(price.display),
           periodDisplay:
             asString(period.display) || asString(period.description),
@@ -323,7 +378,10 @@ Page({
           audience: content.audience.map((item) => {
             const record = asRecord(item)
             return {
-              text: asString(record.text),
+              text:
+                asString(record.text) ||
+                asString(record.group) ||
+                asString(record.description),
               source: sourcePage(record),
             }
           }),
