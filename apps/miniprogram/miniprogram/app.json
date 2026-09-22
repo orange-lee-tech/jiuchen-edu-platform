@@ -10,7 +10,8 @@
     "pages/admin/admin",
     "pages/assessment-form/assessment-form",
     "pages/products/products",
-    "pages/product-detail/product-detail"
+    "pages/product-detail/product-detail",
+    "pages/brand/brand"
   ],
   "window": {
     "navigationBarTitleText": "九辰保研",
