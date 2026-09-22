@@ -13,6 +13,8 @@ import { registerAssessmentRoutes } from './routes/assessments.js'
 import { registerProductRoutes } from './routes/products.js'
 import { registerBrandRoutes } from './routes/brand.js'
 
+const API_RELEASE = '0.2.1-experience'
+
 export function buildApp(env: AppEnv) {
   const app = Fastify({
     logger: true,
@@ -24,12 +26,14 @@ export function buildApp(env: AppEnv) {
     ok: true,
     service: 'jiuchen-api',
     environment: env.NODE_ENV,
+    release: API_RELEASE,
   }))
 
   app.get('/health/config', async () => ({
     ok: true,
     service: 'jiuchen-api',
     environment: env.NODE_ENV,
+    release: API_RELEASE,
     config: {
       databaseUrlConfigured: Boolean(env.DATABASE_URL),
       splitDatabaseConfigComplete: Boolean(
