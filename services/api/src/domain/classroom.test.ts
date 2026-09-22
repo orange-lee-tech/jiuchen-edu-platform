@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getStageDefinition, isPlanTypeAllowed } from './classroom.js'
+import { getStageDefinition, isGuidanceAllowed, isPlanTypeAllowed } from './classroom.js'
 
 test('normal semesters expose GPA, English, competition and research', () => {
   const stage = getStageDefinition('freshman-fall')
