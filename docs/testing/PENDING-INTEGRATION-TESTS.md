@@ -431,6 +431,49 @@ WECHAT_OA_APP_SECRET=
 
 ---
 
+## 10B. 产品知识库
+
+### PRODUCT-01 Schema 与导入
+**状态：TODO**
+
+**成功条件**
+- `db:upgrade:product-knowledge` 可幂等执行；
+- 严格 handbook-v1 `content.json` 可以导入；
+- 相同 document_id 重复导入只更新原文快照并重建 chunks；
+- 重复导入不自动把 draft 变成 active；
+- 导入不依赖原始大 PDF 存入 Git。
+
+### PRODUCT-02 知识边界
+**状态：TODO**
+
+**成功条件**
+- 产品知识 chunks 默认不能作为录取判断证据；
+- 未核验 marketing_claims 的 retrievalAllowed=false；
+- 未核验 marketing_claims 的 displayAllowed=false；
+- 联系方式默认不进入产品正文；
+- 原始 contentJson 仍完整保存用于追溯。
+
+### PRODUCT-03 审核发布
+**状态：TODO**
+
+**成功条件**
+- 新导入手册默认 draft；
+- 电脑后台可查看 draft / active / archived；
+- 从 draft/archived 切 active 时服务端重新执行 handbook-v1 校验；
+- 结构不合格内容不得 active；
+- archived 内容不出现在公开产品 API。
+
+### PRODUCT-04 小程序读取
+**状态：TODO**
+
+**成功条件**
+- `GET /products` 只返回 active 产品；
+- `GET /products/:documentKey` 不返回 draft/archived；
+- 公开内容自动过滤未核验营销声明和隐藏联系方式；
+- 产品知识模块失败不影响登录、课堂、资讯。
+
+---
+
 ## 11. AI 评估（未来集中测试）
 
 ### AI-00 Assessment Foundation Schema
@@ -450,6 +493,16 @@ npm.cmd run db:upgrade:assessment
 - 重复执行幂等；
 - 未执行该升级时，现有登录/课堂/资讯不受影响；
 - 调用 Assessment 持久化接口时若表不存在，明确返回 `assessment_schema_not_ready`。
+
+### AI-00 Draft 输入链
+**状态：TODO**
+
+**成功条件**
+- 定位页“开始 AI 评估”进入真实 Assessment Draft 页面；
+- 已有 UserProfile 自动预填基础背景；
+- 可录入英语、科研、竞赛和 1–5 个目标院校；
+- 模型未配置时允许保存 Draft，但明确禁止生成模拟结果；
+- Assessment Schema 未升级时只影响 AI Draft 保存，不影响其它页面。
 
 ### AI-01 输入标准化
 **状态：TODO**
