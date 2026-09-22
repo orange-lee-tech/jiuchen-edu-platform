@@ -51,10 +51,20 @@ function displayText(value: unknown) {
 }
 
 function sourcePage(value: unknown) {
-  const page = asRecord(value).source_page
-  return typeof page === 'number' && Number.isInteger(page) && page > 0
-    ? page
-    : null
+  const record = asRecord(value)
+  const page = record.source_page
+  if (typeof page === 'number' && Number.isInteger(page) && page > 0) {
+    return page
+  }
+
+  if (Array.isArray(record.source_pages)) {
+    const first = record.source_pages.find(
+      (item) => typeof item === 'number' && Number.isInteger(item) && item > 0,
+    )
+    return typeof first === 'number' ? first : null
+  }
+
+  return null
 }
 
 export function buildProductKnowledgeChunks(
