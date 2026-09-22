@@ -103,3 +103,29 @@ test('requires raw teacher education when structured education is supplied', () 
   const result = productHandbookV1Schema.safeParse(input)
   assert.equal(result.success, false)
 })
+
+
+test('accepts multi-page provenance for handbook sections', () => {
+  const input = validHandbook()
+  input.modules = [
+    {
+      name: '跨页模块',
+      source_pages: [5, 6],
+    },
+  ] as unknown as typeof input.modules
+
+  const result = productHandbookV1Schema.safeParse(input)
+  assert.equal(result.success, true)
+})
+
+test('rejects handbook section without any page provenance', () => {
+  const input = validHandbook()
+  input.modules = [
+    {
+      name: '缺少来源页',
+    },
+  ] as unknown as typeof input.modules
+
+  const result = productHandbookV1Schema.safeParse(input)
+  assert.equal(result.success, false)
+})
