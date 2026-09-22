@@ -44,7 +44,7 @@ function validHandbook() {
     teachers: [{
       display_name: '李老师',
       education_raw: '中南大学本科浙江大学硕士工科类',
-      education_items: [],
+      education_items: [] as Array<{\n        institution: string\n        degree?: string\n        discipline?: string\n      }>,
       offers_claimed: [],
       source_page: 9,
       source_date: '2026-09-11',
