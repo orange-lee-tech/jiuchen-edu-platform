@@ -136,3 +136,50 @@ test('public product content removes unverified claims and hidden contact info',
   assert.equal(content.contact, null)
   assert.equal(content.product.name, '大三冲顶计划')
 })
+
+
+test('chunk builder preserves common handbook aliases without using them as admission evidence', () => {
+  const payload = handbook() as unknown as {
+    product: Record<string, unknown>
+    highlights: Array<Record<string, unknown>>
+    modules: Array<Record<string, unknown>>
+    core_services: Array<Record<string, unknown>>
+  }
+
+  payload.product.positioning = undefined
+  payload.product.positioning_statement = '聚焦大三保研关键冲刺周期'
+  payload.highlights[0].description = undefined
+  payload.highlights[0].text = '一站式汇总关键信息'
+  payload.modules[0].summary = undefined
+  payload.modules[0].details = undefined
+  payload.modules[0].core_content = ['背景盘点', '目标方向梳理']
+  payload.core_services[0].summary = undefined
+  payload.core_services[0].bullets = undefined
+  payload.core_services[0].description = '持续同步更新'
+  payload.core_services[0].items = ['夏令营通知', '预推免通知']
+
+  const chunks = buildProductKnowledgeChunks(
+    payload as Parameters<typeof buildProductKnowledgeChunks>[0],
+  )
+
+  assert.match(
+    chunks.find((chunk) => chunk.kind === 'product')?.text ?? '',
+    /聚焦大三保研关键冲刺周期/,
+  )
+  assert.match(
+    chunks.find((chunk) => chunk.kind === 'highlight')?.text ?? '',
+    /一站式汇总关键信息/,
+  )
+  assert.match(
+    chunks.find((chunk) => chunk.kind === 'module')?.text ?? '',
+    /背景盘点.*目标方向梳理/,
+  )
+  assert.match(
+    chunks.find((chunk) => chunk.kind === 'core_service')?.text ?? '',
+    /持续同步更新.*夏令营通知.*预推免通知/,
+  )
+  assert.equal(
+    chunks.every((chunk) => chunk.assessmentEvidenceAllowed === false),
+    true,
+  )
+})
