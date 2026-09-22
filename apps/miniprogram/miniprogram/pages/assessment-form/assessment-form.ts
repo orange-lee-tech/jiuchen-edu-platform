@@ -4,12 +4,16 @@ import {
   getAssessmentMeta,
   getMyAcademicProfile,
   runMyAssessment,
+  updateMyAcademicProfile,
   updateAssessmentDraft,
   type AssessmentCompetitionExperience,
   type AssessmentEnglishRecord,
   type AssessmentResearchExperience,
   type AssessmentTarget,
+  type AcademicProfile,
 } from '../../utils/request'
+
+type AcademicProfileField = keyof AcademicProfile
 
 const ENGLISH_TYPES = [
   { value: 'cet4', label: 'CET-4' },
@@ -24,6 +28,7 @@ Page({
   data: {
     loading: true,
     saving: false,
+    profileSaving: false,
     providerConfigured: false,
     draftId: '',
     profile: {
@@ -91,6 +96,37 @@ Page({
     this.setData({
       'profile.backgroundNote': event.detail.value,
     })
+  },
+
+  onProfileFieldInput(event: WechatMiniprogram.Input) {
+    const field = String(event.currentTarget.dataset.field) as AcademicProfileField
+    if (!['university', 'major', 'currentGrade', 'gpaText', 'rankText'].includes(field)) {
+      return
+    }
+
+    this.setData({
+      [`profile.${field}`]: event.detail.value,
+    })
+  },
+
+  async onProfileFieldBlur() {
+    if (this.data.profileSaving) return
+
+    try {
+      this.setData({ profileSaving: true })
+      const profile = this.data.profile
+      await updateMyAcademicProfile({
+        university: profile.university.trim() || null,
+        major: profile.major.trim() || null,
+        currentGrade: profile.currentGrade.trim() || null,
+        gpaText: profile.gpaText.trim() || null,
+        rankText: profile.rankText.trim() || null,
+      })
+    } catch (error) {
+      console.info('Academic profile auto-save failed on assessment form.', error)
+    } finally {
+      this.setData({ profileSaving: false })
+    }
   },
 
   onAddEnglish() {
@@ -349,9 +385,5 @@ Page({
     } finally {
       this.setData({ saving: false })
     }
-  },
-
-  onEditProfile() {
-    wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
   },
 })
