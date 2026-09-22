@@ -241,6 +241,16 @@ Provider 未配置时：
 }
 ```
 
+### PUT /me/assessments/:id
+
+仅允许当前 User 更新自己的 `draft`。
+
+更新时：
+- 重新执行 AssessmentInput v1 校验；
+- 覆盖本次 input 快照；
+- 清空旧 evidence / output / provider / model / knowledgeVersion；
+- 不允许直接编辑 running / succeeded / failed 记录。
+
 ### GET /me/assessments
 
 只返回当前 User 自己的历史评估。
