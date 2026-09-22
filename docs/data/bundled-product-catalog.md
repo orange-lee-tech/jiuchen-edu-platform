@@ -99,3 +99,40 @@ Git 与小程序包只复制真正需要运行时使用的轻量资产。目前�
 ```
 
 产品详情由结构化数据渲染，而不是整页宣传册截图，因此可以适配手机屏幕、后台更新和后续多产品扩展。
+
+
+## 7. 本次应用来源快照（2026-09-22）
+
+本轮小程序内置目录以用户提供的两个结构化转换包为来源：
+
+| 产品 | document_id | ZIP SHA-256 | 原始页数 |
+| --- | --- | --- | ---: |
+| 九辰保研·大三冲顶计划 | `jiuchen-dasan-chongding-product-manual-2026-sample-v1` | `8fe014f38459e632d997d24118663f676dacc600178380ea13cbf0117c0c2339` | 10 |
+| 九辰保研导航卡 | `jiuchen-baoyan-navigation-card-product-manual-2026-v1` | `9ddd8dade286b2ec6819a118d09cee10c2ece5c4445587be54fe3bbf44591542` | 14 |
+
+运行时不会把整个 ZIP/PDF/Page WebP 塞入小程序主包。结构化内容进入 bundled catalog；真正需要展示的轻量封面从转换包资产中进入小程序 assets，其余整页视觉证据继续留在转换包用于审计。
+
+### 当前内容完整性回归
+
+大三冲顶计划：
+- audience 4；
+- highlights 8；
+- timeline 6；
+- modules 5；
+- core_services 6；
+- teachers 5；
+- marketing_claims 3。
+
+导航卡：
+- highlights 6；
+- timeline 9；
+- modules 9；
+- core_services 9；
+- teachers 41；
+- marketing_claims 4；
+- training_items 4；
+- course_resources 44；
+- internship_plans 保留；
+- example_plans 保留。
+
+导航卡中的规划示例仍保持 `example_only=true` / `real_case_dataset=false`，不能进入真实案例训练/检索数据集。
