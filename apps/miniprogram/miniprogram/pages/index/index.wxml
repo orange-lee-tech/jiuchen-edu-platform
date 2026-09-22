@@ -14,6 +14,15 @@
     </view>
   </view>
 
+  <view class="brand-intro surface" bindtap="onBrandTap">
+    <view>
+      <text class="brand-intro-eyebrow">JIUCHEN EDUCATION</text>
+      <text class="brand-intro-title">关于九辰 · 品牌与服务体系</text>
+      <text class="brand-intro-desc">了解长期陪跑理念、本科成长路径与九类服务体系</text>
+    </view>
+    <text class="brand-intro-arrow">›</text>
+  </view>
+
   <view class="quick-grid">
     <view
       wx:for="{{quickEntries}}"
