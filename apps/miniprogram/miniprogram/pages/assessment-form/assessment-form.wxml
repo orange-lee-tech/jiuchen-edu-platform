@@ -11,13 +11,28 @@
     <view class="card">
       <view class="section-head">
         <text class="section-title">基础背景</text>
-        <text class="link" bindtap="onEditProfile">修改个人资料</text>
+        <text wx:if="{{profileSaving}}" class="saving-note">保存中…</text>
       </view>
-      <view class="profile-row"><text>本科院校</text><text>{{profile.university || '待填写'}}</text></view>
-      <view class="profile-row"><text>专业</text><text>{{profile.major || '待填写'}}</text></view>
-      <view class="profile-row"><text>当前年级</text><text>{{profile.currentGrade || '待填写'}}</text></view>
-      <view class="profile-row"><text>绩点 / 均分</text><text>{{profile.gpaText || '待填写'}}</text></view>
-      <view class="profile-row"><text>排名</text><text>{{profile.rankText || '待填写'}}</text></view>
+      <label class="profile-row">
+        <text>本科院校</text>
+        <input class="inline-profile-input" data-field="university" value="{{profile.university}}" placeholder="待填写" bindinput="onProfileFieldInput" bindblur="onProfileFieldBlur" />
+      </label>
+      <label class="profile-row">
+        <text>专业</text>
+        <input class="inline-profile-input" data-field="major" value="{{profile.major}}" placeholder="待填写" bindinput="onProfileFieldInput" bindblur="onProfileFieldBlur" />
+      </label>
+      <label class="profile-row">
+        <text>当前年级</text>
+        <input class="inline-profile-input" data-field="currentGrade" value="{{profile.currentGrade}}" placeholder="待填写" bindinput="onProfileFieldInput" bindblur="onProfileFieldBlur" />
+      </label>
+      <label class="profile-row">
+        <text>绩点 / 均分</text>
+        <input class="inline-profile-input" data-field="gpaText" value="{{profile.gpaText}}" placeholder="待填写" bindinput="onProfileFieldInput" bindblur="onProfileFieldBlur" />
+      </label>
+      <label class="profile-row">
+        <text>排名</text>
+        <input class="inline-profile-input" data-field="rankText" value="{{profile.rankText}}" placeholder="待填写" bindinput="onProfileFieldInput" bindblur="onProfileFieldBlur" />
+      </label>
       <textarea class="textarea" maxlength="1000" value="{{profile.backgroundNote}}" placeholder="其它背景说明（可选）" bindinput="onBackgroundNoteInput" />
     </view>
 
