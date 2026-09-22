@@ -25,6 +25,46 @@
       </view>
     </view>
 
+    <view wx:if="{{view.subproducts.length}}" class="section-card">
+      <text class="section-title">服务方向</text>
+      <view class="meta-row">
+        <text wx:for="{{view.subproducts}}" wx:key="*this" class="meta-chip">{{item}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.researchPackages.length}}" class="section-card">
+      <text class="section-title">科研项目套餐</text>
+      <text class="section-note">套餐信息按产品手册原文整理，具体交付以咨询确认与正式合同为准。</text>
+      <view wx:for="{{view.researchPackages}}" wx:key="index" class="service-row">
+        <view class="package-head">
+          <text class="row-title">{{item.name}}{{item.variant ? ' · ' + item.variant : ''}}</text>
+          <text wx:if="{{item.price}}" class="package-price">{{item.price}}</text>
+        </view>
+        <text wx:for="{{item.details}}" wx:key="*this" class="line">• {{item}}</text>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.paperPackages.length}}" class="section-card">
+      <text class="section-title">论文辅导服务套餐</text>
+      <text class="section-note">“待核对”及疑似排版/识别歧义内容按源手册保留，不自行修正。</text>
+      <view wx:for="{{view.paperPackages}}" wx:key="index" class="paper-package">
+        <view class="package-head">
+          <view>
+            <text class="row-title">{{item.module}} · {{item.content}}</text>
+            <text wx:if="{{item.details}}" class="detail-text">{{item.details}}</text>
+          </view>
+          <text wx:if="{{item.fee}}" class="package-price">{{item.fee}}</text>
+        </view>
+        <view class="package-meta-row">
+          <text wx:if="{{item.hours}}" class="resource-meta">课时：{{item.hours}}</text>
+          <text wx:if="{{item.period}}" class="{{item.period.indexOf('待核对') >= 0 ? 'pending' : 'resource-meta'}}">周期：{{item.period}}</text>
+          <text wx:if="{{item.teacher}}" class="resource-meta">导师：{{item.teacher}}</text>
+        </view>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
     <view wx:if="{{view.audience.length}}" class="section-card">
       <text class="section-title">适合谁</text>
       <view wx:for="{{view.audience}}" wx:key="index" class="bullet-row">
