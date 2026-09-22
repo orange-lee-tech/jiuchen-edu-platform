@@ -253,7 +253,28 @@ export function buildProductKnowledgeChunks(
   return chunks
 }
 
+const PUBLIC_PRODUCT_BASE_KEYS = new Set([
+  'document',
+  'brand',
+  'product',
+  'audience',
+  'highlights',
+  'timeline',
+  'modules',
+  'core_services',
+  'teachers',
+  'marketing_claims',
+  'contact',
+  'visual_blocks',
+])
+
 export function buildPublicProductContent(handbook: ProductHandbookV1) {
+  const extensions = Object.fromEntries(
+    Object.entries(handbook as unknown as Record<string, unknown>).filter(
+      ([key]) => !PUBLIC_PRODUCT_BASE_KEYS.has(key),
+    ),
+  )
+
   return {
     document: handbook.document,
     brand: handbook.brand,
@@ -276,5 +297,6 @@ export function buildPublicProductContent(handbook: ProductHandbookV1) {
         ? handbook.contact
         : null,
     visual_blocks: handbook.visual_blocks,
+    extensions,
   }
 }
