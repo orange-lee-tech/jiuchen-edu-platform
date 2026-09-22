@@ -157,6 +157,24 @@ Page({
       priceDisplay: string
       periodDisplay: string
       positioning: string
+      subproducts: string[]
+      researchPackages: Array<{
+        name: string
+        variant: string
+        price: string
+        details: string[]
+        source: string
+      }>
+      paperPackages: Array<{
+        module: string
+        content: string
+        details: string
+        hours: string
+        period: string
+        fee: string
+        teacher: string
+        source: string
+      }>
       audience: Array<{ text: string; source: string }>
       highlights: Array<{ title: string; detail: string; source: string }>
       timeline: Array<{
@@ -357,6 +375,66 @@ Page({
         })
       }
 
+      const researchPackages = Array.isArray(product.research_product_packages)
+        ? product.research_product_packages.map((item) => {
+            const record = asRecord(item)
+            const details = [
+              asString(record.recommendation_letters)
+                ? `推荐信：${asString(record.recommendation_letters)}`
+                : '',
+              asString(record.project_certificate)
+                ? `项目证明：${asString(record.project_certificate)}`
+                : '',
+              asString(record.reference_letter_validity)
+                ? `推荐信有效期：${asString(record.reference_letter_validity)}`
+                : '',
+              asString(record.paper_submission),
+              asString(record.course_certificate),
+              asString(record.industry_research),
+              asString(record.class_size)
+                ? `班型：${asString(record.class_size)}`
+                : '',
+              asString(record.normal_cycle)
+                ? `常规周期：${asString(record.normal_cycle)}`
+                : '',
+              ...asStrings(record.paper_options),
+              ...asStrings(record.paper_choice),
+              ...asStrings(record.choice),
+              ...asStrings(record.included_hours),
+            ].filter(Boolean)
+
+            return {
+              name: asString(record.name),
+              variant: asString(record.variant),
+              price:
+                typeof record.price_cny === 'number'
+                  ? `${record.price_cny}元`
+                  : asString(record.price),
+              details,
+              source: sourcePage(record),
+            }
+          })
+        : []
+
+      const paperPackages = Array.isArray(product.paper_service_packages)
+        ? product.paper_service_packages.map((item) => {
+            const record = asRecord(item)
+            return {
+              module: asString(record.module),
+              content: asString(record.content),
+              details: asString(record.details),
+              hours: asString(record.hours),
+              period: asString(record.period),
+              fee:
+                typeof record.fee_cny === 'number'
+                  ? `${record.fee_cny}元`
+                  : asString(record.fee),
+              teacher: asString(record.teacher),
+              source: sourcePage(record),
+            }
+          })
+        : []
+
       const isResourceTeacherSet = teachers.some((teacher) =>
         teacher.education.includes('网课资源授课老师'),
       )
@@ -375,6 +453,9 @@ Page({
           positioning:
             asString(product.positioning) ||
             asString(product.positioning_statement),
+          subproducts: asStrings(product.subproducts),
+          researchPackages,
+          paperPackages,
           audience: content.audience.map((item) => {
             const record = asRecord(item)
             return {
