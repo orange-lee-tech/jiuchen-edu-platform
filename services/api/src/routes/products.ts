@@ -11,6 +11,37 @@ import {
 
 type ProductSource = 'bundled' | 'database'
 
+const BUNDLED_COVER_ASSETS = new Map<string, string>([
+  [
+    'jiuchen-dasan-chongding-product-manual-2026-sample-v1',
+    '/assets/products/chongding/cover-mountain-main-visual.webp',
+  ],
+  [
+    'jiuchen-baoyan-navigation-card-product-manual-2026-v1',
+    '/assets/products/navigation-card/cover-main-visual.webp',
+  ],
+])
+
+function applyRuntimeAssets(
+  handbook: ProductHandbookV1,
+  source: ProductSource,
+) {
+  const publicContent = applyRuntimeAssets(handbook, source)
+
+  if (source !== 'bundled') return publicContent
+
+  const coverAsset = BUNDLED_COVER_ASSETS.get(handbook.document.document_id)
+  if (!coverAsset) return publicContent
+
+  return {
+    ...publicContent,
+    product: {
+      ...publicContent.product,
+      cover_asset: coverAsset,
+    },
+  }
+}
+
 function isMissingTable(error: unknown) {
   return (
     error &&
@@ -49,7 +80,7 @@ function serializeProductDetail(
     sourceDate: handbook.document.source_date ?? null,
     conversionVersion: handbook.document.conversion_version,
     source,
-    content: buildPublicProductContent(handbook),
+    content: applyRuntimeAssets(handbook, source),
   }
 }
 
