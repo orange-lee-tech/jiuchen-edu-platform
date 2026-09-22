@@ -290,3 +290,38 @@
   color: #858b95;
   font-size: 19rpx;
 }
+
+
+.package-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.package-head > view {
+  flex: 1;
+}
+
+.package-price {
+  flex-shrink: 0;
+  color: #2f6fed;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.paper-package {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #eef0f3;
+}
+
+.paper-package:last-child {
+  border-bottom: 0;
+}
+
+.package-meta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  margin-top: 8rpx;
+}
