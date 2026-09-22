@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jiuchenedu.com/schemas/product-handbook-v1.schema.json",
+  "title": "Jiuchen Product Handbook V1",
+  "type": "object",
+  "required": [
+    "document",
+    "brand",
+    "product",
+    "audience",
+    "highlights",
+    "timeline",
+    "modules",
+    "core_services",
+    "teachers",
+    "marketing_claims",
+    "contact",
+    "visual_blocks"
+  ],
+  "properties": {
+    "document": {
+      "type": "object",
+      "required": [
+        "document_id",
+        "title",
+        "document_type",
+        "source_file",
+        "source_page_count",
+        "conversion_version",
+        "language",
+        "dataset_scope"
+      ],
+      "properties": {
+        "document_id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "document_type": { "const": "product_handbook" },
+        "source_file": { "type": "string", "minLength": 1 },
+        "source_page_count": { "type": "integer", "minimum": 1 },
+        "source_date": { "type": ["string", "null"] },
+        "source_date_basis": { "type": ["string", "null"] },
+        "conversion_version": { "type": "string", "minLength": 1 },
+        "language": { "const": "zh-CN" },
+        "dataset_scope": { "const": "jiuchen_product_knowledge" },
+        "case_dataset_separated": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "brand": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "product": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "price": {
+          "type": ["object", "null"],
+          "properties": {
+            "amount": { "type": ["number", "null"] },
+            "currency": { "type": ["string", "null"] },
+            "display": { "type": ["string", "null"] }
+          },
+          "additionalProperties": true
+        },
+        "service_period": {
+          "type": ["object", "null"],
+          "properties": {
+            "duration_months": { "type": ["number", "null"] },
+            "from": { "type": ["string", "null"] },
+            "to": { "type": ["string", "null"] },
+            "display": { "type": ["string", "null"] }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "audience": { "type": "array", "items": { "$ref": "#/$defs/sourcedItem" } },
+    "highlights": { "type": "array", "items": { "$ref": "#/$defs/sourcedItem" } },
+    "timeline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["order", "stage", "tasks", "source_page"],
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "stage": { "type": "string", "minLength": 1 },
+          "time_range": { "type": ["string", "null"] },
+          "tasks": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "source_page": { "type": "integer", "minimum": 1 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "modules": { "type": "array", "items": { "$ref": "#/$defs/sourcedItem" } },
+    "core_services": { "type": "array", "items": { "$ref": "#/$defs/sourcedItem" } },
+    "teachers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source_page",
+          "source_date",
+          "verification_status"
+        ],
+        "properties": {
+          "display_name": { "type": ["string", "null"] },
+          "name": { "type": ["string", "null"] },
+          "education_raw": { "type": ["string", "null"] },
+          "education": { "type": ["string", "null"] },
+          "education_items": { "type": "array" },
+          "offers_claimed": { "type": "array", "items": { "type": "string" } },
+          "source_page": { "type": "integer", "minimum": 1 },
+          "source_date": { "type": ["string", "null"] },
+          "verification_status": {
+            "enum": ["verified", "unverified", "source_only"]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "marketing_claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "claim_id",
+          "source_text",
+          "source_page",
+          "verification_status",
+          "display_allowed"
+        ],
+        "properties": {
+          "claim_id": { "type": "string", "minLength": 1 },
+          "claim_type": { "type": "string" },
+          "source_text": { "type": "string", "minLength": 1 },
+          "source_page": { "type": "integer", "minimum": 1 },
+          "verification_status": {
+            "enum": ["verified", "unverified", "source_only"]
+          },
+          "display_allowed": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "contact": {
+      "type": "object",
+      "required": ["source_page"],
+      "properties": {
+        "source_page": { "type": "integer", "minimum": 1 },
+        "include_in_product_body": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "visual_blocks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sourcedItem" }
+    }
+  },
+  "$defs": {
+    "sourcedItem": {
+      "type": "object",
+      "required": ["source_page"],
+      "properties": {
+        "source_page": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
