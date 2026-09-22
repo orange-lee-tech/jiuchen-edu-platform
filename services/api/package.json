@@ -21,7 +21,9 @@
     "db:upgrade:native-auth": "tsx src/db/upgrade-native-auth.ts",
     "db:upgrade:assessment": "tsx src/db/upgrade-assessment-foundation.ts",
     "db:upgrade:classroom-guidance": "tsx src/db/upgrade-classroom-guidance.ts",
-    "data:validate:product-handbook": "tsx src/scripts/validate-product-handbook.ts"
+    "data:validate:product-handbook": "tsx src/scripts/validate-product-handbook.ts",
+    "db:upgrade:product-knowledge": "tsx src/db/upgrade-product-knowledge.ts",
+    "data:import:product-handbook": "tsx src/scripts/import-product-handbook.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.2",
