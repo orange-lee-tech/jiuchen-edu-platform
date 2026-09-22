@@ -79,6 +79,10 @@ Page({
     }
   },
 
+  onBrandTap() {
+    wx.navigateTo({ url: '/pages/brand/brand' })
+  },
+
   onSearchTap() {
     wx.showToast({ title: '搜索将在院校数据接入后启用', icon: 'none' })
   },
