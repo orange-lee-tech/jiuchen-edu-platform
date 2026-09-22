@@ -156,3 +156,63 @@ test('assessment metadata is available without database or model provider', asyn
 
   await app.close()
 })
+
+
+test('bundled product catalog is available before product database upgrade', async () => {
+  const app = buildApp(env)
+  const response = await app.inject({ method: 'GET', url: '/products' })
+
+  assert.equal(response.statusCode, 200)
+  const body = response.json() as {
+    ok: boolean
+    products: Array<{
+      documentKey: string
+      productName: string
+      source: string
+    }>
+  }
+
+  assert.equal(body.ok, true)
+  assert.equal(body.products.length, 2)
+  assert.deepEqual(
+    new Set(body.products.map((item) => item.documentKey)),
+    new Set([
+      'jiuchen-dasan-chongding-product-manual-2026-sample-v1',
+      'jiuchen-baoyan-navigation-card-product-manual-2026-v1',
+    ]),
+  )
+  assert.equal(body.products.every((item) => item.source === 'bundled'), true)
+
+  await app.close()
+})
+
+test('bundled navigation card detail keeps supplemental structured content', async () => {
+  const app = buildApp(env)
+  const response = await app.inject({
+    method: 'GET',
+    url: '/products/jiuchen-baoyan-navigation-card-product-manual-2026-v1',
+  })
+
+  assert.equal(response.statusCode, 200)
+  const body = response.json() as {
+    ok: boolean
+    source: string
+    content: {
+      marketing_claims: unknown[]
+      extensions: {
+        course_resources?: unknown[]
+        training_items?: unknown[]
+        example_plans?: unknown
+      }
+    }
+  }
+
+  assert.equal(body.ok, true)
+  assert.equal(body.source, 'bundled')
+  assert.equal(body.content.marketing_claims.length, 0)
+  assert.equal(body.content.extensions.course_resources?.length, 44)
+  assert.equal(body.content.extensions.training_items?.length, 4)
+  assert.ok(body.content.extensions.example_plans)
+
+  await app.close()
+})
