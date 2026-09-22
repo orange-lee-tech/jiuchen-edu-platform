@@ -79,8 +79,23 @@ function normalizeMarketingClaim(
     asString(row.text) ??
     `宣传声明 ${index + 1}`
 
+  const sourcePages = Array.isArray(row.source_pages)
+    ? row.source_pages.filter(
+        (page): page is number =>
+          typeof page === 'number' && Number.isInteger(page) && page > 0,
+      )
+    : []
+
+  const sourcePage =
+    typeof row.source_page === 'number' &&
+    Number.isInteger(row.source_page) &&
+    row.source_page > 0
+      ? row.source_page
+      : sourcePages[0]
+
   return {
     ...row,
+    source_page: sourcePage,
     claim_id:
       asString(row.claim_id) ??
       `claim-${String(index + 1).padStart(3, '0')}`,
