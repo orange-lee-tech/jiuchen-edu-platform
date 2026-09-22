@@ -1076,9 +1076,6 @@ onMounted(async () => {
         </t-card>
       </section>
     </template>
-  </main>
-</template>
-
     <template v-else>
       <section class="identity-grid">
         <t-card title="产品资料审核" :bordered="false">
@@ -1140,6 +1137,9 @@ onMounted(async () => {
         </t-card>
       </section>
     </template>
+  </main>
+</template>
+
 
 <style scoped>
 .page {
