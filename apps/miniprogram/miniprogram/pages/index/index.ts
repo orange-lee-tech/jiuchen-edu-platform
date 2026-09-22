@@ -1,3 +1,24 @@
+import { getProducts } from '../../utils/request'
+
+type AnyRecord = Record<string, unknown>
+
+function asRecord(value: unknown): AnyRecord {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as AnyRecord)
+    : {}
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function asStrings(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string')
+  }
+  return typeof value === 'string' && value ? [value] : []
+}
+
 Page({
   data: {
     quickEntries: [
@@ -7,23 +28,59 @@ Page({
       { icon: '讯', title: '资讯库', desc: '聚合保研政策与招生动态', tone: 'orange' },
     ],
     cases: [
-      { title: '工科 · 双非背景', result: '录取 985 学硕', tag: '相似案例' },
-      { title: '经管 · 英语突出', result: '录取财经强校', tag: '相似案例' },
+      { title: '案例库正在接入', result: '结构化案例将在审核后展示', tag: '真实案例' },
     ],
-    courses: [
-      { title: '保研全流程入门', meta: '13 节 · 规划基础', badge: '基础' },
-      { title: '夏令营材料准备', meta: '9 节 · 文书方法', badge: '材料' },
-      { title: '面试表达训练', meta: '11 节 · 高频问题', badge: '面试' },
-    ],
+    servicePlans: [] as Array<{
+      documentKey: string
+      name: string
+      coverAsset: string
+      meta: string
+    }>,
     updates: [
-      { school: '示例大学', title: '2027 年推免招生预通知', date: '09-18' },
-      { school: '示例学院', title: '优秀大学生夏令营报名提醒', date: '09-17' },
-      { school: '示例研究院', title: '预推免材料清单更新', date: '09-16' },
+      { school: '九辰资讯', title: '服务号最新文章已接入资讯同步链路', date: '持续同步' },
     ],
   },
 
+  onLoad() {
+    void this.loadServicePlans()
+  },
+
+  async loadServicePlans() {
+    try {
+      const products = await getProducts()
+      this.setData({
+        servicePlans: products.slice(0, 3).map((item) => {
+          const product = asRecord(item.product)
+          const period = asRecord(product.service_period)
+          const price = asString(asRecord(product.price).display)
+          const serviceCount =
+            typeof product.service_count === 'number'
+              ? `${product.service_count}项服务`
+              : ''
+          const taglines = asStrings(product.tagline)
+          const meta = [
+            serviceCount,
+            asString(period.display) || asString(period.description),
+            price,
+          ]
+            .filter(Boolean)
+            .join(' · ')
+
+          return {
+            documentKey: item.documentKey,
+            name: item.productName,
+            coverAsset: asString(product.cover_asset),
+            meta: meta || taglines[0] || '查看服务详情',
+          }
+        }),
+      })
+    } catch (error) {
+      console.info('Bundled service plans are temporarily unavailable.', error)
+    }
+  },
+
   onSearchTap() {
-    wx.showToast({ title: '搜索将在 P2 后续接入', icon: 'none' })
+    wx.showToast({ title: '搜索将在院校数据接入后启用', icon: 'none' })
   },
 
   onEntryTap(event: WechatMiniprogram.BaseEvent) {
@@ -32,6 +89,23 @@ Page({
       wx.switchTab({ url: '/pages/position/position' })
       return
     }
+    if (index === 3) {
+      wx.switchTab({ url: '/pages/news/news' })
+      return
+    }
     wx.showToast({ title: '功能骨架已预留', icon: 'none' })
+  },
+
+  onAllProducts() {
+    wx.navigateTo({ url: '/pages/products/products' })
+  },
+
+  onProductTap(event: WechatMiniprogram.BaseEvent) {
+    const documentKey = String(event.currentTarget.dataset.key || '')
+    if (!documentKey) return
+
+    wx.navigateTo({
+      url: `/pages/product-detail/product-detail?documentKey=${encodeURIComponent(documentKey)}`,
+    })
   },
 })
