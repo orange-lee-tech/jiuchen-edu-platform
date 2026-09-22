@@ -4,6 +4,7 @@ import {
   saveAuthResult,
   type BootstrapResult,
 } from '../../utils/auth'
+import { friendlyRequestError } from '../../utils/request'
 
 async function finishLogin(result: BootstrapResult) {
   saveAuthResult(result)
@@ -55,8 +56,11 @@ Page({
       const result = await bootstrapWechatUser(true)
       await finishLogin(result)
     } catch (error) {
-      const message = error instanceof Error ? error.message : '登录失败'
-      wx.showToast({ title: message, icon: 'none', duration: 2500 })
+      wx.showToast({
+        title: friendlyRequestError(error, '登录失败，请稍后重试'),
+        icon: 'none',
+        duration: 2600,
+      })
     } finally {
       this.setData({ loading: false })
     }
@@ -81,8 +85,11 @@ Page({
       const result = await bootstrapPhoneUser(phoneCode, true)
       await finishLogin(result)
     } catch (error) {
-      const message = error instanceof Error ? error.message : '手机号登录失败'
-      wx.showToast({ title: message, icon: 'none', duration: 2500 })
+      wx.showToast({
+        title: friendlyRequestError(error, '手机号登录失败，请稍后重试'),
+        icon: 'none',
+        duration: 2600,
+      })
     } finally {
       this.setData({ loading: false })
     }
