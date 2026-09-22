@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  AssessmentEvidenceConflictError,
   AssessmentEvidenceReferenceError,
   AssessmentProviderUnavailableError,
+  CompositeAssessmentRetriever,
   createUnconfiguredAssessmentRuntime,
   executeAssessment,
+  type AssessmentKnowledgeSource,
   type AssessmentModelProvider,
   type AssessmentRetriever,
 } from './assessment-runtime.js'
@@ -199,5 +202,96 @@ test('assessment runtime rejects invented evidence ids', async () => {
   await assert.rejects(
     executeAssessment({ retriever, provider }, input),
     AssessmentEvidenceReferenceError,
+  )
+})
+
+
+test('composite retriever merges independent knowledge sources', async () => {
+  const sources: AssessmentKnowledgeSource[] = [
+    {
+      sourceId: 'schools',
+      async retrieve() {
+        return {
+          version: 'schools-v1',
+          evidence: [
+            {
+              ref: 'school:target',
+              kind: 'school',
+              sourceType: 'official',
+              sourceId: 'target',
+              title: '目标大学项目要求',
+              sourceLabel: '目标大学官网',
+            },
+          ],
+        }
+      },
+    },
+    {
+      sourceId: 'cases',
+      async retrieve() {
+        return {
+          version: 'cases-v3',
+          evidence: [
+            {
+              ref: 'case:similar',
+              kind: 'case',
+              sourceType: 'external',
+              sourceId: 'similar',
+              title: '相似案例',
+              sourceLabel: '案例库',
+            },
+          ],
+        }
+      },
+    },
+  ]
+
+  const retriever = new CompositeAssessmentRetriever(sources)
+  const result = await retriever.retrieve(input)
+
+  assert.equal(result.evidence.length, 2)
+  assert.deepEqual(
+    result.evidence.map((item) => item.ref),
+    ['school:target', 'case:similar'],
+  )
+  assert.match(result.version, /^knowledge-composite-[a-f0-9]{20}$/)
+})
+
+test('composite retriever rejects duplicate evidence refs across sources', async () => {
+  const duplicate = {
+    ref: 'case:duplicate',
+    kind: 'case' as const,
+    sourceType: 'external' as const,
+    sourceId: 'duplicate',
+    title: '重复案例',
+    sourceLabel: '案例库',
+  }
+
+  const sources: AssessmentKnowledgeSource[] = [
+    {
+      sourceId: 'source-a',
+      async retrieve() {
+        return {
+          version: 'a-v1',
+          evidence: [duplicate],
+        }
+      },
+    },
+    {
+      sourceId: 'source-b',
+      async retrieve() {
+        return {
+          version: 'b-v1',
+          evidence: [duplicate],
+        }
+      },
+    },
+  ]
+
+  const retriever = new CompositeAssessmentRetriever(sources)
+
+  await assert.rejects(
+    retriever.retrieve(input),
+    AssessmentEvidenceConflictError,
   )
 })
