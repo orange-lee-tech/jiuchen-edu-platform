@@ -5,15 +5,29 @@
     "document_type": "product_handbook",
     "source_file": "九辰-大三冲顶计划产品手册.pdf",
     "source_page_count": 10,
-    "conversion_version": "handbook-v1"
+    "source_date": "2026-09-11",
+    "source_date_basis": "PDF metadata ModDate；可见页面未标注文档发布日期",
+    "conversion_version": "handbook-v1",
+    "language": "zh-CN",
+    "dataset_scope": "jiuchen_product_knowledge",
+    "case_dataset_separated": true
+  },
+  "brand": {
+    "name": "九辰教育",
+    "english_name": "JIUCHEN EDUCATION"
   },
   "product": {
     "name": "九辰保研·大三冲顶计划",
     "short_name": "大三冲顶计划",
-    "price_cny": 13800,
-    "price_display": "13800元",
+    "price": {
+      "amount": 13800,
+      "currency": "CNY",
+      "display": "13800元"
+    },
     "service_period": {
-      "months": 14,
+      "duration_months": 14,
+      "from": "大三9月",
+      "to": "大四10月",
       "display": "14个月（大三9月至大四10月）"
     },
     "one_to_one_hours": 12,
@@ -71,18 +85,31 @@
   "teachers": [
     {
       "display_name": "李老师",
-      "education": "中南大学本科、浙江大学硕士工科类",
-      "offers": ["清华大学", "浙江大学", "上海交通大学", "哈尔滨工业大学"],
+      "education_raw": "中南大学本科浙江大学硕士工科类",
+      "education_items": [
+        {
+          "institution": "中南大学",
+          "degree": "本科",
+          "discipline": "工科类"
+        },
+        {
+          "institution": "浙江大学",
+          "degree": "硕士",
+          "discipline": "工科类"
+        }
+      ],
+      "offers_claimed": ["清华大学", "浙江大学", "上海交通大学", "哈尔滨工业大学"],
       "specialties": [],
       "source_page": 9,
-      "source_date": "2026-09",
+      "source_date": "2026-09-11",
       "verification_status": "source_only"
     }
   ],
   "marketing_claims": [
     {
-      "claim": "学员保研整体录取率达96%",
+      "claim_id": "claim-overall-admission-rate",
       "claim_type": "marketing_performance",
+      "source_text": "学员保研整体录取率达96%",
       "source_page": 2,
       "verification_status": "unverified",
       "display_allowed": false
@@ -90,6 +117,7 @@
   ],
   "contact": {
     "source_page": 10,
-    "publish_to_product_body": false
-  }
+    "include_in_product_body": false
+  },
+  "visual_blocks": []
 }
