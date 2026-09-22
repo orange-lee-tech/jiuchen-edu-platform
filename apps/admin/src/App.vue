@@ -11,12 +11,14 @@ import {
   fetchHealth,
   fetchIdentities,
   fetchInternalIds,
+  fetchProductKnowledge,
   fetchStudentClassroom,
   fetchStudents,
   fetchTeacherAssignments,
   fetchTeachers,
   deleteCoachingRecord,
   saveClassroomPlan,
+  updateProductKnowledgeStatus,
   updateStudent,
   type ClassroomPlan,
   type ClassroomStage,
@@ -25,6 +27,7 @@ import {
   type InternalIdSummary,
   type PlanStatus,
   type PlanType,
+  type ProductKnowledgeDocument,
   type StudentSummary,
   type TeacherAssignment,
   type TeacherSummary,
@@ -46,7 +49,7 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 const notice = ref('')
-const activeSection = ref<'classroom' | 'identity'>('classroom')
+const activeSection = ref<'classroom' | 'identity' | 'products'>('classroom')
 const health = ref<HealthResponse | null>(null)
 
 const students = ref<StudentSummary[]>([])
@@ -59,6 +62,7 @@ const identities = ref<IdentitySummary[]>([])
 const internalIds = ref<InternalIdSummary[]>([])
 const teachers = ref<TeacherSummary[]>([])
 const assignments = ref<TeacherAssignment[]>([])
+const productDocuments = ref<ProductKnowledgeDocument[]>([])
 
 const studentForm = ref({
   name: '',
@@ -194,6 +198,49 @@ function addPlanItem() {
 function removePlanItem(index: number) {
   if (!planForm.value) return
   planForm.value.items.splice(index, 1)
+}
+
+async function loadProductKnowledge() {
+  try {
+    clearFeedback()
+    productDocuments.value = await fetchProductKnowledge()
+  } catch (cause) {
+    showError(cause)
+  }
+}
+
+async function openProductKnowledge() {
+  activeSection.value = 'products'
+  await loadProductKnowledge()
+}
+
+async function setProductStatus(
+  document: ProductKnowledgeDocument,
+  status: ProductKnowledgeDocument['status'],
+) {
+  if (
+    status === 'active' &&
+    !window.confirm(`确认发布“${document.productName}”吗？发布前服务端会再次校验内容契约。`)
+  ) {
+    return
+  }
+
+  try {
+    saving.value = true
+    clearFeedback()
+    await updateProductKnowledgeStatus(document.id, status)
+    notice.value =
+      status === 'active'
+        ? `已发布：${document.productName}`
+        : status === 'archived'
+          ? `已下架：${document.productName}`
+          : `已退回草稿：${document.productName}`
+    await loadProductKnowledge()
+  } catch (cause) {
+    showError(cause)
+  } finally {
+    saving.value = false
+  }
 }
 
 async function loadIdentityData() {
@@ -559,11 +606,21 @@ onMounted(async () => {
     <header class="topbar">
       <div>
         <p class="eyebrow">九辰教育 · 内部工作台</p>
-        <h1>{{ activeSection === 'classroom' ? '我的课堂管理' : '账号与身份管理' }}</h1>
+        <h1>{{
+          activeSection === 'classroom'
+            ? '我的课堂管理'
+            : activeSection === 'identity'
+              ? '账号与身份管理'
+              : '产品资料审核'
+        }}</h1>
         <p class="muted">
-          {{ activeSection === 'classroom'
-            ? '维护学员阶段、计划与具体任务。'
-            : '管理微信身份、正式学员、辅导老师及授权关系。' }}
+          {{
+            activeSection === 'classroom'
+              ? '维护学员阶段、计划与具体任务。'
+              : activeSection === 'identity'
+                ? '管理微信身份、正式学员、辅导老师及授权关系。'
+                : '审核结构化产品手册；只有 active 内容才会进入公开产品接口。'
+          }}
         </p>
       </div>
       <div class="status-chip" :class="{ ok: health?.dependencies.database === 'ok' }">
@@ -585,6 +642,13 @@ onMounted(async () => {
         @click="activeSection = 'identity'"
       >
         账号与身份
+      </button>
+      <button
+        type="button"
+        :class="{ active: activeSection === 'products' }"
+        @click="openProductKnowledge"
+      >
+        产品资料
       </button>
     </nav>
 
@@ -810,7 +874,7 @@ onMounted(async () => {
       </section>
     </template>
 
-    <template v-else>
+    <template v-else-if="activeSection === 'identity'">
       <section class="identity-grid">
         <t-card title="微信登录身份" :bordered="false">
           <p class="muted small">
@@ -1014,6 +1078,68 @@ onMounted(async () => {
     </template>
   </main>
 </template>
+
+    <template v-else>
+      <section class="identity-grid">
+        <t-card title="产品资料审核" :bordered="false">
+          <p class="muted small">
+            转换包通过 CLI 导入后默认保持 draft。只有显式发布为 active 的内容才会出现在小程序公开产品接口。
+          </p>
+
+          <div v-if="productDocuments.length === 0" class="empty">
+            暂无已导入产品资料；若数据库尚未升级，会在上方显示明确错误。
+          </div>
+
+          <div
+            v-for="document in productDocuments"
+            :key="document.id"
+            class="identity-row"
+          >
+            <div>
+              <strong>{{ document.productName }}</strong>
+              <p class="muted small">
+                {{ document.title }} · {{ document.conversionVersion }}
+              </p>
+              <p class="muted small mono">{{ document.documentKey }}</p>
+              <p class="muted small">
+                来源：{{ document.sourceFile }}
+                <template v-if="document.sourceDate"> · {{ document.sourceDate }}</template>
+              </p>
+            </div>
+
+            <div class="identity-tags">
+              <span class="role-tag">{{ document.status }}</span>
+              <t-button
+                v-if="document.status !== 'active'"
+                size="small"
+                :loading="saving"
+                @click="setProductStatus(document, 'active')"
+              >
+                发布
+              </t-button>
+              <t-button
+                v-if="document.status === 'active'"
+                size="small"
+                variant="outline"
+                :loading="saving"
+                @click="setProductStatus(document, 'archived')"
+              >
+                下架
+              </t-button>
+              <t-button
+                v-if="document.status === 'archived'"
+                size="small"
+                variant="outline"
+                :loading="saving"
+                @click="setProductStatus(document, 'draft')"
+              >
+                退回草稿
+              </t-button>
+            </div>
+          </div>
+        </t-card>
+      </section>
+    </template>
 
 <style scoped>
 .page {
