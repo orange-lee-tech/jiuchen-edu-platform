@@ -1,0 +1,36 @@
+<view class="products-page">
+  <view class="hero">
+    <text class="eyebrow">九辰教育 · 服务方案</text>
+    <text class="title">从长期规划到关键阶段冲刺</text>
+    <text class="desc">内容来自九辰产品手册的结构化版本。课程与服务仅展示与咨询，不在小程序内直接售卖。</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="state-card">正在加载服务方案…</view>
+  <view wx:elif="{{error}}" class="state-card error">{{error}}</view>
+
+  <view wx:else class="product-list">
+    <view
+      wx:for="{{products}}"
+      wx:key="documentKey"
+      class="product-card"
+      data-key="{{item.documentKey}}"
+      bindtap="onProductTap"
+    >
+      <image
+        wx:if="{{item.coverAsset}}"
+        class="cover"
+        src="{{item.coverAsset}}"
+        mode="aspectFill"
+      />
+      <view class="body">
+        <text class="name">{{item.name}}</text>
+        <text wx:for="{{item.taglines}}" wx:key="*this" class="tagline">{{item}}</text>
+        <text wx:if="{{item.meta}}" class="meta">{{item.meta}}</text>
+        <view class="footer">
+          <text class="detail-link">查看详情 ›</text>
+          <button class="consult" open-type="contact" catchtap="noop">在线咨询</button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
