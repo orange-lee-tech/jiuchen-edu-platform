@@ -23,13 +23,13 @@ function asStrings(value: unknown): string[] {
 }
 
 function sourcePage(value: AnyRecord): string {
-  if (typeof value.source_page === 'number') return `P${value.source_page}`
   if (Array.isArray(value.source_pages)) {
     const pages = value.source_pages.filter(
       (page): page is number => typeof page === 'number',
     )
-    if (pages.length) return `P${pages.join('、')}`
+    if (pages.length) return pages.map((page) => `P${page}`).join('、')
   }
+  if (typeof value.source_page === 'number') return `P${value.source_page}`
   return ''
 }
 
