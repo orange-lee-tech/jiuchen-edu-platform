@@ -74,6 +74,8 @@ Page({
     }
   },
 
+  noop() {},
+
   onProductTap(event: WechatMiniprogram.BaseEvent) {
     const documentKey = String(event.currentTarget.dataset.key || '')
     if (!documentKey) return
