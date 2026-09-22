@@ -49,20 +49,40 @@
 
   <view class="section-head">
     <view>
-      <text class="section-title">精选课程</text>
-      <text class="section-subtitle">课程仅展示与咨询，不在小程序内售卖</text>
+      <text class="section-title">九辰服务方案</text>
+      <text class="section-subtitle">依据产品手册结构化展示，仅提供介绍与咨询</text>
     </view>
-    <text class="more">查看全部 ›</text>
+    <text class="more" bindtap="onAllProducts">查看全部 ›</text>
   </view>
 
   <view class="course-list">
-    <view wx:for="{{courses}}" wx:key="title" class="course-card surface">
-      <view class="course-cover">{{item.badge}}</view>
+    <view
+      wx:for="{{servicePlans}}"
+      wx:key="documentKey"
+      class="course-card surface"
+      data-key="{{item.documentKey}}"
+      bindtap="onProductTap"
+    >
+      <image
+        wx:if="{{item.coverAsset}}"
+        class="course-cover-image"
+        src="{{item.coverAsset}}"
+        mode="aspectFill"
+      />
+      <view wx:else class="course-cover">方案</view>
       <view class="course-main">
-        <text class="course-title">{{item.title}}</text>
+        <text class="course-title">{{item.name}}</text>
         <text class="course-meta">{{item.meta}}</text>
       </view>
       <text class="arrow">›</text>
+    </view>
+
+    <view wx:if="{{servicePlans.length === 0}}" class="course-card surface">
+      <view class="course-cover">九辰</view>
+      <view class="course-main">
+        <text class="course-title">服务方案正在加载</text>
+        <text class="course-meta">已内置产品资料，稍后自动重试</text>
+      </view>
     </view>
   </view>
 
