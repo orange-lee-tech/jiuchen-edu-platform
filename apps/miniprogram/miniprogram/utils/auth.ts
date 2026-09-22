@@ -36,6 +36,38 @@ export type BootstrapResult = {
 export const USER_AGREEMENT_VERSION = 'placeholder-v0'
 export const AUTH_STORAGE_KEY = 'jiuchen-auth-session'
 
+const USER_ROLES = new Set<UserRole>([
+  'user',
+  'student',
+  'teacher',
+  'staff',
+  'admin',
+])
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function isBootstrapResult(value: unknown): value is BootstrapResult {
+  if (!isRecord(value) || value.ok !== true) return false
+
+  const user = value.user
+  const session = value.session
+
+  if (!isRecord(user) || !isRecord(session)) return false
+  if (typeof user.id !== 'string' || !user.id) return false
+  if (typeof user.role !== 'string' || !USER_ROLES.has(user.role as UserRole)) {
+    return false
+  }
+
+  return (
+    typeof session.token === 'string' &&
+    session.token.length > 0 &&
+    typeof session.expiresAt === 'string' &&
+    session.expiresAt.length > 0
+  )
+}
+
 function getWechatLoginCode(): Promise<string> {
   return new Promise((resolve, reject) => {
     wx.login({
@@ -100,14 +132,33 @@ export async function bootstrapPhoneUser(
 }
 
 export function saveAuthResult(result: BootstrapResult) {
-  wx.setStorageSync(AUTH_STORAGE_KEY, result)
+  if (!isBootstrapResult(result)) {
+    clearSavedAuthResult()
+    throw new Error('backend_version_mismatch')
+  }
+
   saveApiSessionToken(result.session.token)
+
+  try {
+    wx.setStorageSync(AUTH_STORAGE_KEY, result)
+  } catch (error) {
+    clearApiSessionToken()
+    throw error
+  }
 }
 
 export function getSavedAuthResult(): BootstrapResult | null {
   const value = wx.getStorageSync(AUTH_STORAGE_KEY)
-  if (!value || typeof value !== 'object') return null
-  return value as BootstrapResult
+
+  if (!isBootstrapResult(value)) {
+    if (value) {
+      wx.removeStorageSync(AUTH_STORAGE_KEY)
+      clearApiSessionToken()
+    }
+    return null
+  }
+
+  return value
 }
 
 export function updateSavedIdentity(
@@ -143,9 +194,6 @@ export async function logoutWechatUser() {
 }
 
 export async function deleteCurrentAccount() {
-  try {
-    await request<{ ok: true }>('/auth/delete-account', 'POST', {})
-  } finally {
-    clearSavedAuthResult()
-  }
+  await request<{ ok: true }>('/auth/delete-account', 'POST', {})
+  clearSavedAuthResult()
 }
