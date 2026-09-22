@@ -11,6 +11,7 @@ import { registerMobileAdminRoutes } from './routes/mobile-admin.js'
 import { registerNewsRoutes } from './routes/news.js'
 import { registerAssessmentRoutes } from './routes/assessments.js'
 import { registerProductRoutes } from './routes/products.js'
+import { registerBrandRoutes } from './routes/brand.js'
 
 export function buildApp(env: AppEnv) {
   const app = Fastify({
@@ -139,6 +140,7 @@ export function buildApp(env: AppEnv) {
   registerNewsRoutes(app, database)
   registerAssessmentRoutes(app, database)
   registerProductRoutes(app, database)
+  registerBrandRoutes(app)
   registerAdminRoutes(app, database, env)
 
   app.addHook('onClose', async () => {
