@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
 import { productKnowledgeDocuments } from '../db/schema.js'
@@ -102,23 +102,18 @@ export function registerProductRoutes(
             contentJson: productKnowledgeDocuments.contentJson,
           })
           .from(productKnowledgeDocuments)
-          .where(eq(productKnowledgeDocuments.documentKey, request.params.documentKey))
+          .where(
+            and(
+              eq(
+                productKnowledgeDocuments.documentKey,
+                request.params.documentKey,
+              ),
+              eq(productKnowledgeDocuments.status, 'active'),
+            ),
+          )
           .limit(1)
 
         if (!row) {
-          return reply.code(404).send({
-            ok: false,
-            error: 'product_not_found',
-          })
-        }
-
-        const [active] = await database.db
-          .select({ status: productKnowledgeDocuments.status })
-          .from(productKnowledgeDocuments)
-          .where(eq(productKnowledgeDocuments.documentKey, request.params.documentKey))
-          .limit(1)
-
-        if (!active || active.status !== 'active') {
           return reply.code(404).send({
             ok: false,
             error: 'product_not_found',
