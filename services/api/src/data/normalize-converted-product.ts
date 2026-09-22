@@ -39,18 +39,19 @@ function normalizeTeacher(
     asString(row.role) ??
     '师资信息'
 
+  const fallbackEducation = [
+    asString(row.institution),
+    asString(row.school_or_department),
+    asString(row.role),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   const educationRaw =
     asString(row.education_raw) ??
     asString(row.education) ??
     asString(row.qualification_claim) ??
-    [
-      asString(row.institution),
-      asString(row.school_or_department),
-      asString(row.role),
-    ]
-      .filter(Boolean)
-      .join(' · ') ||
-    null
+    (fallbackEducation || null)
 
   return {
     ...row,
