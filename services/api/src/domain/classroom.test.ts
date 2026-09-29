@@ -7,7 +7,7 @@ test('normal semesters expose GPA, English, competition and research', () => {
   assert.deepEqual(stage?.planTypes, ['gpa', 'english', 'competition', 'research'])
 })
 
-test('pre-junior-summer holidays expose only English and competition', () => {
+test('pre-junior-summer holidays expose only English', () => {
   const stage = getStageDefinition('sophomore-summer')
   assert.deepEqual(stage?.planTypes, ['english'])
   assert.equal(isPlanTypeAllowed('sophomore-summer', 'gpa'), false)
