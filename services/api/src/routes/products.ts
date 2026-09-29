@@ -113,8 +113,12 @@ export function registerProductRoutes(
           .limit(100)
 
         for (const row of rows) {
-          if (row.status !== 'active') {
+          if (row.status === 'archived') {
             products.delete(row.documentKey)
+            continue
+          }
+
+          if (row.status === 'draft') {
             continue
           }
 
@@ -175,7 +179,18 @@ export function registerProductRoutes(
             .limit(1)
 
           if (row) {
-            if (row.status !== 'active') {
+            if (row.status === 'archived') {
+              return reply.code(404).send({
+                ok: false,
+                error: 'product_not_found',
+              })
+            }
+
+            if (row.status === 'draft') {
+              const bundled = findBundledProduct(request.params.documentKey)
+              if (bundled) {
+                return serializeProductDetail(bundled, 'bundled')
+              }
               return reply.code(404).send({
                 ok: false,
                 error: 'product_not_found',
