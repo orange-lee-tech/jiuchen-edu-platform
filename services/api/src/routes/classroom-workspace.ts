@@ -511,6 +511,30 @@ export function registerClassroomWorkspaceRoutes(
       const parsed = planSchema.safeParse(request.body)
       if (!parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_plan_payload', issues: parsed.error.issues })
 
+      const existingPending = await database.db
+        .select({ id: planRevisions.id })
+        .from(planRevisions)
+        .where(
+          and(
+            eq(planRevisions.studentId, request.params.studentId),
+            eq(planRevisions.stageCode, request.params.stage),
+            eq(planRevisions.type, type),
+            eq(planRevisions.status, 'pending'),
+          ),
+        )
+
+      for (const item of existingPending) {
+        await database.db
+          .update(planRevisions)
+          .set({
+            status: 'rejected',
+            reviewNote: '已被老师正式最新版替代',
+            reviewedByUserId: session.userId,
+            reviewedAt: new Date(),
+          })
+          .where(eq(planRevisions.id, item.id))
+      }
+
       await applyApprovedPlan(
         database,
         request.params.studentId,

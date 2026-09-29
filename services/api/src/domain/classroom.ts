@@ -12,7 +12,7 @@ export type StageDefinition = {
 }
 
 const TERM_PLANS: PlanType[] = ['gpa', 'english', 'competition', 'research']
-const HOLIDAY_PLANS: PlanType[] = ['english', 'competition']
+const HOLIDAY_PLANS: PlanType[] = ['english']
 const INTERNSHIP_PLANS: PlanType[] = ['internship']
 
 export const STAGE_DEFINITIONS: StageDefinition[] = [

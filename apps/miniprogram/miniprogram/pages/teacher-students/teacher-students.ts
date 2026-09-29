@@ -12,7 +12,7 @@ function planTypesForStage(stage: string | null): ClassroomPlanType[] {
   if (!stage) return ['gpa', 'english', 'competition', 'research']
   if (stage.startsWith('senior-')) return ['internship']
   if (stage === 'junior-summer') return []
-  if (stage.includes('winter') || stage.includes('summer')) return ['english', 'competition']
+  if (stage.includes('winter') || stage.includes('summer')) return ['english']
   return ['gpa', 'english', 'competition', 'research']
 }
 

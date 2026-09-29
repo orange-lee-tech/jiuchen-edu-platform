@@ -58,15 +58,15 @@ const PLAN_CARDS: Record<ClassroomPlanType, Omit<PlanCard, 'revisionStatus'>> = 
 
 const FALLBACK_STAGES: ClassroomStage[] = [
   { code: 'freshman-fall', label: '大一上', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: ['gpa', 'english', 'competition', 'research'] },
-  { code: 'freshman-winter', label: '大一寒假', mode: 'holiday', description: '假期 · 英语与竞赛规划', planTypes: ['english', 'competition'] },
+  { code: 'freshman-winter', label: '大一寒假', mode: 'holiday', description: '假期 · 英语与竞赛规划', planTypes: ['english'] },
   { code: 'freshman-spring', label: '大一下', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: ['gpa', 'english', 'competition', 'research'] },
-  { code: 'freshman-summer', label: '大一暑假', mode: 'holiday', description: '假期 · 英语与竞赛规划', planTypes: ['english', 'competition'] },
+  { code: 'freshman-summer', label: '大一暑假', mode: 'holiday', description: '假期 · 英语与竞赛规划', planTypes: ['english'] },
   { code: 'sophomore-fall', label: '大二上', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: ['gpa', 'english', 'competition', 'research'] },
-  { code: 'sophomore-winter', label: '大二寒假', mode: 'holiday', description: '假期 · 英语与竞赛规划', planTypes: ['english', 'competition'] },
+  { code: 'sophomore-winter', label: '大二寒假', mode: 'holiday', description: '假期 · 英语与竞赛规划', planTypes: ['english'] },
   { code: 'sophomore-spring', label: '大二下', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: ['gpa', 'english', 'competition', 'research'] },
-  { code: 'sophomore-summer', label: '大二暑假', mode: 'holiday', description: '假期 · 英语与竞赛规划', planTypes: ['english', 'competition'] },
+  { code: 'sophomore-summer', label: '大二暑假', mode: 'holiday', description: '假期 · 英语与竞赛规划', planTypes: ['english'] },
   { code: 'junior-fall', label: '大三上', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: ['gpa', 'english', 'competition', 'research'] },
-  { code: 'junior-winter', label: '大三寒假', mode: 'holiday', description: '假期 · 英语与竞赛规划', planTypes: ['english', 'competition'] },
+  { code: 'junior-winter', label: '大三寒假', mode: 'holiday', description: '假期 · 英语与竞赛规划', planTypes: ['english'] },
   { code: 'junior-spring', label: '大三下', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: ['gpa', 'english', 'competition', 'research'] },
   { code: 'junior-summer', label: '大三暑假', mode: 'holiday', description: '阶段规划由九辰老师确认', planTypes: [] },
   { code: 'senior-fall', label: '大四上', mode: 'internship', description: '大四阶段 · 实习规划', planTypes: ['internship'] },
@@ -130,12 +130,27 @@ Page({
 
     this.setData({ mode: 'student', loading: true })
     try {
-      const stages = await getClassroomStages().catch(() => FALLBACK_STAGES)
-      const currentCode = this.data.currentStageCode
-      const index = Math.max(0, stages.findIndex((stage) => stage.code === currentCode))
-      const stage = stages[index] || stages[0]
-      this.setData({ stages, ...emptyStageView(stage, index) })
-      await this.hydratePlanData(stage.code)
+      const [stages, initial] = await Promise.all([
+        getClassroomStages().catch(() => FALLBACK_STAGES),
+        getMyClassroom(),
+      ])
+      const index = Math.max(
+        0,
+        stages.findIndex((stage) => stage.code === initial.stage.code),
+      )
+      const stage = stages[index] || initial.stage
+      this.setData({
+        stages,
+        ...emptyStageView(stage, index),
+        studentName: initial.student.name,
+        plans: initial.plans.map(toPlanCard),
+        showGuidance: initial.showGuidance,
+        mentors: initial.mentors,
+        records: initial.records.map((record) => ({
+          ...record,
+          dateLabel: this.formatRecordDate(record.occurredAt),
+        })),
+      })
     } catch (error) {
       console.info('Current student classroom unavailable.', error)
       wx.showToast({ title: '课堂资料暂时无法加载', icon: 'none' })

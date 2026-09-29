@@ -264,10 +264,9 @@ export function getDemoStudentClassroom(stageCode: string): Promise<ClassroomVie
   )
 }
 
-export function getMyClassroom(stageCode: string): Promise<ClassroomView> {
-  return request<ClassroomView>(
-    `/me/classroom?stage=${encodeURIComponent(stageCode)}`,
-  )
+export function getMyClassroom(stageCode?: string): Promise<ClassroomView> {
+  const query = stageCode ? `?stage=${encodeURIComponent(stageCode)}` : ''
+  return request<ClassroomView>(`/me/classroom${query}`)
 }
 
 export type PlanEditorItem = {
