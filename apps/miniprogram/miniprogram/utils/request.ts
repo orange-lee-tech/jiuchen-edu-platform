@@ -44,6 +44,8 @@ export type ClassroomPlan = {
   id: string | null
   type: ClassroomPlanType
   title: string
+  revisionStatus?: 'none' | 'pending' | 'approved'
+  revisionId?: string | null
   items: Array<{
     id: string
     sortOrder: number
@@ -260,6 +262,174 @@ export function getDemoStudentClassroom(stageCode: string): Promise<ClassroomVie
   return request<ClassroomView>(
     `/students/${DEMO_STUDENT_ID}/classroom?stage=${encodeURIComponent(stageCode)}`,
   )
+}
+
+export function getMyClassroom(stageCode: string): Promise<ClassroomView> {
+  return request<ClassroomView>(
+    `/me/classroom?stage=${encodeURIComponent(stageCode)}`,
+  )
+}
+
+export type PlanEditorItem = {
+  name: string
+  target?: string | null
+  status: 'pending' | 'in_progress' | 'done'
+}
+
+export async function saveMyClassroomPlan(
+  stageCode: string,
+  type: ClassroomPlanType,
+  payload: { title: string; items: PlanEditorItem[] },
+): Promise<{ id: string; status: 'pending' }> {
+  const result = await request<{
+    ok: true
+    revision: { id: string; status: 'pending' }
+  }>(
+    `/me/classroom/plans/${encodeURIComponent(stageCode)}/${encodeURIComponent(type)}`,
+    'PUT',
+    payload as unknown as WechatMiniprogram.IAnyObject,
+  )
+  return result.revision
+}
+
+export type PlanRevision = {
+  id: string
+  studentId: string
+  stageCode: string
+  type: ClassroomPlanType
+  title: string
+  itemsJson: PlanEditorItem[]
+  editorRole: 'student' | 'teacher' | 'staff' | 'admin'
+  status: 'pending' | 'approved' | 'rejected'
+  reviewNote: string | null
+  createdAt: string
+  reviewedAt: string | null
+}
+
+export async function getMyPlanVersions(
+  stageCode: string,
+  type: ClassroomPlanType,
+): Promise<PlanRevision[]> {
+  const result = await request<{ ok: true; revisions: PlanRevision[] }>(
+    `/me/classroom/plans/${encodeURIComponent(stageCode)}/${encodeURIComponent(type)}/versions`,
+  )
+  return result.revisions
+}
+
+export type TeacherStudent = StudentSummary & {
+  assignmentId: string
+  relationship: 'primary' | 'support'
+  assignedStageCode: string | null
+}
+
+export async function getTeacherStudents(): Promise<TeacherStudent[]> {
+  const result = await request<{ ok: true; students: TeacherStudent[] }>(
+    '/me/teacher/students',
+  )
+  return result.students
+}
+
+export function getTeacherStudentClassroom(
+  studentId: string,
+  stageCode: string,
+): Promise<ClassroomView> {
+  return request<ClassroomView>(
+    `/me/teacher/students/${encodeURIComponent(studentId)}/classroom?stage=${encodeURIComponent(stageCode)}`,
+  )
+}
+
+export async function saveTeacherStudentPlan(
+  studentId: string,
+  stageCode: string,
+  type: ClassroomPlanType,
+  payload: { title: string; items: PlanEditorItem[] },
+): Promise<{ id: string; status: 'approved' }> {
+  const result = await request<{
+    ok: true
+    revision: { id: string; status: 'approved' }
+  }>(
+    `/me/teacher/students/${encodeURIComponent(studentId)}/plans/${encodeURIComponent(stageCode)}/${encodeURIComponent(type)}`,
+    'PUT',
+    payload as unknown as WechatMiniprogram.IAnyObject,
+  )
+  return result.revision
+}
+
+export type PendingPlanRevision = {
+  id: string
+  studentId: string
+  studentName: string
+  stageCode: string
+  type: ClassroomPlanType
+  title: string
+  itemsJson: PlanEditorItem[]
+  createdAt: string
+}
+
+export async function getPendingPlanRevisions(): Promise<PendingPlanRevision[]> {
+  const result = await request<{ ok: true; revisions: PendingPlanRevision[] }>(
+    '/me/teacher/pending-plan-revisions',
+  )
+  return result.revisions
+}
+
+export async function approvePlanRevision(
+  revisionId: string,
+  note: string | null = null,
+): Promise<void> {
+  await request<{ ok: true }>(
+    `/me/teacher/plan-revisions/${encodeURIComponent(revisionId)}/approve`,
+    'POST',
+    { note },
+  )
+}
+
+export async function rejectPlanRevision(
+  revisionId: string,
+  note: string | null = null,
+): Promise<void> {
+  await request<{ ok: true }>(
+    `/me/teacher/plan-revisions/${encodeURIComponent(revisionId)}/reject`,
+    'POST',
+    { note },
+  )
+}
+
+export type ParsedScheduleCourse = {
+  name: string
+  day: string
+  dayIndex: number
+  slot: string
+  startSection: number | null
+  endSection: number | null
+  time: string | null
+  location: string | null
+  teacher: string | null
+  weeks: string | null
+  raw: string
+}
+
+export type ParsedSchedule = {
+  sourceType: 'spreadsheet' | 'image'
+  courses: ParsedScheduleCourse[]
+  warnings: string[]
+}
+
+export async function createScheduleImport(payload: {
+  fileID: string
+  fileName: string
+  sourceType: 'spreadsheet' | 'image'
+}): Promise<{ importId: string; schedule: ParsedSchedule }> {
+  const result = await request<{
+    ok: true
+    importId: string
+    schedule: ParsedSchedule
+  }>(
+    '/me/classroom/schedule-imports',
+    'POST',
+    payload as unknown as WechatMiniprogram.IAnyObject,
+  )
+  return { importId: result.importId, schedule: result.schedule }
 }
 
 

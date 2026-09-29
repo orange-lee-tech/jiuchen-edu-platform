@@ -11,7 +11,11 @@
     "pages/assessment-form/assessment-form",
     "pages/products/products",
     "pages/product-detail/product-detail",
-    "pages/brand/brand"
+    "pages/brand/brand",
+    "pages/library/library",
+    "pages/plan-editor/plan-editor",
+    "pages/teacher-students/teacher-students",
+    "pages/schedule-import/schedule-import"
   ],
   "window": {
     "navigationBarTitleText": "九辰保研",
@@ -25,11 +29,26 @@
     "backgroundColor": "#ffffff",
     "borderStyle": "white",
     "list": [
-      { "pagePath": "pages/index/index", "text": "首页" },
-      { "pagePath": "pages/position/position", "text": "定位" },
-      { "pagePath": "pages/classroom/classroom", "text": "学堂" },
-      { "pagePath": "pages/news/news", "text": "资讯" },
-      { "pagePath": "pages/profile/profile", "text": "我的" }
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/position/position",
+        "text": "定位"
+      },
+      {
+        "pagePath": "pages/classroom/classroom",
+        "text": "学堂"
+      },
+      {
+        "pagePath": "pages/news/news",
+        "text": "资讯"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
     ]
   },
   "style": "v2",

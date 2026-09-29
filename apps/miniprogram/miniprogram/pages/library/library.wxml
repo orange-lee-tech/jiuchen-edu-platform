@@ -1,0 +1,36 @@
+<view class="page-shell">
+  <view class="library-head">
+    <text class="page-title">院校与项目资料库</text>
+    <text class="page-desc">当前检索真实同步资讯与已结构化九辰服务资料，不展示虚构院校数据。</text>
+  </view>
+
+  <view class="search-box surface">
+    <text class="search-icon">⌕</text>
+    <input
+      class="search-input"
+      placeholder="输入院校、项目、夏令营、科研等关键词"
+      value="{{query}}"
+      bindinput="onSearchInput"
+    />
+  </view>
+
+  <view wx:if="{{loading}}" class="state-card surface">资料加载中…</view>
+
+  <view wx:else class="result-list">
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="result-card surface"
+      data-index="{{index}}"
+      bindtap="onItemTap"
+    >
+      <text class="eyebrow">{{item.eyebrow}}</text>
+      <text class="result-title">{{item.title}}</text>
+      <text class="result-desc">{{item.desc}}</text>
+      <text class="result-action">{{item.kind === 'product' ? '查看详情 ›' : '查看原文 ›'}}</text>
+    </view>
+    <view wx:if="{{items.length === 0}}" class="state-card surface">
+      暂无匹配的真实资料。后续院校数据源接入后会继续扩充这里，而不是填充示例数据。
+    </view>
+  </view>
+</view>

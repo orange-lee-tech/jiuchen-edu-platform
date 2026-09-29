@@ -118,6 +118,29 @@ Page({
       return
     }
 
+    const api = wx as unknown as {
+      openOfficialAccountArticle?: (options: {
+        url: string
+        success?: () => void
+        fail?: () => void
+      }) => void
+    }
+
+    if (url.includes('mp.weixin.qq.com') && api.openOfficialAccountArticle) {
+      api.openOfficialAccountArticle({
+        url,
+        fail() {
+          wx.setClipboardData({
+            data: url,
+            success() {
+              wx.showToast({ title: '打开失败，链接已复制', icon: 'none' })
+            },
+          })
+        },
+      })
+      return
+    }
+
     wx.setClipboardData({
       data: url,
       success() {

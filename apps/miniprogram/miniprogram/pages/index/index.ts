@@ -22,10 +22,10 @@ function asStrings(value: unknown): string[] {
 Page({
   data: {
     quickEntries: [
-      { icon: 'AI', title: 'AI 保研定位', desc: '结合背景与目标生成定位建议', tone: 'blue' },
-      { icon: '规', title: '规划定位', desc: '按阶段梳理保研准备路线', tone: 'violet' },
-      { icon: '校', title: '院校库', desc: '查看院校、项目与夏令营信息', tone: 'cyan' },
-      { icon: '讯', title: '资讯库', desc: '聚合保研政策与招生动态', tone: 'orange' },
+      { key: 'assessment', icon: 'AI', title: 'AI 保研定位', desc: '结合背景与目标生成定位建议', tone: 'blue' },
+      { key: 'planning', icon: '规', title: '规划定位', desc: '进入真实阶段计划与课表', tone: 'violet' },
+      { key: 'library', icon: '校', title: '院校库', desc: '检索已同步院校、项目与服务资料', tone: 'cyan' },
+      { key: 'news', icon: '讯', title: '资讯库', desc: '打开已同步政策与招生动态', tone: 'orange' },
     ],
     cases: [
       { title: '案例库正在接入', result: '结构化案例将在审核后展示', tag: '真实案例' },
@@ -84,20 +84,26 @@ Page({
   },
 
   onSearchTap() {
-    wx.showToast({ title: '搜索将在院校数据接入后启用', icon: 'none' })
+    wx.navigateTo({ url: '/pages/library/library' })
   },
 
   onEntryTap(event: WechatMiniprogram.BaseEvent) {
-    const index = Number(event.currentTarget.dataset.index)
-    if (index === 0) {
+    const key = String(event.currentTarget.dataset.key || '')
+    if (key === 'assessment') {
       wx.switchTab({ url: '/pages/position/position' })
       return
     }
-    if (index === 3) {
-      wx.switchTab({ url: '/pages/news/news' })
+    if (key === 'planning') {
+      wx.switchTab({ url: '/pages/classroom/classroom' })
       return
     }
-    wx.showToast({ title: '功能骨架已预留', icon: 'none' })
+    if (key === 'library') {
+      wx.navigateTo({ url: '/pages/library/library' })
+      return
+    }
+    if (key === 'news') {
+      wx.switchTab({ url: '/pages/news/news' })
+    }
   },
 
   onAllProducts() {

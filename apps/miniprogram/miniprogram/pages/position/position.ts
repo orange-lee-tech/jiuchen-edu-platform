@@ -1,5 +1,9 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import {
+  getCachedAcademicProfile,
+  saveCachedAcademicProfile,
+} from '../../utils/profile-cache'
+import {
   friendlyRequestError,
   getMyAcademicProfile,
   updateMyAcademicProfile,
@@ -7,6 +11,8 @@ import {
 } from '../../utils/request'
 
 type ProfileField = keyof AcademicProfile
+
+let profileSaveTimer: ReturnType<typeof setTimeout> | null = null
 
 const EMPTY_PROFILE = {
   university: '',
@@ -37,6 +43,19 @@ Page({
 
     this.setData({ canEditProfile })
 
+    const cached = getCachedAcademicProfile()
+    if (cached && canEditProfile) {
+      this.setData({
+        profileForm: {
+          university: cached.university || '',
+          major: cached.major || '',
+          currentGrade: cached.currentGrade || '',
+          gpaText: cached.gpaText || '',
+          rankText: cached.rankText || '',
+        },
+      })
+    }
+
     if (canEditProfile) {
       void this.loadAcademicProfile()
     } else {
@@ -47,15 +66,15 @@ Page({
   async loadAcademicProfile() {
     try {
       const profile = await getMyAcademicProfile()
-      this.setData({
-        profileForm: {
-          university: profile.university || '',
-          major: profile.major || '',
-          currentGrade: profile.currentGrade || '',
-          gpaText: profile.gpaText || '',
-          rankText: profile.rankText || '',
-        },
-      })
+      const normalized = {
+        university: profile.university || '',
+        major: profile.major || '',
+        currentGrade: profile.currentGrade || '',
+        gpaText: profile.gpaText || '',
+        rankText: profile.rankText || '',
+      }
+      this.setData({ profileForm: normalized })
+      saveCachedAcademicProfile(normalized)
     } catch (error) {
       console.info('Academic profile is unavailable on position page.', error)
     }
@@ -68,9 +87,20 @@ Page({
     this.setData({
       [`profileForm.${field}`]: event.detail.value,
     })
+
+    const form = {
+      ...this.data.profileForm,
+      [field]: event.detail.value,
+    }
+    saveCachedAcademicProfile(form)
+
+    if (profileSaveTimer) clearTimeout(profileSaveTimer)
+    profileSaveTimer = setTimeout(() => {
+      void this.persistProfile()
+    }, 650)
   },
 
-  async onProfileBlur() {
+  async persistProfile() {
     if (!this.data.canEditProfile || this.data.profileSaving) return
 
     try {
@@ -83,15 +113,15 @@ Page({
         gpaText: form.gpaText.trim() || null,
         rankText: form.rankText.trim() || null,
       })
-      this.setData({
-        profileForm: {
-          university: saved.university || '',
-          major: saved.major || '',
-          currentGrade: saved.currentGrade || '',
-          gpaText: saved.gpaText || '',
-          rankText: saved.rankText || '',
-        },
-      })
+      const normalized = {
+        university: saved.university || '',
+        major: saved.major || '',
+        currentGrade: saved.currentGrade || '',
+        gpaText: saved.gpaText || '',
+        rankText: saved.rankText || '',
+      }
+      this.setData({ profileForm: normalized })
+      saveCachedAcademicProfile(normalized)
     } catch (error) {
       wx.showToast({
         title: friendlyRequestError(error, '资料自动保存失败'),
@@ -101,6 +131,22 @@ Page({
     } finally {
       this.setData({ profileSaving: false })
     }
+  },
+
+  onProfileBlur() {
+    if (profileSaveTimer) {
+      clearTimeout(profileSaveTimer)
+      profileSaveTimer = null
+    }
+    void this.persistProfile()
+  },
+
+  onUnload() {
+    if (profileSaveTimer) {
+      clearTimeout(profileSaveTimer)
+      profileSaveTimer = null
+    }
+    if (this.data.canEditProfile) void this.persistProfile()
   },
 
   onStartAssessment() {
