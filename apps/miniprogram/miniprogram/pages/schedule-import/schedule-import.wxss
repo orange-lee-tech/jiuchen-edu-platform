@@ -1,0 +1,39 @@
+.import-head { margin: 8rpx 4rpx 24rpx; }
+.page-title,.page-desc,.import-icon,.import-title,.import-desc,.course-name,.course-meta { display:block; }
+.page-title { font-size:38rpx; font-weight:800; }
+.page-desc { margin-top:10rpx; color:#777e89; font-size:23rpx; line-height:1.7; }
+
+.import-actions { display:flex; flex-direction:column; gap:16rpx; }
+.import-card {
+  box-sizing:border-box;
+  width:100%;
+  margin:0;
+  padding:26rpx;
+  text-align:left;
+  line-height:1.5;
+  background:#fff;
+}
+.import-card::after { border:0; }
+.import-icon {
+  width:54rpx;
+  height:54rpx;
+  line-height:54rpx;
+  text-align:center;
+  border-radius:14rpx;
+  background:#eef3ff;
+  color:#2f6fed;
+  font-size:22rpx;
+  font-weight:800;
+}
+.import-title { margin-top:14rpx; color:#22262d; font-size:27rpx; font-weight:750; }
+.import-desc { margin-top:7rpx; color:#8b919a; font-size:21rpx; }
+
+.file-note { margin:20rpx 4rpx; color:#6f7682; font-size:22rpx; }
+.section-head { display:flex; justify-content:space-between; margin:26rpx 4rpx 14rpx; }
+.section-title { font-size:28rpx; font-weight:800; }
+.section-note { color:#8b919a; font-size:21rpx; }
+
+.course-card { margin-bottom:12rpx; padding:22rpx; }
+.course-name { font-size:26rpx; font-weight:750; }
+.course-meta { margin-top:5rpx; color:#7f8590; font-size:21rpx; }
+.warning { margin-top:12rpx; padding:16rpx; border-radius:12rpx; background:#fff7e5; color:#8c650d; font-size:21rpx; }

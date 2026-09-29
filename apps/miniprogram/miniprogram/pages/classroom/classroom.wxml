@@ -2,129 +2,141 @@
   <view class="classroom-top">
     <view>
       <text class="page-title">我的课堂</text>
-      <text class="page-subtitle">大学阶段规划与辅导进度</text>
+      <text class="page-subtitle">{{mode === 'student' ? '真实计划、版本审核与辅导进度' : '大学阶段规划与辅导工作台'}}</text>
     </view>
-    <view class="stage-badge">{{currentStageLabel}}</view>
+    <view wx:if="{{mode === 'student'}}" class="stage-badge">{{currentStageLabel}}</view>
   </view>
 
-  <view class="classroom-layout">
-    <scroll-view
-      class="stage-sidebar"
-      scroll-y
-      enhanced
-      show-scrollbar="{{false}}"
-    >
-      <view class="timeline">
-        <view
-          wx:for="{{stages}}"
-          wx:key="code"
-          class="timeline-item {{currentStage === index ? 'active' : ''}}"
-          data-index="{{index}}"
-          bindtap="onStageChange"
-        >
-          <view class="timeline-mark">
-            <view class="timeline-dot"></view>
-          </view>
-          <text class="timeline-label">{{item.label}}</text>
-        </view>
+  <view wx:if="{{mode === 'guest'}}" class="entry-state surface">
+    <text class="entry-title">绑定学员身份后进入真实课堂</text>
+    <text class="entry-desc">游客不会显示演示学员数据。登录并绑定九辰学员 ID 后，这里只展示你自己的计划。</text>
+    <button class="entry-button" bindtap="onLogin">登录 / 绑定身份</button>
+  </view>
+
+  <view wx:elif="{{mode === 'teacher'}}" class="entry-state surface">
+    <text class="entry-title">老师工作台</text>
+    <text class="entry-desc">查看已分配学员、处理学员更新版本，并可直接编辑形成正式最新版。</text>
+    <button class="entry-button" bindtap="onTeacherWorkspace">进入我的学员</button>
+  </view>
+
+  <view wx:else class="student-layout">
+    <view class="student-tools surface">
+      <view>
+        <text class="tool-title">{{studentName || '我的计划'}}</text>
+        <text class="tool-desc">学员修改先进入待审核版本；老师通过后写入正式档案。</text>
       </view>
-    </scroll-view>
+      <button class="import-button" bindtap="onScheduleImport">导入课表</button>
+    </view>
 
-    <view class="classroom-main">
-      <view class="stage-summary surface">
-        <view class="stage-summary-head">
-          <view>
-            <text class="stage-title">{{currentStageLabel}}</text>
-            <text class="stage-desc">{{stageDescription}}</text>
-          </view>
-          <view class="stage-state">当前阶段</view>
-        </view>
-      </view>
-
-      <view class="section-title-row">
-        <text class="section-title">阶段规划</text>
-        <text class="section-note">按阶段持续更新</text>
-      </view>
-
-      <view wx:if="{{plans.length > 0}}" class="plan-list">
-        <view
-          wx:for="{{plans}}"
-          wx:key="type"
-          class="plan-card surface"
-          data-type="{{item.type}}"
-          bindtap="onPlanTap"
-        >
-          <view class="plan-card-head">
-            <view class="plan-icon">{{item.badge}}</view>
-            <view class="plan-heading">
-              <text class="plan-title">{{item.title}}</text>
-              <text class="plan-note">{{item.note}}</text>
-            </view>
-            <text class="plan-arrow">›</text>
-          </view>
-          <view class="plan-card-foot">
-            <text class="progress-label">完成进度</text>
-            <text class="plan-progress">{{item.progress}}</text>
-          </view>
-        </view>
-      </view>
-
-      <view wx:else class="pending-card surface">
-        <text class="pending-title">本阶段规划待配置</text>
-        <text class="pending-desc">保留原型时间轴节点，具体规划内容由九辰后台确认后录入。</text>
-      </view>
-
-      <block wx:if="{{showGuidance}}">
-        <view class="section-title-row">
-          <text class="section-title">辅导老师</text>
-          <text class="section-note">查看老师介绍</text>
-        </view>
-
-        <view wx:if="{{mentors.length > 0}}" class="mentor-list">
+    <view class="classroom-layout">
+      <scroll-view class="stage-sidebar" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="timeline">
           <view
-            wx:for="{{mentors}}"
-            wx:key="id"
-            class="mentor-card surface"
+            wx:for="{{stages}}"
+            wx:key="code"
+            class="timeline-item {{currentStage === index ? 'active' : ''}}"
             data-index="{{index}}"
-            bindtap="onMentorTap"
+            bindtap="onStageChange"
           >
-            <view class="mentor-avatar">导</view>
-            <view class="mentor-main">
-              <text class="mentor-name">{{item.name}}</text>
-              <text class="mentor-desc">
-                {{item.title || '九辰辅导老师'}} · {{item.relationship === 'primary' ? '主辅导' : '协助'}}
-              </text>
-            </view>
-            <text class="arrow">›</text>
+            <view class="timeline-mark"><view class="timeline-dot"></view></view>
+            <text class="timeline-label">{{item.label}}</text>
           </view>
         </view>
+      </scroll-view>
 
-        <view wx:else class="pending-card surface">
-          <text class="pending-title">辅导老师待分配</text>
-          <text class="pending-desc">老师由九辰后台维护并按学员/阶段授权。</text>
+      <view class="classroom-main">
+        <view class="stage-summary surface">
+          <view class="stage-summary-head">
+            <view>
+              <text class="stage-title">{{currentStageLabel}}</text>
+              <text class="stage-desc">{{stageDescription}}</text>
+            </view>
+            <view class="stage-state">当前查看</view>
+          </view>
         </view>
 
         <view class="section-title-row">
-          <text class="section-title">辅导记录</text>
-          <text class="section-note">工作人员录入</text>
+          <text class="section-title">阶段规划</text>
+          <text class="section-note">{{loading ? '同步中…' : '点击即可编辑'}}</text>
         </view>
 
-        <view wx:if="{{records.length > 0}}" class="record-list surface">
-          <view wx:for="{{records}}" wx:key="id" class="record-row">
-            <view class="record-date">{{item.dateLabel}}</view>
-            <view class="record-main">
-              <text class="record-title">{{item.title}}</text>
-              <text wx:if="{{item.teacherName}}" class="record-teacher">记录老师：{{item.teacherName}}</text>
-              <text class="record-content">{{item.content}}</text>
+        <view wx:if="{{plans.length > 0}}" class="plan-list">
+          <view
+            wx:for="{{plans}}"
+            wx:key="type"
+            class="plan-card surface"
+            data-type="{{item.type}}"
+            bindtap="onPlanTap"
+          >
+            <view class="plan-card-head">
+              <view class="plan-icon">{{item.badge}}</view>
+              <view class="plan-heading">
+                <view class="plan-title-row">
+                  <text class="plan-title">{{item.title}}</text>
+                  <text class="revision-chip {{item.revisionStatus}}">
+                    {{item.revisionStatus === 'pending' ? '待老师审核' : item.revisionStatus === 'approved' ? '正式版' : '未建立'}}
+                  </text>
+                </view>
+                <text class="plan-note">{{item.note}}</text>
+              </view>
+              <text class="plan-arrow">›</text>
+            </view>
+            <view class="plan-card-foot">
+              <text class="progress-label">完成进度</text>
+              <text class="plan-progress">{{item.progress}}</text>
             </view>
           </view>
         </view>
 
         <view wx:else class="pending-card surface">
-          <text class="pending-title">暂无辅导记录</text>
-          <text class="pending-desc">辅导完成后由九辰工作人员在后台录入，学员端只读。</text>
+          <text class="pending-title">本阶段暂无可编辑计划</text>
+          <text class="pending-desc">该阶段不自动生成虚构任务，等待九辰老师确认实际安排。</text>
         </view>
-      </block>
+
+        <block wx:if="{{showGuidance}}">
+          <view class="section-title-row">
+            <text class="section-title">辅导老师</text>
+            <text class="section-note">点击查看老师介绍</text>
+          </view>
+
+          <view wx:if="{{mentors.length > 0}}" class="mentor-list">
+            <view wx:for="{{mentors}}" wx:key="id" class="mentor-card surface" data-index="{{index}}" bindtap="onMentorTap">
+              <view class="mentor-avatar">导</view>
+              <view class="mentor-main">
+                <text class="mentor-name">{{item.name}}</text>
+                <text class="mentor-desc">{{item.title || '九辰辅导老师'}} · {{item.relationship === 'primary' ? '主辅导' : '协助'}}</text>
+              </view>
+              <text class="arrow">›</text>
+            </view>
+          </view>
+
+          <view wx:else class="pending-card surface">
+            <text class="pending-title">辅导老师待分配</text>
+            <text class="pending-desc">这里只展示后台真实建立的师生关系。</text>
+          </view>
+
+          <view class="section-title-row">
+            <text class="section-title">辅导记录</text>
+            <text class="section-note">真实记录</text>
+          </view>
+
+          <view wx:if="{{records.length > 0}}" class="record-list surface">
+            <view wx:for="{{records}}" wx:key="id" class="record-row">
+              <view class="record-date">{{item.dateLabel}}</view>
+              <view class="record-main">
+                <text class="record-title">{{item.title}}</text>
+                <text wx:if="{{item.teacherName}}" class="record-teacher">记录老师：{{item.teacherName}}</text>
+                <text class="record-content">{{item.content}}</text>
+              </view>
+            </view>
+          </view>
+
+          <view wx:else class="pending-card surface">
+            <text class="pending-title">暂无辅导记录</text>
+            <text class="pending-desc">不会再用演示记录填充这里。</text>
+          </view>
+        </block>
+      </view>
     </view>
   </view>
 </view>

@@ -1,0 +1,45 @@
+<view class="page-shell">
+  <view class="editor-head">
+    <text class="page-title">{{studentName || '计划编辑'}}</text>
+    <text class="page-desc">{{teacherMode ? '老师保存后直接进入正式档案' : '你的更新会立即在自己界面显示，老师审核通过后进入正式档案'}}</text>
+    <text wx:if="{{!teacherMode}}" class="status-line">当前版本：{{revisionStatus === 'pending' ? '待老师审核' : revisionStatus === 'approved' ? '正式版' : '尚未建立正式计划'}}</text>
+  </view>
+
+  <view class="surface editor-card">
+    <text class="field-label">计划名称</text>
+    <input class="title-input" value="{{title}}" placeholder="填写计划名称" bindinput="onTitleInput" />
+
+    <view class="section-row">
+      <text class="section-title">任务清单</text>
+      <text class="add-link" bindtap="onAddItem">+ 添加任务</text>
+    </view>
+
+    <view wx:for="{{items}}" wx:key="index" class="item-card">
+      <input class="item-input strong" data-index="{{index}}" data-field="name" value="{{item.name}}" placeholder="任务名称" bindinput="onItemInput" />
+      <input class="item-input" data-index="{{index}}" data-field="target" value="{{item.target}}" placeholder="目标 / 说明（可选）" bindinput="onItemInput" />
+      <view class="item-actions">
+        <picker range="{{statusOptions}}" range-key="label" data-index="{{index}}" bindchange="onStatusChange">
+          <text class="status-picker">{{item.status === 'done' ? '已完成' : item.status === 'in_progress' ? '进行中' : '未开始'}} ▾</text>
+        </picker>
+        <text class="remove-link" data-index="{{index}}" bindtap="onRemoveItem">删除</text>
+      </view>
+    </view>
+
+    <view wx:if="{{items.length === 0}}" class="empty-note">还没有任务，点击“+ 添加任务”开始建立真实计划。</view>
+  </view>
+
+  <button class="save-button" loading="{{saving}}" bindtap="onSave">
+    {{teacherMode ? '保存为正式最新版' : '保存并提交老师审核'}}
+  </button>
+
+  <view wx:if="{{!teacherMode && versions.length}}" class="history-card surface">
+    <text class="section-title">最近 3 个版本</text>
+    <view wx:for="{{versions}}" wx:key="id" class="history-row">
+      <view>
+        <text class="history-title">{{item.title}}</text>
+        <text class="history-time">{{item.createdAt}}</text>
+      </view>
+      <text class="history-status {{item.status}}">{{item.status === 'pending' ? '待审核' : item.status === 'approved' ? '已通过' : '已否决'}}</text>
+    </view>
+  </view>
+</view>

@@ -191,6 +191,11 @@ Page({
       return
     }
 
+    if (key === 'students' || key === 'schedule' || key === 'records') {
+      wx.navigateTo({ url: '/pages/teacher-students/teacher-students' })
+      return
+    }
+
     if (key.startsWith('admin-')) {
       wx.navigateTo({
         url: `/pages/admin/admin?section=${encodeURIComponent(key)}`,

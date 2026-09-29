@@ -1,0 +1,40 @@
+<view class="page-shell">
+  <view class="import-head">
+    <text class="page-title">导入课表</text>
+    <text class="page-desc">直接使用微信文件选择、相册/相机与 CloudBase。表格按单元格解析；图片由云开发多模态模型识别，不做假解析。</text>
+  </view>
+
+  <view class="import-actions">
+    <button class="import-card surface" bindtap="onChooseSpreadsheet" loading="{{parsing}}">
+      <text class="import-icon">表</text>
+      <text class="import-title">微信文件 / Excel / CSV</text>
+      <text class="import-desc">从聊天文件中选择 xlsx、xls 或 csv</text>
+    </button>
+    <button class="import-card surface" bindtap="onChooseImage" loading="{{parsing}}">
+      <text class="import-icon">图</text>
+      <text class="import-title">课表截图 / 拍照</text>
+      <text class="import-desc">从相册选择或直接拍摄课表</text>
+    </button>
+  </view>
+
+  <view wx:if="{{fileName}}" class="file-note">当前文件：{{fileName}}{{parsing ? ' · 解析中…' : ''}}</view>
+
+  <view wx:if="{{schedule}}" class="result-section">
+    <view class="section-head">
+      <text class="section-title">解析结果</text>
+      <text class="section-note">{{schedule.courses.length}} 门课程</text>
+    </view>
+
+    <view wx:for="{{schedule.courses}}" wx:key="index" class="course-card surface">
+      <view>
+        <text class="course-name">{{item.name}}</text>
+        <text class="course-meta">{{item.day}} · {{item.slot}}</text>
+        <text wx:if="{{item.location}}" class="course-meta">{{item.location}}</text>
+        <text wx:if="{{item.teacher}}" class="course-meta">{{item.teacher}}</text>
+        <text wx:if="{{item.weeks}}" class="course-meta">{{item.weeks}}</text>
+      </view>
+    </view>
+
+    <view wx:for="{{schedule.warnings}}" wx:key="*this" class="warning">{{item}}</view>
+  </view>
+</view>

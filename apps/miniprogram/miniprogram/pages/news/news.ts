@@ -13,17 +13,12 @@ type NewsCard = {
 const FALLBACK_FEATURED = {
   id: 'fallback-featured',
   tag: '近期关注',
-  title: '推免准备进入信息密集期，如何建立自己的院校追踪表',
-  summary: '把报名节点、材料要求与目标梯度放进同一套可追踪流程。',
+  title: '真实资讯正在同步',
+  summary: '这里只展示九辰已同步或已审核的真实内容，不再使用示例院校占位。',
   articleUrl: '',
 }
 
-const FALLBACK_ARTICLES: NewsCard[] = [
-  { id: 'fallback-1', school: '示例大学', title: '2027 年优秀大学生夏令营通知', meta: '招生动态 · 09-18', tag: '夏令营', summary: '', articleUrl: '' },
-  { id: 'fallback-2', school: '示例学院', title: '预推免报名材料与时间安排', meta: '招生动态 · 09-17', tag: '预推免', summary: '', articleUrl: '' },
-  { id: 'fallback-3', school: '九辰整理', title: '从大一到大三：不同阶段最该关注什么', meta: '规划方法 · 09-15', tag: '经验', summary: '', articleUrl: '' },
-  { id: 'fallback-4', school: '九辰整理', title: '如何判断一个项目是否值得重点准备', meta: '定位方法 · 09-13', tag: '经验', summary: '', articleUrl: '' },
-]
+const FALLBACK_ARTICLES: NewsCard[] = []
 
 function formatDate(value: string | null) {
   if (!value) return ''

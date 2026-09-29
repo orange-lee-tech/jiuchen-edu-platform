@@ -377,3 +377,94 @@
   color: #7b8190;
   font-size: 17rpx;
 }
+
+
+.entry-state,
+.student-tools {
+  margin: 18rpx 24rpx;
+  padding: 28rpx;
+}
+
+.entry-title,
+.entry-desc,
+.tool-title,
+.tool-desc {
+  display: block;
+}
+
+.entry-title,
+.tool-title {
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.entry-desc,
+.tool-desc {
+  margin-top: 12rpx;
+  color: #7f8590;
+  font-size: 22rpx;
+  line-height: 1.7;
+}
+
+.entry-button,
+.import-button {
+  margin-top: 22rpx;
+  border: 0;
+  border-radius: 16rpx;
+  background: #2f6fed;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.entry-button::after,
+.import-button::after {
+  border: 0;
+}
+
+.student-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.student-tools > view {
+  flex: 1;
+  min-width: 0;
+}
+
+.import-button {
+  flex: none;
+  margin: 0 0 0 18rpx;
+  padding: 0 22rpx;
+  height: 66rpx;
+  line-height: 66rpx;
+}
+
+.plan-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.revision-chip {
+  flex: none;
+  padding: 4rpx 9rpx;
+  border-radius: 999rpx;
+  font-size: 17rpx;
+}
+
+.revision-chip.pending {
+  background: #fff3d7;
+  color: #9a6a00;
+}
+
+.revision-chip.approved {
+  background: #eaf7ef;
+  color: #257a4b;
+}
+
+.revision-chip.none {
+  background: #f1f3f6;
+  color: #8b919a;
+}

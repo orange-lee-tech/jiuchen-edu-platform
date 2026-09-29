@@ -28,7 +28,7 @@
       wx:for="{{quickEntries}}"
       wx:key="title"
       class="quick-item surface"
-      data-index="{{index}}"
+      data-key="{{item.key}}"
       bindtap="onEntryTap"
     >
       <view class="quick-icon {{item.tone}}">{{item.icon}}</view>
