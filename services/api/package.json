@@ -23,14 +23,17 @@
     "db:upgrade:classroom-guidance": "tsx src/db/upgrade-classroom-guidance.ts",
     "data:validate:product-handbook": "tsx src/scripts/validate-product-handbook.ts",
     "db:upgrade:product-knowledge": "tsx src/db/upgrade-product-knowledge.ts",
-    "data:import:product-handbook": "tsx src/scripts/import-product-handbook.ts"
+    "data:import:product-handbook": "tsx src/scripts/import-product-handbook.ts",
+    "db:upgrade:classroom-revisions": "tsx src/db/upgrade-classroom-revisions.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.0",
     "fastify": "^5.0.0",
     "mysql2": "^3.14.0",
-    "zod": "^4.0.0"
+    "zod": "^4.0.0",
+    "@cloudbase/node-sdk": "^3.18.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

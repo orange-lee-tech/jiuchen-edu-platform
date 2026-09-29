@@ -234,3 +234,45 @@ export const planItems = mysqlTable('plan_items', {
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
+
+
+export const planRevisions = mysqlTable('plan_revisions', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  studentId: varchar('student_id', { length: 36 })
+    .notNull()
+    .references(() => students.id),
+  stageCode: varchar('stage_code', { length: 32 }).notNull(),
+  type: mysqlEnum('type', ['gpa', 'english', 'competition', 'research', 'internship']).notNull(),
+  title: varchar('title', { length: 160 }).notNull(),
+  itemsJson: json('items_json').notNull(),
+  editorUserId: varchar('editor_user_id', { length: 36 })
+    .notNull()
+    .references(() => users.id),
+  editorRole: mysqlEnum('editor_role', ['student', 'teacher', 'staff', 'admin']).notNull(),
+  status: mysqlEnum('status', ['pending', 'approved', 'rejected'])
+    .notNull()
+    .default('pending'),
+  reviewNote: varchar('review_note', { length: 500 }),
+  reviewedByUserId: varchar('reviewed_by_user_id', { length: 36 }).references(() => users.id),
+  reviewedAt: timestamp('reviewed_at'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
+export const scheduleImports = mysqlTable('schedule_imports', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 })
+    .notNull()
+    .references(() => users.id),
+  studentId: varchar('student_id', { length: 36 }).references(() => students.id),
+  sourceType: mysqlEnum('source_type', ['spreadsheet', 'image']).notNull(),
+  fileId: varchar('file_id', { length: 1000 }).notNull(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  status: mysqlEnum('status', ['uploaded', 'parsing', 'parsed', 'failed'])
+    .notNull()
+    .default('uploaded'),
+  parsedJson: json('parsed_json'),
+  errorCode: varchar('error_code', { length: 120 }),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})

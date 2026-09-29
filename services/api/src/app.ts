@@ -12,8 +12,9 @@ import { registerNewsRoutes } from './routes/news.js'
 import { registerAssessmentRoutes } from './routes/assessments.js'
 import { registerProductRoutes } from './routes/products.js'
 import { registerBrandRoutes } from './routes/brand.js'
+import { registerClassroomWorkspaceRoutes } from './routes/classroom-workspace.js'
 
-const API_RELEASE = '0.2.1-experience'
+const API_RELEASE = '0.3.0-experience'
 
 export function buildApp(env: AppEnv) {
   const app = Fastify({
@@ -71,6 +72,8 @@ export function buildApp(env: AppEnv) {
         'student_teacher_assignments',
         'student_plans',
         'plan_items',
+        'plan_revisions',
+        'schedule_imports',
       ]
 
       for (const table of requiredTables) {
@@ -145,6 +148,7 @@ export function buildApp(env: AppEnv) {
   registerAssessmentRoutes(app, database)
   registerProductRoutes(app, database)
   registerBrandRoutes(app)
+  registerClassroomWorkspaceRoutes(app, database)
   registerAdminRoutes(app, database, env)
 
   app.addHook('onClose', async () => {
