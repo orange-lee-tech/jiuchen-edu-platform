@@ -316,10 +316,15 @@ export async function getMyPlanVersions(
   return result.revisions
 }
 
-export type TeacherStudent = StudentSummary & {
+export type TeacherStudent = {
   assignmentId: string
   relationship: 'primary' | 'support'
   assignedStageCode: string | null
+  studentId: string
+  name: string
+  university: string | null
+  major: string | null
+  currentStage: string | null
 }
 
 export async function getTeacherStudents(): Promise<TeacherStudent[]> {
