@@ -4,6 +4,9 @@ import {
   type ParsedSchedule,
 } from '../../utils/request'
 
+const MAX_SPREADSHEET_BYTES = 5 * 1024 * 1024
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
 function safeName(value: string) {
   return value.replace(/[^0-9A-Za-z._-]/g, '_')
 }
@@ -11,7 +14,7 @@ function safeName(value: string) {
 function uploadCloudFile(filePath: string, fileName: string): Promise<string> {
   const auth = getSavedAuthResult()
   if (!auth) return Promise.reject(new Error('请先登录'))
-  const identity = auth.businessIdentity?.businessId || auth.user.id
+  const identity = auth.user.id
   const cloudPath = `schedule-imports/${safeName(identity)}/${Date.now()}-${safeName(fileName)}`
 
   return new Promise((resolve, reject) => {
@@ -43,7 +46,12 @@ Page({
       success: (result) => {
         const file = result.tempFiles[0]
         if (!file) return
-        void this.uploadAndParse(file.path, file.name || 'schedule.xlsx', 'spreadsheet')
+        void this.uploadAndParse(
+          file.path,
+          file.name || 'schedule.xlsx',
+          'spreadsheet',
+          file.size ?? 0,
+        )
       },
     })
   },
@@ -57,7 +65,12 @@ Page({
         const file = result.tempFiles[0]
         if (!file) return
         const extension = file.tempFilePath.toLowerCase().includes('.png') ? 'png' : 'jpg'
-        void this.uploadAndParse(file.tempFilePath, `schedule.${extension}`, 'image')
+        void this.uploadAndParse(
+          file.tempFilePath,
+          `schedule.${extension}`,
+          'image',
+          file.size ?? 0,
+        )
       },
     })
   },
@@ -66,8 +79,13 @@ Page({
     filePath: string,
     fileName: string,
     sourceType: 'spreadsheet' | 'image',
+    fileSize = 0,
   ) {
     try {
+      const maxBytes = sourceType === 'image' ? MAX_IMAGE_BYTES : MAX_SPREADSHEET_BYTES
+      if (fileSize > maxBytes) {
+        throw new Error(sourceType === 'image' ? '图片不能超过 5MB' : '课表文件不能超过 5MB')
+      }
       this.setData({ parsing: true, fileName, schedule: null })
       const fileID = await uploadCloudFile(filePath, fileName)
       const result = await createScheduleImport({ fileID, fileName, sourceType })
