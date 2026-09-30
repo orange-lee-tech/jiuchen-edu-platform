@@ -1,5 +1,7 @@
 import tcb from '@cloudbase/node-sdk'
 import * as XLSX from 'xlsx'
+import { z } from 'zod'
+import type { AppEnv } from '../config/env.js'
 
 export type ParsedScheduleCourse = {
   name: string
@@ -21,6 +23,13 @@ export type ParsedSchedule = {
   warnings: string[]
 }
 
+export const MAX_SCHEDULE_SPREADSHEET_BYTES = 5 * 1024 * 1024
+export const MAX_SCHEDULE_IMAGE_BYTES = 5 * 1024 * 1024
+export const MAX_SCHEDULE_SHEETS = 20
+export const MAX_SCHEDULE_ROWS = 2000
+export const MAX_SCHEDULE_COLUMNS = 100
+export const MAX_SCHEDULE_COURSES = 500
+
 const DAY_ALIASES: Array<{ index: number; label: string; tokens: string[] }> = [
   { index: 1, label: '周一', tokens: ['周一', '星期一', '礼拜一', '一'] },
   { index: 2, label: '周二', tokens: ['周二', '星期二', '礼拜二', '二'] },
@@ -30,6 +39,25 @@ const DAY_ALIASES: Array<{ index: number; label: string; tokens: string[] }> = [
   { index: 6, label: '周六', tokens: ['周六', '星期六', '礼拜六', '六'] },
   { index: 7, label: '周日', tokens: ['周日', '星期日', '星期天', '礼拜日', '日', '天'] },
 ]
+
+const courseSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  day: z.string().trim().min(1).max(16),
+  dayIndex: z.number().int().min(1).max(7),
+  slot: z.string().trim().min(1).max(80),
+  startSection: z.number().int().min(1).max(50).nullable(),
+  endSection: z.number().int().min(1).max(50).nullable(),
+  time: z.string().trim().max(80).nullable(),
+  location: z.string().trim().max(160).nullable(),
+  teacher: z.string().trim().max(120).nullable(),
+  weeks: z.string().trim().max(160).nullable(),
+  raw: z.string().max(1000),
+})
+
+const schedulePayloadSchema = z.object({
+  courses: z.array(courseSchema).max(MAX_SCHEDULE_COURSES),
+  warnings: z.array(z.string().trim().min(1).max(300)).max(20).optional().default([]),
+})
 
 function text(value: unknown) {
   return String(value ?? '').replace(/\r/g, '').trim()
@@ -70,8 +98,76 @@ function parseCourseCell(rawValue: string) {
   return { name, location, teacher, weeks, time }
 }
 
+function canonicalSchedule(
+  sourceType: ParsedSchedule['sourceType'],
+  payload: unknown,
+  errorCode: string,
+): ParsedSchedule {
+  const parsed = schedulePayloadSchema.safeParse(payload)
+  if (!parsed.success) {
+    throw new Error(errorCode)
+  }
+
+  return {
+    sourceType,
+    courses: parsed.data.courses.map((course) => ({
+      ...course,
+      day: DAY_ALIASES[course.dayIndex - 1]?.label ?? course.day,
+    })),
+    warnings: parsed.data.warnings,
+  }
+}
+
+export function maxScheduleUploadBytes(sourceType: ParsedSchedule['sourceType']) {
+  return sourceType === 'image'
+    ? MAX_SCHEDULE_IMAGE_BYTES
+    : MAX_SCHEDULE_SPREADSHEET_BYTES
+}
+
+export function isSupportedScheduleFileName(
+  fileName: string,
+  sourceType: ParsedSchedule['sourceType'],
+) {
+  const lower = fileName.toLowerCase()
+  if (sourceType === 'image') {
+    return ['.jpg', '.jpeg', '.png', '.webp'].some((ext) => lower.endsWith(ext))
+  }
+  return ['.xlsx', '.xls', '.csv'].some((ext) => lower.endsWith(ext))
+}
+
+function safeCloudPathSegment(value: string) {
+  return value.replace(/[^0-9A-Za-z._-]/g, '_')
+}
+
+export function isOwnedScheduleImportFile(fileID: string, userId: string) {
+  if (!fileID.startsWith('cloud://')) return false
+  const expected = '/schedule-imports/' + safeCloudPathSegment(userId) + '/'
+  return fileID.includes(expected)
+}
+
+function createCloudBaseApp(env: AppEnv) {
+  return tcb.init({
+    env: env.CLOUDBASE_ENV_ID ?? tcb.SYMBOL_CURRENT_ENV,
+    ...(env.CLOUDBASE_APIKEY ? { accessKey: env.CLOUDBASE_APIKEY } : {}),
+    timeout: 60_000,
+  })
+}
+
 export function parseSpreadsheetSchedule(buffer: Buffer): ParsedSchedule {
-  const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false })
+  if (buffer.byteLength > MAX_SCHEDULE_SPREADSHEET_BYTES) {
+    throw new Error('schedule_spreadsheet_too_large')
+  }
+
+  const workbook = XLSX.read(buffer, {
+    type: 'buffer',
+    cellDates: false,
+    sheetRows: MAX_SCHEDULE_ROWS + 1,
+  })
+
+  if (workbook.SheetNames.length > MAX_SCHEDULE_SHEETS) {
+    throw new Error('schedule_too_many_sheets')
+  }
+
   const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
   if (!firstSheet) {
     throw new Error('schedule_spreadsheet_empty')
@@ -85,6 +181,12 @@ export function parseSpreadsheetSchedule(buffer: Buffer): ParsedSchedule {
 
   if (rows.length === 0) {
     throw new Error('schedule_spreadsheet_empty')
+  }
+  if (rows.length > MAX_SCHEDULE_ROWS) {
+    throw new Error('schedule_too_many_rows')
+  }
+  if (rows.some((row) => row.length > MAX_SCHEDULE_COLUMNS)) {
+    throw new Error('schedule_too_many_columns')
   }
 
   let headerIndex = -1
@@ -114,7 +216,7 @@ export function parseSpreadsheetSchedule(buffer: Buffer): ParsedSchedule {
   const courses: ParsedScheduleCourse[] = []
   for (let rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex] ?? []
-    const slot = text(row[0]) || `第${rowIndex - headerIndex}行`
+    const slot = text(row[0]) || '第' + (rowIndex - headerIndex) + '行'
     const sections = sectionRange(slot)
 
     for (const column of dayColumns) {
@@ -135,17 +237,24 @@ export function parseSpreadsheetSchedule(buffer: Buffer): ParsedSchedule {
         weeks: parsed.weeks,
         raw,
       })
+
+      if (courses.length > MAX_SCHEDULE_COURSES) {
+        throw new Error('schedule_too_many_courses')
+      }
     }
   }
 
-  return {
-    sourceType: 'spreadsheet',
-    courses,
-    warnings:
-      courses.length > 0
-        ? []
-        : ['已识别星期表头，但未检测到课程单元格，请检查表格布局。'],
-  }
+  return canonicalSchedule(
+    'spreadsheet',
+    {
+      courses,
+      warnings:
+        courses.length > 0
+          ? []
+          : ['已识别星期表头，但未检测到课程单元格，请检查表格布局。'],
+    },
+    'schedule_spreadsheet_invalid',
+  )
 }
 
 function mimeFromName(fileName: string) {
@@ -169,15 +278,17 @@ function extractJson(textValue: string) {
 export async function parseImageSchedule(
   buffer: Buffer,
   fileName: string,
+  env: AppEnv,
 ): Promise<ParsedSchedule> {
-  if (buffer.byteLength > 5 * 1024 * 1024) {
+  if (buffer.byteLength > MAX_SCHEDULE_IMAGE_BYTES) {
     throw new Error('schedule_image_too_large')
   }
 
-  const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV })
+  const app = createCloudBaseApp(env)
   const ai = app.ai()
   const model = ai.createModel('cloudbase')
-  const dataUrl = `data:${mimeFromName(fileName)};base64,${buffer.toString('base64')}`
+  const dataUrl =
+    'data:' + mimeFromName(fileName) + ';base64,' + buffer.toString('base64')
 
   const result = await model.generateText({
     model: 'qwen3.5-plus',
@@ -199,21 +310,38 @@ export async function parseImageSchedule(
     ],
   } as never)
 
-  const parsed = extractJson(result.text) as {
-    courses?: ParsedScheduleCourse[]
-    warnings?: string[]
-  }
-
-  return {
-    sourceType: 'image',
-    courses: Array.isArray(parsed.courses) ? parsed.courses : [],
-    warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
-  }
+  return canonicalSchedule(
+    'image',
+    extractJson(result.text),
+    'schedule_ai_invalid_payload',
+  )
 }
 
-export async function downloadCloudFile(fileID: string) {
-  const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV })
+export async function downloadCloudFile(
+  fileID: string,
+  env: AppEnv,
+  sourceType: ParsedSchedule['sourceType'],
+) {
+  const app = createCloudBaseApp(env)
   const result = await app.downloadFile({ fileID })
   if (!result.fileContent) throw new Error('schedule_file_download_failed')
-  return Buffer.from(result.fileContent)
+
+  const buffer = Buffer.from(result.fileContent)
+  if (buffer.byteLength > maxScheduleUploadBytes(sourceType)) {
+    throw new Error(
+      sourceType === 'image'
+        ? 'schedule_image_too_large'
+        : 'schedule_spreadsheet_too_large',
+    )
+  }
+  return buffer
+}
+
+export async function deleteCloudFile(fileID: string, env: AppEnv) {
+  const app = createCloudBaseApp(env)
+  const result = await app.deleteFile({ fileList: [fileID] })
+  const item = result.fileList?.[0]
+  if (item?.code && item.code !== 'SUCCESS') {
+    throw new Error('schedule_file_cleanup_failed')
+  }
 }
