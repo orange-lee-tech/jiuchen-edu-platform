@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { and, asc, desc, eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
+import type { AppEnv } from '../config/env.js'
 import type { DatabaseContext } from '../db/client.js'
 import {
   coachingRecords,
@@ -22,7 +23,10 @@ import {
   type PlanType,
 } from '../domain/classroom.js'
 import {
+  deleteCloudFile,
   downloadCloudFile,
+  isOwnedScheduleImportFile,
+  isSupportedScheduleFileName,
   parseImageSchedule,
   parseSpreadsheetSchedule,
 } from '../services/schedule-parser.js'
@@ -350,6 +354,7 @@ async function loadClassroom(
 export function registerClassroomWorkspaceRoutes(
   app: FastifyInstance,
   database: DatabaseContext,
+  env: AppEnv,
 ) {
   app.get<{ Querystring: { stage?: string } }>('/me/classroom', async (request, reply) => {
     if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
@@ -683,6 +688,13 @@ export function registerClassroomWorkspaceRoutes(
     const parsed = scheduleImportSchema.safeParse(request.body)
     if (!parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_schedule_import_payload' })
 
+    if (!isSupportedScheduleFileName(parsed.data.fileName, parsed.data.sourceType)) {
+      return reply.code(400).send({ ok: false, error: 'schedule_file_type_not_allowed' })
+    }
+    if (!isOwnedScheduleImportFile(parsed.data.fileID, session.userId)) {
+      return reply.code(400).send({ ok: false, error: 'schedule_file_not_owned' })
+    }
+
     const importId = randomUUID()
     await database.db.insert(scheduleImports).values({
       id: importId,
@@ -695,11 +707,15 @@ export function registerClassroomWorkspaceRoutes(
     })
 
     try {
-      const buffer = await downloadCloudFile(parsed.data.fileID)
+      const buffer = await downloadCloudFile(
+        parsed.data.fileID,
+        env,
+        parsed.data.sourceType,
+      )
       const schedule =
         parsed.data.sourceType === 'spreadsheet'
           ? parseSpreadsheetSchedule(buffer)
-          : await parseImageSchedule(buffer, parsed.data.fileName)
+          : await parseImageSchedule(buffer, parsed.data.fileName, env)
 
       await database.db
         .update(scheduleImports)
@@ -714,6 +730,15 @@ export function registerClassroomWorkspaceRoutes(
         .set({ status: 'failed', errorCode: code })
         .where(eq(scheduleImports.id, importId))
       return reply.code(422).send({ ok: false, error: code })
+    } finally {
+      try {
+        await deleteCloudFile(parsed.data.fileID, env)
+      } catch (cleanupError) {
+        app.log.warn(
+          { err: cleanupError, importId },
+          'Schedule import temporary source cleanup failed',
+        )
+      }
     }
   })
 
