@@ -43,6 +43,7 @@ export function buildApp(env: AppEnv) {
       wechatAppIdConfigured: Boolean(env.WECHAT_APP_ID),
       wechatAppSecretConfigured: Boolean(env.WECHAT_APP_SECRET),
       officialAccountConfigured: Boolean(env.WECHAT_OA_APP_ID && env.WECHAT_OA_APP_SECRET),
+      cloudbaseExternalConfigured: Boolean(env.CLOUDBASE_ENV_ID && env.CLOUDBASE_APIKEY),
     },
   }))
 
@@ -148,7 +149,7 @@ export function buildApp(env: AppEnv) {
   registerAssessmentRoutes(app, database)
   registerProductRoutes(app, database)
   registerBrandRoutes(app)
-  registerClassroomWorkspaceRoutes(app, database)
+  registerClassroomWorkspaceRoutes(app, database, env)
   registerAdminRoutes(app, database, env)
 
   app.addHook('onClose', async () => {
