@@ -6,6 +6,8 @@ Use these texts to open parallel ChatGPT/Codex conversations. Each lane must ret
 
 Repository: `orange-lee-tech/jiuchen-edu-platform`
 Active integration branch: `p1/foundation`
+
+Parallelism is by responsibility, not by branch count. Do **not** create a new Git branch merely because a lane exists. Only create a temporary branch/worktree if two lanes truly need to edit code concurrently and the main control chat explicitly approves it. Otherwise keep one integration branch and serialize commits.
 Read first:
 - `CONSTITUTION.md`
 - `AGENTS.md`
