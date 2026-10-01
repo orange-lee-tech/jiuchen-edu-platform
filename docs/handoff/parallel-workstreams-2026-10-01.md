@@ -47,7 +47,9 @@ Return a concise handoff with commit SHA, changed files, tests, migration/env no
 
 You are responsible only for production deployment design/execution on the shared Alibaba ECS.
 
-Read `ops/ecs/AGENTS.md` and install/copy it as `/opt/jiuchen-api/AGENTS.md` before allowing Codex to operate there.
+Start in **read-only planning/preflight mode**. Do not perform ECS write operations until a least-privilege deployment user and command boundary have been established and the main control chat explicitly approves writes.
+
+Read `ops/ecs/AGENTS.md`. A copy may live at `/opt/jiuchen-api/AGENTS.md` as an operational contract, but it is **not** a security boundary and must not be counted as one. Codex must not receive unrestricted root access for routine deployment work.
 
 Known facts:
 - Existing company website path must not be changed.
@@ -60,12 +62,13 @@ Known facts:
 - formal deployment path should be `/opt/jiuchen-api`.
 
 Objectives:
-1. Create isolated immutable release layout under `/opt/jiuchen-api`.
-2. Pin an isolated Node 22 runtime without replacing global Node/system Python.
-3. Create permanent `jiuchen-api.service` with resource limits, root-only env, restart/health/rollback discipline.
-4. Produce preflight/deploy/rollback procedure.
-5. Do not touch NPM/HTTPS until API release itself is healthy.
-6. After explicit approval, add only a new `api.jiuchenedu.com` proxy/HTTPS entry; never modify the existing website proxy host.
+1. First design and verify a dedicated unprivileged deployment user (for example `jiuchen-deploy`) and a narrowly allowlisted sudo/command boundary for Jiuchen-only operations.
+2. Create isolated immutable release layout under `/opt/jiuchen-api`.
+3. Pin an isolated Node 22 runtime without replacing global Node/system Python.
+4. Create permanent `jiuchen-api.service` with resource limits, root-only env, restart/health/rollback discipline.
+5. Produce preflight/deploy/rollback procedure.
+6. Do not touch NPM/HTTPS until API release itself is healthy.
+7. After explicit approval, add only a new `api.jiuchenedu.com` proxy/HTTPS entry; never modify the existing website proxy host.
 
 Do not modify application business logic in this lane.
 
