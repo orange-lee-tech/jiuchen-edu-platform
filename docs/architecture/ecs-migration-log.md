@@ -111,6 +111,24 @@ Current known dependencies:
    - backend currently calls CloudBase AI
    - model configured in current code: `qwen3.5-plus`
 
+### ECS -> CloudBase validation
+
+Validated on 2026-10-01 with the dedicated `jiuchen-ecs` CAM identity:
+
+- CloudBase Storage upload: **PASSED**
+- CloudBase Storage download: **PASSED**
+- CloudBase Storage delete: **PASSED**
+- CloudBase AI call from ECS: **BLOCKED**
+- AI response: HTTP `429`
+
+Interpretation:
+
+- CAM credentials and environment-scoped access are confirmed working because Storage upload/download/delete succeeds.
+- The AI failure is no longer treated as a CAM authentication failure.
+- CloudBase documentation states that HTTP 429 can be caused by Token quota / plan quota or concurrency limits.
+- The currently configured `qwen3.5-plus` model was scheduled by CloudBase to be taken offline from 2026-09-08; the schedule-image provider must therefore be reviewed before production.
+- Do not upgrade the CloudBase plan merely to make this smoke test green. First determine whether to use the current supported CloudBase model under a resource-point plan or replace the AI provider with a direct model API on ECS.
+
 ## CloudBase machine identity
 
 Status: **CREATED**
