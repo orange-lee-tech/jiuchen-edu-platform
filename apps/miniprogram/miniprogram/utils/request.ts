@@ -188,7 +188,7 @@ export function request<T>(
 ): Promise<T> {
   const sessionToken = getApiSessionToken()
 
-  if (runtimeConfig.apiTransport === 'cloud') {
+  if (runtimeConfig.apiTransport === 'cloudrun') {
     return new Promise((resolve, reject) => {
       wx.cloud.callContainer({
         config: {
