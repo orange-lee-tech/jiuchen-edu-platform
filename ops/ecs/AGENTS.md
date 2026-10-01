@@ -6,6 +6,8 @@ This file is intended to live at `/opt/jiuchen-api/AGENTS.md` and governs any Co
 
 The ECS already hosts production company assets. Preserve existing services first. Jiuchen API work must be isolated, reversible, observable, and limited to its own runtime.
 
+This file is a behavioral guardrail, not an OS security boundary. Prefer running Codex under a dedicated unprivileged deployment user (for example `jiuchen-deploy`) rather than unrestricted root. Any sudo capability should be narrowly allowlisted to Jiuchen-owned paths/actions only. Do not grant Codex general root shell access for routine work.
+
 ## Allowed working area
 
 By default, write only under:
