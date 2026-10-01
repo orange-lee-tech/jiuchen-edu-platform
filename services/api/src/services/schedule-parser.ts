@@ -1,7 +1,6 @@
-import tcb from '@cloudbase/node-sdk'
 import * as XLSX from 'xlsx'
 import { z } from 'zod'
-import type { AppEnv } from '../config/env.js'
+import type { JsonModelProvider } from './ai-provider.js'
 
 export type ParsedScheduleCourse = {
   name: string
@@ -145,14 +144,6 @@ export function isOwnedScheduleImportFile(fileID: string, userId: string) {
   return fileID.includes(expected)
 }
 
-function createCloudBaseApp(env: AppEnv) {
-  return tcb.init({
-    env: env.CLOUDBASE_ENV_ID ?? tcb.SYMBOL_CURRENT_ENV,
-    ...(env.CLOUDBASE_APIKEY ? { accessKey: env.CLOUDBASE_APIKEY } : {}),
-    timeout: 60_000,
-  })
-}
-
 export function parseSpreadsheetSchedule(buffer: Buffer): ParsedSchedule {
   if (buffer.byteLength > MAX_SCHEDULE_SPREADSHEET_BYTES) {
     throw new Error('schedule_spreadsheet_too_large')
@@ -264,84 +255,42 @@ function mimeFromName(fileName: string) {
   return 'image/jpeg'
 }
 
-function extractJson(textValue: string) {
-  const trimmed = textValue.trim()
-  const unfenced = trimmed
-    .replace(/^\`\`\`(?:json)?\s*/i, '')
-    .replace(/\s*\`\`\`$/, '')
-  const start = unfenced.indexOf('{')
-  const end = unfenced.lastIndexOf('}')
-  if (start < 0 || end <= start) throw new Error('schedule_ai_invalid_json')
-  return JSON.parse(unfenced.slice(start, end + 1)) as unknown
-}
-
 export async function parseImageSchedule(
   buffer: Buffer,
   fileName: string,
-  env: AppEnv,
+  provider: JsonModelProvider,
 ): Promise<ParsedSchedule> {
   if (buffer.byteLength > MAX_SCHEDULE_IMAGE_BYTES) {
     throw new Error('schedule_image_too_large')
   }
 
-  const app = createCloudBaseApp(env)
-  const ai = app.ai()
-  const model = ai.createModel('cloudbase')
+  if (!provider.isConfigured()) {
+    throw new Error('schedule_ai_provider_not_configured')
+  }
+
   const dataUrl =
     'data:' + mimeFromName(fileName) + ';base64,' + buffer.toString('base64')
 
-  const result = await model.generateText({
-    model: 'qwen3.5-plus',
-    messages: [
+  const payload = await provider.generateJson({
+    system:
+      '你是大学课程表图片解析器。只输出一个 JSON 对象，不要 Markdown，不要解释。必须忠于图片；看不清的字段填 null，不要编造。',
+    user: [
       {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text:
-              '这是大学课程表截图。请只输出 JSON，不要解释。格式：{"courses":[{"name":"课程名","day":"周一","dayIndex":1,"slot":"第1-2节","startSection":1,"endSection":2,"time":null,"location":null,"teacher":null,"weeks":null,"raw":"原始单元格文字"}],"warnings":[]}。必须忠于图片；看不清的字段填 null，不要编造。',
-          },
-          {
-            type: 'image_url',
-            image_url: { url: dataUrl },
-          },
-        ],
+        type: 'text',
+        text:
+          '请按以下结构提取课程表：{"courses":[{"name":"课程名","day":"周一","dayIndex":1,"slot":"第1-2节","startSection":1,"endSection":2,"time":null,"location":null,"teacher":null,"weeks":null,"raw":"原始单元格文字"}],"warnings":[]}。',
+      },
+      {
+        type: 'image_url',
+        image_url: { url: dataUrl },
       },
     ],
-  } as never)
+    maxTokens: 3500,
+  })
 
   return canonicalSchedule(
     'image',
-    extractJson(result.text),
+    payload,
     'schedule_ai_invalid_payload',
   )
-}
-
-export async function downloadCloudFile(
-  fileID: string,
-  env: AppEnv,
-  sourceType: ParsedSchedule['sourceType'],
-) {
-  const app = createCloudBaseApp(env)
-  const result = await app.downloadFile({ fileID })
-  if (!result.fileContent) throw new Error('schedule_file_download_failed')
-
-  const buffer = Buffer.from(result.fileContent)
-  if (buffer.byteLength > maxScheduleUploadBytes(sourceType)) {
-    throw new Error(
-      sourceType === 'image'
-        ? 'schedule_image_too_large'
-        : 'schedule_spreadsheet_too_large',
-    )
-  }
-  return buffer
-}
-
-export async function deleteCloudFile(fileID: string, env: AppEnv) {
-  const app = createCloudBaseApp(env)
-  const result = await app.deleteFile({ fileList: [fileID] })
-  const item = result.fileList?.[0]
-  if (item?.code && item.code !== 'SUCCESS') {
-    throw new Error('schedule_file_cleanup_failed')
-  }
 }

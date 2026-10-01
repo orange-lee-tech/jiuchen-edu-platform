@@ -26,6 +26,20 @@ const envSchema = z.object({
   WECHAT_OA_APP_SECRET: optionalNonEmptyString,
   CLOUDBASE_ENV_ID: optionalNonEmptyString,
   CLOUDBASE_APIKEY: optionalNonEmptyString,
+  TENCENTCLOUD_SECRETID: optionalNonEmptyString,
+  TENCENTCLOUD_SECRETKEY: optionalNonEmptyString,
+  ASSESSMENT_AI_PROVIDER: optionalNonEmptyString,
+  ASSESSMENT_AI_BASE_URL: optionalNonEmptyString,
+  ASSESSMENT_AI_API_KEY: optionalNonEmptyString,
+  ASSESSMENT_AI_MODEL: optionalNonEmptyString,
+  SCHEDULE_AI_PROVIDER: optionalNonEmptyString,
+  SCHEDULE_AI_BASE_URL: optionalNonEmptyString,
+  SCHEDULE_AI_API_KEY: optionalNonEmptyString,
+  SCHEDULE_AI_MODEL: optionalNonEmptyString,
+  CUSTOMER_AI_PROVIDER: optionalNonEmptyString,
+  CUSTOMER_AI_BASE_URL: optionalNonEmptyString,
+  CUSTOMER_AI_API_KEY: optionalNonEmptyString,
+  CUSTOMER_AI_MODEL: optionalNonEmptyString,
 })
 
 export type AppEnv = z.infer<typeof envSchema>

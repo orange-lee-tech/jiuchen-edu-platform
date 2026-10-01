@@ -1,10 +1,15 @@
 import { createHash } from 'node:crypto'
+import type { AppEnv } from '../config/env.js'
 import type {
   AssessmentEvidenceItem,
   AssessmentInput,
   AssessmentOutput,
 } from '../domain/assessment.js'
 import { validateAssessmentOutput } from '../domain/assessment.js'
+import {
+  createAssessmentAIProvider,
+  type JsonModelProvider,
+} from './ai-provider.js'
 
 export type AssessmentKnowledgeContext = {
   version: string
@@ -51,7 +56,7 @@ export class AssessmentEvidenceReferenceError extends Error {
 
 export class AssessmentEvidenceConflictError extends Error {
   constructor(ref: string) {
-    super(`assessment_evidence_ref_conflict:${ref}`)
+    super('assessment_evidence_ref_conflict:' + ref)
     this.name = 'AssessmentEvidenceConflictError'
   }
 }
@@ -100,17 +105,8 @@ export class CompositeAssessmentRetriever implements AssessmentRetriever {
       .slice(0, 20)
 
     return {
-      version: `knowledge-composite-${digest}`,
+      version: 'knowledge-composite-' + digest,
       evidence,
-    }
-  }
-}
-
-class EmptyAssessmentRetriever implements AssessmentRetriever {
-  async retrieve(): Promise<AssessmentKnowledgeContext> {
-    return {
-      version: 'knowledge-empty-v0',
-      evidence: [],
     }
   }
 }
@@ -128,10 +124,57 @@ class UnconfiguredAssessmentProvider implements AssessmentModelProvider {
   }
 }
 
+class JsonAssessmentModelProvider implements AssessmentModelProvider {
+  constructor(private readonly modelProvider: JsonModelProvider) {}
+
+  get provider() {
+    return this.modelProvider.provider
+  }
+
+  get model() {
+    return this.modelProvider.model
+  }
+
+  isConfigured() {
+    return this.modelProvider.isConfigured()
+  }
+
+  async analyze(input: {
+    assessment: AssessmentInput
+    knowledge: AssessmentKnowledgeContext
+  }): Promise<unknown> {
+    if (!this.isConfigured()) {
+      throw new AssessmentProviderUnavailableError()
+    }
+
+    return this.modelProvider.generateJson({
+      system:
+        '你是九辰教育保研评估引擎。只输出一个 JSON 对象，不要 Markdown，不要解释。' +
+        '输出必须匹配 assessment-output-v1：包含 profileSummary、strengths、risks、targetAssessments、recommendedActions、similarCases、uncertainties、disclaimer。' +
+        '禁止生成精确录取概率。禁止发明 evidence ref、案例、院校事实或来源。' +
+        'strengths/risks 可以引用 input: 前缀的用户输入证据；每个 targetAssessments 必须引用至少一条 knowledge.evidence 中真实存在的非 input 证据。' +
+        'similarCases 只能引用 kind=case 的真实 evidence。资料不足时明确写入 uncertainties，并使用 insufficient_data，而不是编造结论。',
+      user:
+        '请根据以下结构化输入和证据快照完成评估：\n' +
+        JSON.stringify(input),
+      maxTokens: 4500,
+    })
+  }
+}
+
 export function createUnconfiguredAssessmentRuntime(): AssessmentRuntime {
   return {
     retriever: new CompositeAssessmentRetriever([]),
     provider: new UnconfiguredAssessmentProvider(),
+  }
+}
+
+export function createAssessmentRuntimeFromEnv(env: AppEnv): AssessmentRuntime {
+  return {
+    retriever: new CompositeAssessmentRetriever([]),
+    provider: new JsonAssessmentModelProvider(
+      createAssessmentAIProvider(env),
+    ),
   }
 }
 

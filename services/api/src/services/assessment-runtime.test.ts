@@ -5,6 +5,7 @@ import {
   AssessmentEvidenceReferenceError,
   AssessmentProviderUnavailableError,
   CompositeAssessmentRetriever,
+  createAssessmentRuntimeFromEnv,
   createUnconfiguredAssessmentRuntime,
   executeAssessment,
   type AssessmentKnowledgeSource,
@@ -294,4 +295,35 @@ test('composite retriever rejects duplicate evidence refs across sources', async
     retriever.retrieve(input),
     AssessmentEvidenceConflictError,
   )
+})
+
+
+test('assessment runtime uses only assessment-scoped AI configuration', () => {
+  const runtime = createAssessmentRuntimeFromEnv({
+    NODE_ENV: 'test',
+    HOST: '127.0.0.1',
+    PORT: 3000,
+    ASSESSMENT_AI_PROVIDER: 'assessment-test',
+    ASSESSMENT_AI_BASE_URL: 'https://assessment.example/v1',
+    ASSESSMENT_AI_API_KEY: 'assessment-key',
+    ASSESSMENT_AI_MODEL: 'assessment-model',
+    CUSTOMER_AI_BASE_URL: 'https://customer.example/v1',
+    CUSTOMER_AI_API_KEY: 'customer-key',
+    CUSTOMER_AI_MODEL: 'customer-model',
+  })
+
+  assert.equal(runtime.provider.isConfigured(), true)
+  assert.equal(runtime.provider.provider, 'assessment-test')
+  assert.equal(runtime.provider.model, 'assessment-model')
+
+  const customerOnlyRuntime = createAssessmentRuntimeFromEnv({
+    NODE_ENV: 'test',
+    HOST: '127.0.0.1',
+    PORT: 3000,
+    CUSTOMER_AI_BASE_URL: 'https://customer.example/v1',
+    CUSTOMER_AI_API_KEY: 'customer-key',
+    CUSTOMER_AI_MODEL: 'customer-model',
+  })
+
+  assert.equal(customerOnlyRuntime.provider.isConfigured(), false)
 })

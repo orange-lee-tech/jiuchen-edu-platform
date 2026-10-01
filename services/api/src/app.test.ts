@@ -73,13 +73,18 @@ test('GET /health/config exposes only configuration presence', async () => {
     ok: true,
     service: 'jiuchen-api',
     environment: 'test',
-    release: '0.2.1-experience',
+    release: '0.3.0-experience',
     config: {
       databaseUrlConfigured: false,
       splitDatabaseConfigComplete: false,
       wechatAppIdConfigured: false,
       wechatAppSecretConfigured: false,
       officialAccountConfigured: false,
+      cloudbaseCamConfigured: false,
+      cloudbaseExternalConfigured: false,
+      assessmentAiConfigured: false,
+      scheduleAiConfigured: false,
+      customerAiConfigured: false,
     },
   })
 
@@ -140,7 +145,7 @@ test('assessment metadata is available without database or model provider', asyn
     versions: {
       inputSchema: 'assessment-input-v1',
       outputSchema: 'assessment-output-v1',
-      agent: 'assessment-agent-v0',
+      agent: 'assessment-agent-v1',
     },
     limits: {
       targets: 5,

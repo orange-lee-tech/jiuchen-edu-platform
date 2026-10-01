@@ -13,6 +13,11 @@ import { registerAssessmentRoutes } from './routes/assessments.js'
 import { registerProductRoutes } from './routes/products.js'
 import { registerBrandRoutes } from './routes/brand.js'
 import { registerClassroomWorkspaceRoutes } from './routes/classroom-workspace.js'
+import {
+  createCustomerServiceAIProvider,
+  createScheduleAIProvider,
+} from './services/ai-provider.js'
+import { createAssessmentRuntimeFromEnv } from './services/assessment-runtime.js'
 
 const API_RELEASE = '0.3.0-experience'
 
@@ -22,6 +27,16 @@ export function buildApp(env: AppEnv) {
   })
 
   const database = createDatabaseContext(env)
+  const assessmentRuntime = createAssessmentRuntimeFromEnv(env)
+  const scheduleAI = createScheduleAIProvider(env)
+  const customerAI = createCustomerServiceAIProvider(env)
+  const cloudbaseCamConfigured = Boolean(
+    env.TENCENTCLOUD_SECRETID && env.TENCENTCLOUD_SECRETKEY,
+  )
+  const cloudbaseExternalConfigured = Boolean(
+    env.CLOUDBASE_ENV_ID &&
+      (env.CLOUDBASE_APIKEY || cloudbaseCamConfigured),
+  )
 
   app.get('/health/live', async () => ({
     ok: true,
@@ -43,7 +58,11 @@ export function buildApp(env: AppEnv) {
       wechatAppIdConfigured: Boolean(env.WECHAT_APP_ID),
       wechatAppSecretConfigured: Boolean(env.WECHAT_APP_SECRET),
       officialAccountConfigured: Boolean(env.WECHAT_OA_APP_ID && env.WECHAT_OA_APP_SECRET),
-      cloudbaseExternalConfigured: Boolean(env.CLOUDBASE_ENV_ID && env.CLOUDBASE_APIKEY),
+      cloudbaseCamConfigured,
+      cloudbaseExternalConfigured,
+      assessmentAiConfigured: assessmentRuntime.provider.isConfigured(),
+      scheduleAiConfigured: scheduleAI.isConfigured(),
+      customerAiConfigured: customerAI.isConfigured(),
     },
   }))
 
@@ -78,7 +97,7 @@ export function buildApp(env: AppEnv) {
       ]
 
       for (const table of requiredTables) {
-        await database.pool.query(`SELECT 1 FROM \`${table}\` LIMIT 1`)
+        await database.pool.query('SELECT 1 FROM ' + String.fromCharCode(96) + table + String.fromCharCode(96) + ' LIMIT 1')
       }
 
       return {
@@ -146,7 +165,7 @@ export function buildApp(env: AppEnv) {
   registerTeacherRoutes(app, database)
   registerMobileAdminRoutes(app, database, env)
   registerNewsRoutes(app, database)
-  registerAssessmentRoutes(app, database)
+  registerAssessmentRoutes(app, database, assessmentRuntime)
   registerProductRoutes(app, database)
   registerBrandRoutes(app)
   registerClassroomWorkspaceRoutes(app, database, env)

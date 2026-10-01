@@ -5,6 +5,7 @@ import {
   MAX_SCHEDULE_SPREADSHEET_BYTES,
   isOwnedScheduleImportFile,
   isSupportedScheduleFileName,
+  parseImageSchedule,
   parseSpreadsheetSchedule,
 } from './schedule-parser.js'
 
@@ -63,4 +64,60 @@ test('schedule import file type must match the declared source type', () => {
   assert.equal(isSupportedScheduleFileName('schedule.png', 'image'), true)
   assert.equal(isSupportedScheduleFileName('schedule.exe', 'spreadsheet'), false)
   assert.equal(isSupportedScheduleFileName('schedule.xlsx', 'image'), false)
+})
+
+test('parseImageSchedule delegates image inference to an injected provider', async () => {
+  let called = false
+  const provider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async generateJson() {
+      called = true
+      return {
+        courses: [
+          {
+            name: '机器学习',
+            day: '星期二',
+            dayIndex: 2,
+            slot: '第3-4节',
+            startSection: 3,
+            endSection: 4,
+            time: null,
+            location: 'A201',
+            teacher: null,
+            weeks: '1-16周',
+            raw: '机器学习 A201 1-16周',
+          },
+        ],
+        warnings: [],
+      }
+    },
+  }
+
+  const result = await parseImageSchedule(
+    Buffer.from('fake-image'),
+    'schedule.png',
+    provider,
+  )
+
+  assert.equal(called, true)
+  assert.equal(result.sourceType, 'image')
+  assert.equal(result.courses[0]?.day, '周二')
+})
+
+test('parseImageSchedule fails explicitly when image AI is not configured', async () => {
+  const provider = {
+    provider: 'unconfigured',
+    model: 'unconfigured',
+    isConfigured: () => false,
+    async generateJson(): Promise<never> {
+      throw new Error('should_not_run')
+    },
+  }
+
+  await assert.rejects(
+    parseImageSchedule(Buffer.from('fake-image'), 'schedule.png', provider),
+    /schedule_ai_provider_not_configured/,
+  )
 })

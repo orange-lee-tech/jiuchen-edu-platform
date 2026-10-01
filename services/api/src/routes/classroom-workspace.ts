@@ -22,14 +22,14 @@ import {
   isPlanTypeAllowed,
   type PlanType,
 } from '../domain/classroom.js'
+import { createScheduleAIProvider } from '../services/ai-provider.js'
 import {
-  deleteCloudFile,
-  downloadCloudFile,
   isOwnedScheduleImportFile,
   isSupportedScheduleFileName,
   parseImageSchedule,
   parseSpreadsheetSchedule,
 } from '../services/schedule-parser.js'
+import { createScheduleStorageProvider } from '../services/schedule-storage.js'
 import { resolveSessionUser } from '../services/session.js'
 
 const itemSchema = z.object({
@@ -356,6 +356,9 @@ export function registerClassroomWorkspaceRoutes(
   database: DatabaseContext,
   env: AppEnv,
 ) {
+  const scheduleStorage = createScheduleStorageProvider(env)
+  const scheduleImageAI = createScheduleAIProvider(env)
+
   app.get<{ Querystring: { stage?: string } }>('/me/classroom', async (request, reply) => {
     if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
     const session = await resolveSessionUser(request, database)
@@ -707,15 +710,14 @@ export function registerClassroomWorkspaceRoutes(
     })
 
     try {
-      const buffer = await downloadCloudFile(
+      const buffer = await scheduleStorage.download(
         parsed.data.fileID,
-        env,
         parsed.data.sourceType,
       )
       const schedule =
         parsed.data.sourceType === 'spreadsheet'
           ? parseSpreadsheetSchedule(buffer)
-          : await parseImageSchedule(buffer, parsed.data.fileName, env)
+          : await parseImageSchedule(buffer, parsed.data.fileName, scheduleImageAI)
 
       await database.db
         .update(scheduleImports)
@@ -732,7 +734,7 @@ export function registerClassroomWorkspaceRoutes(
       return reply.code(422).send({ ok: false, error: code })
     } finally {
       try {
-        await deleteCloudFile(parsed.data.fileID, env)
+        await scheduleStorage.delete(parsed.data.fileID)
       } catch (cleanupError) {
         app.log.warn(
           { err: cleanupError, importId },
