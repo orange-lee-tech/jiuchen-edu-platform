@@ -118,16 +118,18 @@ Validated on 2026-10-01 with the dedicated `jiuchen-ecs` CAM identity:
 - CloudBase Storage upload: **PASSED**
 - CloudBase Storage download: **PASSED**
 - CloudBase Storage delete: **PASSED**
-- CloudBase AI call from ECS: **BLOCKED**
-- AI response: HTTP `429`
+- CloudBase AI call from ECS using `qwen3.5-plus`: **BLOCKED**
+- CloudBase AI call from ECS using current recommended `hy3`: **BLOCKED**
+- Both AI attempts returned HTTP `429`
 
 Interpretation:
 
 - CAM credentials and environment-scoped access are confirmed working because Storage upload/download/delete succeeds.
-- The AI failure is no longer treated as a CAM authentication failure.
-- CloudBase documentation states that HTTP 429 can be caused by Token quota / plan quota or concurrency limits.
-- The currently configured `qwen3.5-plus` model was scheduled by CloudBase to be taken offline from 2026-09-08; the schedule-image provider must therefore be reviewed before production.
-- Do not upgrade the CloudBase plan merely to make this smoke test green. First determine whether to use the current supported CloudBase model under a resource-point plan or replace the AI provider with a direct model API on ECS.
+- The AI failure is no longer treated as a CAM authentication failure because Storage operations using the same identity succeed.
+- Repeating the AI test with `hy3` also returned HTTP `429`, so the blocker is not specific to the retired `qwen3.5-plus` model name.
+- The current WeChat experience-tier environment is therefore not accepted as a production dependency for ECS-side AI inference without an explicit paid-plan decision.
+- Do not upgrade the CloudBase plan merely to make this smoke test green.
+- Migration decision: keep CloudBase Storage temporarily, but replace schedule-image AI with a provider abstraction callable directly from ECS. CloudBase AI may remain an optional provider later, not a hard dependency.
 
 ## CloudBase machine identity
 
