@@ -111,30 +111,37 @@ Current known dependencies:
    - backend currently calls CloudBase AI
    - model configured in current code: `qwen3.5-plus`
 
-## Authentication work in progress
+## CloudBase machine identity
 
-Goal: give the Alibaba ECS a dedicated Tencent Cloud machine identity rather than using owner-account credentials.
+Status: **CREATED**
 
-Planned identity:
+Validated on 2026-10-01:
 
 - CAM sub-user: `jiuchen-ecs`
-- Purpose: programmatic access from Jiuchen ECS to only the required CloudBase resources
+- Purpose: programmatic access from Jiuchen ECS to required CloudBase resources
 - Console login: disabled
 - Programmatic/API access: enabled
-- SecretId/SecretKey must never be committed to Git or copied into chat
-- Production credentials should ultimately be controlled by Jiuchen, with old development credentials rotated/revoked during handover
+- Phone/email: intentionally not bound because this is a machine identity
+- Attached custom policy: `JiuchenEcsCloudBaseEnvAccess`
+- Policy scope: CloudBase environment `cloud1-d3geim00r03edb212`
+- SecretId/SecretKey were created and stored outside Git/chat
+- Production credentials should ultimately be controlled by Jiuchen, with development credentials rotated/revoked during handover
+
+Security note:
+
+- The environment-scoped policy currently allows `tcb:*` for this single CloudBase environment to unblock migration validation.
+- After Storage/AI calls are verified, narrow the policy to only the actions actually required by the ECS adapter.
 
 ## Next steps
 
-1. Create `jiuchen-ecs` CAM machine identity with programmatic access only.
-2. Apply minimum required CloudBase permissions.
-3. Store credentials only in a root-readable ECS environment file.
-4. Validate ECS -> CloudBase external AI/storage access.
-5. If successful, create production `/opt/jiuchen-api` deployment with permanent systemd unit and rollback procedure.
-6. Add `api.jiuchenedu.com` in Nginx Proxy Manager and enable HTTPS.
-7. Configure WeChat legal domains as required.
-8. Run real mini-program experience-build / device acceptance tests.
-9. Only after stable acceptance, reduce or retire CloudRun.
+1. Store CAM credentials only in a root-readable ECS environment file.
+2. Validate ECS -> CloudBase external Storage and AI access.
+3. Narrow `JiuchenEcsCloudBaseEnvAccess` from environment-scoped `tcb:*` to the verified minimum action set.
+4. If successful, create production `/opt/jiuchen-api` deployment with permanent systemd unit and rollback procedure.
+5. Add `api.jiuchenedu.com` in Nginx Proxy Manager and enable HTTPS.
+6. Configure WeChat legal domains as required.
+7. Run real mini-program experience-build / device acceptance tests.
+8. Only after stable acceptance, reduce or retire CloudRun.
 
 ## Handover rule
 
