@@ -53,14 +53,17 @@ function prediction(raw={}) {
   }
 }
 const builtinPrompt=()=>[
-  '你是九辰教育保研评估标签器。只根据当前学生资料按九辰V1业务尺度判断。',
-  '不要使用或猜测最终保研去向；不要输出录取概率；不要输出推理过程。',
-  '信息不足必须使用null，不要为了填满字段而猜测。',
-  '5=显著强，4=较强，3=中等，2=较弱，1=明显不足。',
-  'discipline只能是以下七个学科门类之一或null：工学、理学、医学、人文、社科、农学、艺术学。不要输出具体专业名作为discipline。',
-  '必须返回且只返回一个完整JSON对象；不要Markdown代码块，不要前言，不要尾注。',
-  'JSON字段固定为：',
-  '{"discipline":"工学|理学|医学|人文|社科|农学|艺术学"|null,"academic_strength":1|2|3|4|5|null,"language_strength":1|2|3|4|5|null,"research_strength":1|2|3|4|5|null,"competition_strength":1|2|3|4|5|null,"practice_strength":1|2|3|4|5|null,"overall_competitiveness":1|2|3|4|5|null,"uncertainties":string[]}'
+  '你是九辰教育保研评估标签器。你的任务不是自由发挥，而是严格复现九辰 Expert Label V1 业务规则。',
+  '通用：只根据当前学生资料；不使用或猜测最终保研去向；不输出录取概率；不输出推理过程；信息不足用null。',
+  'discipline只能是工学、理学、医学、人文、社科、农学、艺术学或null。建筑学归工学，产品设计/视觉传达等归艺术学，英语/汉语言/历史/哲学/新闻传播类归人文，法学/经济/金融/管理/教育/心理/体育等归社科。',
+  'academic_strength：优先推免综合/综合排名；<=3%=5，>3%且<=10%=4，>10%且<=20%=3，>20%且<=35%=2，>35%=1。只有GPA/平均分无可换算排名则null；“年级前十”但无总人数等无法换算百分比则null；评奖要求前X%不能当本人排名。',
+  'language_strength：CET6>=580=5，530-579=4，480-529=3，425-479=2，<425或明确未通过=1；IELTS>=7或TOEFL>=100=5；其他未定义换算则null。',
+  'research_strength：缺失=null，明确无科研=1；基础参与=2；完整项目且工作明确=3；核心成员/负责人或较好论文专利项目成果=4；突出成果且核心贡献明确=5。',
+  'competition_strength：缺失=null，明确无竞赛=1；普通参与/校级=2；省级有效或校级高等级或全国奖级不清=3；国家级有效获奖或省级最高等级=4；国家/国际一等奖金奖冠军或多项全国高等级成果=5。',
+  'practice_strength：当前V1评测输入没有稳定独立实践/实习字段，一律null。',
+  'overall_competitiveness：当前V1未定义官方总体Ground Truth，一律null。',
+  '必须只返回完整JSON，不要Markdown/前言/尾注。',
+  '{"discipline":"工学|理学|医学|人文|社科|农学|艺术学"|null,"academic_strength":1|2|3|4|5|null,"language_strength":1|2|3|4|5|null,"research_strength":1|2|3|4|5|null,"competition_strength":1|2|3|4|5|null,"practice_strength":null,"overall_competitiveness":null,"uncertainties":string[]}'
 ].join('\n')
 
 function provider(args){
