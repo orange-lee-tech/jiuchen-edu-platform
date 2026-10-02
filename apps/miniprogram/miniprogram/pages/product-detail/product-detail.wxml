@@ -21,7 +21,8 @@
         </view>
 
         <text wx:if="{{view.positioning}}" class="positioning">{{view.positioning}}</text>
-        <button class="consult" open-type="contact">在线咨询</button>
+        <button wx:if="{{wechatCustomerServiceSupported}}" class="consult" bindtap="onCustomerServiceTap">在线咨询</button>
+        <button wx:else class="consult" open-type="contact">在线咨询</button>
       </view>
     </view>
 
@@ -183,7 +184,8 @@
         <text class="bottom-title">需要结合个人背景判断是否适合？</text>
         <text class="bottom-desc">可联系九辰顾问进一步沟通。</text>
       </view>
-      <button class="consult compact" open-type="contact">在线咨询</button>
+      <button wx:if="{{wechatCustomerServiceSupported}}" class="consult compact" bindtap="onCustomerServiceTap">在线咨询</button>
+      <button wx:else class="consult compact" open-type="contact">在线咨询</button>
     </view>
   </block>
 </view>

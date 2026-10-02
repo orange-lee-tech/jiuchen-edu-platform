@@ -6,6 +6,10 @@ import {
   type UserRole,
 } from '../../utils/auth'
 import { friendlyRequestError } from '../../utils/request'
+import {
+  openWechatCustomerService,
+  supportsWechatCustomerService,
+} from '../../utils/customer-service'
 
 const GUEST_STATS = [
   { value: '—', label: '当前身份' },
@@ -148,6 +152,7 @@ function getIdentityView(auth: BootstrapResult | null) {
 
 Page({
   data: {
+    wechatCustomerServiceSupported: supportsWechatCustomerService(),
     loggedIn: false,
     role: '' as UserRole | '',
     roleLabel: '未登录',
@@ -162,6 +167,10 @@ Page({
 
   onShow() {
     this.setData(getIdentityView(getSavedAuthResult()))
+  },
+
+  onCustomerServiceTap() {
+    openWechatCustomerService()
   },
 
   onIdentityTap() {

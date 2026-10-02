@@ -58,4 +58,8 @@ export const runtimeConfig = {
     apiTransport === 'local' ? LOCAL_API_BASE_URL : ECS_API_BASE_URL,
   cloudEnvId: 'cloud1-d3geim00r03edb212',
   cloudServiceName: 'jiuchen-api',
+  wechatCustomerService: {
+    corpId: 'ww01fcafb0ee037a33',
+    url: 'https://work.weixin.qq.com/kfid/kfc339c8d016c9e6e84',
+  },
 } as const

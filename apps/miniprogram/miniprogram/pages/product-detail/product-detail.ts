@@ -1,4 +1,8 @@
 import { getProduct } from '../../utils/request'
+import {
+  openWechatCustomerService,
+  supportsWechatCustomerService,
+} from '../../utils/customer-service'
 
 type AnyRecord = Record<string, unknown>
 
@@ -147,6 +151,7 @@ function serviceDetails(value: AnyRecord): string[] {
 
 Page({
   data: {
+    wechatCustomerServiceSupported: supportsWechatCustomerService(),
     loading: true,
     error: '',
     view: null as null | {
@@ -233,6 +238,10 @@ Page({
         lines: string[]
       }>
     },
+  },
+
+  onCustomerServiceTap() {
+    openWechatCustomerService()
   },
 
   onLoad(options: { documentKey?: string }) {
