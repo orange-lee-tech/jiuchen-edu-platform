@@ -57,8 +57,10 @@ const builtinPrompt=()=>[
   '不要使用或猜测最终保研去向；不要输出录取概率；不要输出推理过程。',
   '信息不足必须使用null，不要为了填满字段而猜测。',
   '5=显著强，4=较强，3=中等，2=较弱，1=明显不足。',
-  '只输出JSON：',
-  '{"discipline":string|null,"academic_strength":1|2|3|4|5|null,"language_strength":1|2|3|4|5|null,"research_strength":1|2|3|4|5|null,"competition_strength":1|2|3|4|5|null,"practice_strength":1|2|3|4|5|null,"overall_competitiveness":1|2|3|4|5|null,"uncertainties":string[]}'
+  'discipline只能是以下七个学科门类之一或null：工学、理学、医学、人文、社科、农学、艺术学。不要输出具体专业名作为discipline。',
+  '必须返回且只返回一个完整JSON对象；不要Markdown代码块，不要前言，不要尾注。',
+  'JSON字段固定为：',
+  '{"discipline":"工学|理学|医学|人文|社科|农学|艺术学"|null,"academic_strength":1|2|3|4|5|null,"language_strength":1|2|3|4|5|null,"research_strength":1|2|3|4|5|null,"competition_strength":1|2|3|4|5|null,"practice_strength":1|2|3|4|5|null,"overall_competitiveness":1|2|3|4|5|null,"uncertainties":string[]}'
 ].join('\n')
 
 function provider(args){
@@ -98,7 +100,16 @@ async function ask(row,system,cfg,opt){
     if(!res.ok){const e=new Error(`provider_http_${res.status}`);e.status=res.status;e.detail=bodyText.slice(0,500);throw e}
     const payload=JSON.parse(bodyText), content=textOf(payload?.choices?.[0]?.message?.content)
     if(!content) throw new Error('provider_empty_response')
-    return {prediction:prediction(extractJson(content)),usage:payload.usage??null,requestId:res.headers.get('x-request-id')??payload.id??null}
+    let parsed
+    try {
+      parsed=extractJson(content)
+    } catch (error) {
+      if (error && typeof error==='object') {
+        error.detail=content.slice(0,1200)
+      }
+      throw error
+    }
+    return {prediction:prediction(parsed),usage:payload.usage??null,requestId:res.headers.get('x-request-id')??payload.id??null}
   }finally{clearTimeout(timer)}
 }
 async function askRetry(ctx){
