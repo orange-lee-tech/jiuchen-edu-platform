@@ -6,11 +6,13 @@
   "release_impact": "none: data-source/ is ignored and services/api Dockerfile only copies API package files/src",
   "counts": {
     "canonical_cases": 748,
-    "formal_eval_cases": 80,
-    "eval_with_historical_outcome": 75,
-    "train_cases": 601,
-    "dev_cases": 67,
-    "rag_eval_safe_cases": 668,
+    "formal_eval_suite_cases": 92,
+    "eval_core_cases": 80,
+    "eval_language_extension_cases": 12,
+    "eval_with_historical_outcome": 86,
+    "train_cases": 590,
+    "dev_cases": 66,
+    "rag_eval_safe_cases": 656,
     "rag_production_all_cases": 748,
     "boundary_review_cases_excluded_from_eval": 30
   },

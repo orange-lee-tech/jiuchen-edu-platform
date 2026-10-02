@@ -30,6 +30,11 @@ RAG 案例可以包含其他历史案例的最终去向，因为其用途是相�
 
 ## C. 正式 Evaluation
 
+Evaluation Suite 共 92 条：
+
+- Core Eval：80 条，按学科门类比例抽样；
+- Language Extension：12 条，仅补充英语维度盲样本覆盖。
+
 被测模型只能看到：
 
 `data-source/cases/ai/evaluation/v1.0.0/eval_inputs.jsonl`
@@ -37,6 +42,8 @@ RAG 案例可以包含其他历史案例的最终去向，因为其用途是相�
 评分器才能读取：
 
 `eval_expected_rule_labels.jsonl`
+
+报告时 Core 与专项扩展必须分开，不把专项过采样混成一个总体准确率。
 
 当前 V1 评测：
 
