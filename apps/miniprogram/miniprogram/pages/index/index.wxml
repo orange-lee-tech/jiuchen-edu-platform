@@ -5,7 +5,7 @@
         <text class="brand">九辰保研</text>
         <text class="brand-sub">陪你把保研每一步走清楚</text>
       </view>
-      <button class="consult" open-type="contact">咨询</button>
+      <button class="consult" bindtap="onCustomerServiceTap">咨询</button>
     </view>
 
     <view class="search-box" bindtap="onSearchTap">

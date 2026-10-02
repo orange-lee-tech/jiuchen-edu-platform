@@ -28,7 +28,7 @@
         <text wx:if="{{item.meta}}" class="meta">{{item.meta}}</text>
         <view class="footer">
           <text class="detail-link">查看详情 ›</text>
-          <button class="consult" open-type="contact" catchtap="noop">在线咨询</button>
+          <button class="consult" catchtap="onCustomerServiceTap">在线咨询</button>
         </view>
       </view>
     </view>

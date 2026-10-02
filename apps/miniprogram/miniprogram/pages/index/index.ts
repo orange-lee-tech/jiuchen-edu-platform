@@ -1,4 +1,5 @@
 import { getProducts } from '../../utils/request'
+import { openWechatCustomerService } from '../../utils/customer-service'
 
 type AnyRecord = Record<string, unknown>
 
@@ -77,6 +78,10 @@ Page({
     } catch (error) {
       console.info('Bundled service plans are temporarily unavailable.', error)
     }
+  },
+
+  onCustomerServiceTap() {
+    openWechatCustomerService()
   },
 
   onBrandTap() {

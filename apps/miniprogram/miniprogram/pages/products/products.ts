@@ -1,4 +1,5 @@
 import { getProducts } from '../../utils/request'
+import { openWechatCustomerService } from '../../utils/customer-service'
 
 type AnyRecord = Record<string, unknown>
 
@@ -77,7 +78,9 @@ Page({
     }
   },
 
-  noop() {},
+  onCustomerServiceTap() {
+    openWechatCustomerService()
+  },
 
   onProductTap(event: WechatMiniprogram.BaseEvent) {
     const documentKey = String(event.currentTarget.dataset.key || '')
