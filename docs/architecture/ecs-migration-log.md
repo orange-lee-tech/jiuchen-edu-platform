@@ -152,16 +152,96 @@ Security note:
 - The environment-scoped policy currently allows `tcb:*` for this single CloudBase environment to unblock migration validation.
 - After Storage/AI calls are verified, narrow the policy to only the actions actually required by the ECS adapter.
 
+## Production cutover — completed 2026-10-01 / accepted 2026-10-02
+
+Status: **PRODUCTION CHAIN COMPLETE**
+
+Current production facts:
+
+- Active API release: `e4aa5c12a3e905ad1dba55ac92a26609bb171259`
+- Formal layout:
+  - `/opt/jiuchen-api/releases/<commit>`
+  - `/opt/jiuchen-api/current` -> active immutable release
+  - `/etc/jiuchen-api/approved-release` records the approved release
+- Runtime:
+  - isolated Node `22.23.3`
+  - `jiuchen-api.service` enabled and active
+  - private bind `172.25.80.203:3100`
+  - `MemoryMax=256M`
+  - `CPUQuota=50%`
+  - `TasksMax=64`
+  - `NODE_OPTIONS=--max-old-space-size=160`
+  - `Restart=on-failure`
+- Production environment file:
+  - `/etc/jiuchen-api/production.env`
+  - root-owned, mode `0600`
+- Routine deployment boundary:
+  - runtime user: `jiuchen-api`
+  - deployment user: `jiuchen-deploy`
+  - `jiuchen-deploy` is restricted to Jiuchen promote/rollback commands and is not a general root shell
+- Deployment commands:
+  - `/usr/local/sbin/jiuchen-promote`
+  - `/usr/local/sbin/jiuchen-rollback`
+- Old smoke units are inactive; the fallback unit remains available for emergency recovery but must not be started casually because it can conflict on port 3100.
+
+Public ingress:
+
+- `api.jiuchenedu.com` resolves to the shared ECS public endpoint.
+- Nginx Proxy Manager adds a **new** Jiuchen API proxy host only:
+  - `api.jiuchenedu.com` -> `http://172.25.80.203:3100`
+- Let's Encrypt HTTPS and Force SSL are enabled for the API hostname.
+- The existing `jiuchenedu.com` website proxy remains unchanged and continues to target host nginx `:8088`.
+
+Verified application chain:
+
+- `/health/live`: production acceptance passed.
+- `/health`: production acceptance passed with `database=ok`.
+- `GET /products`: public HTTPS request returns HTTP 200.
+- Mini-program request legal domain includes `https://api.jiuchenedu.com`.
+- Real-device WeChat login passed end-to-end through `wx.login`, `jscode2session`, ECS API, production DB and API session creation.
+- Real-device profile loading passed.
+- Real-device phone-number login passed.
+- CloudBase Storage remains intentionally retained as a temporary upload adapter; ECS upload/download/delete validation passed.
+- CloudBase AI remains non-core and is not accepted as a production inference dependency.
+
+### Product route caveat
+
+The public `/products` response currently reports `source: "bundled"` for the returned catalog. This is an intentional application fallback: if `product_knowledge_documents` does not exist, the route still returns the bundled baseline catalog.
+
+Therefore:
+
+- `/products = 200` proves the public API/product route is healthy.
+- It does **not** by itself prove the production product-knowledge schema/import is ready.
+- Before relying on database-backed product content, verify the product-knowledge schema and import explicitly.
+
+### Production schema gate policy
+
+Do not assume every business schema is synchronized merely because auth/login is healthy.
+
+Repository upgrade scripts currently include:
+
+- `db:upgrade:auth` — profile/session/teacher assignment foundation
+- `db:upgrade:identity-v2` — user status/deletion, internal IDs, news posts
+- `db:upgrade:native-auth` — phone-number auth columns/index
+- `db:upgrade:assessment` — assessment persistence
+- `db:upgrade:classroom-guidance` — classroom guidance/planning foundation
+- `db:upgrade:classroom-revisions` — editable revisions/review workflow and schedule imports
+- `db:upgrade:product-knowledge` — product knowledge documents/chunks
+
+Production schema changes are **write operations** and remain approval-gated by `ops/ecs/AGENTS.md`. Before first production acceptance of a feature, inspect its required schema read-only, review the exact idempotent upgrade, obtain explicit main-control approval, then run only that approved upgrade.
+
 ## Next steps
 
-1. Store CAM credentials only in a root-readable ECS environment file.
-2. Validate ECS -> CloudBase external Storage and AI access.
-3. Narrow `JiuchenEcsCloudBaseEnvAccess` from environment-scoped `tcb:*` to the verified minimum action set.
-4. If successful, create production `/opt/jiuchen-api` deployment with permanent systemd unit and rollback procedure.
-5. Add `api.jiuchenedu.com` in Nginx Proxy Manager and enable HTTPS.
-6. Configure WeChat legal domains as required.
-7. Run real mini-program experience-build / device acceptance tests.
-8. Only after stable acceptance, reduce or retire CloudRun.
+Infrastructure migration is no longer the main workstream. Lane B should remain quiet unless a new API release or an explicitly approved production schema action requires it.
+
+1. Keep the current production release unchanged until a backend change justifies a new ECS release.
+2. For every new backend release, preserve the sequence:
+   staging/candidate -> validation -> immutable `releases/<SHA>` -> `approved-release` -> promote -> health -> rollback on failure.
+3. Gate each not-yet-accepted business feature on a read-only production schema check before any migration write.
+4. Do not infer product-knowledge DB readiness from `/products = 200`; the current bundled fallback is designed to survive a missing table.
+5. AI provider configuration remains a Backend/AI lane responsibility. Production currently reports assessment/schedule/customer AI as not configured until that lane provides approved runtime configuration.
+6. Keep the existing website, Nginx Proxy Manager core listeners, Harbor, Portainer, Docker networks, system Python and global Node outside Jiuchen routine deployment scope.
+7. During ownership handover, rotate/reduce temporary developer credentials and keep Jiuchen-designated administrators as the owners of production cloud/API credentials.
 
 ## Handover rule
 
