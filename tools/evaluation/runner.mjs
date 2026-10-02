@@ -127,7 +127,8 @@ async function parallel(items,n,worker){let cursor=0;await Promise.all(Array.fro
 function select(rows,args){
   let out=rows
   const subset=String(args.subset??'all'); if(subset!=='all')out=out.filter(x=>x.subset===subset)
-  if(args['case-id']){const ids=new Set(String(args['case-id']).split(',').map(x=>x.trim()));out=out.filter(x=>ids.has(x.eval_id))}
+  if(args['case-id']){const ids=new Set(String(args['case-id']).split(',').map(x=>x.trim()).filter(Boolean));out=out.filter(x=>ids.has(x.eval_id))}
+  if(args['exclude-case-id']){const ids=new Set(String(args['exclude-case-id']).split(',').map(x=>x.trim()).filter(Boolean));out=out.filter(x=>!ids.has(x.eval_id))}
   const offset=Math.max(0,int(args.offset,0)),limit=Math.max(0,int(args.limit,0));return out.slice(offset,limit?offset+limit:undefined)
 }
 function metric(){return{n:0,exact:0,within:0,unscored:0,abstain:0}}
@@ -168,7 +169,7 @@ async function run(args){
   const scores=await scoreRun(runDir,expectedPath),summary={ok:true,run_id:runId,run_dir:runDir,requested_rows:rows.length,skipped_by_resume:done.size,processed_now:pending.length,errors_now:errors,usage:{input_tokens_now:inputTokens,output_tokens_now:outputTokens,estimated_cost_now:costKnown?Number(cost.toFixed(6)):null,currency:price.currency},score_groups:Object.keys(scores)};await putJson(resolve(runDir,'run_summary.json'),summary);return summary
 }
 
-function help(){console.log(`\nJiuchen Evaluation Runner\n\nnode tools/evaluation/runner.mjs inspect\nnode tools/evaluation/runner.mjs run --dry-run\nnode tools/evaluation/runner.mjs run --subset core_representative --limit 10\nnode tools/evaluation/runner.mjs run --model qwen3.8-flash --concurrency 2\nnode tools/evaluation/runner.mjs score --run-dir <run-dir>\n\nEnv: EVAL_AI_PROVIDER EVAL_AI_BASE_URL EVAL_AI_API_KEY EVAL_AI_MODEL\nOptional: EVAL_AI_EXTRA_BODY_JSON EVAL_PRICE_INPUT_PER_MILLION EVAL_PRICE_OUTPUT_PER_MILLION\nFlags: --subset --limit --offset --case-id --concurrency --timeout-ms --retries --temperature --max-tokens --json-mode --system-prompt --run-id --run-dir --mock --dry-run\n`)}
+function help(){console.log(`\nJiuchen Evaluation Runner\n\nnode tools/evaluation/runner.mjs inspect\nnode tools/evaluation/runner.mjs run --dry-run\nnode tools/evaluation/runner.mjs run --subset core_representative --limit 10\nnode tools/evaluation/runner.mjs run --model qwen3.8-flash --concurrency 2\nnode tools/evaluation/runner.mjs score --run-dir <run-dir>\n\nEnv: EVAL_AI_PROVIDER EVAL_AI_BASE_URL EVAL_AI_API_KEY EVAL_AI_MODEL\nOptional: EVAL_AI_EXTRA_BODY_JSON EVAL_PRICE_INPUT_PER_MILLION EVAL_PRICE_OUTPUT_PER_MILLION\nFlags: --subset --limit --offset --case-id --exclude-case-id --concurrency --timeout-ms --retries --temperature --max-tokens --json-mode --system-prompt --run-id --run-dir --mock --dry-run\n`)}
 
 const args=argsOf(process.argv.slice(2)),cmd=args._[0]??'help'
 try{
