@@ -165,6 +165,15 @@ Page({
     wx.navigateTo({ url: '/pages/assessment-form/assessment-form' })
   },
 
+  onAssessmentHistory() {
+    const auth = getSavedAuthResult()
+    if (!auth) {
+      wx.navigateTo({ url: '/pages/login/login' })
+      return
+    }
+    wx.navigateTo({ url: '/pages/assessment-history/assessment-history' })
+  },
+
   onProfileCardTap() {
     if (this.data.canEditProfile) return
     wx.navigateTo({ url: '/pages/login/login' })

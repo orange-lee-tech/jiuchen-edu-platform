@@ -9,6 +9,8 @@
     "pages/profile-edit/profile-edit",
     "pages/admin/admin",
     "pages/assessment-form/assessment-form",
+    "pages/assessment-history/assessment-history",
+    "pages/assessment-result/assessment-result",
     "pages/products/products",
     "pages/product-detail/product-detail",
     "pages/brand/brand",

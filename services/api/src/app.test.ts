@@ -145,7 +145,7 @@ test('assessment metadata is available without database or model provider', asyn
     versions: {
       inputSchema: 'assessment-input-v1',
       outputSchema: 'assessment-output-v1',
-      agent: 'assessment-agent-v1',
+      agent: 'assessment-agent-v2',
     },
     limits: {
       targets: 5,

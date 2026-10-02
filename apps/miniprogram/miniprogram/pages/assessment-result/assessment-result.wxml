@@ -1,0 +1,97 @@
+<view class="result-page">
+  <view wx:if="{{loading}}" class="state-card">正在加载评估报告…</view>
+  <view wx:elif="{{error}}" class="state-card error-card">
+    <text>{{error}}</text>
+    <button class="secondary" bindtap="onViewHistory">返回历史评估</button>
+  </view>
+
+  <block wx:elif="{{output}}">
+    <view class="report-hero">
+      <text class="eyebrow">AI 保研评估报告</text>
+      <text class="report-title">{{assessment.input.profile.university}} · {{assessment.input.profile.major}}</text>
+      <text class="report-meta">基于当次结构化资料与真实案例证据生成</text>
+    </view>
+
+    <view class="card summary-card">
+      <text class="section-title">背景概览</text>
+      <text class="body-text">{{output.profileSummary}}</text>
+    </view>
+
+    <view class="two-column">
+      <view class="card finding-card strengths-card">
+        <text class="section-title">优势</text>
+        <text wx:if="{{output.strengths.length === 0}}" class="empty">暂无明确优势结论</text>
+        <view wx:for="{{output.strengths}}" wx:key="title" class="finding">
+          <text class="finding-title">{{item.title}}</text>
+          <text class="body-text">{{item.detail}}</text>
+        </view>
+      </view>
+      <view class="card finding-card risks-card">
+        <text class="section-title">风险</text>
+        <text wx:if="{{output.risks.length === 0}}" class="empty">暂无明确风险结论</text>
+        <view wx:for="{{output.risks}}" wx:key="title" class="finding">
+          <text class="finding-title">{{item.title}}</text>
+          <text class="body-text">{{item.detail}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-label">目标评估</view>
+    <view wx:for="{{output.targetAssessments}}" wx:key="schoolName" class="card target-card">
+      <view class="target-head">
+        <view>
+          <text class="target-school">{{item.schoolName}}</text>
+          <text wx:if="{{item.programName}}" class="target-program">{{item.programName}}</text>
+        </view>
+        <text class="tier {{item.tierTone}}">{{item.tierLabel}}</text>
+      </view>
+      <text class="body-text rationale">{{item.rationale}}</text>
+      <view wx:if="{{item.gapItems.length}}" class="subsection">
+        <text class="sub-title">关键差距</text>
+        <text wx:for="{{item.gapItems}}" wx:key="*this" class="bullet">· {{item}}</text>
+      </view>
+      <view wx:if="{{item.actions.length}}" class="subsection">
+        <text class="sub-title">针对性动作</text>
+        <text wx:for="{{item.actions}}" wx:key="*this" class="bullet">· {{item}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="section-title">推荐行动</text>
+      <text wx:if="{{output.recommendedActions.length === 0}}" class="empty">暂无额外行动建议</text>
+      <view wx:for="{{output.recommendedActions}}" wx:key="title" class="action-row">
+        <text class="priority {{item.priority}}">{{item.priorityLabel}}</text>
+        <view class="action-content">
+          <text class="finding-title">{{item.title}}</text>
+          <text class="body-text">{{item.rationale}}</text>
+          <text wx:if="{{item.timeframe}}" class="timeframe">建议周期：{{item.timeframe}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="section-title">相似案例</text>
+      <text wx:if="{{output.similarCases.length === 0}}" class="empty">当前证据中没有足够相似的案例</text>
+      <view wx:for="{{output.similarCases}}" wx:key="caseId" class="case-row">
+        <view class="case-head">
+          <text class="finding-title">案例 {{index + 1}}</text>
+          <text class="source-chip">{{item.sourceType === 'jiuchen' ? '九辰服务案例' : '历史真实案例'}}</text>
+        </view>
+        <text class="body-text">{{item.similarityReason}}</text>
+        <text class="case-result">结果参照：{{item.resultSummary}}</text>
+      </view>
+    </view>
+
+    <view class="card uncertainty-card">
+      <text class="section-title">不确定性</text>
+      <text wx:if="{{output.uncertainties.length === 0}}" class="empty">模型未标记额外不确定项</text>
+      <text wx:for="{{output.uncertainties}}" wx:key="*this" class="bullet">· {{item}}</text>
+    </view>
+
+    <view class="disclaimer">
+      <text class="disclaimer-title">使用说明</text>
+      <text class="disclaimer-text">{{output.disclaimer}}</text>
+    </view>
+    <button class="secondary history-link" bindtap="onViewHistory">查看全部历史评估</button>
+  </block>
+</view>

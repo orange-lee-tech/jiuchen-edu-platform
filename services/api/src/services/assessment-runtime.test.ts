@@ -206,6 +206,112 @@ test('assessment runtime rejects invented evidence ids', async () => {
   )
 })
 
+test('assessment runtime rejects invented input evidence refs', async () => {
+  const retriever: AssessmentRetriever = {
+    async retrieve() {
+      return {
+        version: 'knowledge-v1',
+        evidence: [
+          {
+            ref: 'case:real',
+            kind: 'case',
+            sourceType: 'external',
+            sourceId: 'real',
+            title: '真实案例',
+            sourceLabel: '案例库',
+          },
+        ],
+      }
+    },
+  }
+
+  const provider: AssessmentModelProvider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async analyze() {
+      return {
+        profileSummary: '背景摘要',
+        strengths: [{
+          title: '虚构输入',
+          detail: '引用了不存在的用户输入。',
+          evidenceRefs: ['input:invented'],
+        }],
+        risks: [],
+        targetAssessments: [{
+          schoolName: '目标大学',
+          tier: 'match',
+          rationale: '使用真实案例。',
+          gapItems: [],
+          actions: [],
+          evidenceRefs: ['case:real'],
+        }],
+        recommendedActions: [],
+        similarCases: [],
+        uncertainties: [],
+        disclaimer: '本结果用于规划辅助。',
+      }
+    },
+  }
+
+  await assert.rejects(
+    executeAssessment({ retriever, provider }, input),
+    AssessmentEvidenceReferenceError,
+  )
+})
+
+test('assessment runtime allows one bounded repair after invalid model output', async () => {
+  let repairs = 0
+  const retriever: AssessmentRetriever = {
+    async retrieve() {
+      return {
+        version: 'knowledge-v1',
+        evidence: [{
+          ref: 'case:real',
+          kind: 'case',
+          sourceType: 'external',
+          sourceId: 'real',
+          title: '真实案例',
+          sourceLabel: '案例库',
+        }],
+      }
+    },
+  }
+  const validOutput = {
+    profileSummary: '背景摘要',
+    strengths: [],
+    risks: [],
+    targetAssessments: [{
+      schoolName: '目标大学',
+      tier: 'match',
+      rationale: '使用真实案例。',
+      gapItems: [],
+      actions: [],
+      evidenceRefs: ['case:real'],
+    }],
+    recommendedActions: [],
+    similarCases: [],
+    uncertainties: [],
+    disclaimer: '本结果用于规划辅助。',
+  }
+  const provider: AssessmentModelProvider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async analyze() {
+      return { invalid: true }
+    },
+    async repair() {
+      repairs += 1
+      return validOutput
+    },
+  }
+
+  const result = await executeAssessment({ retriever, provider }, input)
+  assert.equal(repairs, 1)
+  assert.equal(result.output.targetAssessments[0].tier, 'match')
+})
+
 
 test('composite retriever merges independent knowledge sources', async () => {
   const sources: AssessmentKnowledgeSource[] = [

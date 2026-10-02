@@ -480,6 +480,7 @@ export function registerAssessmentRoutes(
         .update(assessments)
         .set({
           status: 'running',
+          agentVersion: ASSESSMENT_AGENT_VERSION,
           startedAt,
           completedAt: null,
           failureCode: null,

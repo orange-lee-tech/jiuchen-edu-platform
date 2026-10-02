@@ -49,6 +49,21 @@
   border: 0;
 }
 
+.history-btn {
+  margin-top: 14rpx;
+  height: 76rpx;
+  border: 1rpx solid #cfdcf5;
+  border-radius: 18rpx;
+  background: #ffffff;
+  color: #2f6fed;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.history-btn::after {
+  border: 0;
+}
+
 .quota {
   margin-top: 14rpx;
   text-align: center;

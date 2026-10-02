@@ -32,6 +32,7 @@ const envSchema = z.object({
   ASSESSMENT_AI_BASE_URL: optionalNonEmptyString,
   ASSESSMENT_AI_API_KEY: optionalNonEmptyString,
   ASSESSMENT_AI_MODEL: optionalNonEmptyString,
+  ASSESSMENT_CASE_DATA_ROOT: optionalNonEmptyString,
   SCHEDULE_AI_PROVIDER: optionalNonEmptyString,
   SCHEDULE_AI_BASE_URL: optionalNonEmptyString,
   SCHEDULE_AI_API_KEY: optionalNonEmptyString,

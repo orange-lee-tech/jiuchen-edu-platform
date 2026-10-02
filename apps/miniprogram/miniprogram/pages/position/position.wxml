@@ -4,6 +4,7 @@
     <text class="hero-title">先认识自己，再决定冲哪里</text>
     <text class="hero-desc">结合个人背景、目标院校与项目数据，形成结构化定位建议。结果用于辅助规划，不展示伪精确录取概率。</text>
     <button class="primary-btn" bindtap="onStartAssessment">开始 AI 评估</button>
+    <button class="history-btn" bindtap="onAssessmentHistory">查看历史评估</button>
     <text class="quota">新用户可获得免费评估次数</text>
   </view>
 

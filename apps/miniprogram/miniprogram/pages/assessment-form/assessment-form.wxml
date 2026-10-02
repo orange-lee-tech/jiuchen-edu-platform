@@ -1,8 +1,8 @@
 <view class="assessment-page">
   <view class="hero">
-    <text class="eyebrow">AI 保研评估 · Draft</text>
+    <text class="eyebrow">AI 保研评估</text>
     <text class="title">把背景与目标整理成可验证的评估输入</text>
-    <text class="desc">当前先保存结构化资料；模型未配置时不会生成模拟结果。</text>
+    <text class="desc">结构化资料将与有限条真实案例证据一起用于评估；模型未配置时不会生成模拟结果。</text>
   </view>
 
   <view wx:if="{{loading}}" class="card">正在加载资料…</view>

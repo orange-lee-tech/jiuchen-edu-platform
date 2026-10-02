@@ -40,3 +40,8 @@ node tools/evaluation/runner.mjs run --concurrency 2
 ## 安全
 
 不要把 API Key 写进 Git、截图或聊天。建议只在当前 PowerShell 会话或服务器 root-only env 中设置。
+
+正式模型评测期间，生产 Assessment Runtime 以外的本地环境固定使用
+`rag_reference_eval_safe_train_dev.jsonl`；现有标签 runner 本身不会读取任何 RAG
+或 outcome 文件，只向模型发送 `eval_inputs.jsonl`。不得把 production-all 或
+`eval_outcomes_retrospective.jsonl` 追加到 system prompt/few-shot。

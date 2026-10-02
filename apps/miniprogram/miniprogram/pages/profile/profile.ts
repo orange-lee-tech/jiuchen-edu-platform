@@ -192,7 +192,11 @@ Page({
     }
 
     if (key === 'assessment') {
-      wx.switchTab({ url: '/pages/position/position' })
+      if (this.data.role === 'student') {
+        wx.navigateTo({ url: '/pages/assessment-history/assessment-history' })
+      } else {
+        wx.switchTab({ url: '/pages/position/position' })
+      }
       return
     }
 

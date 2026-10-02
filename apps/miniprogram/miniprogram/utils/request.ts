@@ -712,6 +712,54 @@ export type AssessmentInput = {
   }
 }
 
+export type AssessmentEvidence = {
+  ref: string
+  kind: 'school' | 'program' | 'case' | 'policy' | 'other'
+  sourceType: 'jiuchen' | 'external' | 'official' | 'internal'
+  sourceId?: string | null
+  title: string
+  sourceLabel: string
+  sourceUrl?: string | null
+  year?: number | null
+  excerpt?: string | null
+}
+
+export type AssessmentFinding = {
+  title: string
+  detail: string
+  evidenceRefs: string[]
+}
+
+export type AssessmentOutput = {
+  profileSummary: string
+  strengths: AssessmentFinding[]
+  risks: AssessmentFinding[]
+  targetAssessments: Array<{
+    schoolName: string
+    programName?: string | null
+    tier: 'reach' | 'match' | 'conservative' | 'insufficient_data'
+    rationale: string
+    gapItems: string[]
+    actions: string[]
+    evidenceRefs: string[]
+  }>
+  recommendedActions: Array<{
+    priority: 'high' | 'medium' | 'low'
+    title: string
+    rationale: string
+    timeframe?: string | null
+  }>
+  similarCases: Array<{
+    caseId: string
+    sourceType: 'jiuchen' | 'external'
+    similarityReason: string
+    resultSummary: string
+    evidenceRef: string
+  }>
+  uncertainties: string[]
+  disclaimer: string
+}
+
 export type AssessmentRecord = {
   id: string
   status: 'draft' | 'running' | 'succeeded' | 'failed'
@@ -726,8 +774,8 @@ export type AssessmentRecord = {
     name: string | null
   }
   input: AssessmentInput
-  evidence: unknown
-  output: unknown
+  evidence: AssessmentEvidence[] | null
+  output: AssessmentOutput | null
   failureCode: string | null
   creditConsumed: boolean
   startedAt: string | null

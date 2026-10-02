@@ -374,11 +374,13 @@ Page({
       }
 
       const result = await runMyAssessment(draftId)
-      wx.showModal({
-        title: '评估完成',
-        content: result.status === 'succeeded' ? 'AI 评估已完成。结果页将在下一步接入。' : '评估未完成，请稍后重试。',
-        showCancel: false,
-      })
+      if (result.status === 'succeeded') {
+        wx.redirectTo({
+          url: `/pages/assessment-result/assessment-result?id=${encodeURIComponent(result.id)}`,
+        })
+      } else {
+        wx.showToast({ title: '评估未完成，请稍后重试', icon: 'none' })
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '评估运行失败'
       wx.showToast({ title: message, icon: 'none', duration: 2600 })

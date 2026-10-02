@@ -78,7 +78,17 @@ ASSESSMENT_AI_PROVIDER=aliyun-bailian
 ASSESSMENT_AI_BASE_URL=https://<WorkspaceId>.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
 ASSESSMENT_AI_API_KEY=<server secret>
 ASSESSMENT_AI_MODEL=qwen3.8-flash
+ASSESSMENT_CASE_DATA_ROOT=/path/to/private/data-source/cases
 ```
+
+`ASSESSMENT_CASE_DATA_ROOT` 只指向私有案例根目录，不把案例打入 Git 或镜像。
+运行时按环境硬分流：`NODE_ENV=production` 只读取
+`rag_reference_production_all.jsonl`；development/test/evaluation 只读取
+`rag_reference_eval_safe_train_dev.jsonl`。不能用环境变量把正式评测切到 production-all。
+
+每次评估先对本地案例库做确定性轻量打分，只把 Top 10 case evidence 与
+Top 3 经过治理的产品知识 chunk 发送给模型。产品知识不能作为目标项目的
+录取判断证据；目标判断至少需要一条 school/program/case evidence。
 
 然后只需要重启 Jiuchen API 服务并检查：
 - `GET /health/config` -> `assessmentAiConfigured: true`

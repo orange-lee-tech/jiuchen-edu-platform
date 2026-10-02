@@ -186,6 +186,20 @@ sourceType 至少区分：
 
 相似案例必须引用真实存在于 Evidence Snapshot 中的 case evidence。
 
+当前运行时进一步约束：
+- `input:` 引用必须来自服务端为本次结构化输入生成的白名单，模型不能自由拼接；
+- `similarCases.caseId/sourceType` 必须与所引 case evidence 完全一致；
+- 产品知识只用于解释九辰服务与行动建议，不能支撑目标项目的录取层级；
+- Schema 或 evidence 校验失败时最多允许一次修复调用，第二次失败即整次失败且不扣额度。
+
+### V1 案例检索
+
+- Eval/development/test：只读 eval-safe 656 条 train/dev RAG；
+- Production：只读 production-all 748 条 RAG；
+- 全库只在服务端做确定性候选打分，模型每次最多接收 10 条案例 evidence；
+- evidence ref 使用数据中的稳定 `doc_id` 派生，不由模型生成；
+- 外部历史案例明确标注为“非九辰自有成功案例”。
+
 ## 5. 版本追踪
 
 每条 Assessment 固化：
