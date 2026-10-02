@@ -1,0 +1,48 @@
+{
+  "evaluation_version": "JC-EVAL-1.0.0",
+  "status": "frozen",
+  "size": 80,
+  "selection": {
+    "method": "deterministic stratified proportional sampling by discipline",
+    "seed": "jiuchen-eval-v1.0.0-freeze-2026-10-02",
+    "excluded_from_evaluation": {
+      "boundary_review_cases": 30,
+      "reason": "These cases were used to validate/develop V1 rules and are therefore not blind."
+    }
+  },
+  "discipline_distribution": {
+    "人文": 5,
+    "艺术学": 2,
+    "工学": 32,
+    "社科": 15,
+    "理学": 10,
+    "待人工归类": 5,
+    "医学": 9,
+    "农学": 2
+  },
+  "rule_label_coverage": {
+    "discipline": 75,
+    "academic_strength": 31,
+    "language_strength": 7,
+    "research_strength": 53,
+    "competition_strength": 43
+  },
+  "historical_outcome_available": 75,
+  "files": {
+    "model_visible": "eval_inputs.jsonl",
+    "scorer_only_rule_reference": "eval_expected_rule_labels.jsonl",
+    "retrospective_only": "eval_outcomes_retrospective.jsonl"
+  },
+  "leakage_rules": [
+    "Evaluation case IDs must not appear in rule supervision train/dev.",
+    "Evaluation case IDs must not appear in RAG corpus during evaluation.",
+    "Reported outcomes are never passed to the model during evaluation.",
+    "Expected rule labels are scorer-only."
+  ],
+  "metrics_v1": {
+    "discipline": ["exact_match_accuracy"],
+    "scored_dimensions": ["exact_match_accuracy", "within_one_band_accuracy"],
+    "uncertainty": ["abstain_when_reference_unavailable_rate"],
+    "overall": "not scored in V1 because official overall ground truth is not defined"
+  }
+}

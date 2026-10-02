@@ -1,0 +1,32 @@
+{
+  "manifest_version": "JC-CASE-DATA-MANIFEST-1.0.0",
+  "created_for_repo": "orange-lee-tech/jiuchen-edu-platform",
+  "intended_local_root": "data-source/cases/",
+  "git_policy": "private real case data stays local and must not enter Git",
+  "release_impact": "none: data-source/ is ignored and services/api Dockerfile only copies API package files/src",
+  "counts": {
+    "canonical_cases": 748,
+    "formal_eval_cases": 80,
+    "eval_with_historical_outcome": 75,
+    "train_cases": 601,
+    "dev_cases": 67,
+    "rag_eval_safe_cases": 668,
+    "rag_production_all_cases": 748,
+    "boundary_review_cases_excluded_from_eval": 30
+  },
+  "canonical": {
+    "path": "data-source/cases/canonical/v1.0.0/",
+    "role": "authoritative offline case source",
+    "never_overwritten_by": ["serving", "supervision", "rag", "evaluation"]
+  },
+  "serving": {
+    "path": "data-source/cases/serving/v1.0.0/",
+    "role": "mini-program display derivative"
+  },
+  "ai": {
+    "supervision": "data-source/cases/ai/supervision/v1.0.0/",
+    "rag": "data-source/cases/ai/rag/v1.0.0/",
+    "evaluation": "data-source/cases/ai/evaluation/v1.0.0/",
+    "review": "data-source/cases/ai/review/v1.0.0/"
+  }
+}
