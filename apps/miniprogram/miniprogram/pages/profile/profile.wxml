@@ -27,21 +27,9 @@
   <view class="menu-list surface">
     <block wx:for="{{menus}}" wx:key="key">
       <button
-        wx:if="{{item.key === 'service' && wechatCustomerServiceSupported}}"
+        wx:if="{{item.key === 'service'}}"
         class="menu-row menu-button"
         bindtap="onCustomerServiceTap"
-      >
-        <view class="menu-main">
-          <text class="menu-title">{{item.title}}</text>
-          <text class="menu-desc">{{item.desc}}</text>
-        </view>
-        <text class="arrow">›</text>
-      </button>
-
-      <button
-        wx:elif="{{item.key === 'service'}}"
-        class="menu-row menu-button"
-        open-type="contact"
       >
         <view class="menu-main">
           <text class="menu-title">{{item.title}}</text>

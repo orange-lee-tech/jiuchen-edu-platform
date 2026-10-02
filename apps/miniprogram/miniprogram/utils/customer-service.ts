@@ -1,11 +1,7 @@
 import { runtimeConfig } from '../config/runtime'
 
 export function supportsWechatCustomerService(): boolean {
-  try {
-    return wx.canIUse('openCustomerServiceChat')
-  } catch {
-    return false
-  }
+  return typeof wx.openCustomerServiceChat === 'function'
 }
 
 export function openWechatCustomerService(): void {
@@ -30,6 +26,9 @@ export function openWechatCustomerService(): void {
   wx.openCustomerServiceChat({
     corpId,
     extInfo: { url },
+    success() {
+      console.info('Opened WeChat customer service.', { corpId, url })
+    },
     fail(error) {
       console.error('Failed to open WeChat customer service.', error)
       wx.showToast({
