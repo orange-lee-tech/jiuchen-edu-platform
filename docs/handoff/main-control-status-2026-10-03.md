@@ -1,148 +1,250 @@
-# Main control status — 2026-10-03
+# Main control status — 2026-10-03 (refreshed)
 
 Repository: `orange-lee-tech/jiuchen-edu-platform`  
-Integration branch: `p1/foundation`  
-Verified branch HEAD at status write: `8eb80caf96660853f4baac3a721457d7a38d0764`
+Integration branch: `p1/foundation`
+
+Source-code baseline verified before this status refresh:
+`dcad4745596609cc9c031f91b3d33ed1a12c9d4d`
+
+Latest verified CI on that baseline:
+- push CI: PASS
+- PR CI: PASS
+
+Current production API release remains:
+`e4aa5c12a3e905ad1dba55ac92a26609bb171259`
 
 ## Executive status
 
-Infrastructure migration is closed. Product work is now in commercial-closure and real-device acceptance.
+Infrastructure migration is closed. WeChat transport, HTTPS, login/profile/phone auth, CloudBase Storage, and WeCom human customer service are accepted and must not be repeatedly re-tested without a concrete failure signal.
 
-Assessment implementation baseline:
-- implementation commit: `529e2cd190177b1b4116cebd0c862b1c0770a424`;
-- real case retrieval and governed product knowledge retrieval are wired;
-- eval/test uses the 656-case eval-safe RAG set;
-- production runtime is designed for the 748-case production RAG set;
-- stable evidence refs, schema/evidence validation and one bounded repair call are implemented;
-- failed inference does not consume assessment credit;
-- Assessment result/history UI exists;
-- draft/result/history device acceptance remains gated by production schema/runtime readiness.
+The project is now in **commercial product closure**.
 
-Latest integration head also contains:
-- wrapped Drizzle/mysql2 missing-table recognition for Assessment: `8a640e63177e73187c3aa1c3212fde5382c97b2b`;
-- mini-program blocked-state / device-acceptance hardening;
-- Official Account news integration requirement captured as a separate product lane.
+The three previous long-running lanes can be closed as permanent conversations:
+- Lane A: model/provider selection complete; only one real runtime parity smoke remains before production gating.
+- Lane B: infrastructure migration complete; remains a production/schema guardian only.
+- Lane C: WeChat integration and current device-acceptance batch closed; remaining failures/blockers are documented.
 
-## Live AI provider evaluation — CLOSED for current model/mode selection
+Future conversations should be opened by **specific work package**, not by permanent lane identity.
 
-Provider: Alibaba Bailian  
-Region: 华北2（北京）  
-Model: `qwen3.5-27b`  
-Protocol: OpenAI-compatible Chat Completions  
-Selected mode: **non-thinking**
+## Assessment AI — selected baseline
 
-Evaluation integrity:
-- frozen suite: 92 total;
-- 5 Core cases were used for calibration and are not counted as blind quality results;
-- blind quality aggregate: 75 Core + 12 Language Extension = 87;
-- both non-thinking and thinking runs completed with zero provider / JSON parse errors.
+Provider/model/mode selection is complete:
 
-Non-thinking blind 87:
-- estimated cost: CNY 0.093304;
-- Core mean / p95 latency: 2391.9 / 3896 ms;
-- Core discipline Exact: 0.9429;
-- Core academic Exact: 0.7586, ±1 = 1.0;
-- Core research Exact: 0.4902, ±1 = 1.0;
-- Core competition Exact: 0.2308, ±1 = 0.9231;
-- Language Extension language Exact: 1.0.
+- Provider: `aliyun-bailian`
+- Region: 华北2（北京）
+- Protocol: OpenAI-compatible Chat Completions
+- Model: `qwen3.5-27b`
+- `enable_thinking=false`
+- Temperature: `0`
+- JSON mode: `true`
 
-Thinking challenger:
-- estimated cost: CNY 0.144660;
-- Core mean / p95 latency: 4947.8 / 8121 ms;
-- did not improve the key Exact metrics;
-- research / competition Exact declined;
-- Language Extension language Exact declined to 0.9167.
+The selected baseline passed live provider evaluation.
+
+Frozen evaluation facts:
+- 92 total evaluation cases;
+- first 5 Core cases became calibration cases;
+- final blind-quality set: 75 Core + 12 Language Extension = 87;
+- non-thinking mode had zero provider/parse errors;
+- thinking mode did not improve key Exact metrics and materially increased cost/latency.
 
 Decision:
-- use `qwen3.5-27b` with `enable_thinking=false` as the next production-integration baseline;
-- do not continue tuning or rerunning the same model/mode without a material contract change;
-- do not treat research/competition raw scores as authoritative expert ground truth; preserve evidence, deterministic constraints, uncertainty and reviewability.
+**Provider/model/mode = ACCEPT.**
 
-Full metrics live in `docs/architecture/ai-provider-evaluation-log.md`.
+Do not rerun the same benchmark merely for reassurance.
 
-## Current hard blockers
+## Assessment runtime parity — one remaining local gate
 
-1. **Local real Assessment runtime parity smoke is BLOCKED / RETEST.** Provider/model selection passed, but two live Agent-runtime attempts returned non-object model content; the latest final response was a valid JSON numeric scalar rather than `assessment-output-v1`. Do not promote the production Assessment gate until `assessment:smoke:live` returns `ok: true`.
-2. Production `assessments` schema is **MISSING / NOT READY**. The approved upgrade is `npm run db:upgrade:assessment`, but no production write is authorized by this document.
-3. The selected Assessment provider is not yet configured in the root-owned production environment.
-4. The private production case corpus is not yet mounted/configured via `ASSESSMENT_CASE_DATA_ROOT`.
-5. A new immutable backend release containing the current Assessment closure/failure-path fixes has not yet been promoted.
-6. Draft / History / Result / real inference still need real-device acceptance after the production gate.
-7. Commercial paid launch still lacks CreditLedger, free quota and WeChat payment/recharge closure.
+The real Assessment runtime path is:
 
-Separate, non-P0 blockers:
-- `coaching_records` is not production-ready for full Classroom guidance acceptance;
-- Product Knowledge DB tables are not production-ready, although bundled product fallback remains available;
-- Official Account news integration is approved but implementation is a separate content lane.
+```text
+Assessment input
+-> eval-safe private case RAG
+-> Top 10 case evidence
+-> governed product knowledge
+-> qwen3.5-27b
+-> assessment-output-v1
+-> schema/evidence validation
+-> at most one bounded repair
+```
 
-## Execution policy
+Observed live runtime failures were not transport failures. The model returned syntactically valid but wrong-shape output (including a JSON numeric scalar).
 
-Do not reopen ECS migration, NPM, HTTPS, login, phone login, profile, WeCom human customer service, or CloudBase Storage validation without a concrete failure signal.
+Runtime hardening already landed:
+- `98f2442...` — one bounded repair for malformed model output;
+- `68d57a7...` — distinguish valid JSON primitives from object contract, strengthen top-level Assessment object contract;
+- current branch is ahead of `68d57a7...`.
 
-Keep one integration branch. Parallelism is by responsibility, not by branch count. Before editing shared files, read the latest head and handoff state. Do not duplicate completed checks.
+Only remaining local parity action:
 
-### Lane A — Backend / AI
+```powershell
+git pull --ff-only origin p1/foundation
+npm.cmd --prefix services/api run assessment:smoke:live
+```
 
-Current model-selection work is closed. The only remaining Lane A gate is the local real Assessment runtime parity smoke.
+Run this **once** on the latest branch with the already-configured private provider env.
 
-Next responsibility:
-1. pull the latest runtime-contract hardening and rerun `assessment:smoke:live` once;
-2. do not rerun the 87-case benchmark for reassurance;
-3. if the real runtime smoke passes, stop AI micro-tuning and hand the exact non-secret runtime contract to Lane B;
-4. if it still fails, fix only the concrete `assessment-output-v1` / provider-contract defect shown by that smoke;
-5. do not execute production schema writes or deploy production in Lane A;
-6. after production inference acceptance, move on to CreditLedger/free quota/payment backend.
+If it returns `{"ok":true}`:
+- stop AI prompt/model tuning;
+- enter the Assessment production schema/runtime gate.
 
-Selected production-integration contract:
-- provider: `aliyun-bailian`;
-- model: `qwen3.5-27b`;
-- mode: `enable_thinking=false`;
-- secrets remain outside Git;
-- production case data remains outside Git.
+If it still returns scalar/wrong top-level output:
+- do not continue indefinite prompt tuning;
+- keep qwen3.5-27b benchmark status = ACCEPT;
+- mark production Agent compatibility = RETEST/FAIL;
+- test one focused strict-JSON-Schema challenger.
 
-### Lane B — Production Guardian
+## Production schema readiness
 
-Infrastructure migration remains closed.
+Readiness report:
+`docs/handoff/production-schema-readiness-2026-10-03.md`
 
-Re-enter only after explicit main-control approval for the Assessment production gate:
-1. perform a fresh read-only `assessments` shape check;
-2. review the exact idempotent `db:upgrade:assessment`;
-3. execute that single approved schema write;
-4. place approved Assessment provider secrets in the root-owned env;
-5. mount/copy the approved private case runtime data;
-6. build/promote one reviewed immutable backend release;
-7. health-check and rollback on failure.
+Known current gates:
 
-Do not batch unrelated Classroom or Product Knowledge schema writes into the Assessment gate.
+### Missing / blocking
+- `assessments` -> `db:upgrade:assessment`
+- `coaching_records` -> `db:upgrade:classroom-guidance`
+- `product_knowledge_documents` / `product_knowledge_chunks` -> `db:upgrade:product-knowledge`
 
-### Lane C — WeChat acceptance
+### Already present / accepted at schema-presence level
+- `student_plans`
+- `plan_items`
+- `plan_revisions`
+- `schedule_imports`
+- `internal_ids`
+- `news_posts`
+- native phone-auth fields
 
-Continue only acceptance work that is not blocked.
+No production schema write is authorized by this status document.
 
-After Lane B completes the Assessment gate:
-1. save draft;
-2. reopen/edit draft;
-3. run real AI Assessment;
-4. inspect result/evidence/similar cases/uncertainty/disclaimer;
-5. reopen succeeded result from history without triggering new inference.
+Each missing feature gate remains independent; do not batch unrelated migrations.
 
-Do not claim production real-AI PASS before those checks.
+## Device acceptance — Lane C closed
 
-## Parallel product lanes
+Current accepted items include:
+- WeChat login/session path;
+- authenticated-but-unbound user now goes directly to identity binding instead of repeating login;
+- internal student ID claim;
+- Position dimension edit navigation;
+- WeCom human customer-service path;
+- Assessment form rendering and provider-unconfigured guard.
 
-- Official Account News: requirement is captured in `docs/product/news-official-account-integration.md`; implementation pending, independent of Assessment.
-- Classroom: full guidance path waits on the `coaching_records` production gate.
-- Product Knowledge: database-backed RAG productionization waits on its own schema/data gate; bundled catalog fallback is not evidence of DB readiness.
-- Customer service: official WeChat/WeCom human service path is already accepted and must not be rebuilt as a blocker.
+Current blockers/failures:
+- Assessment Draft/History/persisted Result: blocked by missing production `assessments` schema;
+- Classroom plan-card/full guidance path: blocked by missing `coaching_records`;
+- image schedule parsing: blocked by missing schedule AI provider;
+- one real `.xls` schedule file: parser compatibility FAIL; requires that exact source file;
+- Products full device acceptance: not run;
+- News full device acceptance: not run;
+- Assessment Result real-device long-text/evidence regression: not run after production gate;
+- teacher/admin complete device role flows: not run.
 
-## Delivery order
+Canonical device log:
+`docs/testing/wechat-product-device-acceptance-2026-10-03.md`
 
-1. **Pass the local real Assessment runtime parity smoke** (no production write).
-2. **Assessment production schema/runtime gate.**
-3. **Real-device Draft → History → Result → real inference acceptance.**
-4. **CreditLedger + free quota + WeChat payment/recharge closure.**
-5. Classroom/ID/schedule product acceptance and remaining feature-specific schema gates.
-6. Product Knowledge DB/RAG productionization.
-7. Official Account News implementation can proceed as an independent content lane when it does not contend with P0.
-8. Customer AI only after the paid core flow is stable.
+## Commercial gap — payment/credits
 
+Current core paid-launch gap remains:
+
+- no completed CreditLedger;
+- no free Assessment quota closure;
+- no WeChat recharge/payment order flow;
+- no idempotent payment callback/credit grant closure.
+
+This is the next major engineering package after production Assessment inference is accepted.
+
+## News / Official Account requirement
+
+The News module requirement is formally captured in:
+`docs/product/news-official-account-integration.md`
+
+Direction:
+- Official Account published articles are the primary content source;
+- preserve article URL and open concrete article via WeChat capability;
+- stop using title-keyword `inferTag()` as the production classification truth;
+- use server-side tags;
+- first verify whether WeChat officially exposes stable collection/category metadata;
+- otherwise allow admin manual multi-tagging;
+- no recommendation algorithm in this phase.
+
+This work is independent from Assessment AI and should not block the P0 commercial path.
+
+## New work-package model
+
+Close the old permanent Lane A/B/C conversations when convenient.
+
+Open a new conversation only when a concrete package is ready to execute.
+
+Recommended next packages:
+
+### Package 1 — Assessment Production Gate
+Trigger: local `assessment:smoke:live` returns `ok:true`.
+
+Scope:
+- fresh read-only `assessments` shape check;
+- approve and run only `db:upgrade:assessment`;
+- place Assessment secrets in root-owned production env;
+- mount production private case corpus;
+- deploy one immutable backend release;
+- health/config checks;
+- real-device Draft -> History -> Real AI -> Result acceptance.
+
+### Package 2 — Credit + WeChat Pay
+Trigger: production Assessment inference accepted.
+
+Scope:
+- credit ledger;
+- free quota;
+- order/recharge model;
+- WeChat payment;
+- signature verification;
+- idempotent callback;
+- failed model calls do not consume paid credit;
+- end-to-end paid Assessment acceptance.
+
+### Package 3 — Learning service closure
+Can run after P0 is stable, with limited parallelism.
+
+Scope:
+- `coaching_records` production gate;
+- Classroom plans/guidance/review;
+- image schedule provider;
+- supplied real `.xls` parser regression once the source file is provided;
+- teacher/admin device flows.
+
+### Package 4 — Content center
+Independent secondary package.
+
+Scope:
+- Product Knowledge schema/import;
+- News Official Account sync + tags/admin tagging;
+- products/news device acceptance.
+
+### Package 5 — Final visual polish
+Only after primary flows are stable.
+
+Scope:
+- consistent visual system;
+- typography, spacing, card hierarchy, states;
+- no business-logic redesign;
+- final device visual QA.
+
+## Delivery focus
+
+Do not spend another cycle on:
+- ECS migration redesign;
+- CloudBase AI;
+- model benchmark repetition;
+- broad architecture refactoring;
+- premature customer AI.
+
+The shortest path to delivery is:
+
+```text
+one real Assessment runtime smoke
+-> Assessment production gate
+-> real-device Assessment acceptance
+-> Credit/WeChat Pay
+-> Classroom/Schedule closure
+-> Product/News closure
+-> final UI polish
+```
