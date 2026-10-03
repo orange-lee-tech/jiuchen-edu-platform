@@ -201,6 +201,56 @@ Blind 87 total:
 - estimated cost: CNY 0.144660
 - provider / parse errors: 0
 
+### Production-runtime parity smoke — BLOCKED / handoff
+
+The provider/model/mode selection above is complete, but the real Assessment Agent
+runtime has **not** passed its local live smoke yet. Do not promote the Assessment
+production gate solely from the benchmark result.
+
+Observed 2026-10-03 local live-runtime attempts, using eval-safe private RAG and the
+real `assessment-output-v1` path:
+
+1. First live runtime attempt:
+   - HTTP status: 200
+   - finish reason: `stop`
+   - content type: string
+   - content length: 301
+   - top-level object markers: absent
+   - reasoning content length: 0
+   - prompt / completion tokens: 11,276 / 301
+   - end-to-end smoke latency: 26,491 ms
+   - result: `ai_provider_invalid_json`
+
+2. Second attempt after removing the Assessment `max_tokens` cap and adding one
+   bounded malformed-JSON repair:
+   - final observed provider call returned HTTP 200 / `finish_reason=stop`
+   - content length: 466
+   - reasoning content length: 0
+   - prompt / completion tokens: 11,610 / 466
+   - returned content was a syntactically valid JSON numeric scalar
+     (`0.999...`), not an `assessment-output-v1` object
+   - end-to-end smoke latency: 29,865 ms
+   - result remained blocked
+
+Interpretation:
+- this is not a truncation signal and not a leaked thinking response;
+- Alibaba documentation says JSON Object mode guarantees JSON formatting but does
+  not guarantee the required business structure, so downstream schema validation
+  and bounded repair remain mandatory;
+- `qwen3.5` open-source series is documented as supporting JSON Object in
+  non-thinking mode;
+- the provider parser previously conflated “valid JSON scalar” with “invalid JSON”;
+  the handoff code now preserves valid JSON values for business-schema validation
+  and strengthens the Assessment prompt with an explicit top-level object/type
+  skeleton.
+
+Gate rule:
+- keep provider/model selection = ACCEPT;
+- keep **production Assessment runtime = BLOCKED / RETEST** until
+  `npm --prefix services/api run assessment:smoke:live` returns `ok: true`;
+- do not execute the production Assessment schema/runtime deployment merely to
+  discover this same Agent-contract failure in production.
+
 ### Decision
 
 **Decision: ACCEPT — selected runtime baseline is qwen3.5-27b, non-thinking.**
@@ -218,12 +268,12 @@ The thinking challenger is not selected as the default:
 This evaluation supports provider/mode selection and engineering readiness. It does **not** turn rule-derived labels into human expert ground truth. Research and competition remain the weakest subjective dimensions, so production must retain bounded evidence, deterministic rule constraints where available, uncertainty, and reviewability rather than treating raw model scores as authoritative expert truth.
 
 Follow-up:
-1. Do not rerun this same model/mode merely for reassurance.
-2. Move to the production Assessment schema/runtime gate.
-3. Configure the selected model only in the ECS private environment.
-4. Mount the approved private case corpus.
+1. Do not rerun the 87-case benchmark merely for reassurance.
+2. Re-run only the local real Assessment runtime smoke after pulling the latest runtime-contract hardening; this is a different gate from the frozen benchmark.
+3. Proceed to the production Assessment schema/runtime gate only after that smoke returns `ok: true`.
+4. Configure the selected model only in the ECS private environment and mount the approved private case corpus.
 5. Re-enter real-device Assessment acceptance after the production gate.
-6. Re-evaluate only if the model, rubric, prompt contract, or evaluation data materially changes.
+6. Re-run the frozen benchmark only if the model, rubric, evaluation prompt contract, or evaluation data materially changes.
 
 ## Secret policy
 

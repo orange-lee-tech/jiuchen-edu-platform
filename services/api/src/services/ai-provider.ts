@@ -68,6 +68,18 @@ export class JsonModelProviderInvalidJsonError extends Error {
 
 export function extractJsonObject(textValue: string): unknown {
   const trimmed = textValue.trim()
+
+  // JSON Object mode should return JSON, but providers/models may still return a
+  // valid JSON scalar/array that is wrong for the downstream business schema.
+  // Preserve that distinction: parse valid JSON here and let the caller's
+  // schema validation decide whether the top-level type is acceptable.
+  try {
+    return JSON.parse(trimmed) as unknown
+  } catch {
+    // Keep compatibility with providers that wrap an otherwise valid JSON
+    // object in short prose or markdown despite JSON mode.
+  }
+
   const start = trimmed.indexOf('{')
   const end = trimmed.lastIndexOf('}')
   if (start < 0 || end <= start) {

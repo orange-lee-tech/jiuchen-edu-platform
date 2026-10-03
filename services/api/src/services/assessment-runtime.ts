@@ -173,16 +173,22 @@ class JsonAssessmentModelProvider implements AssessmentModelProvider {
     repair?: { invalidOutput: unknown; validationError: string },
   ) {
     const allowedInputEvidenceRefs = getAllowedInputEvidenceRefs(input.assessment)
+    const outputShape =
+      '{"profileSummary":"string","strengths":[{"title":"string","detail":"string","evidenceRefs":["ref"]}],"risks":[{"title":"string","detail":"string","evidenceRefs":["ref"]}],"targetAssessments":[{"schoolName":"string","programName":null,"tier":"reach|match|conservative|insufficient_data","rationale":"string","gapItems":["string"],"actions":["string"],"evidenceRefs":["ref"]}],"recommendedActions":[{"priority":"high|medium|low","title":"string","rationale":"string","timeframe":null}],"similarCases":[{"caseId":"string","sourceType":"jiuchen|external","similarityReason":"string","resultSummary":"string","evidenceRef":"case:..."}],"uncertainties":["string"],"disclaimer":"string"}'
+
     return this.modelProvider.generateJson({
       system:
-        '你是九辰教育保研评估引擎。只输出一个 JSON 对象，不要 Markdown，不要解释。' +
-        '输出必须匹配 assessment-output-v1：包含 profileSummary、strengths、risks、targetAssessments、recommendedActions、similarCases、uncertainties、disclaimer。' +
+        '你是九辰教育保研评估引擎。只输出一个完整 JSON 对象，不要 Markdown，不要解释。' +
+        '顶层必须是 object；第一个非空白字符必须是 {，最后一个非空白字符必须是 }。禁止只输出数字、字符串、数组、布尔值或 null。' +
+        '输出必须匹配 assessment-output-v1。以下仅是字段与类型骨架，不是事实示例：' +
+        outputShape +
+        '。可以使用空数组，但不得省略顶层字段。' +
         '禁止生成精确录取概率。禁止发明 evidence ref、案例、院校事实或来源。' +
         'strengths/risks 只能引用 allowedInputEvidenceRefs 或 knowledge.evidence 中的 ref；每个 targetAssessments 必须引用至少一条 kind=school/program/case 的真实检索证据。' +
         'similarCases 只能引用 kind=case 的真实 evidence，caseId 必须等于该 evidence 的 sourceId，sourceType 必须一致。' +
         'targetAssessments 要逐一覆盖用户输入的目标院校。资料不足时明确写入 uncertainties，并使用 insufficient_data，而不是编造结论。' +
         (repair
-          ? '这是唯一一次修复机会；请修复校验错误，保持有证据的有效内容，不要添加新事实。'
+          ? '这是唯一一次修复机会。上次输出未通过 assessment-output-v1；请完全重写为上述完整 JSON 对象，不要只修局部，也不要重复输出数字/字符串/数组。保持有证据的有效内容，不要添加新事实。'
           : ''),
       user:
         (repair

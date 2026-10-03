@@ -314,6 +314,59 @@ test('assessment runtime allows one bounded repair after invalid model output', 
 })
 
 
+test('assessment runtime repairs a valid JSON scalar that violates output schema', async () => {
+  let repairs = 0
+  const retriever: AssessmentRetriever = {
+    async retrieve() {
+      return {
+        version: 'knowledge-v1',
+        evidence: [{
+          ref: 'case:real',
+          kind: 'case',
+          sourceType: 'external',
+          sourceId: 'real',
+          title: '真实案例',
+          sourceLabel: '案例库',
+        }],
+      }
+    },
+  }
+
+  const provider: AssessmentModelProvider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async analyze() {
+      return 0.999
+    },
+    async repair() {
+      repairs += 1
+      return {
+        profileSummary: '背景摘要',
+        strengths: [],
+        risks: [],
+        targetAssessments: [{
+          schoolName: '目标大学',
+          tier: 'match',
+          rationale: '使用真实案例。',
+          gapItems: [],
+          actions: [],
+          evidenceRefs: ['case:real'],
+        }],
+        recommendedActions: [],
+        similarCases: [],
+        uncertainties: [],
+        disclaimer: '本结果用于规划辅助。',
+      }
+    },
+  }
+
+  const result = await executeAssessment({ retriever, provider }, input)
+  assert.equal(repairs, 1)
+  assert.equal(result.output.targetAssessments[0].tier, 'match')
+})
+
+
 test('assessment runtime uses the same single repair budget for invalid JSON', async () => {
   let repairs = 0
   const retriever: AssessmentRetriever = {

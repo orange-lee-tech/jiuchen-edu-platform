@@ -2,7 +2,7 @@
 
 Repository: `orange-lee-tech/jiuchen-edu-platform`  
 Integration branch: `p1/foundation`  
-Verified branch HEAD at status write: `27bc7f4a818cdaa2a5e0fc9b173212b724432b45`
+Verified branch HEAD at status write: `8eb80caf96660853f4baac3a721457d7a38d0764`
 
 ## Executive status
 
@@ -62,12 +62,13 @@ Full metrics live in `docs/architecture/ai-provider-evaluation-log.md`.
 
 ## Current hard blockers
 
-1. Production `assessments` schema is **MISSING / NOT READY**. The approved upgrade is `npm run db:upgrade:assessment`, but no production write is authorized by this document.
-2. The selected Assessment provider is not yet configured in the root-owned production environment.
-3. The private production case corpus is not yet mounted/configured via `ASSESSMENT_CASE_DATA_ROOT`.
-4. A new immutable backend release containing the current Assessment closure/failure-path fixes has not yet been promoted.
-5. Draft / History / Result / real inference still need real-device acceptance after the production gate.
-6. Commercial paid launch still lacks CreditLedger, free quota and WeChat payment/recharge closure.
+1. **Local real Assessment runtime parity smoke is BLOCKED / RETEST.** Provider/model selection passed, but two live Agent-runtime attempts returned non-object model content; the latest final response was a valid JSON numeric scalar rather than `assessment-output-v1`. Do not promote the production Assessment gate until `assessment:smoke:live` returns `ok: true`.
+2. Production `assessments` schema is **MISSING / NOT READY**. The approved upgrade is `npm run db:upgrade:assessment`, but no production write is authorized by this document.
+3. The selected Assessment provider is not yet configured in the root-owned production environment.
+4. The private production case corpus is not yet mounted/configured via `ASSESSMENT_CASE_DATA_ROOT`.
+5. A new immutable backend release containing the current Assessment closure/failure-path fixes has not yet been promoted.
+6. Draft / History / Result / real inference still need real-device acceptance after the production gate.
+7. Commercial paid launch still lacks CreditLedger, free quota and WeChat payment/recharge closure.
 
 Separate, non-P0 blockers:
 - `coaching_records` is not production-ready for full Classroom guidance acceptance;
@@ -82,14 +83,15 @@ Keep one integration branch. Parallelism is by responsibility, not by branch cou
 
 ### Lane A — Backend / AI
 
-Current model-selection work is closed.
+Current model-selection work is closed. The only remaining Lane A gate is the local real Assessment runtime parity smoke.
 
 Next responsibility:
-1. maintain the selected provider/runtime contract;
-2. do not rerun the same qwen3.5-27b benchmark for reassurance;
-3. do not execute production schema writes or deploy production;
-4. after main-control approval, hand the exact non-secret runtime contract to Lane B;
-5. after production inference acceptance, move on to CreditLedger/free quota/payment backend rather than further model micro-tuning.
+1. pull the latest runtime-contract hardening and rerun `assessment:smoke:live` once;
+2. do not rerun the 87-case benchmark for reassurance;
+3. if the real runtime smoke passes, stop AI micro-tuning and hand the exact non-secret runtime contract to Lane B;
+4. if it still fails, fix only the concrete `assessment-output-v1` / provider-contract defect shown by that smoke;
+5. do not execute production schema writes or deploy production in Lane A;
+6. after production inference acceptance, move on to CreditLedger/free quota/payment backend.
 
 Selected production-integration contract:
 - provider: `aliyun-bailian`;
@@ -135,11 +137,12 @@ Do not claim production real-AI PASS before those checks.
 
 ## Delivery order
 
-1. **Assessment production schema/runtime gate.**
-2. **Real-device Draft → History → Result → real inference acceptance.**
-3. **CreditLedger + free quota + WeChat payment/recharge closure.**
-4. Classroom/ID/schedule product acceptance and remaining feature-specific schema gates.
-5. Product Knowledge DB/RAG productionization.
-6. Official Account News implementation can proceed as an independent content lane when it does not contend with P0.
-7. Customer AI only after the paid core flow is stable.
+1. **Pass the local real Assessment runtime parity smoke** (no production write).
+2. **Assessment production schema/runtime gate.**
+3. **Real-device Draft → History → Result → real inference acceptance.**
+4. **CreditLedger + free quota + WeChat payment/recharge closure.**
+5. Classroom/ID/schedule product acceptance and remaining feature-specific schema gates.
+6. Product Knowledge DB/RAG productionization.
+7. Official Account News implementation can proceed as an independent content lane when it does not contend with P0.
+8. Customer AI only after the paid core flow is stable.
 

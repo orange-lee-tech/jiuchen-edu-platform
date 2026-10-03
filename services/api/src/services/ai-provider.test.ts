@@ -16,6 +16,12 @@ test('extractJsonObject accepts JSON surrounded by model prose', () => {
   )
 })
 
+test('extractJsonObject preserves valid JSON primitives for schema validation', () => {
+  assert.equal(extractJsonObject('0.999'), 0.999)
+  assert.equal(extractJsonObject('"not-an-object"'), 'not-an-object')
+  assert.deepEqual(extractJsonObject('[1,2,3]'), [1, 2, 3])
+})
+
 test('AI provider configuration is isolated by workload', () => {
   const env = {
     NODE_ENV: 'test' as const,
