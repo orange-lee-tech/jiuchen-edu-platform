@@ -135,7 +135,7 @@ Diagnosis: `classroom.ts` treated an authenticated `user` role as the same `gues
 
 Fix: introduce an explicit `unbound` classroom state and route its CTA to `/pages/profile-edit/profile-edit`.
 
-Status: **FIXED / RETEST**.
+Status: **PASS** — user retested the updated flow and confirmed an already authenticated user now goes directly to internal-ID binding without another WeChat/phone login.
 
 ### Observation E — Test student identity claim
 
@@ -194,10 +194,30 @@ Fix:
 - 竞赛实践 → 竞赛区；
 - remove permanently hard-coded “待补充” semantics and present the chip as an action.
 
-Status: **FIXED / RETEST**.
+Status: **PASS** — user retested the updated Position dimension cards and confirmed the actionable edit links work as intended.
 
 ### Observation I — Plan cards did not render
 
 The student did **not** miss a required “import schedule first” step. Schedule import is an independent tool and is not a prerequisite for plan cards.
 
 The current student classroom request fails before `plans` can render because the production guidance schema is incomplete. This remains the same known Classroom schema blocker and must not be “fixed” by fabricating client-side plan data.
+
+## 8. Lane C closure note — 2026-10-03
+
+Final retest confirmations from the device owner:
+
+- authenticated-but-unbound Classroom routing: **PASS**;
+- Position dimension edit entry points: **PASS**.
+
+Latest known branch state before this documentation update already included Lane C code fixes plus subsequent AI-lane work, and the latest branch CI was green.
+
+Outstanding items intentionally left for follow-up rather than hidden:
+
+1. Assessment Draft/History/Result production persistence remains dependent on the production `assessments` schema gate and real AI runtime readiness.
+2. Classroom plan-card production acceptance remains dependent on the classroom guidance schema gate, including `coaching_records`.
+3. Image schedule parsing remains dependent on the schedule multimodal AI provider.
+4. The supplied real `.xls` schedule remains a parser compatibility FAIL; repair should be done against that exact source file.
+5. Products and News still need their dedicated real-device acceptance pass.
+6. News Official Account article/tag integration is recorded separately in `docs/product/news-official-account-integration.md`.
+
+No ECS/NPM changes, production schema writes, or customer-service AI implementation were performed by Lane C during this acceptance batch.
