@@ -1,5 +1,16 @@
 # Main delivery command — 2026-10-02
 
+> **Historical document / superseded for current execution.**
+>
+> This file records the 2026-10-02 delivery state. Several blockers listed below
+> (case retrieval, provider selection, Assessment result/history UI) have since
+> been completed.
+>
+> For current execution, use:
+> `docs/handoff/main-control-status-2026-10-03.md`
+>
+> Do not use this historical file as the active task list.
+
 ## Current verified baseline
 
 Repository: `orange-lee-tech/jiuchen-edu-platform`  
@@ -29,61 +40,21 @@ Accepted:
 
 Do not spend delivery time re-validating these without a concrete failure signal.
 
-## Critical product gaps discovered at command review
+## Historical critical product gaps at 2026-10-02
 
-### 1. Assessment runtime is not commercially complete
+At the time of this command, Assessment retrieval/result UI/provider evaluation were unfinished. Those items have since advanced and must be read from the current main-control status.
 
-The provider adapter exists, but `createAssessmentRuntimeFromEnv()` currently creates:
+The commercial/payment gap remains current:
+- CreditLedger
+- free quota
+- WeChat payment/recharge
+- idempotent callback/credit grant
 
-`new CompositeAssessmentRetriever([])`
+The independent production schema gates also remain feature-specific and must not be bulk-applied.
 
-Therefore the runtime has **no real case / school / product evidence source**. The assessment output validator requires retrieved evidence for target assessments, so merely buying/configuring an API key is not enough.
+## Historical delivery order
 
-### 2. Assessment result UX is unfinished
-
-The mini-program assessment page can save and run a draft, but after success currently says:
-
-`AI 评估已完成。结果页将在下一步接入。`
-
-A real result view/history experience is required before the feature is deliverable.
-
-### 3. Credits / payment are not implemented in current API routes
-
-Current API route inventory has no credits/payment route. If V1 commercial policy remains “free assessment quota, then paid recharge”, this is a commercial-delivery blocker and must be implemented before paid launch.
-
-### 4. Production feature schemas remain gate-based
-
-Do not bulk-run all upgrades. Before first production acceptance of a feature, inspect its required schema and run only the reviewed idempotent upgrade after main-control approval.
-
-Priority gates:
-- internal ID/news
-- classroom guidance/revisions
-- assessment
-- product knowledge
-
-### 5. Product knowledge is still serving bundled fallback
-
-`GET /products` can return HTTP 200 from bundled content even without production product-knowledge tables. Database-backed knowledge must be verified/imported before it is relied on for RAG/AI.
-
-### 6. Schedule image AI still needs a real provider
-
-CloudBase Storage stays. Image parsing should use the provider abstraction already created by Lane A and receive separate low-cost vision/OCR credentials.
-
-## Existing private AI data assets
-
-Current manifest records:
-- canonical cases: 748
-- train: 590
-- dev: 66
-- frozen evaluation suite: 92
-- eval-safe RAG cases: 656
-- production RAG cases: 748
-
-The 92-case evaluation suite is already frozen and leakage rules are documented. Do not rebuild a second evaluation system unless the existing one is demonstrably insufficient.
-
-Real case content stays under ignored local `data-source/cases/` and must not enter Git.
-
-## Delivery order
+This section is retained for audit only.
 
 ### Gate P0 — Close the core paid product path
 
@@ -106,30 +77,11 @@ Real case content stays under ignored local `data-source/cases/` and must not en
 1. Verify/import product knowledge DB.
 2. Verify news production path.
 3. Keep WeChat/WeCom human customer-service path as the guaranteed fallback.
-4. Add bounded Customer AI FAQ/RAG only after core product P0/P1 is stable; do not let it block initial business acceptance.
+4. Add bounded Customer AI FAQ/RAG only after core product P0/P1 is stable.
 
-## Ownership
+## Current pointer
 
-- Main control chat: prioritization, release gates, acceptance decisions.
-- Lane A / local Codex: backend AI, retrieval, evaluation, assessment runtime, schedule AI, later credits/payment backend.
-- Lane B: dormant Production Guardian; only release, schema gate, rollback, or incident.
-- Lane C: acceptance/integration support; customer-service and ECS transport are already closed.
+Use:
+`docs/handoff/main-control-status-2026-10-03.md`
 
-Parallelism is by responsibility, not branch count. Keep `p1/foundation` as the integration branch and serialize code commits unless a real conflict requires a temporary worktree/branch.
-
-## Immediate command
-
-Do not start another infrastructure initiative.
-
-The next engineering batch is:
-
-**Assessment Commercial Closure**
-
-It ends only when:
-- real evidence retrieval works;
-- one provider passes the frozen evaluation gate at acceptable cost;
-- an authenticated user can submit an assessment and see a real structured result in the mini-program;
-- the production assessment schema is verified;
-- failure paths do not consume paid quota.
-
-After that, proceed directly to classroom/ID/schedule device acceptance and commercial payment closure.
+for the live blocker list, next work packages, and production gate order.
