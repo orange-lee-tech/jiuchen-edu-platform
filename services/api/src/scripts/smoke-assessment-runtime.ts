@@ -69,21 +69,119 @@ const input = {
   },
 }
 
-const startedAt = Date.now()
-const result = await executeAssessment(runtime, input)
+type ProviderDiagnostic = {
+  status?: number
+  finishReason?: unknown
+  contentType?: string
+  contentLength?: number
+  startsWithObject?: boolean
+  endsWithObject?: boolean
+  reasoningContentLength?: number
+  messageKeys?: string[]
+  usage?: unknown
+  diagnosticError?: string
+}
 
-console.log(
-  JSON.stringify(
-    {
-      ok: true,
-      provider: result.provider,
-      model: result.model,
-      knowledgeVersion: result.knowledgeVersion,
-      evidenceCount: result.evidence.length,
-      latencyMs: Date.now() - startedAt,
-      output: result.output,
-    },
-    null,
-    2,
-  ),
-)
+const originalFetch = globalThis.fetch
+let providerDiagnostic: ProviderDiagnostic | undefined
+
+globalThis.fetch = async (resource, init) => {
+  const response = await originalFetch(resource, init)
+
+  if (String(resource).includes('/chat/completions')) {
+    try {
+      const payload = (await response.clone().json()) as {
+        choices?: Array<{
+          finish_reason?: unknown
+          message?: {
+            content?: unknown
+            reasoning_content?: unknown
+            [key: string]: unknown
+          }
+        }>
+        usage?: unknown
+      }
+      const choice = payload.choices?.[0]
+      const message = choice?.message
+      const content = message?.content
+      const text =
+        typeof content === 'string'
+          ? content
+          : Array.isArray(content)
+            ? content
+                .map((item) =>
+                  item &&
+                  typeof item === 'object' &&
+                  'text' in item &&
+                  typeof item.text === 'string'
+                    ? item.text
+                    : '',
+                )
+                .join('')
+            : ''
+      const trimmed = text.trim()
+
+      providerDiagnostic = {
+        status: response.status,
+        finishReason: choice?.finish_reason,
+        contentType: Array.isArray(content) ? 'array' : typeof content,
+        contentLength: text.length,
+        startsWithObject: trimmed.startsWith('{'),
+        endsWithObject: trimmed.endsWith('}'),
+        reasoningContentLength:
+          typeof message?.reasoning_content === 'string'
+            ? message.reasoning_content.length
+            : 0,
+        messageKeys: message ? Object.keys(message).sort() : [],
+        usage: payload.usage,
+      }
+    } catch (error) {
+      providerDiagnostic = {
+        status: response.status,
+        diagnosticError:
+          error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  return response
+}
+
+const startedAt = Date.now()
+
+try {
+  const result = await executeAssessment(runtime, input)
+
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        provider: result.provider,
+        model: result.model,
+        knowledgeVersion: result.knowledgeVersion,
+        evidenceCount: result.evidence.length,
+        latencyMs: Date.now() - startedAt,
+        providerDiagnostic,
+        output: result.output,
+      },
+      null,
+      2,
+    ),
+  )
+} catch (error) {
+  console.error(
+    JSON.stringify(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+        latencyMs: Date.now() - startedAt,
+        providerDiagnostic,
+      },
+      null,
+      2,
+    ),
+  )
+  throw error
+} finally {
+  globalThis.fetch = originalFetch
+}
