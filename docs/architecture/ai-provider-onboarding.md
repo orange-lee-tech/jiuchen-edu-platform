@@ -32,37 +32,49 @@
 
 不要把 Token Plan 的 Key/Base URL 与普通按量 API Key 混用；它们是两套独立入口。
 
-## 第一批模型怎么选
+## 当前已选模型
 
-### Baseline
-`qwen3.8-flash`
+2026-10-03 的真实 Evaluation 已完成。
 
-先用它跑 5 条、20 条、92 条 Eval。它价格低、支持结构化输出，适合先验证“够不够用”。
+当前 Assessment 生产集成基线：
 
-### Challenger
-至少再跑一个：
-- `qwen3.7-plus`：更强但更贵；
-- 或百炼中的 `deepseek-v4-flash`：做跨模型对照。
+- Provider：阿里云百炼
+- Region：华北2（北京）
+- Model：`qwen3.5-27b`
+- Mode：`enable_thinking=false`
+- Protocol：OpenAI-compatible Chat Completions
 
-不要先买最贵模型。只有 Eval 显示便宜模型在关键维度明显不够，再升级。
+Thinking challenger（`thinking_budget=4096`）已经完成同一批盲测，但没有改善关键 Exact 指标，同时显著增加延迟和输出 Token，因此**不作为默认生产模式**。
+
+不要再按旧计划优先测试 `qwen3.8-flash`；除非未来明确启动“新模型 challenger”任务，否则当前工作应从模型选择转向生产 Assessment gate。
+
+完整结果见：
+`docs/architecture/ai-provider-evaluation-log.md`
 
 ## 本地评测
 
-在 PowerShell 当前窗口设置：
+在 PowerShell 当前窗口设置。当前本地已验证北京共享 OpenAI-compatible Base URL；生产可继续使用经过批准的北京 endpoint，并保持 Key 只在私有环境：
 
 ```powershell
 $env:EVAL_AI_PROVIDER="aliyun-bailian"
-$env:EVAL_AI_BASE_URL="https://<WorkspaceId>.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+$env:EVAL_AI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
 $env:EVAL_AI_API_KEY="<只在你本机填写>"
-$env:EVAL_AI_MODEL="qwen3.8-flash"
+$env:EVAL_AI_MODEL="qwen3.5-27b"
 
-$env:EVAL_PRICE_INPUT_PER_MILLION="0.8"
-$env:EVAL_PRICE_OUTPUT_PER_MILLION="2.7"
+$env:EVAL_PRICE_INPUT_PER_MILLION="0.6"
+$env:EVAL_PRICE_OUTPUT_PER_MILLION="4.8"
 $env:EVAL_PRICE_CURRENCY="CNY"
 
 node tools/evaluation/runner.mjs inspect
 node tools/evaluation/runner.mjs run --dry-run
-node tools/evaluation/runner.mjs run --subset core_representative --limit 5 --concurrency 1
+$env:EVAL_AI_EXTRA_BODY_JSON='{"enable_thinking":false}'
+$env:EVAL_JSON_MODE="true"
+
+node tools/evaluation/runner.mjs inspect
+node tools/evaluation/runner.mjs run --dry-run
+
+# 已完成的正式基线不要为“确认一下”重复重跑。
+# 只有模型 / Prompt / rubric / dataset materially changes 时才启动新 run-id。
 ```
 
 5 条无报错后，再扩到 20 条和 92 条。Runner 会记录 usage、延迟、错误和可选费用估算。
@@ -75,9 +87,9 @@ node tools/evaluation/runner.mjs run --subset core_representative --limit 5 --co
 
 ```text
 ASSESSMENT_AI_PROVIDER=aliyun-bailian
-ASSESSMENT_AI_BASE_URL=https://<WorkspaceId>.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+ASSESSMENT_AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 ASSESSMENT_AI_API_KEY=<server secret>
-ASSESSMENT_AI_MODEL=qwen3.8-flash
+ASSESSMENT_AI_MODEL=qwen3.5-27b
 ASSESSMENT_CASE_DATA_ROOT=/path/to/private/data-source/cases
 ```
 
