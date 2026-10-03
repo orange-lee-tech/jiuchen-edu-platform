@@ -138,81 +138,126 @@ Do not add theoretical runner cost to the cloud invoice as if both were charged.
 
 ## Production-runtime parity smoke — current state
 
-The operator ran the real Assessment runtime smoke on local commit:
-
-`3bd7abf367349a2690b2e5fa37960d5d4ac819d2`
-
 Command:
 
 ```powershell
 npm.cmd --prefix services/api run assessment:smoke:live
 ```
 
-Result: **FAILED on the old local head**.
+Status: **BLOCKED / RETEST — provider connectivity works, but the real Assessment Agent has not yet produced a valid `assessment-output-v1` object.**
 
-Observed provider diagnostic:
+Observed operator attempts include:
+
+### Attempt A — before malformed-JSON repair
 
 ```text
 HTTP status: 200
 finishReason: stop
 contentType: string
-contentLength: 316
+contentLength: 301
 startsWithObject: false
 endsWithObject: false
 reasoningContentLength: 0
-prompt_tokens: 12194
-completion_tokens: 316
-total_tokens: 12510
-latency: 34744 ms
+prompt_tokens: 11276
+completion_tokens: 301
+latency: 26491 ms
 runtime error: ai_provider_invalid_json
 ```
 
-The raw model content was a long decimal beginning with `0.999999...`, not a JSON object.
+This ruled out a transport/API failure, output-token truncation, and leaked thinking content.
 
-This was not an API connectivity failure. It was a malformed model-output shape that the old runtime did not spend its existing single repair budget on.
+### Attempt B — after `98f2442...`
 
-## Existing fix already landed remotely
+After pulling the one-bounded-repair implementation, the real runtime smoke was rerun.
 
-After local commit `3bd7abf...`, another parallel lane landed:
+Final observed provider call:
 
-`98f2442daf9d3b933c3be1b5081f45cae3a9c0bf — fix(ai): repair malformed assessment JSON once`
+```text
+HTTP status: 200
+finishReason: stop
+contentType: string
+contentLength: 466
+startsWithObject: false
+endsWithObject: false
+reasoningContentLength: 0
+prompt_tokens: 11610
+completion_tokens: 466
+total_tokens: 12076
+latency: 29865 ms
+runtime error: ai_provider_invalid_json
+```
 
-That fix:
-- adds `JsonModelProviderInvalidJsonError` and preserves the raw malformed text;
-- routes initial invalid-JSON output into the existing one-repair budget;
-- prevents a second repair after that budget is consumed;
-- adds tests for this exact malformed-JSON path;
-- does not create a second retry/repair architecture.
+The raw final content was a long JSON numeric scalar beginning with `0.999999...`.
 
-GitHub CI for `98f2442...`: **PASS**.
+Important interpretation:
+- `0.999...` is syntactically valid JSON, but it is not the required top-level Assessment object;
+- Alibaba's JSON Object mode guarantees JSON formatting but not the Jiuchen business schema, so downstream schema validation and bounded repair are still required;
+- Qwen3.5 open-source models are documented as supporting JSON Object in non-thinking mode;
+- the production runtime therefore must distinguish “invalid JSON syntax” from “valid JSON with the wrong top-level/business type”.
 
-Therefore the failure above must not be treated as an unresolved code defect until the smoke is rerun after syncing past `98f2442...`.
+## Runtime hardening already landed
+
+### `98f2442daf9d3b933c3be1b5081f45cae3a9c0bf`
+
+`fix(ai): repair malformed assessment JSON once`
+
+- preserves malformed response text;
+- routes initial invalid-JSON output into the existing single repair budget;
+- prevents unlimited repair loops;
+- removes the Assessment `max_tokens` cap in line with structured-output guidance;
+- CI: PASS.
+
+### `68d57a7429843b17ed3c1339f822b3c7d7f46616`
+
+`fix(ai): harden assessment output contract`
+
+- parses any syntactically valid JSON value first, so a scalar such as `0.999` reaches `assessment-output-v1` schema validation instead of being mislabeled as invalid JSON;
+- preserves prose-wrapped JSON-object fallback parsing;
+- strengthens the real Assessment prompt with an explicit top-level object rule and nested field/type skeleton;
+- explicitly forbids scalar/array/null top-level output;
+- keeps exactly one bounded repair budget;
+- adds regressions for valid JSON primitives and scalar-to-object repair;
+- records the parity blocker in the evaluation log and main-control status;
+- GitHub CI (push): **PASS**.
 
 ## Current repository handoff commits
 
-Live-evaluation chronology/logging:
+Evaluation / model-selection:
 - `ab3e973dda2450d6b178f4c1cd959446e4f2359f` — docs(ai): record live 5-20-92 evaluation gate
 - `8eb80caf96660853f4baac3a721457d7a38d0764` — docs(ai): fix evaluation decision formatting
 
-Runtime malformed-JSON repair from the parallel lane:
-- `98f2442daf9d3b933c3be1b5081f45cae3a9c0bf`
+Runtime parity:
+- `98f2442daf9d3b933c3be1b5081f45cae3a9c0bf` — fix(ai): repair malformed assessment JSON once
+- `68d57a7429843b17ed3c1339f822b3c7d7f46616` — fix(ai): harden assessment output contract
+
+Handoff/accounting docs after that commit may advance the shared branch; preserve them and pull latest before any new edit.
 
 ## Only remaining Lane A parity action
 
-Sync the local `p1/foundation` so it contains `98f2442...` or later, retain the already-configured private env values, and rerun:
+Pull the latest shared branch so the local checkout contains `68d57a...` or later, retain the existing private env values, and rerun the real runtime smoke **once**:
 
 ```powershell
-git pull
+git pull --ff-only origin p1/foundation
 git rev-parse HEAD
 npm.cmd --prefix services/api run assessment:smoke:live
 ```
 
 Expected gate:
 - real `assessment-output-v1` path executes;
-- eval-safe case corpus is used;
+- eval-safe private case corpus is used;
 - no production DB write;
-- malformed first response may consume at most the one bounded repair;
-- final output must pass schema/evidence validation.
+- malformed/wrong-shape first response may consume at most one bounded repair;
+- final output must pass schema and evidence validation.
+
+If this smoke returns `ok: true`:
+- Lane A stops;
+- hand the runtime contract to Lane B;
+- main control may then consider the separate Assessment production schema/runtime gate.
+
+If it still returns a JSON scalar or repeatedly fails the object contract:
+- do **not** keep prompt-tuning indefinitely;
+- record qwen3.5-27b as provider/model benchmark ACCEPT but real-Agent structured-output compatibility RETEST/FAIL;
+- consider a focused challenger that supports strict JSON Schema for the production Agent, then subject any model change to the required quality/cost evaluation before deployment.
 
 Do not deploy production or execute production schema writes from this lane.
 
