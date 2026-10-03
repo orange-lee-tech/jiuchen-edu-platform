@@ -17,6 +17,17 @@
       <text class="body-text">{{output.profileSummary}}</text>
     </view>
 
+    <view class="card">
+      <text class="section-title">证据依据</text>
+      <text wx:if="{{output.evidenceItems.length === 0}}" class="empty">当前报告没有可展示的外部证据条目</text>
+      <view wx:for="{{output.evidenceItems}}" wx:key="ref" class="evidence-row">
+        <text class="finding-title">{{item.title}}</text>
+        <text class="evidence-meta">{{item.metaLabel}}</text>
+        <text wx:if="{{item.excerpt}}" class="evidence-excerpt">{{item.excerpt}}</text>
+        <text class="evidence-ref">引用：{{item.ref}}</text>
+      </view>
+    </view>
+
     <view class="two-column">
       <view class="card finding-card strengths-card">
         <text class="section-title">优势</text>
@@ -37,6 +48,9 @@
     </view>
 
     <view class="section-label">目标评估</view>
+    <view wx:if="{{output.targetAssessments.length === 0}}" class="card">
+      <text class="empty">当前报告没有可展示的目标判断</text>
+    </view>
     <view wx:for="{{output.targetAssessments}}" wx:key="schoolName" class="card target-card">
       <view class="target-head">
         <view>
@@ -79,6 +93,7 @@
         </view>
         <text class="body-text">{{item.similarityReason}}</text>
         <text class="case-result">结果参照：{{item.resultSummary}}</text>
+        <text class="evidence-ref">证据引用：{{item.evidenceRef}}</text>
       </view>
     </view>
 

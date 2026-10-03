@@ -1,6 +1,7 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import {
   getMyAssessment,
+  type AssessmentEvidence,
   type AssessmentOutput,
   type AssessmentRecord,
 } from '../../utils/request'
@@ -12,7 +13,12 @@ const TIER_VIEW = {
   insufficient_data: { label: '信息不足', tone: 'insufficient' },
 } as const
 
+type EvidenceView = AssessmentEvidence & {
+  metaLabel: string
+}
+
 type ResultView = AssessmentOutput & {
+  evidenceItems: EvidenceView[]
   targetAssessments: Array<AssessmentOutput['targetAssessments'][number] & {
     tierLabel: string
     tierTone: string
@@ -52,6 +58,15 @@ Page({
       }
       const output: ResultView = {
         ...assessment.output,
+        evidenceItems: (assessment.evidence ?? []).map((item) => ({
+          ...item,
+          metaLabel: [
+            item.sourceLabel,
+            item.year ? String(item.year) : '',
+          ]
+            .filter(Boolean)
+            .join(' · '),
+        })),
         targetAssessments: assessment.output.targetAssessments.map((target) => ({
           ...target,
           tierLabel: TIER_VIEW[target.tier].label,
@@ -72,6 +87,14 @@ Page({
   },
 
   onViewHistory() {
+    const pages = getCurrentPages()
+    const previous = pages[pages.length - 2]
+
+    if (previous?.route === 'pages/assessment-history/assessment-history') {
+      wx.navigateBack()
+      return
+    }
+
     wx.redirectTo({ url: '/pages/assessment-history/assessment-history' })
   },
 })

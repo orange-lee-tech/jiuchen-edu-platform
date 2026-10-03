@@ -3,6 +3,7 @@ import {
   createAssessmentDraft,
   getAssessmentMeta,
   getMyAcademicProfile,
+  getMyAssessment,
   runMyAssessment,
   updateMyAcademicProfile,
   updateAssessmentDraft,
@@ -53,7 +54,7 @@ Page({
     ] as AssessmentTarget[],
   },
 
-  async onLoad() {
+  async onLoad(query: Record<string, string | undefined>) {
     const auth = getSavedAuthResult()
 
     if (!auth) {
@@ -68,21 +69,48 @@ Page({
     }
 
     try {
-      const [profile, meta] = await Promise.all([
+      const requestedDraftId = query.id ? decodeURIComponent(query.id) : ''
+      const [profile, meta, draft] = await Promise.all([
         getMyAcademicProfile(),
         getAssessmentMeta(),
+        requestedDraftId
+          ? getMyAssessment(requestedDraftId)
+          : Promise.resolve(null),
       ])
+
+      if (draft && draft.status !== 'draft') {
+        wx.showToast({ title: '该记录已不能作为草稿编辑', icon: 'none' })
+        wx.navigateBack()
+        return
+      }
+
+      const draftInput = draft?.input
+      const draftProfile = draftInput?.profile
 
       this.setData({
         providerConfigured: meta.providerConfigured,
+        draftId: draft?.id || '',
         profile: {
-          university: profile.university || '',
-          major: profile.major || '',
-          currentGrade: profile.currentGrade || '',
-          gpaText: profile.gpaText || '',
-          rankText: profile.rankText || '',
-          backgroundNote: '',
+          university: draftProfile?.university || profile.university || '',
+          major: draftProfile?.major || profile.major || '',
+          currentGrade: draftProfile?.currentGrade || profile.currentGrade || '',
+          gpaText: draftProfile?.gpaText || profile.gpaText || '',
+          rankText: draftProfile?.rankText || profile.rankText || '',
+          backgroundNote: draftProfile?.backgroundNote || '',
         },
+        english: draftInput?.english ?? [],
+        research: draftInput?.research ?? [],
+        competitions: draftInput?.competitions ?? [],
+        targets: draftInput?.targets?.length
+          ? draftInput.targets
+          : [
+              {
+                schoolName: '',
+                programName: '',
+                researchDirection: '',
+                note: '',
+              },
+            ],
       })
     } catch (error) {
       console.info('Assessment form bootstrap failed.', error)
@@ -366,9 +394,13 @@ Page({
 
     try {
       this.setData({ saving: true })
+      const input = this.buildInput()
       let draftId = this.data.draftId
-      if (!draftId) {
-        const draft = await createAssessmentDraft(this.buildInput())
+
+      if (draftId) {
+        await updateAssessmentDraft(draftId, input)
+      } else {
+        const draft = await createAssessmentDraft(input)
         draftId = draft.id
         this.setData({ draftId })
       }

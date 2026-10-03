@@ -55,7 +55,11 @@ Page({
             .join('、'),
           statusLabel: status.label,
           statusTone: status.tone,
-          dateLabel: formatDate(row.completedAt || row.createdAt),
+          dateLabel: formatDate(
+            row.status === 'draft'
+              ? row.updatedAt
+              : row.completedAt || row.createdAt,
+          ),
         }
       })
       this.setData({ assessments })
@@ -71,10 +75,19 @@ Page({
     const id = String(event.currentTarget.dataset.id || '')
     const status = String(event.currentTarget.dataset.status || '')
     if (!id) return
+
+    if (status === 'draft') {
+      wx.navigateTo({
+        url: `/pages/assessment-form/assessment-form?id=${encodeURIComponent(id)}`,
+      })
+      return
+    }
+
     if (status !== 'succeeded') {
       wx.showToast({ title: '该评估尚无可查看结果', icon: 'none' })
       return
     }
+
     wx.navigateTo({
       url: `/pages/assessment-result/assessment-result?id=${encodeURIComponent(id)}`,
     })
