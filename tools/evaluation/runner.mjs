@@ -125,7 +125,7 @@ function aggregateRecords(rows){
   let input=0,output=0,cached=0,reasoning=0,cost=0,costRows=0,usageMissing=0
   for(const row of successes){
     if(row.usage){const u=usageOf(row.usage);input+=u.input;output+=u.output;cached+=u.cached;reasoning+=u.reasoning}else usageMissing++
-    if(Number.isFinite(Number(row.estimated_cost))){cost+=Number(row.estimated_cost);costRows++}
+    if(row.estimated_cost!==null&&row.estimated_cost!==undefined&&Number.isFinite(Number(row.estimated_cost))){cost+=Number(row.estimated_cost);costRows++}
   }
   const errorTypes={};for(const row of failures){const k=String(row.error??'unknown_error');errorTypes[k]=(errorTypes[k]??0)+1}
   return{
