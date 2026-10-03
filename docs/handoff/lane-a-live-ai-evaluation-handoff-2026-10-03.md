@@ -125,6 +125,17 @@ This ACCEPT is for provider/model/mode selection only. It does not authorize pro
 Detailed metrics are in:
 `docs/architecture/ai-provider-evaluation-log.md`
 
+## Billing interpretation
+
+The runner's cost fields are estimated from the configured token prices. They are not proof that Alibaba Cloud actually charged that amount.
+
+For the operator's account, the Alibaba console still showed monthly consumption of CNY 0.00 after these calls. Treat:
+- runner `estimated_cost_*` as a comparable theoretical cost at the configured unit price;
+- Alibaba billing/usage records as the source of truth for actual charged amount;
+- free quota or other account-side offsets as possible reasons why actual payable cost remains zero.
+
+Do not add theoretical runner cost to the cloud invoice as if both were charged.
+
 ## Production-runtime parity smoke — current state
 
 The operator ran the real Assessment runtime smoke on local commit:
