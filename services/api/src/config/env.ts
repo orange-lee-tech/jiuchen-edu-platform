@@ -10,6 +10,22 @@ const optionalPort = z.preprocess(
   z.coerce.number().int().min(1).max(65535).optional(),
 )
 
+const optionalNumber = (min: number, max: number) =>
+  z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.coerce.number().min(min).max(max).optional(),
+  )
+
+const optionalBoolean = z.preprocess((value) => {
+  if (typeof value !== 'string') return value
+  const normalized = value.trim().toLowerCase()
+  if (!normalized) return undefined
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
+  return value
+}, z.boolean().optional())
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().default('0.0.0.0'),
@@ -32,6 +48,9 @@ const envSchema = z.object({
   ASSESSMENT_AI_BASE_URL: optionalNonEmptyString,
   ASSESSMENT_AI_API_KEY: optionalNonEmptyString,
   ASSESSMENT_AI_MODEL: optionalNonEmptyString,
+  ASSESSMENT_AI_TEMPERATURE: optionalNumber(0, 2),
+  ASSESSMENT_AI_JSON_MODE: optionalBoolean,
+  ASSESSMENT_AI_EXTRA_BODY_JSON: optionalNonEmptyString,
   ASSESSMENT_CASE_DATA_ROOT: optionalNonEmptyString,
   SCHEDULE_AI_PROVIDER: optionalNonEmptyString,
   SCHEDULE_AI_BASE_URL: optionalNonEmptyString,

@@ -34,6 +34,9 @@ export type JsonModelProviderConfig = {
   apiKey?: string
   model?: string
   timeoutMs?: number
+  temperature?: number
+  jsonMode?: boolean
+  extraBody?: Record<string, unknown>
 }
 
 export class JsonModelProviderUnavailableError extends Error {
@@ -92,6 +95,9 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
   private readonly baseUrl?: string
   private readonly apiKey?: string
   private readonly timeoutMs: number
+  private readonly temperature: number
+  private readonly jsonMode: boolean
+  private readonly extraBody: Record<string, unknown>
 
   constructor(config: JsonModelProviderConfig) {
     this.provider = config.provider?.trim() || 'openai-compatible'
@@ -99,6 +105,9 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
     this.baseUrl = config.baseUrl?.trim()
     this.apiKey = config.apiKey?.trim()
     this.timeoutMs = config.timeoutMs ?? 60_000
+    this.temperature = config.temperature ?? 0.1
+    this.jsonMode = config.jsonMode ?? false
+    this.extraBody = { ...(config.extraBody ?? {}) }
   }
 
   isConfigured() {
@@ -142,9 +151,13 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          ...this.extraBody,
           model: this.model,
           messages,
-          temperature: 0.1,
+          temperature: this.temperature,
+          ...(this.jsonMode
+            ? { response_format: { type: 'json_object' } }
+            : {}),
           ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}),
         }),
         signal: controller.signal,
@@ -181,12 +194,32 @@ export function createJsonModelProvider(config: JsonModelProviderConfig) {
   return new ChatCompletionsJsonModelProvider(config)
 }
 
+function parseExtraBodyJson(value?: string) {
+  if (!value) return undefined
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(value)
+  } catch {
+    throw new Error('ai_provider_extra_body_invalid_json')
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('ai_provider_extra_body_must_be_object')
+  }
+
+  return parsed as Record<string, unknown>
+}
+
 export function createAssessmentAIProvider(env: AppEnv) {
   return createJsonModelProvider({
     provider: env.ASSESSMENT_AI_PROVIDER ?? 'assessment-openai-compatible',
     baseUrl: env.ASSESSMENT_AI_BASE_URL,
     apiKey: env.ASSESSMENT_AI_API_KEY,
     model: env.ASSESSMENT_AI_MODEL,
+    temperature: env.ASSESSMENT_AI_TEMPERATURE ?? 0,
+    jsonMode: env.ASSESSMENT_AI_JSON_MODE ?? true,
+    extraBody: parseExtraBodyJson(env.ASSESSMENT_AI_EXTRA_BODY_JSON),
   })
 }
 

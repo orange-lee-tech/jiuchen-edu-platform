@@ -35,3 +35,19 @@ test('CAM and AI product credentials remain independently configurable', () => {
   assert.equal(env.CUSTOMER_AI_MODEL, 'customer-model')
   assert.equal(env.SCHEDULE_AI_MODEL, undefined)
 })
+
+test('assessment AI generation options are parsed explicitly', () => {
+  const env = loadEnv({
+    NODE_ENV: 'production',
+    ASSESSMENT_AI_TEMPERATURE: '0',
+    ASSESSMENT_AI_JSON_MODE: 'true',
+    ASSESSMENT_AI_EXTRA_BODY_JSON: '{"enable_thinking":false}',
+  })
+
+  assert.equal(env.ASSESSMENT_AI_TEMPERATURE, 0)
+  assert.equal(env.ASSESSMENT_AI_JSON_MODE, true)
+  assert.equal(
+    env.ASSESSMENT_AI_EXTRA_BODY_JSON,
+    '{"enable_thinking":false}',
+  )
+})

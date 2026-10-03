@@ -90,6 +90,9 @@ ASSESSMENT_AI_PROVIDER=aliyun-bailian
 ASSESSMENT_AI_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 ASSESSMENT_AI_API_KEY=<server secret>
 ASSESSMENT_AI_MODEL=qwen3.5-27b
+ASSESSMENT_AI_TEMPERATURE=0
+ASSESSMENT_AI_JSON_MODE=true
+ASSESSMENT_AI_EXTRA_BODY_JSON={"enable_thinking":false}
 ASSESSMENT_CASE_DATA_ROOT=/path/to/private/data-source/cases
 ```
 
@@ -134,3 +137,31 @@ Assessment、客服、课表图像解析分别使用独立业务空间或至少�
 - 不立即微调；
 - 不让 92 条 Eval 进入训练或评测时 RAG；
 - 不为了接某一家供应商重写 Runtime。
+
+## Production-runtime parity gate
+
+Provider benchmark passing is not the same thing as the production Assessment runtime passing.
+
+Before the production schema/deploy gate, run one local live smoke through the real runtime contract:
+
+```powershell
+$env:ASSESSMENT_AI_PROVIDER="aliyun-bailian"
+$env:ASSESSMENT_AI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+$env:ASSESSMENT_AI_API_KEY=$env:DASHSCOPE_API_KEY
+$env:ASSESSMENT_AI_MODEL="qwen3.5-27b"
+$env:ASSESSMENT_AI_TEMPERATURE="0"
+$env:ASSESSMENT_AI_JSON_MODE="true"
+$env:ASSESSMENT_AI_EXTRA_BODY_JSON='{"enable_thinking":false}'
+$env:ASSESSMENT_CASE_DATA_ROOT=(Resolve-Path ".\data-source\cases").Path
+
+npm --prefix services/api run assessment:smoke:live
+```
+
+This smoke:
+- refuses `NODE_ENV=production`;
+- uses the eval-safe case corpus;
+- does not require or write the production database;
+- runs the actual `assessment-output-v1` prompt, Top-10 case retrieval, evidence validation and bounded repair path;
+- must pass before handing the provider contract to production deployment.
+
+Do not commit the API key or private case content.
