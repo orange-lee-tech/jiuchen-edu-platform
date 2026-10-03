@@ -7,10 +7,11 @@
 - **inspect**：检查 92 条 Eval 文件是否齐全、标签覆盖是否符合清单。
 - **run**：调用任意 OpenAI-compatible `/chat/completions` 模型并保存预测。
 - **score**：不再调用模型，重新对已有预测计分，适合调整评分器后重算。
-- **predictions.jsonl**：逐条模型输出，可断点续跑。
+- **predictions.jsonl**：逐条模型输出，可断点续跑；失败记录会在恢复时重试，评分只取每个 eval_id 的最后一次结果。
 - **score_summary.json / report.md**：Exact、±1 档、无参考时克制率。
 - **run_config.json**：记录模型、参数、数据路径，不保存 API Key。
-- **errors.jsonl**：单独收集 429/5xx/解析失败等问题。
+- **errors.jsonl**：单独收集最终仍失败的请求；429/5xx/超时/常见网络瞬断会按有限重试策略处理。
+- **run_summary.json**：汇总当前选择集的总 token、缓存命中 token、reasoning token、mean/p95 延迟、错误类型和费用；断点续跑后仍按完整结果重算。
 
 ## 推荐执行顺序
 
@@ -33,7 +34,8 @@ node tools/evaluation/runner.mjs run --concurrency 2
 - `--temperature / --max-tokens / --json-mode`
 - `--system-prompt <path>`
 - `--model <name>`
-- `EVAL_AI_EXTRA_BODY_JSON` 追加供应商特有参数。
+- `EVAL_AI_EXTRA_BODY_JSON` 追加供应商特有参数；不能覆盖 runner 冻结的 model/messages/temperature/max_tokens/stream 核心请求字段。
+- 若供应商对缓存命中输入单独计价，可设置 `EVAL_PRICE_CACHED_INPUT_PER_MILLION`；未设置时按普通输入单价保守估算。
 
 因此 Runner 不绑定千问；只要服务兼容 OpenAI Chat Completions，就可以用同一套 Eval 对比。
 
