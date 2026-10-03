@@ -13,6 +13,12 @@
     <button class="entry-button" bindtap="onLogin">登录 / 绑定身份</button>
   </view>
 
+  <view wx:elif="{{mode === 'unbound'}}" class="entry-state surface">
+    <text class="entry-title">已登录，绑定九辰内部ID后进入真实课堂</text>
+    <text class="entry-desc">无需重新微信或手机号登录。前往个人资料填写九辰提供的内部ID，绑定成功后系统会自动切换学员或老师身份。</text>
+    <button class="entry-button" bindtap="onBindIdentity">去绑定身份</button>
+  </view>
+
   <view wx:elif="{{mode === 'teacher'}}" class="entry-state surface">
     <text class="entry-title">老师工作台</text>
     <text class="entry-desc">查看已分配学员、处理学员更新版本，并可直接编辑形成正式最新版。</text>

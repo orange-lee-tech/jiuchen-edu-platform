@@ -100,7 +100,7 @@ function toPlanCard(plan: ClassroomPlan): PlanCard {
 
 Page({
   data: {
-    mode: 'guest' as 'guest' | 'student' | 'teacher',
+    mode: 'guest' as 'guest' | 'unbound' | 'student' | 'teacher',
     loading: false,
     studentName: '',
     stages: FALLBACK_STAGES,
@@ -124,7 +124,7 @@ Page({
     }
 
     if (auth.user.role !== 'student') {
-      this.setData({ mode: 'guest', plans: [], mentors: [], records: [] })
+      this.setData({ mode: 'unbound', plans: [], mentors: [], records: [] })
       return
     }
 
@@ -202,6 +202,10 @@ Page({
 
   onLogin() {
     wx.navigateTo({ url: '/pages/login/login' })
+  },
+
+  onBindIdentity() {
+    wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
   },
 
   formatRecordDate(value: string) {

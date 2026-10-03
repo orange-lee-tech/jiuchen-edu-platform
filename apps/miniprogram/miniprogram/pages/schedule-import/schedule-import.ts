@@ -1,6 +1,7 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import {
   createScheduleImport,
+  friendlyRequestError,
   type ParsedSchedule,
 } from '../../utils/request'
 
@@ -94,7 +95,7 @@ Page({
     } catch (error) {
       wx.showModal({
         title: '课表解析失败',
-        content: error instanceof Error ? error.message : '请检查文件后重试',
+        content: friendlyRequestError(error, '请检查文件格式与课表布局后重试'),
         showCancel: false,
       })
     } finally {

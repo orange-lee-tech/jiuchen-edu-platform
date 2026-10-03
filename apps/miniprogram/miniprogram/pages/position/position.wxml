@@ -47,7 +47,13 @@
   </view>
 
   <view class="dimension-list">
-    <view wx:for="{{dimensions}}" wx:key="title" class="dimension-card surface">
+    <view
+      wx:for="{{dimensions}}"
+      wx:key="title"
+      class="dimension-card surface"
+      data-key="{{item.key}}"
+      bindtap="onDimensionTap"
+    >
       <view>
         <text class="dimension-title">{{item.title}}</text>
         <text class="dimension-desc">{{item.desc}}</text>

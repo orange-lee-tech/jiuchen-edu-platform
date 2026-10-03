@@ -1,14 +1,14 @@
 <view class="page-shell">
   <view class="import-head">
     <text class="page-title">导入课表</text>
-    <text class="page-desc">直接使用微信文件选择、相册/相机与 CloudBase。表格按单元格解析；图片由云开发多模态模型识别，不做假解析。</text>
+    <text class="page-desc">直接使用微信文件选择、相册/相机与 CloudBase。表格按星期表头与课程单元格解析；图片依赖已配置的多模态模型，不做假解析。</text>
   </view>
 
   <view class="import-actions">
     <button class="import-card surface" bindtap="onChooseSpreadsheet" loading="{{parsing}}">
       <text class="import-icon">表</text>
       <text class="import-title">微信文件 / Excel / CSV</text>
-      <text class="import-desc">从聊天文件中选择 xlsx、xls 或 csv</text>
+      <text class="import-desc">支持 xlsx、xls、csv；复杂合并单元格或特殊教务导出格式可能需要转换</text>
     </button>
     <button class="import-card surface" bindtap="onChooseImage" loading="{{parsing}}">
       <text class="import-icon">图</text>

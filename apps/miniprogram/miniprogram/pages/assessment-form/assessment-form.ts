@@ -57,6 +57,7 @@ Page({
 
   async onLoad(query: Record<string, string | undefined>) {
     const auth = getSavedAuthResult()
+    const focusSection = query.section ? decodeURIComponent(query.section) : ''
 
     if (!auth) {
       wx.redirectTo({ url: '/pages/login/login' })
@@ -118,7 +119,18 @@ Page({
       wx.showToast({ title: '评估资料暂时无法加载', icon: 'none' })
     } finally {
       this.setData({ loading: false })
+      if (focusSection) {
+        setTimeout(() => this.scrollToSection(focusSection), 80)
+      }
     }
+  },
+
+  scrollToSection(section: string) {
+    if (!['english', 'research', 'competition'].includes(section)) return
+    wx.pageScrollTo({
+      selector: `#section-${section}`,
+      duration: 220,
+    })
   },
 
   onBackgroundNoteInput(event: WechatMiniprogram.Input) {

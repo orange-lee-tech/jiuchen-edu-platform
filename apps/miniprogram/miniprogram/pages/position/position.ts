@@ -28,10 +28,10 @@ Page({
     profileSaving: false,
     profileForm: { ...EMPTY_PROFILE },
     dimensions: [
-      { title: '学业基础', desc: '绩点、排名与核心课程', status: '待补充' },
-      { title: '英语能力', desc: '四六级、雅思、托福等', status: '待补充' },
-      { title: '科研经历', desc: '项目、论文与导师经历', status: '待补充' },
-      { title: '竞赛实践', desc: '竞赛、创新创业与作品', status: '待补充' },
+      { key: 'profile', title: '学业基础', desc: '绩点、排名与核心课程', status: '填写 ›' },
+      { key: 'english', title: '英语能力', desc: '四六级、雅思、托福等', status: '填写 ›' },
+      { key: 'research', title: '科研经历', desc: '项目、论文与导师经历', status: '填写 ›' },
+      { key: 'competition', title: '竞赛实践', desc: '竞赛、创新创业与作品', status: '填写 ›' },
     ],
   },
 
@@ -177,5 +177,29 @@ Page({
   onProfileCardTap() {
     if (this.data.canEditProfile) return
     wx.navigateTo({ url: '/pages/login/login' })
+  },
+
+  onDimensionTap(event: WechatMiniprogram.BaseEvent) {
+    const auth = getSavedAuthResult()
+    if (!auth) {
+      wx.navigateTo({ url: '/pages/login/login' })
+      return
+    }
+
+    if (auth.user.role !== 'user' && auth.user.role !== 'student') {
+      wx.showToast({ title: '当前身份不编辑定位资料', icon: 'none' })
+      return
+    }
+
+    const key = String(event.currentTarget.dataset.key || '')
+    if (key === 'profile') {
+      wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
+      return
+    }
+
+    if (!['english', 'research', 'competition'].includes(key)) return
+    wx.navigateTo({
+      url: `/pages/assessment-form/assessment-form?section=${encodeURIComponent(key)}`,
+    })
   },
 })

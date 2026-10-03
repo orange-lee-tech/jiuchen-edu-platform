@@ -36,7 +36,7 @@
       <textarea class="textarea" maxlength="1000" value="{{profile.backgroundNote}}" placeholder="其它背景说明（可选）" bindinput="onBackgroundNoteInput" />
     </view>
 
-    <view class="card">
+    <view id="section-english" class="card">
       <view class="section-head">
         <text class="section-title">英语</text>
         <text class="link" bindtap="onAddEnglish">+ 添加</text>
@@ -52,7 +52,7 @@
       </view>
     </view>
 
-    <view class="card">
+    <view id="section-research" class="card">
       <view class="section-head">
         <text class="section-title">科研经历</text>
         <text class="link" bindtap="onAddResearch">+ 添加</text>
@@ -68,7 +68,7 @@
       </view>
     </view>
 
-    <view class="card">
+    <view id="section-competition" class="card">
       <view class="section-head">
         <text class="section-title">竞赛与实践</text>
         <text class="link" bindtap="onAddCompetition">+ 添加</text>

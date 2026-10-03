@@ -10,6 +10,7 @@ Status vocabulary:
 - **FIXED / RETEST** — deterministic UI/interaction defect was fixed in code; real-device retest is still required.
 - **NOT RUN** — not yet executed on the current device acceptance run.
 - **BLOCKED** — cannot be honestly passed until an external/runtime dependency is ready.
+- **FAIL** — executed on device and the observed behavior did not meet the expected product behavior.
 
 ## 1. AI Assessment UI acceptance
 
@@ -37,10 +38,12 @@ Status vocabulary:
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| WeChat login | NOT RUN | Run on current experience build. |
-| Profile | PARTIAL PASS | Real-device screenshot confirms Assessment/profile academic fields share the same persisted profile data and avoid duplicate entry. Full close/reopen persistence retest remains. |
-| Internal ID | NOT RUN | Requires real test IDs with known states. |
-| Classroom page | BLOCKED | Production readiness confirms `coaching_records` is MISSING / NOT READY. Current `/me/classroom` queries coaching records for guidance-enabled stages, so complete student classroom acceptance cannot honestly pass until the approved classroom-guidance schema gate is executed. Lane C only hardened UI error handling; no production migration was performed. |
+| WeChat login | PASS | User was already authenticated on device and successfully performed an authenticated internal-ID claim without re-login. |
+| Profile | PARTIAL PASS | Real-device screenshots confirm persisted academic fields are reused across profile/Position/Assessment. Full close/reopen persistence retest remains. |
+| Internal ID | PASS | Real device successfully claimed test student ID `JCS-UD7D-2F9Z` and displayed the locked “学员” identity. |
+| Classroom page | BLOCKED | Test student identity bound successfully, but the real classroom payload still fails before plan cards render. Production readiness confirms `coaching_records` is MISSING / NOT READY, and current `/me/classroom` queries it for guidance-enabled stages. A separate UI bug that sent an already logged-in but unbound user back to Login was fixed; retest after schema readiness. |
+| Schedule spreadsheet import | FAIL | A real `.xls` file reached the parser but returned `schedule_spreadsheet_invalid`. UI now explains supported layouts instead of exposing the raw code; parser compatibility for the supplied layout still needs investigation with the actual source file. |
+| Schedule image import | BLOCKED | Real image upload reached the backend but returned `schedule_ai_provider_not_configured`. This is an explicit provider dependency, not a successful image parse. |
 | Products | NOT RUN | Verify list/detail navigation and long product content. An explicit empty state was added for a valid empty catalog response. |
 | News | NOT RUN | Verify ECS list + official article/fallback behavior. |
 | WeChat customer service | PASS | Previously verified end-to-end: mini-program → `wx.openCustomerServiceChat` → official WeCom customer-service account → human agent → reply to user. |
@@ -115,3 +118,86 @@ Result: **PARTIAL PASS**; close/reopen persistence still needs a separate device
 - Teacher approve/reject actions now catch API failures and show a recoverable toast instead of leaving an unhandled async rejection.
 - Product list now has an explicit empty-catalog state.
 - No ECS, NPM, AI provider, schema migration, or customer-service architecture changes were made in this batch.
+
+## 7. Real-device findings — 2026-10-03 12:34–12:39
+
+### Issue D — Logged-in unbound user was sent back to Login
+
+```text
+页面：学堂
+操作：用户已经完成微信登录，但尚未绑定九辰内部ID；进入“学堂”后点击“登录 / 绑定身份”
+期望：已登录用户直接进入内部ID绑定页，不重复要求微信/手机号登录
+实际：按钮再次进入登录页
+截图：2026-10-03 用户真机反馈
+```
+
+Diagnosis: `classroom.ts` treated an authenticated `user` role as the same `guest` state as an unauthenticated visitor, and the CTA always navigated to `/pages/login/login`.
+
+Fix: introduce an explicit `unbound` classroom state and route its CTA to `/pages/profile-edit/profile-edit`.
+
+Status: **FIXED / RETEST**.
+
+### Observation E — Test student identity claim
+
+```text
+页面：个人资料
+操作：绑定 JCS-UD7D-2F9Z
+期望：切换到学员身份并锁定该内部ID
+实际：显示“身份绑定成功”，内部ID锁定，角色为“学员”
+截图：2026-10-03 12:34 真机截图
+```
+
+Result: **PASS**.
+
+### Issue F — Image schedule provider unavailable
+
+```text
+页面：导入课表
+操作：上传课表图片
+期望：Provider 可用时解析真实课表；Provider 未配置时给出明确产品提示
+实际：后端返回 schedule_ai_provider_not_configured，旧 UI 直接显示原始错误码
+截图：2026-10-03 12:37 真机截图
+```
+
+Fix: schedule import now routes backend codes through `friendlyRequestError`; provider-unconfigured state is explained in Chinese.
+
+Status: **BLOCKED by schedule image AI provider / UI FIXED, RETEST**.
+
+### Issue G — Supplied XLS schedule was not compatible with current parser
+
+```text
+页面：导入课表
+操作：上传真实 .xls 文件
+期望：识别星期表头与课程单元格并生成课程列表
+实际：后端返回 schedule_spreadsheet_invalid
+截图：2026-10-03 12:39 真机截图
+```
+
+The backend does accept `.xls` and reads it with the XLSX parser. The failure occurs after file acceptance, during canonical schedule parsing. The client now explains layout expectations instead of exposing the raw error code. Root-cause compatibility work requires the actual failing spreadsheet file.
+
+Status: **FAIL for the tested file / source file needed for parser-specific repair**.
+
+### Issue H — Position dimension cards were non-interactive
+
+```text
+页面：定位
+操作：点击“评估维度”中的“待补充”
+期望：直接进入对应资料编辑位置
+实际：卡片和“待补充”均不可点击
+截图：2026-10-03 12:35 用户批注截图
+```
+
+Fix:
+- 学业基础 → 个人资料编辑；
+- 英语能力 → AI 评估表单英语区；
+- 科研经历 → 科研区；
+- 竞赛实践 → 竞赛区；
+- remove permanently hard-coded “待补充” semantics and present the chip as an action.
+
+Status: **FIXED / RETEST**.
+
+### Observation I — Plan cards did not render
+
+The student did **not** miss a required “import schedule first” step. Schedule import is an independent tool and is not a prerequisite for plan cards.
+
+The current student classroom request fails before `plans` can render because the production guidance schema is incomplete. This remains the same known Classroom schema blocker and must not be “fixed” by fabricating client-side plan data.

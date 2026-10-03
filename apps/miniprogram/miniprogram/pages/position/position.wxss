@@ -130,6 +130,10 @@
   padding: 24rpx 26rpx;
 }
 
+.dimension-card:active {
+  background: #f8faff;
+}
+
 .dimension-title {
   font-size: 27rpx;
   font-weight: 700;
@@ -144,9 +148,10 @@
 .dimension-status {
   padding: 8rpx 14rpx;
   border-radius: 999rpx;
-  background: #f2f4f7;
-  color: #9298a1;
+  background: #edf4ff;
+  color: #2f6fed;
   font-size: 20rpx;
+  font-weight: 700;
 }
 
 .notice {
