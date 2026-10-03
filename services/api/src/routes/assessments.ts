@@ -26,13 +26,35 @@ const createAssessmentSchema = z
   })
   .strict()
 
-function isMissingTable(error: unknown) {
-  return (
-    error &&
-    typeof error === 'object' &&
-    'code' in error &&
-    String((error as { code?: unknown }).code ?? '') === 'ER_NO_SUCH_TABLE'
-  )
+export function isMissingTable(error: unknown) {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (!current || typeof current !== 'object' || seen.has(current)) {
+      return false
+    }
+
+    seen.add(current)
+    const candidate = current as {
+      code?: unknown
+      errno?: unknown
+      sqlState?: unknown
+      cause?: unknown
+    }
+
+    if (
+      String(candidate.code ?? '') === 'ER_NO_SUCH_TABLE' ||
+      Number(candidate.errno) === 1146 ||
+      String(candidate.sqlState ?? '') === '42S02'
+    ) {
+      return true
+    }
+
+    current = candidate.cause
+  }
+
+  return false
 }
 
 function serializeAssessment(row: {
