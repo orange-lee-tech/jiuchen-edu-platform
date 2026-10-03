@@ -56,6 +56,16 @@ export class JsonModelProviderHttpError extends Error {
   }
 }
 
+export class JsonModelProviderInvalidJsonError extends Error {
+  readonly rawText: string
+
+  constructor(rawText: string) {
+    super('ai_provider_invalid_json')
+    this.name = 'JsonModelProviderInvalidJsonError'
+    this.rawText = rawText
+  }
+}
+
 export function extractJsonObject(textValue: string): unknown {
   const trimmed = textValue.trim()
   const start = trimmed.indexOf('{')
@@ -178,7 +188,11 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
       const text = responseText(payload.choices?.[0]?.message?.content)
       if (!text) throw new Error('ai_provider_empty_response')
 
-      return extractJsonObject(text)
+      try {
+        return extractJsonObject(text)
+      } catch {
+        throw new JsonModelProviderInvalidJsonError(text)
+      }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new Error('ai_provider_timeout')

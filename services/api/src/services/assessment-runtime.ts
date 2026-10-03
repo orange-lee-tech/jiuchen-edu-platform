@@ -11,6 +11,7 @@ import {
 } from '../domain/assessment.js'
 import {
   createAssessmentAIProvider,
+  JsonModelProviderInvalidJsonError,
   type JsonModelProvider,
 } from './ai-provider.js'
 import {
@@ -189,7 +190,6 @@ class JsonAssessmentModelProvider implements AssessmentModelProvider {
           : '') +
         '请根据以下结构化输入、允许的输入引用和证据快照完成评估：\n' +
         JSON.stringify({ ...input, allowedInputEvidenceRefs }),
-      maxTokens: 4500,
     })
   }
 
@@ -323,21 +323,45 @@ export async function executeAssessment(
   }
 
   const knowledge = await runtime.retriever.retrieve(input)
-  let rawOutput = await runtime.provider.analyze({
-    assessment: input,
-    knowledge,
-  })
+  let rawOutput: unknown
+  let repairUsed = false
+
+  try {
+    rawOutput = await runtime.provider.analyze({
+      assessment: input,
+      knowledge,
+    })
+  } catch (error) {
+    if (
+      !(error instanceof JsonModelProviderInvalidJsonError) ||
+      !runtime.provider.repair
+    ) {
+      throw error
+    }
+
+    repairUsed = true
+    rawOutput = await runtime.provider.repair({
+      assessment: input,
+      knowledge,
+      invalidOutput: error.rawText,
+      validationError: error.message,
+    })
+  }
+
   let output: AssessmentOutput
 
   try {
     output = validateAssessmentResult(rawOutput, input, knowledge)
   } catch (error) {
-    if (!runtime.provider.repair) throw error
+    if (!runtime.provider.repair || repairUsed) throw error
+
+    repairUsed = true
     rawOutput = await runtime.provider.repair({
       assessment: input,
       knowledge,
       invalidOutput: rawOutput,
-      validationError: error instanceof Error ? error.message : 'assessment_output_invalid',
+      validationError:
+        error instanceof Error ? error.message : 'assessment_output_invalid',
     })
     output = validateAssessmentResult(rawOutput, input, knowledge)
   }

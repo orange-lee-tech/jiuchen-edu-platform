@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   ChatCompletionsJsonModelProvider,
+  JsonModelProviderInvalidJsonError,
   createAssessmentAIProvider,
   createCustomerServiceAIProvider,
   createScheduleAIProvider,
@@ -91,4 +92,37 @@ test('assessment provider rejects invalid extra-body JSON at startup', () => {
       }),
     /ai_provider_extra_body_invalid_json/,
   )
+})
+
+test('provider preserves invalid JSON text for bounded assessment repair', async () => {
+  const originalFetch = globalThis.fetch
+
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        choices: [{ message: { content: 'plain text instead of JSON' } }],
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    )
+
+  try {
+    const provider = new ChatCompletionsJsonModelProvider({
+      baseUrl: 'https://example.invalid/v1',
+      apiKey: 'test-key',
+      model: 'test-model',
+      jsonMode: true,
+    })
+
+    await assert.rejects(
+      provider.generateJson({ user: 'Return JSON' }),
+      (error: unknown) =>
+        error instanceof JsonModelProviderInvalidJsonError &&
+        error.rawText === 'plain text instead of JSON',
+    )
+  } finally {
+    globalThis.fetch = originalFetch
+  }
 })
