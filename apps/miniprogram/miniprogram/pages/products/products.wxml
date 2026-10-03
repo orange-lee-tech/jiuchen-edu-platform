@@ -8,6 +8,10 @@
   <view wx:if="{{loading}}" class="state-card">正在加载服务方案…</view>
   <view wx:elif="{{error}}" class="state-card error">{{error}}</view>
 
+  <view wx:elif="{{products.length === 0}}" class="state-card">
+    暂无可展示的服务方案。
+  </view>
+
   <view wx:else class="product-list">
     <view
       wx:for="{{products}}"

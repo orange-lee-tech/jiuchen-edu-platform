@@ -1,4 +1,5 @@
 import {
+  friendlyRequestError,
   getMyClassroom,
   getMyPlanVersions,
   getTeacherStudentClassroom,
@@ -8,6 +9,13 @@ import {
   type PlanEditorItem,
   type PlanRevision,
 } from '../../utils/request'
+
+function formatVersionDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const pad = (part: number) => String(part).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: '未开始' },
@@ -67,12 +75,18 @@ Page({
 
       if (!this.data.teacherMode) {
         const versions = await getMyPlanVersions(this.data.stageCode, this.data.type).catch(() => [])
-        this.setData({ versions })
+        this.setData({
+          versions: versions.map((version) => ({
+            ...version,
+            createdAt: formatVersionDate(version.createdAt),
+          })),
+        })
       }
     } catch (error) {
       wx.showToast({
-        title: error instanceof Error ? error.message : '计划加载失败',
+        title: friendlyRequestError(error, '计划加载失败，请稍后重试'),
         icon: 'none',
+        duration: 2600,
       })
     } finally {
       this.setData({ loading: false })
@@ -150,8 +164,9 @@ Page({
       await this.loadPlan()
     } catch (error) {
       wx.showToast({
-        title: error instanceof Error ? error.message : '保存失败',
+        title: friendlyRequestError(error, '计划保存失败，请稍后重试'),
         icon: 'none',
+        duration: 2600,
       })
     } finally {
       this.setData({ saving: false })

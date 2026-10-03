@@ -1,5 +1,6 @@
 import {
   approvePlanRevision,
+  friendlyRequestError,
   getPendingPlanRevisions,
   getTeacherStudents,
   rejectPlanRevision,
@@ -81,9 +82,17 @@ Page({
       content: '通过后，该版本会写入正式档案并成为默认最新版。',
       success: async (result) => {
         if (!result.confirm) return
-        await approvePlanRevision(id)
-        wx.showToast({ title: '已通过', icon: 'success' })
-        await this.loadData()
+        try {
+          await approvePlanRevision(id)
+          wx.showToast({ title: '已通过', icon: 'success' })
+          await this.loadData()
+        } catch (error) {
+          wx.showToast({
+            title: friendlyRequestError(error, '审核失败，请稍后重试'),
+            icon: 'none',
+            duration: 2600,
+          })
+        }
       },
     })
   },
@@ -97,9 +106,17 @@ Page({
       placeholderText: '可填写原因（选填）',
       success: async (result) => {
         if (!result.confirm) return
-        await rejectPlanRevision(id, result.content || null)
-        wx.showToast({ title: '已否决并回退正式版', icon: 'none' })
-        await this.loadData()
+        try {
+          await rejectPlanRevision(id, result.content || null)
+          wx.showToast({ title: '已否决并回退正式版', icon: 'none' })
+          await this.loadData()
+        } catch (error) {
+          wx.showToast({
+            title: friendlyRequestError(error, '审核失败，请稍后重试'),
+            icon: 'none',
+            duration: 2600,
+          })
+        }
       },
     })
   },

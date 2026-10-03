@@ -40,8 +40,8 @@ Status vocabulary:
 | WeChat login | NOT RUN | Run on current experience build. |
 | Profile | PARTIAL PASS | Real-device screenshot confirms Assessment/profile academic fields share the same persisted profile data and avoid duplicate entry. Full close/reopen persistence retest remains. |
 | Internal ID | NOT RUN | Requires real test IDs with known states. |
-| Classroom page | NOT RUN | Verify student/teacher role visibility and editable/review state without relying on the new AI provider. |
-| Products | NOT RUN | Verify list/detail navigation and long product content. |
+| Classroom page | BLOCKED | Production readiness confirms `coaching_records` is MISSING / NOT READY. Current `/me/classroom` queries coaching records for guidance-enabled stages, so complete student classroom acceptance cannot honestly pass until the approved classroom-guidance schema gate is executed. Lane C only hardened UI error handling; no production migration was performed. |
+| Products | NOT RUN | Verify list/detail navigation and long product content. An explicit empty state was added for a valid empty catalog response. |
 | News | NOT RUN | Verify ECS list + official article/fallback behavior. |
 | WeChat customer service | PASS | Previously verified end-to-end: mini-program → `wx.openCustomerServiceChat` → official WeCom customer-service account → human agent → reply to user. |
 
@@ -107,3 +107,11 @@ Result: **PARTIAL PASS**; close/reopen persistence still needs a separate device
 3. Result → history → reopen same result; confirm no new inference is triggered.
 4. Real device: login → profile → internal ID → classroom → products → news.
 5. Reconfirm WeChat customer service only if the experience build changed materially around that entry; no redesign is required.
+
+## 6. Static acceptance fixes after 2026-10-03 device run
+
+- Plan editor now routes backend failures through `friendlyRequestError` instead of exposing raw server messages.
+- Student plan version timestamps are formatted for human-readable display.
+- Teacher approve/reject actions now catch API failures and show a recoverable toast instead of leaving an unhandled async rejection.
+- Product list now has an explicit empty-catalog state.
+- No ECS, NPM, AI provider, schema migration, or customer-service architecture changes were made in this batch.
