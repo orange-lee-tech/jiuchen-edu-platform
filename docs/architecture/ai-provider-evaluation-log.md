@@ -203,7 +203,9 @@ Blind 87 total:
 
 ### Decision
 
-**Decision: ACCEPT — selected runtime baseline is qwen3.5-27b, non-thinking.**\n\nThis ACCEPT decision covers provider/model/mode selection only. It does not authorize production deployment; the production-runtime parity smoke and separate production schema/runtime gate still apply.
+**Decision: ACCEPT — selected runtime baseline is qwen3.5-27b, non-thinking.**
+
+This ACCEPT decision covers provider/model/mode selection only. It does not authorize production deployment; the production-runtime parity smoke and separate production schema/runtime gate still apply.
 
 The thinking challenger is not selected as the default:
 - it did not improve the key Exact metrics;
