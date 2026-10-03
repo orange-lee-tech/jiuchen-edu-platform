@@ -1,6 +1,7 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import {
   createAssessmentDraft,
+  friendlyRequestError,
   getAssessmentMeta,
   getMyAcademicProfile,
   getMyAssessment,
@@ -375,8 +376,11 @@ Page({
       this.setData({ draftId: draft.id })
       wx.showToast({ title: '评估草稿已保存', icon: 'success' })
     } catch (error) {
-      const message = error instanceof Error ? error.message : '保存失败'
-      wx.showToast({ title: message, icon: 'none', duration: 2600 })
+      wx.showToast({
+        title: friendlyRequestError(error, '评估草稿暂时无法保存'),
+        icon: 'none',
+        duration: 2600,
+      })
     } finally {
       this.setData({ saving: false })
     }
@@ -414,8 +418,11 @@ Page({
         wx.showToast({ title: '评估未完成，请稍后重试', icon: 'none' })
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : '评估运行失败'
-      wx.showToast({ title: message, icon: 'none', duration: 2600 })
+      wx.showToast({
+        title: friendlyRequestError(error, '评估运行失败，请稍后重试'),
+        icon: 'none',
+        duration: 2600,
+      })
     } finally {
       this.setData({ saving: false })
     }

@@ -27,7 +27,7 @@
     <text class="featured-tag">{{featured.tag}}</text>
     <text class="featured-title">{{featured.title}}</text>
     <text class="featured-summary">{{featured.summary}}</text>
-    <text class="featured-more">{{featured.articleUrl ? '复制原文链接 ›' : '预览内容'}}</text>
+    <text class="featured-more">{{featured.articleUrl ? '查看服务号原文 ›' : '预览内容'}}</text>
   </view>
 
   <view class="section-head">

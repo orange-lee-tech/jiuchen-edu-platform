@@ -134,9 +134,12 @@ function responseError(statusCode: number, payload: unknown) {
     return new ApiRequestError(statusCode, 'backend_version_mismatch', message)
   }
 
+  const applicationError =
+    /^[a-z][a-z0-9_]+$/.test(apiError) ? apiError : ''
+
   const code =
-    apiError && apiError !== 'Not Found'
-      ? apiError
+    applicationError
+      ? applicationError
       : statusCode === 401
         ? 'unauthorized'
         : statusCode >= 500
@@ -169,6 +172,8 @@ export function friendlyRequestError(
     phone_login_failed: '手机号登录暂不可用，请稍后重试',
     database_not_configured: '测试数据库尚未配置完成',
     schema_missing: '测试数据库正在升级，请稍后重试',
+    assessment_schema_not_ready: 'AI评估服务正在准备中，请稍后重试',
+    assessment_provider_not_configured: 'AI模型尚未接入，暂时不能运行评估',
     service_unavailable: '服务暂不可用，请稍后重试',
     invalid_internal_id: '内部ID不正确，请核对后重试',
     internal_id_locked: '内部ID已绑定，如需变更请联系管理员',
