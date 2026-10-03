@@ -42,6 +42,81 @@ This file records only non-secret provider/model decisions. Append one section p
 - Calibration prompt: `tools/evaluation/prompts/jc-label-v1.1.txt`
 - Pricing inputs used by the local runner: CNY 0.6 / million input tokens, CNY 4.8 / million output tokens. Treat this as the evaluation snapshot, not a permanent billing contract.
 
+### Initial live gate chronology — 5 → 20 → 92
+
+This chronology records the first operator-run live-provider gate for `qwen3.5-27b`.
+It proves request/usage/error/cost/latency stability, but it is **not** the blind-quality
+aggregate used for the final model/mode decision below: the first 5 Core cases were
+later treated as prompt-calibration cases, and this run used the provider's default
+thinking behavior rather than the selected explicit non-thinking contract.
+
+Run ID: `2026-10-03T04-25-33-241Z_qwen3.5-27b`
+
+Smoke 5:
+- completed: 5/5
+- provider / parse errors: 0
+- input tokens: 4,089
+- output tokens: 995
+- reasoning tokens: 495
+- estimated cumulative cost: CNY 0.007229
+- mean / p95 latency: 3474.4 / 3963 ms
+
+Smoke 20 (resumed from the same run):
+- completed: 20/20
+- skipped by resume: 5
+- newly processed: 15
+- provider / parse errors: 0
+- cumulative input tokens: 15,779
+- cumulative output tokens: 4,827
+- cumulative reasoning tokens: 2,738
+- estimated cumulative cost: CNY 0.032637
+- mean / p95 latency: 4361.9 / 5422 ms
+- Core 20 discipline Exact: 0.9474 (n=19)
+- academic: Exact 0.6; ±1 band 1.0
+- language: Exact 1.0; ±1 band 1.0
+- research: Exact 0.5714; ±1 band 1.0
+- competition: Exact 0.2143; ±1 band 1.0
+
+Full 92 (resumed from the same run):
+- completed: 92/92
+- skipped by resume: 20
+- newly processed: 72
+- provider / parse errors: 0
+- usage-missing rows: 0
+- total input tokens: 76,018
+- total output tokens: 24,364
+- reasoning tokens: 16,055
+- cached input tokens: 0
+- estimated total cost: CNY 0.162558
+- mean / p95 latency: 5312.5 / 12809 ms
+
+Core 80:
+- discipline Exact: 0.92 (n=75)
+- academic: Exact 0.7742; ±1 band 1.0
+- language: Exact 1.0; ±1 band 1.0
+- research: Exact 0.5094; ±1 band 0.9811
+- competition: Exact 0.2093; ±1 band 0.9302
+- practice: no scored references; abstention 1.0
+
+Language Extension 12:
+- discipline Exact: 1.0
+- academic: Exact 0.6; ±1 band 1.0
+- language: Exact 1.0; ±1 band 1.0
+- research: Exact 0.5833; ±1 band 1.0
+- competition: Exact 0.2857; ±1 band 1.0
+- practice: no scored references; abstention 1.0
+
+Cost accounting:
+- the 5-, 20-, and 92-case values above are cumulative checkpoints of one resumed run;
+- do **not** add CNY 0.007229 + 0.032637 + 0.162558;
+- the total unique 92-case cost is CNY 0.162558;
+- the incremental 15-case step cost CNY 0.025408 and the incremental 72-case step cost CNY 0.129921.
+
+Gate result:
+- live provider/runtime-request gate: **PASS**;
+- final model/mode selection: use the controlled blind comparison below, not this
+  calibration-contaminated/default-thinking run.
+
 ### Non-thinking baseline
 
 Runtime option:
@@ -128,7 +203,7 @@ Blind 87 total:
 
 ### Decision
 
-**Selected runtime baseline: qwen3.5-27b, non-thinking.**
+**Decision: ACCEPT — selected runtime baseline is qwen3.5-27b, non-thinking.**\n\nThis ACCEPT decision covers provider/model/mode selection only. It does not authorize production deployment; the production-runtime parity smoke and separate production schema/runtime gate still apply.
 
 The thinking challenger is not selected as the default:
 - it did not improve the key Exact metrics;
