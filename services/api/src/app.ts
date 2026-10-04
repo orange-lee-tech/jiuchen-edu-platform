@@ -14,11 +14,14 @@ import { registerProductRoutes } from './routes/products.js'
 import { registerBrandRoutes } from './routes/brand.js'
 import { registerClassroomWorkspaceRoutes } from './routes/classroom-workspace.js'
 import { registerGrowthProfileRoutes } from './routes/growth-profile.js'
+import { registerCommercialRoutes } from './routes/commercial.js'
 import {
   createCustomerServiceAIProvider,
   createScheduleAIProvider,
 } from './services/ai-provider.js'
 import { createAssessmentRuntimeFromEnv } from './services/assessment-runtime.js'
+import { createCommercialConfig } from './services/commercial-config.js'
+import { createWechatPayGatewayFromEnv } from './services/wechat-pay.js'
 
 const API_RELEASE = '0.3.0-experience'
 
@@ -31,6 +34,8 @@ export function buildApp(env: AppEnv) {
   const assessmentRuntime = createAssessmentRuntimeFromEnv(env)
   const scheduleAI = createScheduleAIProvider(env)
   const customerAI = createCustomerServiceAIProvider(env)
+  const commercialConfig = createCommercialConfig(env)
+  const wechatPay = createWechatPayGatewayFromEnv(env)
   const cloudbaseCamConfigured = Boolean(
     env.TENCENTCLOUD_SECRETID && env.TENCENTCLOUD_SECRETKEY,
   )
@@ -64,6 +69,10 @@ export function buildApp(env: AppEnv) {
       assessmentAiConfigured: assessmentRuntime.provider.isConfigured(),
       scheduleAiConfigured: scheduleAI.isConfigured(),
       customerAiConfigured: customerAI.isConfigured(),
+      creditEnforcementEnabled: commercialConfig.creditEnforcementEnabled,
+      freeCreditGrantConfigured: Boolean(commercialConfig.freeGrant),
+      paymentSkuCount: commercialConfig.paymentSkus.length,
+      wechatPayConfigured: wechatPay.isConfigured(),
     },
   }))
 
@@ -171,6 +180,7 @@ export function buildApp(env: AppEnv) {
   registerBrandRoutes(app)
   registerClassroomWorkspaceRoutes(app, database, env)
   registerGrowthProfileRoutes(app, database)
+  registerCommercialRoutes(app, database, commercialConfig, wechatPay)
   registerAdminRoutes(app, database, env)
 
   app.addHook('onClose', async () => {
