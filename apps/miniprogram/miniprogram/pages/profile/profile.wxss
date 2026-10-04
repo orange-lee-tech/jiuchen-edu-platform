@@ -1,25 +1,35 @@
 .profile-hero {
   display: flex;
   align-items: center;
-  padding: 30rpx;
+  gap: 0;
+  padding: 28rpx;
+  background: linear-gradient(145deg, #ffffff 0%, #f2f6ff 100%);
+  border-color: #e1e8f5;
+}
+
+.profile-hero:active {
+  background: #f6f9ff;
 }
 
 .avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 94rpx;
-  height: 94rpx;
+  width: 92rpx;
+  height: 92rpx;
+  flex-shrink: 0;
   border-radius: 50%;
-  background: linear-gradient(145deg, #2f6fed, #6d8ff5);
+  background: linear-gradient(145deg, #2f6fed, #6389ee);
+  box-shadow: 0 8rpx 20rpx rgba(47, 111, 237, 0.18);
   color: #ffffff;
-  font-size: 36rpx;
+  font-size: 35rpx;
   font-weight: 800;
 }
 
 .identity {
   flex: 1;
-  margin-left: 22rpx;
+  min-width: 0;
+  margin-left: 20rpx;
 }
 
 .user-name,
@@ -34,31 +44,37 @@
 }
 
 .user-name {
+  color: #202934;
   font-size: 31rpx;
   font-weight: 800;
+  line-height: 1.35;
 }
 
 .user-meta {
-  margin-top: 9rpx;
-  color: #8a8f98;
+  margin-top: 7rpx;
+  color: #78818d;
   font-size: 22rpx;
+  line-height: 1.5;
 }
 
 .arrow {
-  color: #b2b7c0;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  color: #a9b0bb;
   font-size: 38rpx;
 }
 
 .stats {
   display: flex;
-  margin-top: 18rpx;
-  padding: 24rpx 10rpx;
+  margin-top: 16rpx;
+  padding: 22rpx 8rpx;
 }
 
 .stat-item {
   flex: 1;
+  min-width: 0;
   text-align: center;
-  border-right: 1rpx solid #eef0f4;
+  border-right: 1rpx solid #eceef2;
 }
 
 .stat-item:last-child {
@@ -66,99 +82,122 @@
 }
 
 .stat-value {
-  font-size: 32rpx;
+  color: #27313c;
+  font-size: 31rpx;
   font-weight: 800;
+  line-height: 1.3;
 }
 
 .stat-label {
-  margin-top: 8rpx;
-  color: #8a8f98;
+  margin-top: 6rpx;
+  color: #7e8691;
   font-size: 21rpx;
+  line-height: 1.4;
 }
 
 .section-head {
-  margin: 34rpx 4rpx 18rpx;
+  margin: 32rpx 4rpx 16rpx;
 }
 
 .menu-list {
-  padding: 4rpx 24rpx;
+  padding: 2rpx 22rpx;
 }
 
 .menu-row {
   display: flex;
   align-items: center;
-  min-height: 128rpx;
-  border-bottom: 1rpx solid #eef0f4;
+  min-height: 116rpx;
+  box-sizing: border-box;
+  border-bottom: 1rpx solid #eceef2;
 }
 
 .menu-row:last-child {
   border-bottom: 0;
 }
 
+.menu-row:active {
+  background: #f8faff;
+}
+
 .menu-main {
   flex: 1;
+  min-width: 0;
 }
 
 .menu-title,
 .note-title {
+  color: #2b3440;
   font-size: 27rpx;
   font-weight: 700;
+  line-height: 1.4;
 }
 
 .menu-desc,
 .note-text {
-  margin-top: 8rpx;
-  color: #8a8f98;
+  margin-top: 7rpx;
+  color: #78818d;
   font-size: 21rpx;
   line-height: 1.6;
 }
 
 .service-note {
-  margin-top: 24rpx;
-  padding: 26rpx;
+  margin-top: 22rpx;
+  padding: 24rpx;
+  background: #fcfdff;
 }
-
 
 .identity-line {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  gap: 11rpx;
 }
 
 .role-chip {
-  padding: 5rpx 10rpx;
+  flex-shrink: 0;
+  padding: 6rpx 11rpx;
   border-radius: 999rpx;
   background: #f0edff;
-  color: #6a50d5;
+  color: #654bcf;
   font-size: 18rpx;
   font-weight: 700;
+  line-height: 1.3;
 }
 
 .logout-button {
-  margin-top: 24rpx;
+  min-height: 78rpx;
+  margin-top: 22rpx;
   border-radius: 18rpx;
   background: #ffffff;
-  color: #7b818b;
+  color: #646d79;
   font-size: 23rpx;
+  font-weight: 600;
+}
+
+.logout-button:active {
+  background: #f7f8fa;
 }
 
 .logout-button::after {
-  border-color: #eceef3;
+  border-color: #e2e5ea;
 }
 
-
 .delete-account-button {
-  margin-top: 12rpx;
+  min-height: 74rpx;
+  margin-top: 10rpx;
   border-radius: 18rpx;
   background: transparent;
-  color: #b4534b;
+  color: #ad4f49;
   font-size: 22rpx;
+  font-weight: 600;
+}
+
+.delete-account-button:active {
+  background: #fff7f6;
 }
 
 .delete-account-button::after {
   border-color: #ead7d4;
 }
-
 
 .menu-button {
   box-sizing: border-box;

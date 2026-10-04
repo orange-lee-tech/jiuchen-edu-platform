@@ -1,34 +1,295 @@
 page {
   min-height: 100%;
   background: #f6f7fb;
-  color: #171a1f;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1f2733;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
+  font-size: 26rpx;
+  -webkit-font-smoothing: antialiased;
 }
 
 .page-shell {
-  padding: 28rpx 28rpx 44rpx;
+  box-sizing: border-box;
+  padding: 28rpx 28rpx 56rpx;
 }
 
 .surface {
   background: #ffffff;
-  border: 1rpx solid #edf0f5;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 30rpx rgba(31, 45, 61, 0.04);
+  border: 1rpx solid #e8ebf1;
+  border-radius: 22rpx;
+  box-shadow: 0 8rpx 24rpx rgba(31, 45, 61, 0.045);
 }
 
 .section-title {
+  color: #1f2733;
   font-size: 32rpx;
   font-weight: 700;
-  color: #171a1f;
+  line-height: 1.35;
 }
 
 .section-subtitle {
   margin-top: 8rpx;
-  color: #8a8f98;
+  color: #737b87;
   font-size: 24rpx;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 
 .muted {
-  color: #8a8f98;
+  color: #8b929d;
+}
+
+/*
+ * Jiuchen V1 UI primitives
+ * Keep these classes opt-in so feature pages can adopt them as their
+ * business structure stabilizes.
+ */
+
+.jc-page-title {
+  display: block;
+  color: #18202b;
+  font-size: 44rpx;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.jc-page-lead {
+  display: block;
+  margin-top: 12rpx;
+  color: #66707d;
+  font-size: 25rpx;
+  line-height: 1.7;
+}
+
+.jc-section {
+  margin-top: 36rpx;
+}
+
+.jc-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-bottom: 18rpx;
+}
+
+.jc-card {
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1rpx solid #e8ebf1;
+  border-radius: 22rpx;
+  box-shadow: 0 8rpx 24rpx rgba(31, 45, 61, 0.045);
+}
+
+.jc-card--interactive:active {
+  background: #f8faff;
+  border-color: #d8e2f5;
+}
+
+.jc-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 84rpx;
+  margin: 0;
+  padding: 0 28rpx;
+  border: 0;
+  border-radius: 18rpx;
+  font-size: 27rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.jc-button::after {
+  border: 0;
+}
+
+.jc-button--primary {
+  background: #2f6fed;
+  color: #ffffff;
+}
+
+.jc-button--primary:active {
+  background: #285fcf;
+}
+
+.jc-button--secondary {
+  background: #eef4ff;
+  color: #2f6fed;
+}
+
+.jc-button--secondary:active {
+  background: #e3edff;
+}
+
+.jc-button--outline {
+  border: 1rpx solid #cfdaf0;
+  background: #ffffff;
+  color: #2f6fed;
+}
+
+.jc-button--ghost {
+  background: transparent;
+  color: #5f6874;
+}
+
+.jc-button--danger {
+  background: #fff4f2;
+  color: #b34b43;
+}
+
+.jc-button[disabled] {
+  background: #f0f2f5;
+  color: #a4aab3;
+  opacity: 1;
+}
+
+.jc-button--compact {
+  min-height: 64rpx;
+  padding: 0 22rpx;
+  border-radius: 999rpx;
+  font-size: 23rpx;
+}
+
+.jc-field {
+  box-sizing: border-box;
+  min-height: 88rpx;
+  padding: 20rpx 22rpx;
+  border: 1rpx solid #dfe4ec;
+  border-radius: 16rpx;
+  background: #ffffff;
+}
+
+.jc-field:focus-within {
+  border-color: #8fb0f3;
+  box-shadow: 0 0 0 4rpx rgba(47, 111, 237, 0.08);
+}
+
+.jc-field--disabled {
+  background: #f4f5f7;
+  color: #9da3ac;
+}
+
+.jc-field-label {
+  display: block;
+  margin-bottom: 10rpx;
+  color: #596371;
+  font-size: 23rpx;
+  font-weight: 600;
+}
+
+.jc-field-help {
+  display: block;
+  margin-top: 10rpx;
+  color: #8b929d;
+  font-size: 21rpx;
+  line-height: 1.55;
+}
+
+.jc-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40rpx;
+  padding: 0 14rpx;
+  border-radius: 999rpx;
+  background: #eef4ff;
+  color: #2f6fed;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.jc-tag--success {
+  background: #edf8f1;
+  color: #2e7d4f;
+}
+
+.jc-tag--warning {
+  background: #fff6e8;
+  color: #a76515;
+}
+
+.jc-tag--error {
+  background: #fff1ef;
+  color: #b34b43;
+}
+
+.jc-tag--neutral {
+  background: #f0f2f5;
+  color: #68717d;
+}
+
+.jc-state {
+  box-sizing: border-box;
+  padding: 44rpx 30rpx;
+  border: 1rpx solid #e8ebf1;
+  border-radius: 22rpx;
+  background: #ffffff;
+  text-align: center;
+}
+
+.jc-state-title {
+  display: block;
+  color: #2a313c;
+  font-size: 27rpx;
+  font-weight: 700;
+}
+
+.jc-state-desc {
+  display: block;
+  max-width: 560rpx;
+  margin: 12rpx auto 0;
+  color: #7b838f;
+  font-size: 23rpx;
+  line-height: 1.65;
+}
+
+.jc-state--error {
+  border-color: #f0d9d6;
+  background: #fffafa;
+}
+
+.jc-state--success {
+  border-color: #d8eadf;
+  background: #fbfefc;
+}
+
+.jc-spinner {
+  width: 40rpx;
+  height: 40rpx;
+  margin: 0 auto 18rpx;
+  border: 4rpx solid #dce6fa;
+  border-top-color: #2f6fed;
+  border-radius: 50%;
+  animation: jc-spin 0.8s linear infinite;
+}
+
+@keyframes jc-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.jc-rich-text {
+  color: #343d49;
+  font-size: 26rpx;
+  line-height: 1.82;
+  white-space: normal;
+}
+
+.jc-rich-text text,
+.jc-rich-text view {
+  max-width: 100%;
+}
+
+.jc-divider {
+  height: 1rpx;
+  background: #eceef2;
+}
+
+.jc-clickable:active {
+  opacity: 0.72;
 }
