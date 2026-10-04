@@ -13,6 +13,7 @@ import {
   getCachedGrowthProfileBootstrap,
   saveGrowthProfileBootstrap,
 } from '../../utils/growth-profile-cache'
+import { openResumeDocx } from '../../utils/resume-document'
 
 type ResumeTarget = 'general' | 'technical' | 'academic'
 
@@ -73,6 +74,7 @@ Page({
     importAssessmentId: '',
     importCandidates: [] as Array<GrowthImportCandidate & { selected: boolean; typeLabel: string }>,
     importing: false,
+    openingDocument: false,
   },
 
   onLoad() {
@@ -208,6 +210,27 @@ Page({
       target,
       resume: projections ? projections[target] : null,
     })
+  },
+
+  async onOpenResumeDocx() {
+    if (this.data.openingDocument || !this.data.resume) return
+
+    try {
+      this.setData({ openingDocument: true })
+      await openResumeDocx(this.data.target)
+    } catch (error) {
+      const message =
+        error instanceof Error && /[\u4e00-\u9fff]/.test(error.message)
+          ? error.message
+          : '简历文件暂时无法打开'
+      wx.showToast({
+        title: message,
+        icon: 'none',
+        duration: 2600,
+      })
+    } finally {
+      this.setData({ openingDocument: false })
+    }
   },
 
   onEditBaseProfile() {

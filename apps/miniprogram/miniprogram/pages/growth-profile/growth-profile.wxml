@@ -121,6 +121,15 @@
         </view>
       </view>
       <view wx:else class="empty">当前没有可投影的已确认经历；不会为了凑简历内容虚构项目或技能。</view>
+
+      <button
+        wx:if="{{resume}}"
+        class="docx-button"
+        loading="{{openingDocument}}"
+        disabled="{{openingDocument}}"
+        bindtap="onOpenResumeDocx"
+      >生成并打开 DOCX 简历</button>
+      <text wx:if="{{resume}}" class="artifact-note">即时基于当前已确认事实生成，不写回 Canonical Profile；可在微信文档预览中继续分享或保存。</text>
     </view>
 
     <view class="section-card">
