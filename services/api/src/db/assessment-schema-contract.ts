@@ -83,31 +83,31 @@ export async function inspectAssessmentSchema(connection: mysql.Connection): Pro
   }
 
   const [columnRows] = await connection.query<mysql.RowDataPacket[]>(
-    "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'assessments' ORDER BY ordinal_position",
+    "SELECT column_name AS columnName, data_type AS dataType, is_nullable AS nullableFlag FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'assessments' ORDER BY ordinal_position",
   )
   const [indexRows] = await connection.query<mysql.RowDataPacket[]>(
-    "SELECT index_name, column_name, seq_in_index FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'assessments' ORDER BY index_name, seq_in_index",
+    "SELECT index_name AS indexName, column_name AS columnName, seq_in_index AS sequenceNumber FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'assessments' ORDER BY index_name, seq_in_index",
   )
   const [foreignKeyRows] = await connection.query<mysql.RowDataPacket[]>(
-    "SELECT column_name, referenced_table_name, referenced_column_name FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = 'assessments' AND referenced_table_name IS NOT NULL",
+    "SELECT column_name AS columnName, referenced_table_name AS referencedTableName, referenced_column_name AS referencedColumnName FROM information_schema.key_column_usage WHERE table_schema = DATABASE() AND table_name = 'assessments' AND referenced_table_name IS NOT NULL",
   )
 
   return {
     tableExists: true,
     columns: columnRows.map((row) => ({
-      name: String(row.column_name),
-      dataType: String(row.data_type).toLowerCase(),
-      nullable: String(row.is_nullable).toUpperCase() === 'YES',
+      name: String(row.columnName),
+      dataType: String(row.dataType).toLowerCase(),
+      nullable: String(row.nullableFlag).toUpperCase() === 'YES',
     })),
     indexes: indexRows.map((row) => ({
-      name: String(row.index_name),
-      column: String(row.column_name),
-      sequence: Number(row.seq_in_index),
+      name: String(row.indexName),
+      column: String(row.columnName),
+      sequence: Number(row.sequenceNumber),
     })),
     foreignKeys: foreignKeyRows.map((row) => ({
-      column: String(row.column_name),
-      referencedTable: String(row.referenced_table_name),
-      referencedColumn: String(row.referenced_column_name),
+      column: String(row.columnName),
+      referencedTable: String(row.referencedTableName),
+      referencedColumn: String(row.referencedColumnName),
     })),
   }
 }

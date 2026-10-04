@@ -153,3 +153,14 @@ Interpretation:
 - no reconciliation or destructive repair is required;
 - the only schema write candidate remains db:upgrade:assessment;
 - after the write, db:check:assessment must return ok=true with zero issues.
+## Schema verifier incident during approved migration
+
+The approved db:upgrade:assessment run created the assessments table successfully, but the first post-create contract verification falsely reported every column/index/FK as missing while simultaneously reporting table exists=true and columnCount=18.
+
+Root cause: the checker relied on information_schema result property names without explicit SQL aliases. The production MySQL/mysql2 result field names did not match those JavaScript property names, yielding undefined metadata values.
+
+Safety conclusion:
+- do not drop or recreate the table;
+- do not rerun the migration merely because of this verifier failure;
+- fix the read-only metadata mapping and re-run db:check:assessment;
+- only accept the schema gate after the corrected checker returns zero issues.
