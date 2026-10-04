@@ -126,3 +126,13 @@ Stop if:
 - result succeeds but cannot be reopened from history.
 
 Never touch the existing website, NPM, DNS, ports 80/443/8088, Harbor, Portainer, Docker networks or /www/wwwroot/jiuchen-current.
+## Fresh SSH session note
+
+The production Node runtime is intentionally isolated from the default jiuchen-deploy shell PATH.
+
+Production service path: /opt/jiuchen-api/runtime/node/bin/node
+Current versioned runtime: /opt/jiuchen-api/runtime/node-v22.23.3-linux-x64/
+
+A fresh jiuchen-deploy SSH session may report node/npm as not found. This is expected and is not a reason to install or replace system Node.
+
+For candidate validation, first inspect /opt/jiuchen-api/runtime/node and its bin directory, then use that existing Jiuchen-owned runtime in the current shell only.
