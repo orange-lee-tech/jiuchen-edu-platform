@@ -3,6 +3,7 @@ import {
   getCachedAcademicProfile,
   saveCachedAcademicProfile,
 } from '../../utils/profile-cache'
+import { clearGrowthProfileBootstrapCache } from '../../utils/growth-profile-cache'
 import {
   friendlyRequestError,
   getMyAcademicProfile,
@@ -43,24 +44,28 @@ Page({
 
     this.setData({ canEditProfile })
 
-    const cached = getCachedAcademicProfile()
-    if (cached && canEditProfile) {
-      this.setData({
-        profileForm: {
-          university: cached.university || '',
-          major: cached.major || '',
-          currentGrade: cached.currentGrade || '',
-          gpaText: cached.gpaText || '',
-          rankText: cached.rankText || '',
-        },
-      })
-    }
-
     if (canEditProfile) {
+      void this.hydrateCachedProfile()
+
       void this.loadAcademicProfile()
     } else {
       this.setData({ profileForm: { ...EMPTY_PROFILE } })
     }
+  },
+
+  async hydrateCachedProfile() {
+    const cached = await getCachedAcademicProfile()
+    if (!cached || !this.data.canEditProfile) return
+
+    this.setData({
+      profileForm: {
+        university: cached.university || '',
+        major: cached.major || '',
+        currentGrade: cached.currentGrade || '',
+        gpaText: cached.gpaText || '',
+        rankText: cached.rankText || '',
+      },
+    })
   },
 
   async loadAcademicProfile() {
@@ -74,7 +79,8 @@ Page({
         rankText: profile.rankText || '',
       }
       this.setData({ profileForm: normalized })
-      saveCachedAcademicProfile(normalized)
+      void saveCachedAcademicProfile(normalized)
+      void clearGrowthProfileBootstrapCache()
     } catch (error) {
       console.info('Academic profile is unavailable on position page.', error)
     }
@@ -92,7 +98,7 @@ Page({
       ...this.data.profileForm,
       [field]: event.detail.value,
     }
-    saveCachedAcademicProfile(form)
+    void saveCachedAcademicProfile(form)
 
     if (profileSaveTimer) clearTimeout(profileSaveTimer)
     profileSaveTimer = setTimeout(() => {
@@ -121,7 +127,7 @@ Page({
         rankText: saved.rankText || '',
       }
       this.setData({ profileForm: normalized })
-      saveCachedAcademicProfile(normalized)
+      void saveCachedAcademicProfile(normalized)
     } catch (error) {
       wx.showToast({
         title: friendlyRequestError(error, '资料自动保存失败'),
