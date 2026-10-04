@@ -151,3 +151,28 @@ Assessment production gate.
 - no ECS deployment from this work package;
 - no UI work in this lane;
 - documentation stays under `docs/` and must not create runtime dependencies.
+
+## 2026-10-04 grounding re-smoke — PASS
+
+The bounded grounding hardening was re-tested on the real Assessment runtime.
+
+Measured:
+- `ok: true`;
+- `qwen3.8-flash`;
+- strict JSON Schema request confirmed;
+- schema/evidence validation PASS;
+- 13 evidence items;
+- latency 24,560 ms;
+- 2,864 prompt + 1,416 completion = 4,280 total tokens;
+- approximate list-price cost CNY 0.006114.
+
+Strategic decision:
+- stop prompt tuning;
+- do not chase perfect phrasing before launch;
+- residual broad statements should be improved later by adding stronger official
+  school/program evidence, not by endless prompt edits;
+- run only five blind representative evaluation cases to ensure the challenger has
+  not materially regressed basic judgment quality;
+- if the five-case sanity gate passes, close model selection and enter the Assessment
+  Production Gate immediately.
+

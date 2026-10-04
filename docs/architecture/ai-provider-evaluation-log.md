@@ -315,3 +315,39 @@ Do not commit API keys, secret-bearing URLs, Workspace credentials, or private c
 - Decision: **RETEST** — strict structured-output compatibility is ACCEPTED; final model promotion waits only on the bounded grounding re-smoke + five-case sanity gate.
 - Production gate: **NO** until those two minimal checks pass. Do not rerun the historical full benchmark.
 
+### Grounding re-smoke — PASS / model quality sanity gate next
+
+A second private local smoke was run after the bounded grounding hardening.
+
+Measured non-secret facts:
+- provider/model: `aliyun-bailian / qwen3.8-flash`;
+- HTTP 200 / finish reason `stop`;
+- `response_format=json_schema`;
+- `strict=true`;
+- final top-level object markers present;
+- `assessment-output-v1` schema validation PASS;
+- evidence-reference validation PASS;
+- evidence count: 13;
+- end-to-end latency: 24,560 ms;
+- prompt / completion / total tokens: 2,864 / 1,416 / 4,280;
+- measured list-price estimate at the recorded snapshot: approximately CNY 0.006114.
+
+Human review:
+- the result remained useful and structurally complete;
+- the prior unsupported hard thresholds such as an invented "600+" language benchmark
+  were removed;
+- some broad competitive-language remains ("top school", "high competition", etc.),
+  but it is now framed mostly through retrieved historical cases rather than invented
+  numeric cutoffs;
+- this residual wording is not judged severe enough to justify another prompt-tuning
+  cycle before production. It should be handled later through richer official
+  school/program evidence rather than repeated wording tweaks.
+
+Gate decision:
+- strict structured-output compatibility: **ACCEPT**;
+- grounding re-smoke: **PASS**;
+- runtime usability: **ACCEPT for production-gate preparation**;
+- model selection remains **RETEST** only for one final five-case blind gross-regression
+  sanity check;
+- do not rerun the full historical benchmark.
+
