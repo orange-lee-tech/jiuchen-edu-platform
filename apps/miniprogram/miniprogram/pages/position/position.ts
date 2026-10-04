@@ -80,7 +80,6 @@ Page({
       }
       this.setData({ profileForm: normalized })
       void saveCachedAcademicProfile(normalized)
-      void clearGrowthProfileBootstrapCache()
     } catch (error) {
       console.info('Academic profile is unavailable on position page.', error)
     }
@@ -127,7 +126,10 @@ Page({
         rankText: saved.rankText || '',
       }
       this.setData({ profileForm: normalized })
-      void saveCachedAcademicProfile(normalized)
+      await Promise.all([
+        saveCachedAcademicProfile(normalized),
+        clearGrowthProfileBootstrapCache(),
+      ])
     } catch (error) {
       wx.showToast({
         title: friendlyRequestError(error, '资料自动保存失败'),
