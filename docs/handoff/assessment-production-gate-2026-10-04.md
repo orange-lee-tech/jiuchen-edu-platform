@@ -307,3 +307,50 @@ Follow-up hardening:
 - repository promote script must keep the symlink-mode false-positive fix;
 - repository promote script must preflight `jiuchen-api` traverse/read access to `services/api/dist/server.js` before switching `current`;
 - future release runbooks must include service-user access checks as a required gate.
+## Final closeout checkpoint — BLOCKED pending operator real-device acceptance
+
+Baseline HEAD:
+`80c69d0545a63f370efb786f7d8c20c7577c29de`.
+
+Production state at closeout checkpoint:
+- active release: `8e5a0ffe7869cd3f6ec8c0a8a876247798b65519`;
+- previous/rollback release: `e4aa5c12a3e905ad1dba55ac92a26609bb171259`;
+- schema: PASS;
+- production case corpus: PASS;
+- Assessment production env: PASS;
+- `/health/live`: PASS;
+- database: `ok`;
+- `assessmentAiConfigured=true`;
+- `providerConfigured=true`;
+- service: active.
+
+Assessment Production Gate final status for this checkpoint: **BLOCKED**.
+
+Reason:
+- the remaining acceptance is device-bound and must be executed by the operator on the real WeChat mini-program;
+- no device result has yet been supplied for the final customer-visible loop.
+
+Required final device evidence:
+1. Assessment Form saves a draft successfully;
+2. leave the form, open History, and reopen the same draft with persisted input intact;
+3. submit that draft and observe one real production qwen3.8-flash run;
+4. Result opens successfully and the succeeded Assessment is persisted;
+5. return to History and reopen the same succeeded Assessment;
+6. the reopen renders the persisted result and does **not** trigger a second model call.
+
+Until those six observations are supplied:
+- real production model call from the mini-program: **UNVERIFIED**;
+- History persisted-result reuse: **UNVERIFIED**;
+- second-call suppression on reopen: **UNVERIFIED**;
+- remaining blocker: **operator real-device acceptance only**.
+
+Scope freeze:
+- no model/prompt/strict-schema changes;
+- no new benchmark/evaluation run;
+- no Schedule AI or Customer AI;
+- no payment work;
+- no Blueprint/UI/navigation work;
+- only a direct bug revealed by the six-step Assessment chain may be fixed here.
+
+If all six steps PASS, change this gate to PASS and record:
+`Assessment AI Runtime 当前阶段 CLOSED。除主控重新派发 Schedule AI / Customer AI 等新工作包外，不再修改 Assessment Runtime。`

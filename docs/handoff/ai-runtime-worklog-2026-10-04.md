@@ -221,3 +221,43 @@ Repository inspection confirms that form/result/history/API routes already exist
 Product Knowledge DB migration is not required for this gate because Assessment uses the private case JSONL plus bundled governed product evidence.
 
 A read-only schema checker and post-migration contract verification were added before any production write. Canonical runbook: docs/handoff/assessment-production-gate-2026-10-04.md.
+## 2026-10-04 Assessment Production Gate closeout checkpoint — BLOCKED on real device only
+
+Baseline HEAD for this closeout checkpoint:
+`80c69d0545a63f370efb786f7d8c20c7577c29de`.
+
+Production/runtime infrastructure is complete:
+- production `assessments` schema: PASS;
+- production private case corpus: PASS;
+- Assessment qwen3.8-flash production env: PASS;
+- active production release: `8e5a0ffe7869cd3f6ec8c0a8a876247798b65519`;
+- `/health/live`: PASS;
+- `/health`: database `ok`;
+- `/health/config`: `assessmentAiConfigured=true`;
+- `/assessments/meta`: `providerConfigured=true`;
+- `jiuchen-api.service`: active.
+
+Assessment model/runtime decision remains frozen:
+- provider: `aliyun-bailian`;
+- model: `qwen3.8-flash`;
+- non-thinking;
+- temperature `0`;
+- strict `json_schema`;
+- no further benchmark, prompt tuning, expected-label work, or model selection is authorized.
+
+Final Production Gate status at this checkpoint: **BLOCKED**.
+
+The only remaining blocker is real-device end-to-end acceptance performed by the operator:
+`Assessment Form -> Save Draft -> leave -> History reopen -> Real AI -> Result -> History -> reopen the same persisted result without a second model call`.
+
+Because that real-device sequence has not yet been executed and recorded, this worklog does not claim:
+- a production real-model call from the mini-program;
+- successful persisted-result reopen from History;
+- absence of a second model call on History reopen.
+
+Freeze rule:
+- Assessment Runtime code/config is frozen pending real-device acceptance;
+- only a bug directly exposed by that exact chain may reopen Assessment Runtime work;
+- do not start Schedule AI, Customer AI, payment, Blueprint, navigation, or UI work from this lane.
+
+AI Runtime is **not yet formally CLOSED** only because the real-device acceptance evidence is outstanding. No further Assessment Runtime modification is planned unless that acceptance exposes a direct defect.
