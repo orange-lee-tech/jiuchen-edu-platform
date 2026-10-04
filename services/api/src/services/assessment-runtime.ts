@@ -186,6 +186,9 @@ class JsonAssessmentModelProvider implements AssessmentModelProvider {
         outputShape +
         '。可以使用空数组，但不得省略顶层字段。' +
         '禁止生成精确录取概率。禁止发明 evidence ref、案例、院校事实或来源。' +
+        '任何关于院校/项目竞争强度、典型生源、分数阈值、论文竞赛门槛、通常要求等外部事实，只有在 knowledge.evidence 明确支持时才能陈述并引用对应 ref。' +
+        '如果只有用户输入或历史案例证据，只能写成基于当前输入/案例的有限推断，不得包装成普遍事实；不得自行添加证据中没有出现的分数阈值、论文等级或硬性要求。' +
+        'strengths/risks 若仅引用 input ref，只描述用户自身已知情况，不得夹带外部基准。' +
         'strengths/risks 只能引用 allowedInputEvidenceRefs 或 knowledge.evidence 中的 ref；每个 targetAssessments 必须引用至少一条 kind=school/program/case 的真实检索证据。' +
         'similarCases 只能引用 kind=case 的真实 evidence，caseId 必须等于该 evidence 的 sourceId，sourceType 必须一致。' +
         'targetAssessments 要逐一覆盖用户输入的目标院校。资料不足时明确写入 uncertainties，并使用 insufficient_data，而不是编造结论。' +

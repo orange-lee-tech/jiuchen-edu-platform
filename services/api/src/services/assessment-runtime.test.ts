@@ -515,6 +515,61 @@ test('composite retriever rejects duplicate evidence refs across sources', async
 })
 
 
+
+test('assessment runtime prompt forbids unsupported external benchmarks', async () => {
+  const originalFetch = globalThis.fetch
+  let capturedBody: {
+    messages?: Array<{ role?: string; content?: unknown }>
+  } | undefined
+
+  globalThis.fetch = async (_input, init) => {
+    capturedBody = JSON.parse(String(init?.body ?? '{}')) as {
+      messages?: Array<{ role?: string; content?: unknown }>
+    }
+
+    return new Response(
+      JSON.stringify({
+        choices: [{ message: { content: '{"ok":true}' } }],
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    )
+  }
+
+  try {
+    const runtime = createAssessmentRuntimeFromEnv({
+      NODE_ENV: 'test',
+      HOST: '127.0.0.1',
+      PORT: 3000,
+      ASSESSMENT_AI_BASE_URL: 'https://assessment.example/v1',
+      ASSESSMENT_AI_API_KEY: 'assessment-key',
+      ASSESSMENT_AI_MODEL: 'assessment-model',
+      ASSESSMENT_AI_RESPONSE_FORMAT: 'json_schema',
+    })
+
+    await runtime.provider.analyze({
+      assessment: input,
+      knowledge: {
+        version: 'knowledge-v1',
+        evidence: [],
+      },
+    })
+
+    const system = capturedBody?.messages?.find(
+      (message) => message.role === 'system',
+    )?.content
+
+    assert.equal(typeof system, 'string')
+    assert.match(String(system), /外部事实/)
+    assert.match(String(system), /不得自行添加/)
+    assert.match(String(system), /不得夹带外部基准/)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
 test('assessment runtime uses only assessment-scoped AI configuration', () => {
   const runtime = createAssessmentRuntimeFromEnv({
     NODE_ENV: 'test',

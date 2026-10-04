@@ -299,28 +299,19 @@ Do not commit API keys, secret-bearing URLs, Workspace credentials, or private c
   - GitHub CI: PASS, including API `typecheck`, full `test`, and `build`.
   - Added explicit `ASSESSMENT_AI_RESPONSE_FORMAT=json_schema` mode without changing the default `qwen3.5-27b` JSON Object path.
   - Added a strict-schema transport regression and smoke diagnostics that report `responseFormatType` / `responseFormatStrict` without printing prompts, keys, or private case text.
-- Real runtime smoke: **PENDING private local execution**. This environment does not have the operator's secret-bearing Bailian key or private case corpus, so no fake smoke result is recorded.
-- Required first real smoke configuration:
-  - `ASSESSMENT_AI_PROVIDER=aliyun-bailian`
-  - existing approved Beijing `ASSESSMENT_AI_BASE_URL`
-  - existing private `ASSESSMENT_AI_API_KEY`
-  - `ASSESSMENT_AI_MODEL=qwen3.8-flash`
-  - `ASSESSMENT_AI_TEMPERATURE=0`
-  - `ASSESSMENT_AI_RESPONSE_FORMAT=json_schema`
-  - `ASSESSMENT_AI_EXTRA_BODY_JSON={"enable_thinking":false}`
-  - existing private `ASSESSMENT_CASE_DATA_ROOT`
-  - command: `npm.cmd --prefix services/api run assessment:smoke:live`
-- Strict-schema smoke PASS criteria:
-  - `ok: true`;
-  - `providerDiagnostic.responseFormatType = "json_schema"`;
-  - `providerDiagnostic.responseFormatStrict = true`;
-  - top-level result is an `assessment-output-v1` object;
-  - schema and evidence validation both pass;
-  - no production DB write.
-- Theoretical token cost note: using the historical 11,610-input / 466-output parity-call token counts only as a pricing reference, one `qwen3.8-flash` call would be about CNY 0.01055 at the snapshot list price. With the same 11,610 input tokens, its per-call token cost becomes lower than `qwen3.5-27b` once a complete output exceeds roughly 1.1k output tokens; avoiding a repair call can further improve effective runtime cost. This is not a measured challenger result.
-- Quality change: **not measured yet**; do not infer quality from structured-output compliance.
-- Latency: **not measured yet**.
-- Token usage: **not measured yet**.
-- Decision: **RETEST**.
-- Production gate: **NO** until the private real runtime smoke passes. If it passes, run only the minimum quality/cost gate needed to detect an unacceptable regression; do not rerun the historical benchmark for reassurance.
+- Real runtime smoke: **PASS**.
+  - HTTP 200 / finish reason `stop`;
+  - `response_format=json_schema`, `strict=true`;
+  - top-level object markers present;
+  - final `assessment-output-v1` schema validation PASS;
+  - evidence-reference validation PASS;
+  - evidence count: 13;
+  - prompt / completion / total tokens: 2,759 / 1,124 / 3,883;
+  - end-to-end latency: 13,724 ms;
+  - measured list-price estimate: approximately CNY 0.005242 for this call.
+- Quality observation: the result was coherent and useful, but human review identified a bounded grounding issue: some external benchmark/threshold-style statements were more confident than the retrieved evidence justified. No private case text or raw result is committed.
+- Follow-up hardening: one targeted grounding rule is allowed so external school/program competitiveness, score thresholds, publication/competition requirements, typical-candidate claims, and similar facts must be evidence-backed; input-only findings may not introduce external benchmarks.
+- Quality gate: run the same real runtime smoke once after that bounded hardening, then only five blind representative label cases to detect gross model-quality regression.
+- Decision: **RETEST** — strict structured-output compatibility is ACCEPTED; final model promotion waits only on the bounded grounding re-smoke + five-case sanity gate.
+- Production gate: **NO** until those two minimal checks pass. Do not rerun the historical full benchmark.
 

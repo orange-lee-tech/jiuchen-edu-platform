@@ -68,6 +68,56 @@ A PASS requires:
 If that passes, move to the smallest quality/cost sanity gate needed for production.
 Do not restart the frozen historical benchmark.
 
+
+## 2026-10-04 strict-schema real runtime smoke — PASS
+
+The first valid private local smoke for the strict-schema challenger passed end to end.
+
+Measured non-secret facts:
+- provider: `aliyun-bailian`;
+- model: `qwen3.8-flash`;
+- runtime mode: non-thinking, temperature 0, strict JSON Schema;
+- `responseFormatType=json_schema`;
+- `responseFormatStrict=true`;
+- HTTP 200 / finish reason `stop`;
+- final top-level output: valid `assessment-output-v1` object;
+- schema validation: PASS;
+- evidence-reference validation: PASS;
+- evidence items supplied to runtime: 13;
+- end-to-end latency: 13,724 ms;
+- prompt tokens: 2,759;
+- completion tokens: 1,124;
+- total tokens: 3,883;
+- measured list-price estimate at the recorded snapshot: about CNY 0.005242 for this call.
+
+This closes the previous "model can answer but production Agent cannot satisfy the
+business structure" blocker.
+
+Human review found one remaining production-quality concern: the output was useful
+and structurally valid, but some external comparisons/threshold-like statements were
+phrased more confidently than the retrieved evidence justified. No private case text
+or raw output is committed here.
+
+A single targeted grounding hardening is therefore allowed before production:
+- external school/program competitiveness, typical-candidate claims, score thresholds,
+  publication/competition requirements, and similar external facts must be explicitly
+  supported by retrieved evidence;
+- input-only findings may describe the user's own profile but may not smuggle in
+  unsupported external benchmarks.
+
+This is a bounded quality correction, not a new prompt-tuning loop.
+
+## Next gate
+
+1. Re-run the same real Assessment smoke once after the grounding hardening.
+2. If structure still passes and unsupported external-fact language is materially
+   reduced, run only five blind representative label cases as a gross-regression
+   sanity check for `qwen3.8-flash`.
+3. If that micro-gate passes, stop model selection and hand Assessment to the
+   Production Gate.
+
+Do not restart the 87/92-case benchmark.
+
 ## Customer AI boundary
 
 Customer AI is intentionally narrow in V1:
