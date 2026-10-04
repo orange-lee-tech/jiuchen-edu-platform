@@ -1,10 +1,12 @@
-> **EXECUTION STATUS — QUEUED AFTER BASELINE RESET**
+> **EXECUTION STATUS — PHASE 0 RELEASED**
 >
-> The product direction in this blueprint is approved and remains the next repo-wide experience program.
+> Baseline reset is complete. Codex may now execute **Phase 0 mapping only** from the current integration baseline.
 >
-> Do **not** begin broad implementation while the current AI Runtime, business/commercial, and UI work areas are still closing their already-started tasks. Each area must first refresh its durable handoff/status and stop editing shared hot modules. Main control will then declare a clean baseline.
+> Phase 0 is documentation/analysis work. It must not modify runtime code, `app.json`, tabBar, page structure, backend contracts, AI, payment, or visual styles.
 >
-> When released, implementation begins with **Phase 0 mapping only** (routes, tab/deep links, role shells, backend-contract needs, conflict map). Do not start with a full visual rewrite or immediate `app.json` replacement.
+> Required output: route/navigation/deep-link inventory, role-shell constraints, keep/rename/merge/demote decisions, backend-contract needs, conflict map, and Phase 1 prerequisites.
+>
+> Broad implementation remains blocked until main control reviews and approves the Phase 0 map.
 >
 > Current orchestration source of truth: `docs/handoff/main-control-status-2026-10-04.md`.
 
