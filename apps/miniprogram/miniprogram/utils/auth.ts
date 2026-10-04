@@ -36,6 +36,8 @@ export type BootstrapResult = {
 export const USER_AGREEMENT_VERSION = 'placeholder-v0'
 export const AUTH_STORAGE_KEY = 'jiuchen-auth-session'
 
+let memoryAuthResult: BootstrapResult | null | undefined
+
 const USER_ROLES = new Set<UserRole>([
   'user',
   'student',
@@ -141,16 +143,21 @@ export function saveAuthResult(result: BootstrapResult) {
 
   try {
     wx.setStorageSync(AUTH_STORAGE_KEY, result)
+    memoryAuthResult = result
   } catch (error) {
+    memoryAuthResult = null
     clearApiSessionToken()
     throw error
   }
 }
 
 export function getSavedAuthResult(): BootstrapResult | null {
+  if (memoryAuthResult !== undefined) return memoryAuthResult
+
   const value = wx.getStorageSync(AUTH_STORAGE_KEY)
 
   if (!isBootstrapResult(value)) {
+    memoryAuthResult = null
     if (value) {
       wx.removeStorageSync(AUTH_STORAGE_KEY)
       clearApiSessionToken()
@@ -158,7 +165,8 @@ export function getSavedAuthResult(): BootstrapResult | null {
     return null
   }
 
-  return value
+  memoryAuthResult = value
+  return memoryAuthResult
 }
 
 export function updateSavedIdentity(
@@ -178,9 +186,11 @@ export function updateSavedIdentity(
   }
 
   wx.setStorageSync(AUTH_STORAGE_KEY, updated)
+  memoryAuthResult = updated
 }
 
 export function clearSavedAuthResult() {
+  memoryAuthResult = null
   wx.removeStorageSync(AUTH_STORAGE_KEY)
   clearApiSessionToken()
 }
