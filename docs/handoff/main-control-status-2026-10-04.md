@@ -18,21 +18,28 @@ Previous rollback release:
 
 ## 1. Executive status
 
-The project is in **delivery sprint / baseline reset before Experience Blueprint execution**.
+The project is in **delivery sprint / Experience Blueprint Phase 0 released**.
 
 Infrastructure migration is closed. Do not reopen ECS/NPM/HTTPS/CloudBase-AI migration work without a concrete failure signal.
 
-The approved V1 Experience Blueprint is intentionally **queued, not yet under implementation**. Before that repo-wide UX reorganization starts, the current three active work areas must finish their already-started bounded work, refresh their durable status documents, and stop. This restores one coherent baseline and avoids overlapping edits.
+The approved V1 Experience Blueprint is now released for **Phase 0 mapping only**. AI Runtime, business/commercial, and UI pre-Blueprint lanes have completed their bounded closeouts and frozen their shared hot modules. The baseline reset is complete.
 
-Required closeout order:
+Completed closeout order:
 
-1. Assessment / AI Runtime closeout;
-2. Business / commercial closeout;
-3. UI / design closeout and freeze;
-4. main-control baseline review;
-5. then Codex Experience Blueprint Phase 0 mapping.
+1. Assessment / AI Runtime closeout — DONE / frozen pending operator device acceptance;
+2. Business / commercial closeout — DONE / frozen;
+3. UI / design closeout and freeze — DONE;
+4. main-control baseline review — DONE;
+5. Codex Experience Blueprint Phase 0 mapping — RELEASED.
 
-No fourth parallel implementation lane should modify shared mini-program surfaces before step 4.
+Current repository baseline for Phase 0:
+`dd4b9d9c56a0fae217fd2861ed56e9b7f54b3974`
+
+CI on that baseline:
+- push: PASS
+- pull_request: PASS
+
+No other lane may modify shared mini-program navigation/Home/Plan/Opportunity/Mine surfaces while Phase 0 mapping is active. Phase 0 is documentation/mapping only and must not change runtime code.
 
 ## 2. Assessment AI — model/runtime decision CLOSED
 
@@ -156,7 +163,7 @@ The existing large-radius primitives (for example many 16–22rpx card/input/but
 
 UI lane must finish its current bounded work, document what was exploratory, and freeze broad page restyling until Experience Blueprint route/shell mapping is approved.
 
-## 7. Experience Blueprint — APPROVED, QUEUED
+## 7. Experience Blueprint — APPROVED, PHASE 0 RELEASED
 
 Approved blueprint commit:
 `ea7fc72b899e363e4c238dd2dfa2b52034e85e9a`
@@ -173,16 +180,18 @@ Product direction is approved:
 - Canonical Growth Profile is reused;
 - deterministic priority rules before recommendation algorithms.
 
-**Execution hold:** do not start repo-wide Blueprint implementation until the three current work areas close and main control confirms the clean baseline.
+**Execution scope:** Phase 0 mapping is released. Broad implementation remains on hold until Phase 0 produces a reviewed route/navigation/contract/conflict map.
 
-When released, Codex should start with **Phase 0 mapping only**:
+Codex Phase 0 must produce:
 - current route -> new experience contract;
-- switchTab/navigateTo/deep-link inventory;
+- all `switchTab` / `navigateTo` / deep-link dependencies;
 - role/navigation constraints;
 - backend contract requirements;
-- file ownership/conflict map.
+- file ownership/conflict map;
+- keep/rename/merge/demote/new-shell decisions;
+- explicit Phase 1 implementation prerequisites.
 
-Do not begin by editing `app.json` or performing a full visual rewrite.
+Phase 0 must not edit runtime code, `app.json`, tabBar, page structure, backend contracts, AI, payment, or visual styles. Its output is a reviewed execution map only.
 
 ## 8. Known independent product work after baseline reset
 
@@ -219,9 +228,18 @@ For current work, prefer:
 
 Documents dated 2026-10-02/03 may contain historically correct but superseded states. They must not override later accepted gates.
 
-## 10. Baseline reset rule
+## 10. Baseline reset result
 
-Before Experience Blueprint implementation begins:
+**BASELINE RESET COMPLETE.**
+
+Verified closeouts:
+- AI Runtime: `d26f2bc4f0b17f34fb085f64a5cecab5095264aa`
+- Business/commercial: `8b1a136d6a98ec03ca8cd16b486a377d3d1200b4`
+- UI pre-Blueprint: `dd4b9d9c56a0fae217fd2861ed56e9b7f54b3974`
+
+Phase 0 begins from `dd4b9d9c...`.
+
+Before Phase 1 implementation begins:
 
 Each current work area must report:
 - baseline HEAD;
