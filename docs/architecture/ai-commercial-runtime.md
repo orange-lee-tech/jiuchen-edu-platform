@@ -2,6 +2,38 @@
 
 Status: working architecture decision for Jiuchen V1.
 
+## 0. Product priority and strategic objective
+
+The AI roadmap is intentionally ordered:
+
+1. **Assessment AI**
+2. **Customer AI**
+3. **User AI Profile**
+
+The immediate commercial objective is not to maximize benchmark scores. It is to make
+the real Assessment path reliably usable end to end: real user input -> bounded
+retrieval/evidence -> model -> valid business output -> stored/displayable result.
+
+A model that is slightly less impressive on an offline metric but reliably satisfies
+the production contract may be preferable to a stronger model that cannot complete
+the business workflow.
+
+Customer AI must not block Assessment delivery. Its V1 product job is narrow:
+- give concise, useful business-domain answers or guidance;
+- transfer to a human when needed;
+- preserve the AI conversation record so the human agent can see the context instead
+  of forcing the user to repeat the conversation.
+
+User AI Profile is a downstream synthesis layer, not a prerequisite for Assessment or
+Customer AI. It should accurately track the individual over time by combining only
+authorized, structured facts from:
+- user/account/profile information;
+- Assessment inputs/results and evidence-backed conclusions;
+- Customer AI interactions and human-service outcomes where policy permits.
+
+It must remain attributable and updateable rather than becoming an opaque personality
+summary.
+
 ## 1. Business split
 
 Jiuchen has two AI products with different economic and runtime requirements.

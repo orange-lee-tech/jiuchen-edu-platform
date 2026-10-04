@@ -10,12 +10,24 @@ const env = loadEnv({
   NODE_ENV: 'development',
 })
 
+const requiredProviderEnv = [
+  'ASSESSMENT_AI_BASE_URL',
+  'ASSESSMENT_AI_API_KEY',
+  'ASSESSMENT_AI_MODEL',
+] as const
+
+const missingProviderEnv = requiredProviderEnv.filter((name) => !env[name])
+
+if (missingProviderEnv.length > 0) {
+  throw new Error(
+    'assessment_provider_not_configured:missing=' + missingProviderEnv.join(','),
+  )
+}
+
 const runtime = createAssessmentRuntimeFromEnv(env)
 
 if (!runtime.provider.isConfigured()) {
-  throw new Error(
-    'assessment_provider_not_configured:set ASSESSMENT_AI_BASE_URL/ASSESSMENT_AI_API_KEY/ASSESSMENT_AI_MODEL',
-  )
+  throw new Error('assessment_provider_not_configured')
 }
 
 const input = {

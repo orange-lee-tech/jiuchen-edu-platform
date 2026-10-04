@@ -1,0 +1,103 @@
+# AI Runtime worklog — 2026-10-04
+
+Repository: `orange-lee-tech/jiuchen-edu-platform`  
+Branch: `p1/foundation`
+
+Purpose: durable, non-secret handoff log for AI Runtime work. This file is documentation
+only and is not loaded by the mini-program or API runtime.
+
+## Strategic order
+
+1. Assessment AI — current P0
+2. Customer AI — P1 after Assessment is usable
+3. User AI Profile — P2 synthesis layer
+
+The current definition of success is simple: **Assessment must work in the real product
+path.** Offline model quality matters, but a model that cannot satisfy the runtime
+contract cannot ship.
+
+## Assessment — current state
+
+- Historical provider/model benchmark is complete and should not be rerun for reassurance.
+- Baseline `qwen3.5-27b` model quality was accepted, but JSON Object mode did not
+  reliably satisfy `assessment-output-v1`.
+- A focused strict-schema challenger path now exists:
+  - model under test: `qwen3.8-flash`
+  - non-thinking
+  - temperature 0
+  - `response_format=json_schema`
+  - `strict=true`
+- Runtime keeps downstream Zod schema validation, evidence validation and at most one
+  bounded repair. Strict provider output does not replace business validation.
+- No ECS deployment or production DB migration is authorized by this worklog.
+
+## 2026-10-04 operator smoke attempt
+
+Observed result:
+
+`assessment_provider_not_configured`
+
+This attempt did **not** reach Alibaba Bailian and does not count as a model/runtime
+failure. The PowerShell process did not contain all required provider environment
+variables. In particular, comments such as "keep the existing value" do not restore
+environment variables from an earlier terminal session.
+
+The smoke script is being hardened to report exactly which required variable names are
+missing without printing any secret values.
+
+## Next gate
+
+Run exactly one real local Assessment smoke after confirming the current PowerShell
+process contains:
+
+- `ASSESSMENT_AI_BASE_URL`
+- `ASSESSMENT_AI_API_KEY`
+- `ASSESSMENT_AI_MODEL=qwen3.8-flash`
+- `ASSESSMENT_AI_TEMPERATURE=0`
+- `ASSESSMENT_AI_RESPONSE_FORMAT=json_schema`
+- `ASSESSMENT_AI_EXTRA_BODY_JSON={"enable_thinking":false}`
+- private `ASSESSMENT_CASE_DATA_ROOT`
+
+Do not echo API key contents. Presence checks only.
+
+A PASS requires:
+- `ok: true`;
+- strict schema request diagnostics show `json_schema` and `strict=true`;
+- final `assessment-output-v1` object passes schema and evidence validation.
+
+If that passes, move to the smallest quality/cost sanity gate needed for production.
+Do not restart the frozen historical benchmark.
+
+## Customer AI boundary
+
+Customer AI is intentionally narrow in V1:
+
+1. concise answer / guidance within Jiuchen's business domain;
+2. explicit transfer to human service.
+
+When transferred, the human agent must be able to see the relevant AI conversation
+record/context so the user is not required to repeat the problem.
+
+Customer AI must use its own credential/quota and must not block Assessment delivery.
+
+## User AI Profile boundary
+
+The User AI Profile is an individual, longitudinal synthesis built from authorized
+structured sources:
+
+- profile/account information;
+- Assessment inputs and results;
+- Customer AI and human-service interaction outcomes where policy permits.
+
+It should track meaningful changes over time and preserve source/updated-at provenance.
+It is not an unrestricted chat-memory dump and is not a prerequisite for the current
+Assessment production gate.
+
+## Guardrails
+
+- no API keys, secret URLs, private case text or production credentials in Git;
+- no Eval leakage into training/RAG;
+- no production DB writes from AI model-selection work;
+- no ECS deployment from this work package;
+- no UI work in this lane;
+- documentation stays under `docs/` and must not create runtime dependencies.
