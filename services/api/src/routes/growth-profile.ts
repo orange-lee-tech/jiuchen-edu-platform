@@ -24,6 +24,7 @@ import {
   type CanonicalProfile,
 } from '../domain/growth-profile.js'
 import { resolveSessionUser } from '../services/session.js'
+import { createResumeDocx } from '../services/resume-docx.js'
 
 function isMissingTable(error: unknown) {
   const seen = new Set<unknown>()
@@ -554,6 +555,57 @@ export function registerGrowthProfileRoutes(
       projection: buildResumeProjection(result.profile, parsed.data),
     }
   })
+
+  app.get<{ Querystring: { target?: string } }>(
+    '/me/resume-artifacts/docx',
+    async (request, reply) => {
+      if (!database.configured) {
+        return reply.code(503).send({ ok: false, error: 'database_not_configured' })
+      }
+      const session = await resolveSessionUser(request, database)
+      if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
+
+      const parsed = z
+        .object({
+          target: z.enum(['general', 'technical', 'academic']).default('general'),
+        })
+        .safeParse(request.query)
+      if (!parsed.success) {
+        return reply.code(400).send({ ok: false, error: 'invalid_resume_artifact_options' })
+      }
+
+      const result = await loadCanonicalProfile(database, session.userId)
+      const projection = buildResumeProjection(result.profile, {
+        target: parsed.data.target,
+        language: 'zh-CN',
+        length: 'one-page',
+      })
+      const buffer = await createResumeDocx(projection)
+      const labels = {
+        general: '通用求职',
+        technical: '技术岗位',
+        academic: '科研学术',
+      } as const
+      const owner = (result.profile.identity.displayName || '九辰用户')
+        .replace(/[\\/:*?"<>|]/g, '')
+        .slice(0, 40)
+      const filename = `${owner}-${labels[parsed.data.target]}简历.docx`
+
+      return reply
+        .header(
+          'Content-Type',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        )
+        .header(
+          'Content-Disposition',
+          `attachment; filename="jiuchen-resume.docx"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        )
+        .header('Cache-Control', 'private, no-store')
+        .header('X-Jiuchen-Projection-Version', projection.version)
+        .header('Content-Length', String(buffer.byteLength))
+        .send(buffer)
+    },
+  )
 
   app.post<{ Body: unknown }>('/me/application-projection', async (request, reply) => {
     if (!database.configured) {
