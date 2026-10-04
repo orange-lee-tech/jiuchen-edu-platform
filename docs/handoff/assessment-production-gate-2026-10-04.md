@@ -187,3 +187,10 @@ Read-only checks show:
 Interpretation:
 - there is no stale qwen3.5 production configuration to remove;
 - next order is: securely place private production case corpus -> configure approved qwen3.8-flash Assessment env -> deploy immutable backend release -> verify health/config/meta -> run real-device Assessment closure.
+## Production case corpus gate — PASS
+
+Private production case corpus was transferred through staging, SHA256 matched between local and ECS copies, installed under /opt/jiuchen-api/shared/cases/ai/rag/v1.0.0/rag_reference_production_all.jsonl, and confirmed readable by the jiuchen-api service account.
+
+Conclusion:
+- production case corpus gate: PASS;
+- next blocker: Assessment AI production env placement for qwen3.8-flash strict-schema runtime.
