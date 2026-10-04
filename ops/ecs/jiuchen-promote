@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+umask 027
+
+BASE=/opt/jiuchen-api
+READY_FILE="$BASE/staging/READY"
+APPROVED_FILE=/etc/jiuchen-api/approved-release
+RUNTIME_CONF=/etc/jiuchen-api/runtime.conf
+PREVIOUS_FILE="$BASE/shared/previous-release"
+SERVICE=jiuchen-api.service
+
+die() {
+  echo "ERROR: $*" >&2
+  exit 1
+}
+
+[ "$#" -eq 0 ] || die "arguments are not accepted"
+
+exec 9>/run/jiuchen-release.lock
+flock -n 9 || die "another Jiuchen release operation is running"
+
+[ -f "$RUNTIME_CONF" ] || die "runtime.conf missing"
+# root-owned operational config; safe to source.
+# shellcheck disable=SC1090
+source "$RUNTIME_CONF"
+
+[ -n "${HEALTH_LIVE_URL:-}" ] || die "HEALTH_LIVE_URL missing"
+[ -n "${HEALTH_READY_URL:-}" ] || die "HEALTH_READY_URL missing"
+
+[ -f "$READY_FILE" ] || die "staging/READY missing"
+[ ! -L "$READY_FILE" ] || die "staging/READY must not be a symlink"
+
+REQUESTED="$(head -n 1 "$READY_FILE" | tr -d '[:space:]')"
+APPROVED="$(head -n 1 "$APPROVED_FILE" | tr -d '[:space:]')"
+
+[[ "$REQUESTED" =~ ^[0-9a-f]{40}$ ]] \
+  || die "READY does not contain a valid 40-character commit SHA"
+
+[[ "$APPROVED" =~ ^[0-9a-f]{40}$ ]] \
+  || die "no valid root-approved release"
+
+[ "$REQUESTED" = "$APPROVED" ] \
+  || die "requested SHA does not match root-approved SHA"
+
+TARGET="$BASE/releases/$REQUESTED"
+
+[ -d "$TARGET" ] || die "approved release directory does not exist"
+[ ! -L "$TARGET" ] || die "release directory must not be a symlink"
+
+OWNER="$(stat -c '%U:%G' "$TARGET")"
+[ "$OWNER" = "root:root" ] \
+  || die "release root must be owned by root:root"
+
+BAD_OWNER="$(
+  find "$TARGET" -xdev \
+    \( ! -user root -o ! -group root \) \
+    -print -quit
+)"
+
+[ -z "$BAD_OWNER" ] \
+  || die "release contains non-root-owned content: $BAD_OWNER"
+
+# Symlink mode bits are not an access-control boundary on Linux and are
+# normally reported as 0777. Check real files/directories only; their
+# ownership and target permissions remain protected by the checks above.
+WRITABLE="$(
+  find "$TARGET" -xdev \
+    ! -type l \
+    \( -perm -0020 -o -perm -0002 \) \
+    -print -quit
+)"
+
+[ -z "$WRITABLE" ] \
+  || die "release contains group/world-writable content: $WRITABLE"
+
+[ -f "$TARGET/services/api/dist/server.js" ] \
+  || die "dist/server.js missing"
+
+[ -f "$TARGET/services/api/package.json" ] \
+  || die "package.json missing"
+
+[ -f "$TARGET/COMMIT_SHA" ] \
+  || die "COMMIT_SHA marker missing"
+
+MARKER="$(tr -d '[:space:]' < "$TARGET/COMMIT_SHA")"
+[ "$MARKER" = "$REQUESTED" ] \
+  || die "COMMIT_SHA marker mismatch"
+
+OLD_TARGET=""
+OLD_SHA=""
+
+if [ -L "$BASE/current" ]; then
+  OLD_TARGET="$(readlink -f "$BASE/current")"
+
+  case "$OLD_TARGET" in
+    "$BASE/releases/"*) ;;
+    *) die "current points outside releases" ;;
+  esac
+
+  OLD_SHA="$(basename "$OLD_TARGET")"
+fi
+
+TMP_LINK="$BASE/.current.new.$$"
+rm -f "$TMP_LINK"
+
+ln -s "$TARGET" "$TMP_LINK"
+mv -Tf "$TMP_LINK" "$BASE/current"
+
+echo "Switching Jiuchen API to $REQUESTED"
+
+if ! systemctl restart "$SERVICE"; then
+  systemctl stop "$SERVICE" || true
+
+  if [ -n "$OLD_TARGET" ]; then
+    ln -s "$OLD_TARGET" "$TMP_LINK"
+    mv -Tf "$TMP_LINK" "$BASE/current"
+    systemctl restart "$SERVICE" || true
+  else
+    rm -f "$BASE/current"
+  fi
+
+  die "service restart failed; previous state restored where possible"
+fi
+
+healthy=0
+
+for _ in $(seq 1 15); do
+  if curl \
+      --fail \
+      --silent \
+      --show-error \
+      --max-time 3 \
+      "$HEALTH_LIVE_URL" >/dev/null \
+    && curl \
+      --fail \
+      --silent \
+      --show-error \
+      --max-time 5 \
+      "$HEALTH_READY_URL" >/dev/null; then
+
+    healthy=1
+    break
+  fi
+
+  sleep 2
+done
+
+if [ "$healthy" -ne 1 ]; then
+  echo "Health checks failed; reverting." >&2
+
+  systemctl stop "$SERVICE" || true
+
+  if [ -n "$OLD_TARGET" ]; then
+    ln -s "$OLD_TARGET" "$TMP_LINK"
+    mv -Tf "$TMP_LINK" "$BASE/current"
+    systemctl restart "$SERVICE" || true
+  else
+    rm -f "$BASE/current"
+  fi
+
+  die "promotion failed health gate"
+fi
+
+if [ -n "$OLD_SHA" ]; then
+  printf '%s\n' "$OLD_SHA" > "$PREVIOUS_FILE"
+else
+  : > "$PREVIOUS_FILE"
+fi
+
+chown root:root "$PREVIOUS_FILE"
+chmod 0600 "$PREVIOUS_FILE"
+
+rm -f "$READY_FILE"
+
+echo "PROMOTE_OK active=$REQUESTED previous=${OLD_SHA:-none}"

@@ -237,3 +237,23 @@ On ECS this candidate completed:
 The earlier 105-test expectation belonged to the later a4dedbe9... staging candidate, which contains additional schema-contract/profile-era tests. Do not treat the 97 count on 8e5a0ffe... as missing coverage merely because the later shared-branch candidate has a larger test total.
 
 GitHub CI for 8e5a0ffe... also completed successfully.
+## Promote permission-gate false positive
+
+Before approving the Assessment-only release, the immutable release permission preflight stopped on a node_modules .bin symlink reported as mode 0777.
+
+Evidence:
+- new release esbuild .bin entry is a symlink; its resolved target is root:root mode 0750;
+- existing production pino .bin entry is also a symlink reported as 0777; its resolved target is root:root mode 0750;
+- the existing production release would fail the current WRITABLE find expression for the same reason.
+
+Root cause:
+- Linux symlink mode bits are normally reported as 0777 and are not the effective access-control boundary;
+- the promote script's group/world-writable scan did not exclude symlinks, creating a false positive.
+
+Planned correction:
+- keep root ownership checks unchanged;
+- keep group/world writable checks for real files/directories;
+- exclude symbolic links from only the writable-mode test using ! -type l;
+- do not approve READY/promote until the corrected script is reviewed and installed with explicit human approval.
+
+The repository-controlled copy is ops/ecs/jiuchen-promote.
