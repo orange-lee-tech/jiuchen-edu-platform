@@ -257,3 +257,17 @@ Planned correction:
 - do not approve READY/promote until the corrected script is reviewed and installed with explicit human approval.
 
 The repository-controlled copy is ops/ecs/jiuchen-promote.
+## Promote symlink permission-gate repair — PASS
+
+The root-owned /usr/local/sbin/jiuchen-promote permission gate was patched after explicit human approval so that only the writable-mode scan excludes symbolic links (`! -type l`). Ownership checks and writable checks for real files/directories remain unchanged.
+
+Post-fix verification:
+- bash syntax check: PASS;
+- existing production release permission dry-run: PASS;
+- Assessment-only release permission dry-run: PASS;
+- resolved pino/esbuild targets remain root:root mode 0750.
+
+Conclusion:
+- the prior failure was a symlink mode-bit false positive;
+- promote safety contract is restored without relaxing real file/directory protections;
+- no READY file or production cutover occurred during this repair.
