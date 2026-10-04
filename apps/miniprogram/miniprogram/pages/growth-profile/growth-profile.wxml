@@ -3,6 +3,8 @@
     <text class="eyebrow">CANONICAL GROWTH RECORD</text>
     <text class="title">我的本科成长履历</text>
     <text class="desc">这里保存事实，简历和招聘填空只是它的不同投影。修改原始资料后，可重新生成输出。</text>
+    <text wx:if="{{refreshing}}" class="refresh-note">正在后台更新最新履历…</text>
+    <text wx:elif="{{cacheState === 'stale'}}" class="refresh-note">已先显示本地缓存，正在尝试刷新</text>
   </view>
 
   <view wx:if="{{loading && !resume}}" class="state-card">正在整理你的履历…</view>
