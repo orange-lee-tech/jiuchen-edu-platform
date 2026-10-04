@@ -69,10 +69,6 @@ export function buildApp(env: AppEnv) {
       assessmentAiConfigured: assessmentRuntime.provider.isConfigured(),
       scheduleAiConfigured: scheduleAI.isConfigured(),
       customerAiConfigured: customerAI.isConfigured(),
-      creditEnforcementEnabled: commercialConfig.creditEnforcementEnabled,
-      freeCreditGrantConfigured: Boolean(commercialConfig.freeGrant),
-      paymentSkuCount: commercialConfig.paymentSkus.length,
-      wechatPayConfigured: wechatPay.isConfigured(),
     },
   }))
 
