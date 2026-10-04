@@ -1,3 +1,12 @@
+> **PARTIALLY SUPERSEDED — 2026-10-04**
+>
+> Preserve this file as the 2026-10-03 readiness snapshot, but do not use its Assessment state as current truth.
+>
+> Current Assessment status: `assessments` production schema gate is PASS and verified. See:
+> `docs/handoff/assessment-production-gate-2026-10-04.md`
+>
+> Other feature gates remain independent and must still be re-checked at the time of their own production write.
+
 # Production Schema Readiness — 2026-10-03
 
 Repository: `orange-lee-tech/jiuchen-edu-platform`  
