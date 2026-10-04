@@ -210,6 +210,77 @@ export const assessments = mysqlTable('assessments', {
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
 
+export const paymentOrders = mysqlTable('payment_orders', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 })
+    .notNull()
+    .references(() => users.id),
+  outTradeNo: varchar('out_trade_no', { length: 64 }).notNull().unique(),
+  provider: mysqlEnum('provider', ['wechat_pay']).notNull().default('wechat_pay'),
+  status: mysqlEnum('status', ['pending', 'paid', 'closed', 'refunded'])
+    .notNull()
+    .default('pending'),
+  amountFen: int('amount_fen').notNull(),
+  creditAmount: int('credit_amount').notNull(),
+  providerTransactionId: varchar('provider_transaction_id', { length: 64 }).unique(),
+  paidAt: timestamp('paid_at'),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
+export const creditLedgerEntries = mysqlTable('credit_ledger_entries', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 })
+    .notNull()
+    .references(() => users.id),
+  type: mysqlEnum('type', [
+    'free_grant',
+    'payment_grant',
+    'assessment_debit',
+    'admin_adjustment',
+    'correction',
+  ]).notNull(),
+  delta: int('delta').notNull(),
+  assessmentId: varchar('assessment_id', { length: 36 }).references(() => assessments.id),
+  paymentOrderId: varchar('payment_order_id', { length: 36 }).references(() => paymentOrders.id),
+  idempotencyKey: varchar('idempotency_key', { length: 160 }).notNull().unique(),
+  note: varchar('note', { length: 500 }),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+})
+
+export const creditReservations = mysqlTable('credit_reservations', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 })
+    .notNull()
+    .references(() => users.id),
+  assessmentId: varchar('assessment_id', { length: 36 })
+    .notNull()
+    .unique()
+    .references(() => assessments.id),
+  amount: int('amount').notNull().default(1),
+  status: mysqlEnum('status', ['held', 'consumed', 'released'])
+    .notNull()
+    .default('held'),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
+export const paymentNotifications = mysqlTable('payment_notifications', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  provider: mysqlEnum('provider', ['wechat_pay']).notNull().default('wechat_pay'),
+  notificationId: varchar('notification_id', { length: 96 }).notNull().unique(),
+  outTradeNo: varchar('out_trade_no', { length: 64 }),
+  providerTransactionId: varchar('provider_transaction_id', { length: 64 }),
+  payloadHash: varchar('payload_hash', { length: 64 }).notNull(),
+  status: mysqlEnum('status', ['received', 'processed', 'rejected'])
+    .notNull()
+    .default('received'),
+  processedAt: timestamp('processed_at'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+})
+
 export const studentPlans = mysqlTable('student_plans', {
   id: varchar('id', { length: 36 }).primaryKey(),
   studentId: varchar('student_id', { length: 36 })

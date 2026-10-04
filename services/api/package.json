@@ -25,7 +25,8 @@
     "db:upgrade:product-knowledge": "tsx src/db/upgrade-product-knowledge.ts",
     "data:import:product-handbook": "tsx src/scripts/import-product-handbook.ts",
     "db:upgrade:classroom-revisions": "tsx src/db/upgrade-classroom-revisions.ts",
-    "assessment:smoke:live": "tsx src/scripts/smoke-assessment-runtime.ts"
+    "assessment:smoke:live": "tsx src/scripts/smoke-assessment-runtime.ts",
+    "db:upgrade:credit-payment": "tsx src/db/upgrade-credit-payment-foundation.ts"
   },
   "dependencies": {
     "@cloudbase/node-sdk": "^3.18.3",
