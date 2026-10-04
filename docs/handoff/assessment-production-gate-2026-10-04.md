@@ -212,3 +212,17 @@ For Assessment AI, the previously verified Beijing OpenAI-compatible Base URL is
 https://dashscope.aliyuncs.com/compatible-mode/v1
 
 The API key remains secret and must stay outside Git.
+## Assessment production runtime configuration gate — PASS
+
+Production configuration verification confirmed:
+- provider: aliyun-bailian;
+- Base URL configured;
+- API key configured;
+- model: qwen3.8-flash;
+- temperature: 0;
+- response format: json_schema;
+- extra body: enable_thinking=false;
+- case data root: /opt/jiuchen-api/shared/cases;
+- production case corpus readable by jiuchen-api service account.
+
+No service restart or release promotion had occurred at the time of this check. The next gate is immutable backend release deployment and post-promotion health/config/meta verification.
