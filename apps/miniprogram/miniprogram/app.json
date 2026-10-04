@@ -5,6 +5,7 @@
     "pages/classroom/classroom",
     "pages/news/news",
     "pages/profile/profile",
+    "pages/growth-profile/growth-profile",
     "pages/login/login",
     "pages/profile-edit/profile-edit",
     "pages/admin/admin",

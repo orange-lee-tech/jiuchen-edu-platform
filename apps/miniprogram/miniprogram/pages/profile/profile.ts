@@ -40,6 +40,7 @@ const GUEST_MENUS = [
 
 const STUDENT_MENUS = [
   { key: 'profile', title: '个人资料', desc: '查看内部ID、院校、专业与成绩背景' },
+  { key: 'growth', title: '成长履历', desc: '统一查看本科阶段事实与简历投影视图' },
   { key: 'assessment', title: '我的评估', desc: '查看历史 AI 定位结果' },
   { key: 'favorites', title: '我的收藏', desc: '收藏的院校、项目与资讯' },
   { key: 'credits', title: '评估额度', desc: '查看剩余次数与使用记录' },
@@ -188,6 +189,11 @@ Page({
 
     if (key === 'profile') {
       wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
+      return
+    }
+
+    if (key === 'growth') {
+      wx.navigateTo({ url: '/pages/growth-profile/growth-profile' })
       return
     }
 

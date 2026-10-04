@@ -173,6 +173,8 @@ export function friendlyRequestError(
     database_not_configured: '测试数据库尚未配置完成',
     schema_missing: '测试数据库正在升级，请稍后重试',
     assessment_schema_not_ready: 'AI评估服务正在准备中，请稍后重试',
+    growth_profile_schema_not_ready: '成长履历服务正在准备中，请稍后重试',
+    assessment_or_growth_schema_not_ready: '成长履历与评估数据正在准备中，请稍后重试',
     assessment_provider_not_configured: 'AI模型尚未接入，暂时不能运行评估',
     schedule_ai_provider_not_configured: '图片课表识别服务尚未接入，当前请先使用表格导入',
     schedule_spreadsheet_invalid: '未识别出有效课表结构，请检查星期表头与课程单元格布局',
@@ -950,4 +952,155 @@ export type BrandContent = {
 export async function getBrandContent(): Promise<BrandContent> {
   const result = await request<{ ok: true; content: BrandContent }>('/brand')
   return result.content
+}
+
+
+export type GrowthRecordType =
+  | 'course'
+  | 'language'
+  | 'research'
+  | 'publication'
+  | 'competition'
+  | 'project'
+  | 'internship'
+  | 'campus'
+  | 'award'
+  | 'skill'
+  | 'other'
+
+export type CanonicalGrowthRecord = {
+  id: string
+  type: GrowthRecordType
+  title: string
+  organization?: string | null
+  role?: string | null
+  startDate?: string | null
+  endDate?: string | null
+  description?: string | null
+  result?: string | null
+  standardExpression: string
+  source: {
+    type: 'manual' | 'assessment' | 'classroom' | 'admin'
+    recordId: string | null
+    key: string
+  }
+  confirmations: {
+    user: boolean
+    teacher: boolean
+    admin: boolean
+  }
+  updatedAt: string
+}
+
+export type CanonicalGrowthProfile = {
+  schemaVersion: 'growth-profile-v1'
+  identity: {
+    displayName: string | null
+    university: string | null
+    major: string | null
+    currentGrade: string | null
+    gpaText: string | null
+    rankText: string | null
+  }
+  records: CanonicalGrowthRecord[]
+}
+
+export type ResumeProjection = {
+  version: 'resume-projection-v1'
+  options: {
+    target: 'general' | 'technical' | 'academic'
+    language: 'zh-CN' | 'en'
+    length: 'one-page' | 'detailed'
+  }
+  identity: CanonicalGrowthProfile['identity']
+  education: {
+    school: string
+    major: string | null
+    grade: string | null
+    gpa: string | null
+    rank: string | null
+    sourceRefs: string[]
+  } | null
+  entries: Array<{
+    id: string
+    type: GrowthRecordType
+    title: string
+    organization: string | null
+    role: string | null
+    startDate: string | null
+    endDate: string | null
+    text: string
+    sourceRefs: string[]
+  }>
+}
+
+export type ApplicationProjection = {
+  version: 'application-projection-v1'
+  schemaKey: 'generic-recruitment-v1'
+  fields: Array<{
+    key: string
+    label: string
+    status: 'matched' | 'needs_confirmation' | 'missing'
+    value: string | string[] | null
+    sourceRefs: string[]
+  }>
+}
+
+export async function getMyGrowthProfile(): Promise<{
+  profile: CanonicalGrowthProfile
+  growthSchemaReady: boolean
+}> {
+  const result = await request<{
+    ok: true
+    profile: CanonicalGrowthProfile
+    growthSchemaReady: boolean
+  }>('/me/growth-profile')
+  return {
+    profile: result.profile,
+    growthSchemaReady: result.growthSchemaReady,
+  }
+}
+
+export async function getMyResumeProjection(
+  target: 'general' | 'technical' | 'academic' = 'general',
+): Promise<{
+  projection: ResumeProjection
+  growthSchemaReady: boolean
+}> {
+  const result = await request<{
+    ok: true
+    projection: ResumeProjection
+    growthSchemaReady: boolean
+  }>(
+    '/me/resume-projection',
+    'POST',
+    {
+      target,
+      language: 'zh-CN',
+      length: 'one-page',
+    },
+  )
+  return {
+    projection: result.projection,
+    growthSchemaReady: result.growthSchemaReady,
+  }
+}
+
+export async function getMyApplicationProjection(): Promise<{
+  projection: ApplicationProjection
+  growthSchemaReady: boolean
+}> {
+  const result = await request<{
+    ok: true
+    projection: ApplicationProjection
+    growthSchemaReady: boolean
+  }>(
+    '/me/application-projection',
+    'POST',
+    { schemaKey: 'generic-recruitment-v1' },
+  )
+  return {
+    projection: result.projection,
+    growthSchemaReady: result.growthSchemaReady,
+  }
 }
