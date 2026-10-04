@@ -226,3 +226,14 @@ Production configuration verification confirmed:
 - production case corpus readable by jiuchen-api service account.
 
 No service restart or release promotion had occurred at the time of this check. The next gate is immutable backend release deployment and post-promotion health/config/meta verification.
+## Assessment-only release candidate test-count clarification
+
+Production candidate: 8e5a0ffe7869cd3f6ec8c0a8a876247798b65519.
+
+On ECS this candidate completed:
+- npm test: 97 tests, 97 pass, 0 fail;
+- npm run build: PASS.
+
+The earlier 105-test expectation belonged to the later a4dedbe9... staging candidate, which contains additional schema-contract/profile-era tests. Do not treat the 97 count on 8e5a0ffe... as missing coverage merely because the later shared-branch candidate has a larger test total.
+
+GitHub CI for 8e5a0ffe... also completed successfully.
