@@ -51,9 +51,24 @@ test('JSAPI order params are signed server-side', async () => {
     authorization = String(
       (init?.headers as Record<string, string> | undefined)?.Authorization ?? '',
     )
-    return new Response(JSON.stringify({ prepay_id: 'wx-prepay-123' }), {
+    const body = JSON.stringify({ prepay_id: 'wx-prepay-123' })
+    const timestamp = '1791100000'
+    const responseNonce = 'response-nonce'
+    const signature = sign(
+      'RSA-SHA256',
+      Buffer.from(`${timestamp}\n${responseNonce}\n${body}\n`),
+      platform.privateKey,
+    ).toString('base64')
+
+    return new Response(body, {
       status: 200,
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'wechatpay-timestamp': timestamp,
+        'wechatpay-nonce': responseNonce,
+        'wechatpay-signature': signature,
+        'wechatpay-serial': 'PLATFORM-SERIAL',
+      },
     })
   }
 

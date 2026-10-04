@@ -275,7 +275,52 @@ class ConfiguredWechatPayGateway implements WechatPayGateway {
       )
     }
 
-    const payload = (await response.json()) as { prepay_id?: unknown }
+    const responseBody = Buffer.from(await response.text(), 'utf8')
+    const responseTimestamp = response.headers.get('wechatpay-timestamp')
+    const responseNonce = response.headers.get('wechatpay-nonce')
+    const responseSignature = response.headers.get('wechatpay-signature')
+    const responseSerial = response.headers.get('wechatpay-serial')
+
+    if (
+      !responseTimestamp ||
+      !responseNonce ||
+      !responseSignature ||
+      !responseSerial
+    ) {
+      throw new WechatPayGatewayError(
+        'wechat_pay_response_signature_headers_missing',
+      )
+    }
+    if (responseSerial !== this.config.platformSerialNo) {
+      throw new WechatPayGatewayError(
+        'wechat_pay_platform_serial_mismatch',
+      )
+    }
+    if (
+      !verify(
+        'RSA-SHA256',
+        callbackSignatureMessage(
+          responseTimestamp,
+          responseNonce,
+          responseBody,
+        ),
+        this.config.platformCertificatePem,
+        Buffer.from(responseSignature, 'base64'),
+      )
+    ) {
+      throw new WechatPayGatewayError(
+        'wechat_pay_response_signature_invalid',
+      )
+    }
+
+    let payload: { prepay_id?: unknown }
+    try {
+      payload = JSON.parse(responseBody.toString('utf8'))
+    } catch {
+      throw new WechatPayGatewayError(
+        'wechat_pay_create_order_invalid_json',
+      )
+    }
     if (typeof payload.prepay_id !== 'string' || !payload.prepay_id) {
       throw new WechatPayGatewayError('wechat_pay_prepay_id_missing')
     }
