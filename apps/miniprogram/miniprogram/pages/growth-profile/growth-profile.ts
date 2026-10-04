@@ -1,16 +1,18 @@
 import {
   friendlyRequestError,
   confirmAssessmentGrowthImport,
-  getMyApplicationProjection,
-  getMyAssessments,
-  getMyGrowthProfile,
-  getMyResumeProjection,
-  previewAssessmentGrowthRecords,
+  getMyGrowthProfileBootstrap,
   type ApplicationProjection,
   type CanonicalGrowthProfile,
   type GrowthImportCandidate,
+  type GrowthProfileBootstrap,
   type ResumeProjection,
 } from '../../utils/request'
+import {
+  clearGrowthProfileBootstrapCache,
+  getCachedGrowthProfileBootstrap,
+  saveGrowthProfileBootstrap,
+} from '../../utils/growth-profile-cache'
 
 type ResumeTarget = 'general' | 'technical' | 'academic'
 
@@ -52,13 +54,18 @@ function emptyProfile(): CanonicalGrowthProfile {
 Page({
   data: {
     loading: true,
+    refreshing: false,
     error: '',
+    cacheState: '' as '' | 'fresh' | 'stale',
+    revision: '',
     growthSchemaReady: true,
+    assessmentSchemaReady: true,
     profile: emptyProfile(),
     records: [] as Array<Record<string, unknown>>,
     target: 'general' as ResumeTarget,
     targets: TARGETS,
     resume: null as ResumeProjection | null,
+    resumeProjections: null as GrowthProfileBootstrap['resumeProjections'] | null,
     application: null as ApplicationProjection | null,
     matchedCount: 0,
     confirmCount: 0,
@@ -69,101 +76,90 @@ Page({
   },
 
   onLoad() {
-    void this.loadAll()
+    void this.loadBootstrap()
   },
 
-  async loadAll() {
-    try {
-      this.setData({ loading: true, error: '' })
-      const [profileResult, resumeResult, applicationResult] = await Promise.all([
-        getMyGrowthProfile(),
-        getMyResumeProjection(this.data.target),
-        getMyApplicationProjection(),
-      ])
-
-      const application = applicationResult.projection
-      this.setData({
-        growthSchemaReady:
-          profileResult.growthSchemaReady &&
-          resumeResult.growthSchemaReady &&
-          applicationResult.growthSchemaReady,
-        profile: profileResult.profile,
-        records: profileResult.profile.records.map((record) => ({
-          ...record,
-          typeLabel: TYPE_LABELS[record.type] || '经历',
-          sourceLabel:
-            record.source.type === 'assessment'
-              ? '来自已确认评估资料'
-              : record.source.type === 'classroom'
-                ? '来自学堂记录'
-                : record.source.type === 'admin'
-                  ? '九辰后台记录'
-                  : '用户维护',
-        })),
-        resume: resumeResult.projection,
-        application,
-        matchedCount: application.fields.filter((field) => field.status === 'matched').length,
-        confirmCount: application.fields.filter((field) => field.status === 'needs_confirmation').length,
-        missingCount: application.fields.filter((field) => field.status === 'missing').length,
-      })
-
-      await this.loadAssessmentImportCandidates()
-    } catch (error) {
-      this.setData({
-        error: friendlyRequestError(error, '成长履历暂时无法加载'),
-      })
-    } finally {
-      this.setData({ loading: false })
-    }
+  applyBootstrap(
+    bootstrap: GrowthProfileBootstrap,
+    cacheState: '' | 'fresh' | 'stale',
+  ) {
+    const application = bootstrap.applicationProjection
+    const pending = bootstrap.pendingAssessmentImport
+    this.setData({
+      cacheState,
+      revision: bootstrap.revision,
+      growthSchemaReady: bootstrap.growthSchemaReady,
+      assessmentSchemaReady: bootstrap.assessmentSchemaReady,
+      profile: bootstrap.profile,
+      records: bootstrap.profile.records.map((record) => ({
+        ...record,
+        typeLabel: TYPE_LABELS[record.type] || '经历',
+        sourceLabel:
+          record.source.type === 'assessment'
+            ? '来自已确认评估资料'
+            : record.source.type === 'classroom'
+              ? '来自学堂记录'
+              : record.source.type === 'admin'
+                ? '九辰后台记录'
+                : '用户维护',
+      })),
+      resumeProjections: bootstrap.resumeProjections,
+      resume: bootstrap.resumeProjections[this.data.target],
+      application,
+      matchedCount: application.fields.filter((field) => field.status === 'matched').length,
+      confirmCount: application.fields.filter((field) => field.status === 'needs_confirmation').length,
+      missingCount: application.fields.filter((field) => field.status === 'missing').length,
+      importAssessmentId: pending?.assessmentId ?? '',
+      importCandidates: (pending?.candidates ?? []).map((candidate) => ({
+        ...candidate,
+        selected: true,
+        typeLabel: TYPE_LABELS[candidate.record.type] || '经历',
+      })),
+    })
   },
 
+  async loadBootstrap(force = false) {
+    let usedCache = false
 
-  async loadAssessmentImportCandidates() {
-    try {
-      const assessments = await getMyAssessments()
-      const importedSourceKeys = new Set(
-        this.data.profile.records
-          .filter((record) => record.source.type === 'assessment')
-          .map((record) => record.source.key),
-      )
-
-      for (const source of assessments) {
-        const input = source.input
-        if (
-          !input.english?.length &&
-          !input.research?.length &&
-          !input.competitions?.length
-        ) {
-          continue
-        }
-
-        const candidates = await previewAssessmentGrowthRecords(source.id)
-        const pending = candidates
-          .filter(
-            (candidate) =>
-              !importedSourceKeys.has(
-                `assessment:${source.id}:${candidate.candidateKey}`,
-              ),
-          )
-          .map((candidate) => ({
-            ...candidate,
-            selected: true,
-            typeLabel: TYPE_LABELS[candidate.record.type] || '经历',
-          }))
-
-        if (pending.length) {
-          this.setData({
-            importAssessmentId: source.id,
-            importCandidates: pending,
-          })
-          return
-        }
+    if (!force) {
+      const cached = await getCachedGrowthProfileBootstrap()
+      if (cached) {
+        usedCache = true
+        this.applyBootstrap(cached.data, cached.fresh ? 'fresh' : 'stale')
+        this.setData({ loading: false, refreshing: true, error: '' })
       }
+    }
 
-      this.setData({ importAssessmentId: '', importCandidates: [] })
+    if (!usedCache) {
+      this.setData({ loading: true, refreshing: false, error: '' })
+    }
+
+    try {
+      const fresh = await getMyGrowthProfileBootstrap()
+      if (fresh.revision !== this.data.revision || !usedCache) {
+        this.applyBootstrap(fresh, '')
+      } else {
+        this.setData({
+          cacheState: '',
+          growthSchemaReady: fresh.growthSchemaReady,
+          assessmentSchemaReady: fresh.assessmentSchemaReady,
+        })
+      }
+      void saveGrowthProfileBootstrap(fresh)
     } catch (error) {
-      console.info('Assessment facts are not available for growth import yet.', error)
-      this.setData({ importAssessmentId: '', importCandidates: [] })
+      if (!usedCache) {
+        this.setData({
+          error: friendlyRequestError(error, '成长履历暂时无法加载'),
+        })
+      } else {
+        wx.showToast({
+          title: '已显示本地履历，在线更新稍后重试',
+          icon: 'none',
+          duration: 2200,
+        })
+      }
+    } finally {
+      this.setData({ loading: false, refreshing: false })
     }
   },
 
@@ -189,12 +185,9 @@ Page({
     try {
       this.setData({ importing: true })
       const result = await confirmAssessmentGrowthImport(assessmentId, candidateKeys)
+      await clearGrowthProfileBootstrapCache()
       wx.showToast({ title: `已同步${result.imported}条履历`, icon: 'success' })
-      this.setData({
-        importAssessmentId: '',
-        importCandidates: [],
-      })
-      await this.loadAll()
+      await this.loadBootstrap(true)
     } catch (error) {
       wx.showToast({
         title: friendlyRequestError(error, '同步履历失败，请稍后重试'),
@@ -206,24 +199,15 @@ Page({
     }
   },
 
-  async onTargetTap(event: WechatMiniprogram.BaseEvent) {
+  onTargetTap(event: WechatMiniprogram.BaseEvent) {
     const target = String(event.currentTarget.dataset.target || '') as ResumeTarget
     if (!TARGETS.some((item) => item.key === target) || target === this.data.target) return
 
-    try {
-      this.setData({ target, loading: true, error: '' })
-      const result = await getMyResumeProjection(target)
-      this.setData({
-        resume: result.projection,
-        growthSchemaReady: this.data.growthSchemaReady && result.growthSchemaReady,
-      })
-    } catch (error) {
-      this.setData({
-        error: friendlyRequestError(error, '简历投影生成失败'),
-      })
-    } finally {
-      this.setData({ loading: false })
-    }
+    const projections = this.data.resumeProjections
+    this.setData({
+      target,
+      resume: projections ? projections[target] : null,
+    })
   },
 
   onEditBaseProfile() {

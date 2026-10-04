@@ -1153,3 +1153,36 @@ export async function confirmAssessmentGrowthImport(
     recordIds: result.recordIds,
   }
 }
+
+
+export type GrowthProfileBootstrap = {
+  generatedAt: string
+  revision: string
+  growthSchemaReady: boolean
+  assessmentSchemaReady: boolean
+  profile: CanonicalGrowthProfile
+  resumeProjections: {
+    general: ResumeProjection
+    technical: ResumeProjection
+    academic: ResumeProjection
+  }
+  applicationProjection: ApplicationProjection
+  pendingAssessmentImport: {
+    assessmentId: string
+    candidates: GrowthImportCandidate[]
+  } | null
+}
+
+export async function getMyGrowthProfileBootstrap(): Promise<GrowthProfileBootstrap> {
+  const result = await request<
+    { ok: true } & GrowthProfileBootstrap
+  >(
+    '/me/growth-profile/bootstrap',
+    'POST',
+    {
+      language: 'zh-CN',
+      length: 'one-page',
+    },
+  )
+  return result
+}
