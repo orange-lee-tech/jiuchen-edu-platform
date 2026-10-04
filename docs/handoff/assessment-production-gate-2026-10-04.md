@@ -178,3 +178,12 @@ Conclusion:
 - prior verifier failure was a checker metadata-mapping bug, not schema failure;
 - no rerun, drop, recreate or repair migration is required;
 - Assessment Schema Gate is PASS.
+## Production runtime readiness after schema PASS
+
+Read-only checks show:
+- production case corpus: MISSING at /opt/jiuchen-api/shared/cases/ai/rag/v1.0.0/rag_reference_production_all.jsonl;
+- Assessment AI production env: not configured (provider/base URL/API key/model/response format/case root all absent).
+
+Interpretation:
+- there is no stale qwen3.5 production configuration to remove;
+- next order is: securely place private production case corpus -> configure approved qwen3.8-flash Assessment env -> deploy immutable backend release -> verify health/config/meta -> run real-device Assessment closure.
