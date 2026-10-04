@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { and, desc, eq } from 'drizzle-orm'
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import type { DatabaseContext } from '../db/client.js'
 import { assessments } from '../db/schema.js'
@@ -18,6 +18,14 @@ import {
   executeAssessment,
   type AssessmentRuntime,
 } from '../services/assessment-runtime.js'
+import {
+  CommercialStateError,
+  beginAssessmentRunWithCredit,
+  grantFreeCredits,
+  persistAssessmentFailureAndReleaseCredit,
+  persistAssessmentSuccessAndConsumeCredit,
+  resetAssessmentDraftAndReleaseCredit,
+} from '../services/credit-ledger.js'
 import { resolveSessionUser } from '../services/session.js'
 
 const createAssessmentSchema = z
@@ -25,6 +33,42 @@ const createAssessmentSchema = z
     input: assessmentInputSchema,
   })
   .strict()
+
+type AssessmentCommercialOptions = {
+  creditEnforcementEnabled: boolean
+  freeGrant: {
+    version: string
+    amount: number
+  } | null
+}
+
+const DEFAULT_COMMERCIAL_OPTIONS: AssessmentCommercialOptions = {
+  creditEnforcementEnabled: false,
+  freeGrant: null,
+}
+
+function assessmentCommercialErrorReply(
+  reply: FastifyReply,
+  error: CommercialStateError,
+) {
+  const status =
+    error.code === 'assessment_credit_insufficient'
+      ? 402
+      : error.code === 'assessment_not_found'
+        ? 404
+        : error.code === 'credit_payment_schema_not_ready'
+          ? 503
+          : error.code === 'assessment_already_running' ||
+              error.code === 'assessment_already_succeeded' ||
+              error.code.includes('conflict')
+            ? 409
+            : 500
+
+  return reply.code(status).send({
+    ok: false,
+    error: error.code,
+  })
+}
 
 export function isMissingTable(error: unknown) {
   const seen = new Set<unknown>()
@@ -105,6 +149,7 @@ export function registerAssessmentRoutes(
   app: FastifyInstance,
   database: DatabaseContext,
   runtime: AssessmentRuntime = createUnconfiguredAssessmentRuntime(),
+  commercial: AssessmentCommercialOptions = DEFAULT_COMMERCIAL_OPTIONS,
 ) {
   app.get('/assessments/meta', async () => ({
     ok: true,
@@ -495,63 +540,119 @@ export function registerAssessmentRoutes(
         })
       }
 
-      const input = normalizeAssessmentInput(row.inputJson)
       const startedAt = new Date()
+      let inputJson = row.inputJson
 
-      await database.db
-        .update(assessments)
-        .set({
-          status: 'running',
-          agentVersion: ASSESSMENT_AGENT_VERSION,
-          startedAt,
-          completedAt: null,
-          failureCode: null,
-        })
-        .where(eq(assessments.id, row.id))
+      if (commercial.creditEnforcementEnabled) {
+        try {
+          if (commercial.freeGrant) {
+            await grantFreeCredits({
+              database,
+              userId: user.userId,
+              grant: commercial.freeGrant,
+            })
+          }
 
-      try {
-        const result = await executeAssessment(runtime, input)
-        const completedAt = new Date()
-
+          const started = await beginAssessmentRunWithCredit({
+            database,
+            userId: user.userId,
+            assessmentId: row.id,
+            startedAt,
+          })
+          inputJson = started.inputJson
+        } catch (error) {
+          if (error instanceof CommercialStateError) {
+            return assessmentCommercialErrorReply(reply, error)
+          }
+          throw error
+        }
+      } else {
         await database.db
           .update(assessments)
           .set({
-            status: 'succeeded',
-            provider: result.provider,
-            model: result.model,
-            knowledgeVersion: result.knowledgeVersion,
-            evidenceJson: result.evidence,
-            outputJson: result.output,
+            status: 'running',
+            agentVersion: ASSESSMENT_AGENT_VERSION,
+            startedAt,
+            completedAt: null,
             failureCode: null,
-            creditConsumed: false,
-            completedAt,
           })
           .where(eq(assessments.id, row.id))
+      }
 
-        const [completed] = await database.db
-          .select()
-          .from(assessments)
-          .where(eq(assessments.id, row.id))
-          .limit(1)
-
-        if (!completed) {
-          throw new Error('assessment_complete_readback_failed')
-        }
-
-        return {
-          ok: true,
-          assessment: serializeAssessment(completed),
-        }
+      let normalizedInput: ReturnType<typeof normalizeAssessmentInput>
+      try {
+        normalizedInput = normalizeAssessmentInput(inputJson)
       } catch (error) {
-        if (error instanceof AssessmentProviderUnavailableError) {
+        app.log.error(
+          { err: error, assessmentId: row.id },
+          'Persisted Assessment input is invalid',
+        )
+
+        if (commercial.creditEnforcementEnabled) {
+          try {
+            await persistAssessmentFailureAndReleaseCredit({
+              database,
+              userId: user.userId,
+              assessmentId: row.id,
+              failureCode: 'assessment_input_invalid',
+              completedAt: new Date(),
+            })
+          } catch (persistenceError) {
+            app.log.error(
+              { err: persistenceError, assessmentId: row.id },
+              'Failed to persist invalid-input Assessment terminal state',
+            )
+          }
+        } else {
           await database.db
             .update(assessments)
             .set({
-              status: 'draft',
-              startedAt: null,
-              failureCode: null,
+              status: 'failed',
+              failureCode: 'assessment_input_invalid',
+              creditConsumed: false,
+              completedAt: new Date(),
             })
             .where(eq(assessments.id, row.id))
+        }
+
+        return reply.code(500).send({
+          ok: false,
+          error: 'assessment_input_invalid',
+        })
+      }
+
+      let result: Awaited<ReturnType<typeof executeAssessment>>
+      try {
+        result = await executeAssessment(runtime, normalizedInput)
+      } catch (error) {
+        if (error instanceof AssessmentProviderUnavailableError) {
+          if (commercial.creditEnforcementEnabled) {
+            try {
+              await resetAssessmentDraftAndReleaseCredit({
+                database,
+                userId: user.userId,
+                assessmentId: row.id,
+              })
+            } catch (persistenceError) {
+              app.log.error(
+                { err: persistenceError, assessmentId: row.id },
+                'Failed to reset Assessment and release credit reservation',
+              )
+              return reply.code(503).send({
+                ok: false,
+                error: 'assessment_failure_persistence_pending',
+              })
+            }
+          } else {
+            await database.db
+              .update(assessments)
+              .set({
+                status: 'draft',
+                startedAt: null,
+                failureCode: null,
+              })
+              .where(eq(assessments.id, row.id))
+          }
 
           return reply.code(503).send({
             ok: false,
@@ -564,20 +665,102 @@ export function registerAssessmentRoutes(
           'Assessment execution failed',
         )
 
-        await database.db
-          .update(assessments)
-          .set({
-            status: 'failed',
-            failureCode: 'assessment_execution_failed',
-            creditConsumed: false,
-            completedAt: new Date(),
-          })
-          .where(eq(assessments.id, row.id))
+        if (commercial.creditEnforcementEnabled) {
+          try {
+            await persistAssessmentFailureAndReleaseCredit({
+              database,
+              userId: user.userId,
+              assessmentId: row.id,
+              failureCode: 'assessment_execution_failed',
+              completedAt: new Date(),
+            })
+          } catch (persistenceError) {
+            app.log.error(
+              { err: persistenceError, assessmentId: row.id },
+              'Failed to persist Assessment failure and release reservation',
+            )
+            return reply.code(503).send({
+              ok: false,
+              error: 'assessment_failure_persistence_pending',
+            })
+          }
+        } else {
+          await database.db
+            .update(assessments)
+            .set({
+              status: 'failed',
+              failureCode: 'assessment_execution_failed',
+              creditConsumed: false,
+              completedAt: new Date(),
+            })
+            .where(eq(assessments.id, row.id))
+        }
 
         return reply.code(502).send({
           ok: false,
           error: 'assessment_execution_failed',
         })
+      }
+
+      const completedAt = new Date()
+
+      try {
+        if (commercial.creditEnforcementEnabled) {
+          await persistAssessmentSuccessAndConsumeCredit({
+            database,
+            userId: user.userId,
+            assessmentId: row.id,
+            provider: result.provider,
+            model: result.model,
+            knowledgeVersion: result.knowledgeVersion,
+            evidence: result.evidence,
+            output: result.output,
+            completedAt,
+          })
+        } else {
+          await database.db
+            .update(assessments)
+            .set({
+              status: 'succeeded',
+              provider: result.provider,
+              model: result.model,
+              knowledgeVersion: result.knowledgeVersion,
+              evidenceJson: result.evidence,
+              outputJson: result.output,
+              failureCode: null,
+              creditConsumed: false,
+              completedAt,
+            })
+            .where(eq(assessments.id, row.id))
+        }
+      } catch (error) {
+        app.log.error(
+          { err: error, assessmentId: row.id },
+          'Assessment result persistence / credit settlement failed',
+        )
+
+        return reply.code(503).send({
+          ok: false,
+          error: 'assessment_result_persistence_pending',
+        })
+      }
+
+      const [completed] = await database.db
+        .select()
+        .from(assessments)
+        .where(eq(assessments.id, row.id))
+        .limit(1)
+
+      if (!completed) {
+        return reply.code(503).send({
+          ok: false,
+          error: 'assessment_complete_readback_failed',
+        })
+      }
+
+      return {
+        ok: true,
+        assessment: serializeAssessment(completed),
       }
     },
   )

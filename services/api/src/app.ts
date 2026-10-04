@@ -175,7 +175,10 @@ export function buildApp(env: AppEnv) {
   registerTeacherRoutes(app, database)
   registerMobileAdminRoutes(app, database, env)
   registerNewsRoutes(app, database)
-  registerAssessmentRoutes(app, database, assessmentRuntime)
+  registerAssessmentRoutes(app, database, assessmentRuntime, {
+    creditEnforcementEnabled: commercialConfig.creditEnforcementEnabled,
+    freeGrant: commercialConfig.freeGrant,
+  })
   registerProductRoutes(app, database)
   registerBrandRoutes(app)
   registerClassroomWorkspaceRoutes(app, database, env)
