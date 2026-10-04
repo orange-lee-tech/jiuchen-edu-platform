@@ -205,4 +205,19 @@ Status:
 - next priority: Assessment Production Gate;
 - AI Customer Service remains P1;
 - User AI Profile remains P2.
+## 2026-10-04 Assessment Production Gate opened
 
+Model selection is closed. The work package is production closure only.
+
+Five customer-visible gates:
+1. submit/save input;
+2. ECS executes qwen3.8-flash;
+3. persist result;
+4. open result;
+5. reopen the persisted result from history.
+
+Repository inspection confirms that form/result/history/API routes already exist. The current hard production blockers are the assessments schema gate, qwen3.8 production env placement, private production case corpus mount, immutable backend release promotion and real-device end-to-end acceptance.
+
+Product Knowledge DB migration is not required for this gate because Assessment uses the private case JSONL plus bundled governed product evidence.
+
+A read-only schema checker and post-migration contract verification were added before any production write. Canonical runbook: docs/handoff/assessment-production-gate-2026-10-04.md.

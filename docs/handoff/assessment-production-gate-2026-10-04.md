@@ -1,0 +1,128 @@
+# Assessment Production Gate — 2026-10-04
+
+Status: READY FOR READ-ONLY PRODUCTION PREFLIGHT
+
+Repository: orange-lee-tech/jiuchen-edu-platform
+Branch: p1/foundation
+
+## Strategic objective
+
+Close exactly one customer-visible path:
+
+WeChat real device -> fill/save Assessment input -> ECS API -> qwen3.8-flash strict-schema runtime -> persist assessments row -> open result -> reopen from history.
+
+Nothing in this gate authorizes work on Customer AI, User AI Profile, Classroom, Product Knowledge database migration, payment, the existing website, NPM, DNS, Harbor, Portainer or unrelated production services.
+
+## Accepted AI runtime contract
+
+- provider: Alibaba Bailian
+- model: qwen3.8-flash
+- mode: non-thinking
+- temperature: 0
+- response format: json_schema
+- strict: true
+- downstream validation: Zod + evidence validation
+- repair: at most one bounded repair
+- model selection: CLOSED / ACCEPT
+
+Required production env names:
+
+- ASSESSMENT_AI_PROVIDER=aliyun-bailian
+- ASSESSMENT_AI_BASE_URL=<approved Bailian OpenAI-compatible endpoint>
+- ASSESSMENT_AI_API_KEY=<secret; never print or commit>
+- ASSESSMENT_AI_MODEL=qwen3.8-flash
+- ASSESSMENT_AI_TEMPERATURE=0
+- ASSESSMENT_AI_RESPONSE_FORMAT=json_schema
+- ASSESSMENT_AI_EXTRA_BODY_JSON={"enable_thinking":false}
+- ASSESSMENT_CASE_DATA_ROOT=/opt/jiuchen-api/shared/cases
+
+Production case corpus required path:
+/opt/jiuchen-api/shared/cases/ai/rag/v1.0.0/rag_reference_production_all.jsonl
+
+The corpus is private production data and must never enter Git.
+
+## Product Knowledge database is not part of this gate
+
+Assessment currently uses the private production case JSONL plus bundled governed product-handbook evidence. Therefore missing product_knowledge_documents / product_knowledge_chunks do not block this Assessment gate. Do not batch db:upgrade:product-knowledge into this change.
+
+## Gate 1 — read-only schema preflight
+
+Run the repository command:
+
+npm --prefix services/api run db:check:assessment
+
+This command reads information_schema only. It reports table presence, expected column count, index names, user foreign-key readiness and non-secret shape issues.
+
+Previous production evidence predicts: missing_table:assessments.
+
+If the preflight instead reports a partially present or drifted table, STOP. Do not run the migration until the shape is reconciled.
+
+## Gate 2 — only schema write candidate
+
+The exact feature migration is:
+
+npm --prefix services/api run db:upgrade:assessment
+
+It creates only assessments when absent and then verifies the complete contract.
+
+Per production guardrails, execute this write only after explicit human approval of this exact migration based on Gate 1 output.
+
+Immediately rerun:
+
+npm --prefix services/api run db:check:assessment
+
+Required result: ok=true and zero issues.
+
+## Gate 3 — runtime placement
+
+Production env remains root-owned mode 0600. Never print secret values. Presence checks may print booleans only.
+
+The production case corpus belongs under /opt/jiuchen-api/shared/cases, outside immutable release directories, so rollback does not remove or duplicate it.
+
+## Gate 4 — immutable backend release
+
+Use the existing discipline:
+
+candidate/staging -> verify -> releases/<SHA> -> approved-release -> promote -> health
+
+Do not mutate the active release in place.
+
+After promotion verify:
+- /health/live = 200
+- /health keeps database=ok
+- /health/config reports assessmentAiConfigured=true
+- /assessments/meta reports providerConfigured=true
+
+Rollback to the previous release if post-promotion health fails.
+
+## Gate 5 — real-device acceptance
+
+Use one test account:
+
+1. Open Assessment form.
+2. Fill required profile and at least one target.
+3. Save draft.
+4. Leave and reopen through Assessment History; draft remains readable.
+5. Run real AI assessment.
+6. Result page opens and displays the structured report.
+7. Confirm persisted model metadata is qwen3.8-flash.
+8. Return to History.
+9. Reopen the same succeeded assessment.
+10. Confirm output/evidence are persisted and reopening does not trigger a second model call.
+
+Acceptance record format:
+page -> action -> expected -> actual -> screenshot/result
+
+## Stop conditions
+
+Stop if:
+- schema checker reports drift rather than a clean missing table;
+- migration affects any table other than assessments;
+- production case corpus is unavailable;
+- assessmentAiConfigured=false;
+- public API health regresses;
+- login/profile flow regresses;
+- real AI call returns 5xx or invalid output;
+- result succeeds but cannot be reopened from history.
+
+Never touch the existing website, NPM, DNS, ports 80/443/8088, Harbor, Portainer, Docker networks or /www/wwwroot/jiuchen-current.
