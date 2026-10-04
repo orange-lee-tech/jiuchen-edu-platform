@@ -12,6 +12,11 @@ import {
   type AcademicProfile,
   type InternalIdentity,
 } from '../../utils/request'
+import {
+  getCachedAcademicProfile,
+  saveCachedAcademicProfile,
+} from '../../utils/profile-cache'
+import { clearGrowthProfileBootstrapCache } from '../../utils/growth-profile-cache'
 
 type ProfileField = keyof AcademicProfile
 
@@ -63,19 +68,41 @@ Page({
       canEditAcademic,
     })
 
+    void this.hydrateCachedProfile()
     void this.loadAll()
+  },
+
+  async hydrateCachedProfile() {
+    if (!this.data.canEditAcademic) return
+    const profile = await getCachedAcademicProfile()
+    if (!profile) return
+
+    this.setData({
+      form: {
+        university: profile.university ?? '',
+        major: profile.major ?? '',
+        currentGrade: profile.currentGrade ?? '',
+        gpaText: profile.gpaText ?? '',
+        rankText: profile.rankText ?? '',
+      },
+    })
   },
 
   async loadAll() {
     try {
-      const identityResult = await getMyInternalIdentity()
+      const [identityResult, profile] = await Promise.all([
+        getMyInternalIdentity(),
+        this.data.canEditAcademic
+          ? getMyAcademicProfile()
+          : Promise.resolve(null),
+      ])
+
       this.setData({
         identity: identityResult.identity,
         identityLocked: identityResult.locked,
       })
 
-      if (this.data.canEditAcademic) {
-        const profile = await getMyAcademicProfile()
+      if (profile) {
         this.setData({
           form: {
             university: profile.university ?? '',
@@ -85,6 +112,7 @@ Page({
             rankText: profile.rankText ?? '',
           },
         })
+        void saveCachedAcademicProfile(profile)
       }
     } catch (error) {
       console.info('Profile data is not available yet.', error)
@@ -165,6 +193,10 @@ Page({
         },
       })
 
+      await Promise.all([
+        saveCachedAcademicProfile(saved),
+        clearGrowthProfileBootstrapCache(),
+      ])
       wx.showToast({ title: '资料已保存', icon: 'success' })
     } catch (error) {
       wx.showToast({

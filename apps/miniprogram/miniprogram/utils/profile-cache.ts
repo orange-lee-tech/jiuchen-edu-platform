@@ -15,16 +15,44 @@ function key() {
   return `${PREFIX}:${cacheIdentity(getSavedAuthResult())}`
 }
 
-export function getCachedAcademicProfile(): AcademicProfile | null {
-  const value = wx.getStorageSync(key())
-  if (!value || typeof value !== 'object') return null
-  return value as AcademicProfile
+export function getCachedAcademicProfile(): Promise<AcademicProfile | null> {
+  return new Promise((resolve) => {
+    wx.getStorage({
+      key: key(),
+      success(result) {
+        const value = result.data
+        resolve(
+          value && typeof value === 'object'
+            ? (value as AcademicProfile)
+            : null,
+        )
+      },
+      fail() {
+        resolve(null)
+      },
+    })
+  })
 }
 
-export function saveCachedAcademicProfile(profile: AcademicProfile) {
-  wx.setStorageSync(key(), profile)
+export function saveCachedAcademicProfile(profile: AcademicProfile): Promise<void> {
+  return new Promise((resolve) => {
+    wx.setStorage({
+      key: key(),
+      data: profile,
+      complete() {
+        resolve()
+      },
+    })
+  })
 }
 
-export function clearCachedAcademicProfile() {
-  wx.removeStorageSync(key())
+export function clearCachedAcademicProfile(): Promise<void> {
+  return new Promise((resolve) => {
+    wx.removeStorage({
+      key: key(),
+      complete() {
+        resolve()
+      },
+    })
+  })
 }
