@@ -205,12 +205,13 @@ export function registerGrowthProfileRoutes(
     const id = randomUUID()
     const now = new Date()
     try {
+      const { evidence, metadata, ...fields } = parsed.data
       await database.db.insert(growthRecords).values({
         id,
         userId: session.userId,
-        ...parsed.data,
-        evidenceJson: parsed.data.evidence ?? null,
-        metadataJson: parsed.data.metadata ?? null,
+        ...fields,
+        evidenceJson: evidence ?? null,
+        metadataJson: metadata ?? null,
         standardExpression: buildStandardExpression(parsed.data),
         sourceType: 'manual',
         sourceKey: `manual:${id}`,
@@ -258,12 +259,13 @@ export function registerGrowthProfileRoutes(
         if (!existing) {
           return reply.code(404).send({ ok: false, error: 'growth_record_not_found' })
         }
+        const { evidence, metadata, ...fields } = parsed.data
         await database.db
           .update(growthRecords)
           .set({
-            ...parsed.data,
-            evidenceJson: parsed.data.evidence ?? null,
-            metadataJson: parsed.data.metadata ?? null,
+            ...fields,
+            evidenceJson: evidence ?? null,
+            metadataJson: metadata ?? null,
             standardExpression: buildStandardExpression(parsed.data),
             userConfirmed: true,
             userConfirmedAt: new Date(),
@@ -375,13 +377,14 @@ export function registerGrowthProfileRoutes(
             .where(eq(growthRecords.sourceKey, sourceKey))
             .limit(1)
           const now = new Date()
+          const { evidence, metadata, ...fields } = candidate.record
           if (existing) {
             await database.db
               .update(growthRecords)
               .set({
-                ...candidate.record,
-                evidenceJson: candidate.record.evidence ?? null,
-                metadataJson: candidate.record.metadata ?? null,
+                ...fields,
+                evidenceJson: evidence ?? null,
+                metadataJson: metadata ?? null,
                 standardExpression: candidate.standardExpression,
                 userConfirmed: true,
                 userConfirmedAt: now,
@@ -394,9 +397,9 @@ export function registerGrowthProfileRoutes(
             await database.db.insert(growthRecords).values({
               id,
               userId: session.userId,
-              ...candidate.record,
-              evidenceJson: candidate.record.evidence ?? null,
-              metadataJson: candidate.record.metadata ?? null,
+              ...fields,
+              evidenceJson: evidence ?? null,
+              metadataJson: metadata ?? null,
               standardExpression: candidate.standardExpression,
               sourceType: 'assessment',
               sourceRecordId: parsed.data.assessmentId,
