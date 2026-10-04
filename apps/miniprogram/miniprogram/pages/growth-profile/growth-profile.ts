@@ -121,42 +121,46 @@ Page({
   async loadAssessmentImportCandidates() {
     try {
       const assessments = await getMyAssessments()
-      const source = assessments.find((assessment) => {
-        const input = assessment.input
-        return Boolean(
-          input.english?.length ||
-          input.research?.length ||
-          input.competitions?.length,
-        )
-      })
-      if (!source) {
-        this.setData({ importAssessmentId: '', importCandidates: [] })
-        return
-      }
-
-      const candidates = await previewAssessmentGrowthRecords(source.id)
       const importedSourceKeys = new Set(
         this.data.profile.records
           .filter((record) => record.source.type === 'assessment')
           .map((record) => record.source.key),
       )
-      const pending = candidates
-        .filter(
-          (candidate) =>
-            !importedSourceKeys.has(
-              `assessment:${source.id}:${candidate.candidateKey}`,
-            ),
-        )
-        .map((candidate) => ({
-          ...candidate,
-          selected: true,
-          typeLabel: TYPE_LABELS[candidate.record.type] || '经历',
-        }))
 
-      this.setData({
-        importAssessmentId: pending.length ? source.id : '',
-        importCandidates: pending,
-      })
+      for (const source of assessments) {
+        const input = source.input
+        if (
+          !input.english?.length &&
+          !input.research?.length &&
+          !input.competitions?.length
+        ) {
+          continue
+        }
+
+        const candidates = await previewAssessmentGrowthRecords(source.id)
+        const pending = candidates
+          .filter(
+            (candidate) =>
+              !importedSourceKeys.has(
+                `assessment:${source.id}:${candidate.candidateKey}`,
+              ),
+          )
+          .map((candidate) => ({
+            ...candidate,
+            selected: true,
+            typeLabel: TYPE_LABELS[candidate.record.type] || '经历',
+          }))
+
+        if (pending.length) {
+          this.setData({
+            importAssessmentId: source.id,
+            importCandidates: pending,
+          })
+          return
+        }
+      }
+
+      this.setData({ importAssessmentId: '', importCandidates: [] })
     } catch (error) {
       console.info('Assessment facts are not available for growth import yet.', error)
       this.setData({ importAssessmentId: '', importCandidates: [] })
