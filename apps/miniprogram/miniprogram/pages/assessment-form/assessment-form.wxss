@@ -202,3 +202,35 @@
   color: #8a8f98;
   font-size: 20rpx;
 }
+
+
+.picker-select {
+  justify-content: space-between;
+  color: #4f5661;
+}
+
+.competition-search {
+  position: relative;
+  z-index: 2;
+}
+
+.suggestions {
+  margin-top: 8rpx;
+  overflow: hidden;
+  border: 1rpx solid #dfe4ec;
+  border-radius: 14rpx;
+  background: #ffffff;
+  box-shadow: 0 10rpx 28rpx rgba(35, 45, 65, 0.08);
+}
+
+.suggestion-item {
+  padding: 18rpx 20rpx;
+  border-bottom: 1rpx solid #eef1f5;
+  color: #3f4650;
+  font-size: 21rpx;
+  line-height: 1.45;
+}
+
+.suggestion-item:last-child {
+  border-bottom: 0;
+}

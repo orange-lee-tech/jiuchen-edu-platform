@@ -680,6 +680,7 @@ export type AssessmentEnglishRecord = {
 export type AssessmentResearchExperience = {
   title: string
   type?: 'project' | 'paper' | 'patent' | 'lab' | 'other' | null
+  achievementTier?: 'Nature' | 'Science' | 'SCI/SSCI' | 'EI' | '普通期刊' | '科研项目' | '专利/软著' | '其他' | null
   role?: string | null
   organization?: string | null
   level?: 'school' | 'provincial' | 'national' | 'international' | 'other' | null

@@ -59,6 +59,9 @@
       </view>
       <view wx:if="{{research.length === 0}}" class="empty">暂无科研经历，可按需添加。</view>
       <view wx:for="{{research}}" wx:key="index" class="entry vertical">
+        <picker range="{{researchTiers}}" data-index="{{index}}" bindchange="onResearchTierChange">
+          <view class="picker-field picker-select">{{item.achievementTier || '成果级别：Nature / Science / SCI/SSCI / EI / 普刊等'}}</view>
+        </picker>
         <input class="input" data-index="{{index}}" data-field="title" value="{{item.title}}" placeholder="项目 / 论文 / 科研经历名称" bindinput="onResearchInput" />
         <input class="input" data-index="{{index}}" data-field="organization" value="{{item.organization}}" placeholder="实验室 / 学校 / 机构（可选）" bindinput="onResearchInput" />
         <input class="input" data-index="{{index}}" data-field="role" value="{{item.role}}" placeholder="你的角色（可选）" bindinput="onResearchInput" />
@@ -75,8 +78,24 @@
       </view>
       <view wx:if="{{competitions.length === 0}}" class="empty">暂无竞赛经历，可按需添加。</view>
       <view wx:for="{{competitions}}" wx:key="index" class="entry vertical">
-        <input class="input" data-index="{{index}}" data-field="name" value="{{item.name}}" placeholder="竞赛 / 实践名称" bindinput="onCompetitionInput" />
-        <input class="input" data-index="{{index}}" data-field="award" value="{{item.award}}" placeholder="奖项 / 结果（可选）" bindinput="onCompetitionInput" />
+        <view class="competition-search">
+          <input class="input" data-index="{{index}}" value="{{item.name}}" placeholder="输入关键词，如 数模 / 挑战杯 / 蓝桥杯" bindinput="onCompetitionNameInput" />
+          <view wx:if="{{competitionSuggestions[index] && competitionSuggestions[index].length}}" class="suggestions">
+            <view
+              wx:for="{{competitionSuggestions[index]}}"
+              wx:for-item="suggestion"
+              wx:for-index="suggestionIndex"
+              wx:key="*this"
+              class="suggestion-item"
+              data-index="{{index}}"
+              data-name="{{suggestion}}"
+              bindtap="onSelectCompetitionSuggestion"
+            >{{suggestion}}</view>
+          </view>
+        </view>
+        <picker range="{{competitionAwards}}" data-index="{{index}}" bindchange="onCompetitionAwardChange">
+          <view class="picker-field picker-select">{{item.award || '奖项级别：国一 / 国二 / 国三 / 省一 / 省二 / 省三等'}}</view>
+        </picker>
         <input class="input" data-index="{{index}}" data-field="role" value="{{item.role}}" placeholder="你的角色（可选）" bindinput="onCompetitionInput" />
         <textarea class="textarea compact" data-index="{{index}}" data-field="description" value="{{item.description}}" placeholder="补充说明（可选）" bindinput="onCompetitionInput" />
         <button class="remove" data-index="{{index}}" bindtap="onRemoveCompetition">删除</button>

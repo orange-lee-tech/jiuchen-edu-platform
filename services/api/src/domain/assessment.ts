@@ -27,6 +27,10 @@ export const researchExperienceSchema = z
       .enum(['project', 'paper', 'patent', 'lab', 'other'])
       .nullable()
       .optional(),
+    achievementTier: z
+      .enum(['Nature', 'Science', 'SCI/SSCI', 'EI', '普通期刊', '科研项目', '专利/软著', '其他'])
+      .nullable()
+      .optional(),
     role: nullableShortText(120),
     organization: nullableShortText(160),
     level: levelSchema,

@@ -25,6 +25,21 @@ const validInput = {
   ],
 }
 
+test('assessment input accepts structured research achievement tier', () => {
+  const result = normalizeAssessmentInput({
+    ...validInput,
+    research: [
+      {
+        title: '示例论文',
+        type: 'paper',
+        achievementTier: 'SCI/SSCI',
+      },
+    ],
+  })
+
+  assert.equal(result.research[0]?.achievementTier, 'SCI/SSCI')
+})
+
 test('assessment input accepts structured student background', () => {
   const result = normalizeAssessmentInput(validInput)
 
