@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise'
 import 'dotenv/config'
+import { inspectAssessmentSchema, validateAssessmentSchemaSnapshot } from './assessment-schema-contract.js'
 
 const databaseUrl = process.env.DATABASE_URL
 if (!databaseUrl) throw new Error('DATABASE_URL is required')
@@ -119,4 +120,11 @@ if (await tableExists('assessments')) {
   }
 }
 
-console.log('✓ assessment foundation schema is ready')
+const verification = await withFreshConnection(async (connection) => inspectAssessmentSchema(connection))
+const issues = validateAssessmentSchemaSnapshot(verification)
+
+if (issues.length > 0) {
+  throw new Error('assessment_schema_contract_failed:' + issues.join('|'))
+}
+
+console.log('✓ assessment foundation schema is ready and contract-verified')
