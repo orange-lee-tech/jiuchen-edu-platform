@@ -159,7 +159,7 @@ page {
   background: #ffffff;
 }
 
-.jc-field:focus-within {
+.jc-field--focus {
   border-color: #8fb0f3;
   box-shadow: 0 0 0 4rpx rgba(47, 111, 237, 0.08);
 }
