@@ -32,6 +32,40 @@
       </view>
     </view>
 
+    <view wx:if="{{importCandidates.length}}" class="section-card import-card">
+      <view class="section-head">
+        <view>
+          <text class="section-title">复用你已经填过的资料</text>
+          <text class="section-sub">从历史 AI 评估中发现 {{importCandidates.length}} 条语言 / 科研 / 竞赛事实。请确认后再进入 Canonical Profile。</text>
+        </view>
+      </view>
+      <view class="candidate-list">
+        <view
+          wx:for="{{importCandidates}}"
+          wx:key="candidateKey"
+          class="candidate {{item.selected ? 'selected' : ''}}"
+          data-index="{{index}}"
+          bindtap="onCandidateToggle"
+        >
+          <view class="candidate-check">{{item.selected ? '✓' : ''}}</view>
+          <view class="candidate-main">
+            <view class="candidate-head">
+              <text class="record-type">{{item.typeLabel}}</text>
+              <text class="candidate-title">{{item.record.title}}</text>
+            </view>
+            <text class="record-text">{{item.standardExpression}}</text>
+          </view>
+        </view>
+      </view>
+      <button
+        class="confirm-button"
+        loading="{{importing}}"
+        disabled="{{importing}}"
+        bindtap="onConfirmAssessmentImport"
+      >确认所选内容并同步到成长履历</button>
+      <text class="confirm-note">未勾选的内容不会写入。以后修改 Canonical Fact 后，简历和填表包会重新投影。</text>
+    </view>
+
     <view class="section-card">
       <view class="section-head">
         <view>

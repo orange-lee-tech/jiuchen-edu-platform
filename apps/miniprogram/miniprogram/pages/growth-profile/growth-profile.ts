@@ -1,10 +1,14 @@
 import {
   friendlyRequestError,
+  confirmAssessmentGrowthImport,
   getMyApplicationProjection,
+  getMyAssessments,
   getMyGrowthProfile,
   getMyResumeProjection,
+  previewAssessmentGrowthRecords,
   type ApplicationProjection,
   type CanonicalGrowthProfile,
+  type GrowthImportCandidate,
   type ResumeProjection,
 } from '../../utils/request'
 
@@ -59,6 +63,9 @@ Page({
     matchedCount: 0,
     confirmCount: 0,
     missingCount: 0,
+    importAssessmentId: '',
+    importCandidates: [] as Array<GrowthImportCandidate & { selected: boolean; typeLabel: string }>,
+    importing: false,
   },
 
   onLoad() {
@@ -99,12 +106,99 @@ Page({
         confirmCount: application.fields.filter((field) => field.status === 'needs_confirmation').length,
         missingCount: application.fields.filter((field) => field.status === 'missing').length,
       })
+
+      await this.loadAssessmentImportCandidates()
     } catch (error) {
       this.setData({
         error: friendlyRequestError(error, '成长履历暂时无法加载'),
       })
     } finally {
       this.setData({ loading: false })
+    }
+  },
+
+
+  async loadAssessmentImportCandidates() {
+    try {
+      const assessments = await getMyAssessments()
+      const source = assessments.find((assessment) => {
+        const input = assessment.input
+        return Boolean(
+          input.english?.length ||
+          input.research?.length ||
+          input.competitions?.length,
+        )
+      })
+      if (!source) {
+        this.setData({ importAssessmentId: '', importCandidates: [] })
+        return
+      }
+
+      const candidates = await previewAssessmentGrowthRecords(source.id)
+      const importedSourceKeys = new Set(
+        this.data.profile.records
+          .filter((record) => record.source.type === 'assessment')
+          .map((record) => record.source.key),
+      )
+      const pending = candidates
+        .filter(
+          (candidate) =>
+            !importedSourceKeys.has(
+              `assessment:${source.id}:${candidate.candidateKey}`,
+            ),
+        )
+        .map((candidate) => ({
+          ...candidate,
+          selected: true,
+          typeLabel: TYPE_LABELS[candidate.record.type] || '经历',
+        }))
+
+      this.setData({
+        importAssessmentId: pending.length ? source.id : '',
+        importCandidates: pending,
+      })
+    } catch (error) {
+      console.info('Assessment facts are not available for growth import yet.', error)
+      this.setData({ importAssessmentId: '', importCandidates: [] })
+    }
+  },
+
+  onCandidateToggle(event: WechatMiniprogram.BaseEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || index < 0 || index >= this.data.importCandidates.length) return
+    this.setData({
+      [`importCandidates[${index}].selected`]: !this.data.importCandidates[index].selected,
+    })
+  },
+
+  async onConfirmAssessmentImport() {
+    const assessmentId = this.data.importAssessmentId
+    const candidateKeys = this.data.importCandidates
+      .filter((candidate) => candidate.selected)
+      .map((candidate) => candidate.candidateKey)
+
+    if (!assessmentId || !candidateKeys.length) {
+      wx.showToast({ title: '请至少选择一条资料', icon: 'none' })
+      return
+    }
+
+    try {
+      this.setData({ importing: true })
+      const result = await confirmAssessmentGrowthImport(assessmentId, candidateKeys)
+      wx.showToast({ title: `已同步${result.imported}条履历`, icon: 'success' })
+      this.setData({
+        importAssessmentId: '',
+        importCandidates: [],
+      })
+      await this.loadAll()
+    } catch (error) {
+      wx.showToast({
+        title: friendlyRequestError(error, '同步履历失败，请稍后重试'),
+        icon: 'none',
+        duration: 2600,
+      })
+    } finally {
+      this.setData({ importing: false })
     }
   },
 

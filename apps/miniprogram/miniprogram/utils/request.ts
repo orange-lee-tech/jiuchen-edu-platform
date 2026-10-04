@@ -1104,3 +1104,52 @@ export async function getMyApplicationProjection(): Promise<{
     growthSchemaReady: result.growthSchemaReady,
   }
 }
+
+
+export type GrowthImportCandidate = {
+  candidateKey: string
+  record: {
+    type: GrowthRecordType
+    title: string
+    organization?: string | null
+    role?: string | null
+    startDate?: string | null
+    endDate?: string | null
+    description?: string | null
+    result?: string | null
+  }
+  standardExpression: string
+}
+
+export async function previewAssessmentGrowthRecords(
+  assessmentId: string,
+): Promise<GrowthImportCandidate[]> {
+  const result = await request<{
+    ok: true
+    candidates: GrowthImportCandidate[]
+  }>(
+    '/me/growth-records/assessment-preview',
+    'POST',
+    { assessmentId },
+  )
+  return result.candidates
+}
+
+export async function confirmAssessmentGrowthImport(
+  assessmentId: string,
+  candidateKeys: string[],
+): Promise<{ imported: number; recordIds: string[] }> {
+  const result = await request<{
+    ok: true
+    imported: number
+    recordIds: string[]
+  }>(
+    '/me/growth-records/import-assessment',
+    'POST',
+    { assessmentId, candidateKeys },
+  )
+  return {
+    imported: result.imported,
+    recordIds: result.recordIds,
+  }
+}

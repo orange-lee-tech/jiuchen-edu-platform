@@ -44,3 +44,16 @@
 .status-num { color: #30353b; font-size: 31rpx; font-weight: 800; }
 .status-label { margin-top: 5rpx; color: #747c87; font-size: 18rpx; }
 .safety-note { margin-top: 18rpx; color: #8b929c; font-size: 19rpx; line-height: 1.65; }
+
+.import-card { border-color: #dfe8fb; }
+.candidate-list { display: flex; flex-direction: column; gap: 12rpx; }
+.candidate { display: flex; gap: 14rpx; padding: 18rpx; border: 1rpx solid #e6eaf0; border-radius: 16rpx; background: #fafbfc; }
+.candidate.selected { border-color: #b9cdf7; background: #f4f7ff; }
+.candidate-check { flex: 0 0 34rpx; width: 34rpx; height: 34rpx; border: 2rpx solid #c9cfd8; border-radius: 9rpx; color: #fff; font-size: 22rpx; line-height: 34rpx; text-align: center; }
+.candidate.selected .candidate-check { border-color: #2f6fed; background: #2f6fed; }
+.candidate-main { flex: 1; min-width: 0; }
+.candidate-head { display: flex; align-items: center; gap: 10rpx; }
+.candidate-title { flex: 1; color: #30353b; font-size: 22rpx; font-weight: 800; }
+.confirm-button { margin-top: 18rpx; border-radius: 16rpx; background: #2f6fed; color: #fff; font-size: 23rpx; font-weight: 800; }
+.confirm-button::after { border: 0; }
+.confirm-note { display: block; margin-top: 12rpx; color: #949ba5; font-size: 18rpx; line-height: 1.55; }
