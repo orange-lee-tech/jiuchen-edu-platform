@@ -15,10 +15,16 @@ export type JsonModelUserContent =
         }
     >
 
+export type JsonModelJsonSchema = {
+  name: string
+  schema: Record<string, unknown>
+}
+
 export type JsonModelRequest = {
   system?: string
   user: JsonModelUserContent
   maxTokens?: number
+  jsonSchema?: JsonModelJsonSchema
 }
 
 export interface JsonModelProvider {
@@ -36,6 +42,7 @@ export type JsonModelProviderConfig = {
   timeoutMs?: number
   temperature?: number
   jsonMode?: boolean
+  responseFormat?: 'json_object' | 'json_schema'
   extraBody?: Record<string, unknown>
 }
 
@@ -119,6 +126,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
   private readonly timeoutMs: number
   private readonly temperature: number
   private readonly jsonMode: boolean
+  private readonly responseFormat?: 'json_object' | 'json_schema'
   private readonly extraBody: Record<string, unknown>
 
   constructor(config: JsonModelProviderConfig) {
@@ -129,6 +137,8 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
     this.timeoutMs = config.timeoutMs ?? 60_000
     this.temperature = config.temperature ?? 0.1
     this.jsonMode = config.jsonMode ?? false
+    this.responseFormat =
+      config.responseFormat ?? (this.jsonMode ? 'json_object' : undefined)
     this.extraBody = { ...(config.extraBody ?? {}) }
   }
 
@@ -166,6 +176,25 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
         },
       ]
 
+      const responseFormat =
+        this.responseFormat === 'json_schema'
+          ? (() => {
+              if (!request.jsonSchema) {
+                throw new Error('ai_provider_json_schema_required')
+              }
+              return {
+                type: 'json_schema',
+                json_schema: {
+                  name: request.jsonSchema.name,
+                  strict: true,
+                  schema: request.jsonSchema.schema,
+                },
+              }
+            })()
+          : this.responseFormat === 'json_object'
+            ? { type: 'json_object' }
+            : undefined
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -177,9 +206,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
           model: this.model,
           messages,
           temperature: this.temperature,
-          ...(this.jsonMode
-            ? { response_format: { type: 'json_object' } }
-            : {}),
+          ...(responseFormat ? { response_format: responseFormat } : {}),
           ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}),
         }),
         signal: controller.signal,
@@ -245,6 +272,7 @@ export function createAssessmentAIProvider(env: AppEnv) {
     model: env.ASSESSMENT_AI_MODEL,
     temperature: env.ASSESSMENT_AI_TEMPERATURE ?? 0,
     jsonMode: env.ASSESSMENT_AI_JSON_MODE ?? true,
+    responseFormat: env.ASSESSMENT_AI_RESPONSE_FORMAT,
     extraBody: parseExtraBodyJson(env.ASSESSMENT_AI_EXTRA_BODY_JSON),
   })
 }

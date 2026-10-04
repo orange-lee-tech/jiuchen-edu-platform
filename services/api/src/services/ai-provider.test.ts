@@ -84,6 +84,84 @@ test('assessment provider can reproduce evaluated generation contract', async ()
   }
 })
 
+
+test('provider can enforce strict JSON Schema response format', async () => {
+  const originalFetch = globalThis.fetch
+  let capturedBody: Record<string, unknown> | undefined
+
+  globalThis.fetch = async (_input, init) => {
+    capturedBody = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>
+    return new Response(
+      JSON.stringify({
+        choices: [{ message: { content: '{"ok":true}' } }],
+      }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      },
+    )
+  }
+
+  try {
+    const schema = {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        ok: { type: 'boolean' },
+      },
+      required: ['ok'],
+    }
+
+    const provider = new ChatCompletionsJsonModelProvider({
+      provider: 'aliyun-bailian',
+      baseUrl: 'https://example.invalid/v1',
+      apiKey: 'test-key',
+      model: 'qwen3.8-flash',
+      temperature: 0,
+      responseFormat: 'json_schema',
+      extraBody: { enable_thinking: false },
+    })
+
+    await provider.generateJson({
+      system: 'system',
+      user: 'user',
+      jsonSchema: {
+        name: 'assessment_output_v1',
+        schema,
+      },
+    })
+
+    assert.equal(capturedBody?.model, 'qwen3.8-flash')
+    assert.equal(capturedBody?.temperature, 0)
+    assert.equal(capturedBody?.enable_thinking, false)
+    assert.deepEqual(capturedBody?.response_format, {
+      type: 'json_schema',
+      json_schema: {
+        name: 'assessment_output_v1',
+        strict: true,
+        schema,
+      },
+    })
+    assert.equal('max_tokens' in (capturedBody ?? {}), false)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
+test('strict JSON Schema mode refuses requests without a schema', async () => {
+  const provider = new ChatCompletionsJsonModelProvider({
+    baseUrl: 'https://example.invalid/v1',
+    apiKey: 'test-key',
+    model: 'test-model',
+    responseFormat: 'json_schema',
+  })
+
+  await assert.rejects(
+    provider.generateJson({ user: 'user' }),
+    /ai_provider_json_schema_required/,
+  )
+})
+
 test('assessment provider rejects invalid extra-body JSON at startup', () => {
   assert.throws(
     () =>

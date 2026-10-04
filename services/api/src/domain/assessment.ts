@@ -135,6 +135,140 @@ const assessmentOutputBaseSchema = z
   })
   .strict()
 
+
+export const assessmentOutputJsonSchema: Record<string, unknown> = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    profileSummary: { type: 'string' },
+    strengths: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          title: { type: 'string' },
+          detail: { type: 'string' },
+          evidenceRefs: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+        },
+        required: ['title', 'detail', 'evidenceRefs'],
+      },
+    },
+    risks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          title: { type: 'string' },
+          detail: { type: 'string' },
+          evidenceRefs: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+        },
+        required: ['title', 'detail', 'evidenceRefs'],
+      },
+    },
+    targetAssessments: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          schoolName: { type: 'string' },
+          programName: { type: ['string', 'null'] },
+          tier: {
+            type: 'string',
+            enum: ['reach', 'match', 'conservative', 'insufficient_data'],
+          },
+          rationale: { type: 'string' },
+          gapItems: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+          actions: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+          evidenceRefs: {
+            type: 'array',
+            items: { type: 'string' },
+          },
+        },
+        required: [
+          'schoolName',
+          'programName',
+          'tier',
+          'rationale',
+          'gapItems',
+          'actions',
+          'evidenceRefs',
+        ],
+      },
+    },
+    recommendedActions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          priority: {
+            type: 'string',
+            enum: ['high', 'medium', 'low'],
+          },
+          title: { type: 'string' },
+          rationale: { type: 'string' },
+          timeframe: { type: ['string', 'null'] },
+        },
+        required: ['priority', 'title', 'rationale', 'timeframe'],
+      },
+    },
+    similarCases: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          caseId: { type: 'string' },
+          sourceType: {
+            type: 'string',
+            enum: ['jiuchen', 'external'],
+          },
+          similarityReason: { type: 'string' },
+          resultSummary: { type: 'string' },
+          evidenceRef: { type: 'string' },
+        },
+        required: [
+          'caseId',
+          'sourceType',
+          'similarityReason',
+          'resultSummary',
+          'evidenceRef',
+        ],
+      },
+    },
+    uncertainties: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+    disclaimer: { type: 'string' },
+  },
+  required: [
+    'profileSummary',
+    'strengths',
+    'risks',
+    'targetAssessments',
+    'recommendedActions',
+    'similarCases',
+    'uncertainties',
+    'disclaimer',
+  ],
+}
+
 function containsPreciseAdmissionProbability(value: unknown): boolean {
   if (typeof value === 'string') {
     const forward =

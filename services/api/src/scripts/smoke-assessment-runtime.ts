@@ -79,6 +79,8 @@ type ProviderDiagnostic = {
   reasoningContentLength?: number
   messageKeys?: string[]
   usage?: unknown
+  responseFormatType?: unknown
+  responseFormatStrict?: unknown
   diagnosticError?: string
 }
 
@@ -90,6 +92,14 @@ globalThis.fetch = async (resource, init) => {
 
   if (String(resource).includes('/chat/completions')) {
     try {
+      const requestBody = JSON.parse(String(init?.body ?? '{}')) as {
+        response_format?: {
+          type?: unknown
+          json_schema?: {
+            strict?: unknown
+          }
+        }
+      }
       const payload = (await response.clone().json()) as {
         choices?: Array<{
           finish_reason?: unknown
@@ -134,6 +144,8 @@ globalThis.fetch = async (resource, init) => {
             : 0,
         messageKeys: message ? Object.keys(message).sort() : [],
         usage: payload.usage,
+        responseFormatType: requestBody.response_format?.type,
+        responseFormatStrict: requestBody.response_format?.json_schema?.strict,
       }
     } catch (error) {
       providerDiagnostic = {

@@ -6,7 +6,9 @@ import type {
   AssessmentOutput,
 } from '../domain/assessment.js'
 import {
+  ASSESSMENT_OUTPUT_SCHEMA_VERSION,
   assessmentEvidenceItemSchema,
+  assessmentOutputJsonSchema,
   validateAssessmentOutput,
 } from '../domain/assessment.js'
 import {
@@ -190,6 +192,10 @@ class JsonAssessmentModelProvider implements AssessmentModelProvider {
         (repair
           ? '这是唯一一次修复机会。上次输出未通过 assessment-output-v1；请完全重写为上述完整 JSON 对象，不要只修局部，也不要重复输出数字/字符串/数组。保持有证据的有效内容，不要添加新事实。'
           : ''),
+      jsonSchema: {
+        name: ASSESSMENT_OUTPUT_SCHEMA_VERSION.replaceAll('-', '_'),
+        schema: assessmentOutputJsonSchema,
+      },
       user:
         (repair
           ? `上次输出校验失败：${repair.validationError}\n上次输出：${JSON.stringify(repair.invalidOutput)}\n`
