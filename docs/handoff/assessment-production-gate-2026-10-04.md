@@ -164,3 +164,17 @@ Safety conclusion:
 - do not rerun the migration merely because of this verifier failure;
 - fix the read-only metadata mapping and re-run db:check:assessment;
 - only accept the schema gate after the corrected checker returns zero issues.
+## Assessment schema gate — PASS
+
+Production read-only metadata inspection after the approved migration confirmed the final shape:
+- 18 expected columns present with matching data types/nullability;
+- PRIMARY(id);
+- assessments_user_id_idx(user_id);
+- assessments_status_idx(status);
+- user_id foreign key references users(id).
+
+Conclusion:
+- production assessments table creation succeeded;
+- prior verifier failure was a checker metadata-mapping bug, not schema failure;
+- no rerun, drop, recreate or repair migration is required;
+- Assessment Schema Gate is PASS.
