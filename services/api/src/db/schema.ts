@@ -281,6 +281,50 @@ export const paymentNotifications = mysqlTable('payment_notifications', {
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
+export const growthRecords = mysqlTable('growth_records', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  userId: varchar('user_id', { length: 36 })
+    .notNull()
+    .references(() => users.id),
+  type: mysqlEnum('type', [
+    'course',
+    'language',
+    'research',
+    'publication',
+    'competition',
+    'project',
+    'internship',
+    'campus',
+    'award',
+    'skill',
+    'other',
+  ]).notNull(),
+  title: varchar('title', { length: 220 }).notNull(),
+  organization: varchar('organization', { length: 220 }),
+  role: varchar('role', { length: 160 }),
+  startDate: varchar('start_date', { length: 32 }),
+  endDate: varchar('end_date', { length: 32 }),
+  description: varchar('description', { length: 2000 }),
+  result: varchar('result', { length: 1200 }),
+  standardExpression: varchar('standard_expression', { length: 2400 }),
+  evidenceJson: json('evidence_json'),
+  metadataJson: json('metadata_json'),
+  sourceType: mysqlEnum('source_type', ['manual', 'assessment', 'classroom', 'admin'])
+    .notNull()
+    .default('manual'),
+  sourceRecordId: varchar('source_record_id', { length: 80 }),
+  sourceKey: varchar('source_key', { length: 220 }).notNull().unique(),
+  userConfirmed: boolean('user_confirmed').notNull().default(false),
+  userConfirmedAt: timestamp('user_confirmed_at'),
+  teacherConfirmed: boolean('teacher_confirmed').notNull().default(false),
+  teacherConfirmedAt: timestamp('teacher_confirmed_at'),
+  adminConfirmed: boolean('admin_confirmed').notNull().default(false),
+  adminConfirmedAt: timestamp('admin_confirmed_at'),
+  status: mysqlEnum('status', ['active', 'archived']).notNull().default('active'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
 export const studentPlans = mysqlTable('student_plans', {
   id: varchar('id', { length: 36 }).primaryKey(),
   studentId: varchar('student_id', { length: 36 })

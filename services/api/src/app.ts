@@ -13,6 +13,7 @@ import { registerAssessmentRoutes } from './routes/assessments.js'
 import { registerProductRoutes } from './routes/products.js'
 import { registerBrandRoutes } from './routes/brand.js'
 import { registerClassroomWorkspaceRoutes } from './routes/classroom-workspace.js'
+import { registerGrowthProfileRoutes } from './routes/growth-profile.js'
 import {
   createCustomerServiceAIProvider,
   createScheduleAIProvider,
@@ -169,6 +170,7 @@ export function buildApp(env: AppEnv) {
   registerProductRoutes(app, database)
   registerBrandRoutes(app)
   registerClassroomWorkspaceRoutes(app, database, env)
+  registerGrowthProfileRoutes(app, database)
   registerAdminRoutes(app, database, env)
 
   app.addHook('onClose', async () => {
