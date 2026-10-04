@@ -92,10 +92,14 @@ Deployment sequence:
 3. install/build/test inside the new release;
 4. verify env-file permissions without printing values;
 5. start/check the candidate on the Jiuchen API port;
-6. only after success, switch `current`;
-7. restart only `jiuchen-api.service`;
-8. verify `/health/live` and `/health`;
-9. keep the previous release for immediate rollback.
+6. before switching, verify service-user runtime readability:
+   - the systemd service user can traverse the release path;
+   - it can read `services/api/dist/server.js`;
+   - run at least one Node access/syntax check as that service user;
+7. only after success, switch `current`;
+8. restart only `jiuchen-api.service`;
+9. verify `/health/live` and `/health`;
+10. keep the previous release for immediate rollback.
 
 If any post-switch health check fails, roll back to the prior release and report.
 
@@ -131,3 +135,13 @@ At the end of a server task report:
 - unresolved risks.
 
 Never report a migration as complete until HTTPS, WeChat legal-domain configuration, and real mini-program acceptance testing are finished.
+
+### Release permission invariant
+
+A valid immutable release must satisfy both:
+- ownership/integrity: content is root-owned and real files/directories are not group/world-writable;
+- runtime accessibility: the `jiuchen-api` service user can traverse required directories and read runtime artifacts.
+
+Do not infer runtime accessibility from root checks. Run the access check as the service user.
+
+Symbolic links normally report mode `0777` on Linux; do not treat the symlink mode bits themselves as writable-content evidence. Validate ownership plus the resolved target and real file/directory permissions instead.

@@ -10,6 +10,7 @@ APPROVED_FILE=/etc/jiuchen-api/approved-release
 RUNTIME_CONF=/etc/jiuchen-api/runtime.conf
 PREVIOUS_FILE="$BASE/shared/previous-release"
 SERVICE=jiuchen-api.service
+SERVICE_USER=jiuchen-api
 
 die() {
   echo "ERROR: $*" >&2
@@ -77,6 +78,16 @@ WRITABLE="$(
 
 [ -f "$TARGET/services/api/dist/server.js" ] \
   || die "dist/server.js missing"
+
+runuser -u "$SERVICE_USER" -- test -x "$TARGET/services/api/dist" \
+  || die "service user cannot traverse dist"
+
+runuser -u "$SERVICE_USER" -- test -r "$TARGET/services/api/dist/server.js" \
+  || die "service user cannot read dist/server.js"
+
+runuser -u "$SERVICE_USER" -- /opt/jiuchen-api/runtime/node/bin/node \
+  --check "$TARGET/services/api/dist/server.js" \
+  || die "service user node syntax/access check failed"
 
 [ -f "$TARGET/services/api/package.json" ] \
   || die "package.json missing"

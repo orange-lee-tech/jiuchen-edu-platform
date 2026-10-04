@@ -271,3 +271,39 @@ Conclusion:
 - the prior failure was a symlink mode-bit false positive;
 - promote safety contract is restored without relaxing real file/directory protections;
 - no READY file or production cutover occurred during this repair.
+## Production cutover incident and recovery — RESOLVED
+
+Assessment-only release: `8e5a0ffe7869cd3f6ec8c0a8a876247798b65519`.
+
+Final production result:
+- promote completed successfully;
+- active release: `8e5a0ffe7869cd3f6ec8c0a8a876247798b65519`;
+- previous/rollback release: `e4aa5c12a3e905ad1dba55ac92a26609bb171259`;
+- `/health/live`: PASS;
+- `/health`: PASS with database `ok`;
+- `/health/config`: PASS with `assessmentAiConfigured=true`;
+- `/assessments/meta`: PASS with `providerConfigured=true`;
+- `jiuchen-api.service`: active.
+
+Incident sequence:
+1. First promote switched `current` to the Assessment release but the service failed to start.
+2. Node reported `MODULE_NOT_FOUND` for `dist/server.js` even though the file existed.
+3. Root inspection showed `dist/` mode `0750 root:root` and `dist/server.js` mode `0640 root:root`.
+4. The service runs as `jiuchen-api:jiuchen-api`; that user could traverse the release root/services/api but could not traverse `dist` or read `server.js`.
+5. The error was therefore an access-control failure presented by Node as module-not-found, not a missing build artifact.
+6. Release permissions were normalized so immutable content remained root-owned/non-writable while runtime directories/files became readable/traversable by the service account.
+7. Second promote succeeded. Two initial health probes briefly saw connection-refused during process startup, then the built-in retry loop passed and emitted `PROMOTE_OK`.
+
+Lessons:
+- build/test as root is insufficient; production preflight must include the actual systemd service identity;
+- an immutable release needs two simultaneous properties: non-root users cannot modify it, and the runtime service user can traverse/read everything needed to execute;
+- existence checks on `dist/server.js` are insufficient; verify service-user readability before switching `current`;
+- Node `MODULE_NOT_FOUND` can be caused by directory/file permissions, not only an absent file;
+- health probes immediately after restart may briefly receive connection-refused; treat this as transient only when the bounded retry gate ultimately passes;
+- if automatic rollback reaches systemd start-rate limiting, use `systemctl reset-failed` before a controlled recovery start; do not blindly repeat promote/rollback;
+- keep the old release intact and use the existing rollback mechanism rather than manually rewriting `current`.
+
+Follow-up hardening:
+- repository promote script must keep the symlink-mode false-positive fix;
+- repository promote script must preflight `jiuchen-api` traverse/read access to `services/api/dist/server.js` before switching `current`;
+- future release runbooks must include service-user access checks as a required gate.
