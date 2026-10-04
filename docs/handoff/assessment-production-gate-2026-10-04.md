@@ -194,3 +194,21 @@ Private production case corpus was transferred through staging, SHA256 matched b
 Conclusion:
 - production case corpus gate: PASS;
 - next blocker: Assessment AI production env placement for qwen3.8-flash strict-schema runtime.
+## Operator configuration retention rule
+
+Do not rely on chat memory for values that must be re-entered later.
+
+For every successful external-service setup, immediately record the following in the operator's private configuration ledger:
+- provider/service name;
+- region/workspace;
+- Base URL / API host;
+- API key identifier or secret location (never commit the key itself);
+- model name;
+- non-secret runtime options;
+- date last verified;
+- which workload uses it.
+
+For Assessment AI, the previously verified Beijing OpenAI-compatible Base URL is:
+https://dashscope.aliyuncs.com/compatible-mode/v1
+
+The API key remains secret and must stay outside Git.
