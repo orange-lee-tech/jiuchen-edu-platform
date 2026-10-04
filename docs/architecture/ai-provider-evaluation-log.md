@@ -351,3 +351,50 @@ Gate decision:
   sanity check;
 - do not rerun the full historical benchmark.
 
+### Final model selection — ACCEPT
+
+Operator decision on 2026-10-04: stop model selection and move Assessment to the
+Production Gate.
+
+Selected production candidate:
+- provider: Alibaba Bailian;
+- model: `qwen3.8-flash`;
+- mode: non-thinking;
+- temperature: 0;
+- response contract: strict JSON Schema;
+- downstream contract: Zod + evidence validation + at most one bounded repair.
+
+Why this supersedes the earlier `qwen3.5-27b` runtime baseline:
+- `qwen3.5-27b` was accepted for offline model quality, but the real Assessment
+  Agent repeatedly failed the required `assessment-output-v1` structure under JSON
+  Object mode;
+- `qwen3.8-flash` passed the real strict-schema runtime twice and removed that
+  production blocker;
+- this is a runtime-contract decision, not a claim that 3.8 is universally more
+  capable than 3.5.
+
+Five-case micro sanity run:
+- requested / processed: 5 / 5;
+- provider / parse errors: 0;
+- mean / p95 latency: 2,740 / 4,458 ms;
+- prompt / completion tokens: 6,294 / 422 total across five calls;
+- reported cache-hit input tokens: 4,096;
+- runner cost estimate: CNY 0.006175 total;
+- the terminal summary supplied for handoff did not include per-dimension score
+  values, so no score numbers are invented here;
+- operator explicitly accepted model selection based on the full prior benchmark,
+  two successful real-runtime smokes, and the error-free micro run.
+
+Cost decision:
+- current Beijing list-price snapshot:
+  - `qwen3.5-27b`: CNY 0.6 / 1M input, CNY 4.8 / 1M output;
+  - `qwen3.8-flash`: CNY 0.8 / 1M input, CNY 2.7 / 1M output;
+- therefore 3.8 has more expensive input but materially cheaper output;
+- at the two measured real Assessment token mixes, 3.8 is cheaper than 3.5 would
+  be at the same token counts because Assessment output is relatively long;
+- production should record actual per-assessment usage/cost and only reopen model
+  selection if real monthly economics become material.
+
+Decision: **ACCEPT — qwen3.8-flash**.
+Next: Assessment Production Gate. Do not reopen routine model benchmarking.
+

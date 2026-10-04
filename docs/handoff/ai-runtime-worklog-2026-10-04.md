@@ -176,3 +176,33 @@ Strategic decision:
 - if the five-case sanity gate passes, close model selection and enter the Assessment
   Production Gate immediately.
 
+## 2026-10-04 model selection closed — qwen3.8-flash ACCEPT
+
+The project previously selected `qwen3.5-27b` after the frozen offline benchmark.
+That decision was valid for model quality, but the production-style Assessment Agent
+could not reliably obtain the required structured object from it under JSON Object
+mode.
+
+`qwen3.8-flash` is now selected because it solved that runtime-contract blocker with
+strict JSON Schema and passed two private real-runtime smokes.
+
+Cost is not a launch blocker:
+- 3.8 input is more expensive than 3.5;
+- 3.8 output is substantially cheaper than 3.5;
+- the two measured Assessment smokes are output-heavy enough that 3.8 is cheaper at
+  the same observed token mixes;
+- actual production usage must be recorded, but no further model search is justified
+  before launch.
+
+The five-case micro run completed 5/5 with zero provider/parse errors. The supplied
+terminal summary did not expose per-dimension score metrics; this log does not invent
+them. The operator explicitly approved closing model selection.
+
+Status:
+- model selection: CLOSED / ACCEPT;
+- selected runtime: `qwen3.8-flash`;
+- old `qwen3.5-27b`: historical quality baseline / rollback reference only;
+- next priority: Assessment Production Gate;
+- AI Customer Service remains P1;
+- User AI Profile remains P2.
+
