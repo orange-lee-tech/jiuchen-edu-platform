@@ -17,6 +17,12 @@ const optionalNumber = (min: number, max: number) =>
     z.coerce.number().min(min).max(max).optional(),
   )
 
+const optionalPositiveInteger = z.preprocess(
+  (value) =>
+    typeof value === 'string' && value.trim() === '' ? undefined : value,
+  z.coerce.number().int().positive().optional(),
+)
+
 const optionalBoolean = z.preprocess((value) => {
   if (typeof value !== 'string') return value
   const normalized = value.trim().toLowerCase()
@@ -40,10 +46,21 @@ const envSchema = z.object({
   WECHAT_APP_SECRET: optionalNonEmptyString,
   WECHAT_OA_APP_ID: optionalNonEmptyString,
   WECHAT_OA_APP_SECRET: optionalNonEmptyString,
+  WECHAT_PAY_MCH_ID: optionalNonEmptyString,
+  WECHAT_PAY_API_V3_KEY: optionalNonEmptyString,
+  WECHAT_PAY_MERCHANT_SERIAL_NO: optionalNonEmptyString,
+  WECHAT_PAY_PRIVATE_KEY_PEM: optionalNonEmptyString,
+  WECHAT_PAY_PLATFORM_SERIAL_NO: optionalNonEmptyString,
+  WECHAT_PAY_PLATFORM_CERT_PEM: optionalNonEmptyString,
+  WECHAT_PAY_NOTIFY_URL: optionalNonEmptyString,
   CLOUDBASE_ENV_ID: optionalNonEmptyString,
   CLOUDBASE_APIKEY: optionalNonEmptyString,
   TENCENTCLOUD_SECRETID: optionalNonEmptyString,
   TENCENTCLOUD_SECRETKEY: optionalNonEmptyString,
+  CREDIT_ENFORCEMENT_ENABLED: optionalBoolean,
+  CREDIT_FREE_GRANT_VERSION: optionalNonEmptyString,
+  CREDIT_FREE_GRANT_AMOUNT: optionalPositiveInteger,
+  CREDIT_PAYMENT_SKUS_JSON: optionalNonEmptyString,
   ASSESSMENT_AI_PROVIDER: optionalNonEmptyString,
   ASSESSMENT_AI_BASE_URL: optionalNonEmptyString,
   ASSESSMENT_AI_API_KEY: optionalNonEmptyString,
