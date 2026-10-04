@@ -1,3 +1,13 @@
+> **EXECUTION STATUS — QUEUED AFTER BASELINE RESET**
+>
+> The product direction in this blueprint is approved and remains the next repo-wide experience program.
+>
+> Do **not** begin broad implementation while the current AI Runtime, business/commercial, and UI work areas are still closing their already-started tasks. Each area must first refresh its durable handoff/status and stop editing shared hot modules. Main control will then declare a clean baseline.
+>
+> When released, implementation begins with **Phase 0 mapping only** (routes, tab/deep links, role shells, backend-contract needs, conflict map). Do not start with a full visual rewrite or immediate `app.json` replacement.
+>
+> Current orchestration source of truth: `docs/handoff/main-control-status-2026-10-04.md`.
+
 # Jiuchen V1 Experience Blueprint
 
 Status: **APPROVED PRODUCT / UX EXECUTION BLUEPRINT**
