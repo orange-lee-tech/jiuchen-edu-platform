@@ -28,7 +28,8 @@
     "db:upgrade:classroom-revisions": "tsx src/db/upgrade-classroom-revisions.ts",
     "assessment:smoke:live": "tsx src/scripts/smoke-assessment-runtime.ts",
     "db:upgrade:credit-payment": "tsx src/db/upgrade-credit-payment-foundation.ts",
-    "db:upgrade:growth-profile": "tsx src/db/upgrade-growth-profile.ts"
+    "db:upgrade:growth-profile": "tsx src/db/upgrade-growth-profile.ts",
+    "db:check:growth-profile": "tsx src/db/check-growth-profile-foundation.ts"
   },
   "dependencies": {
     "@cloudbase/node-sdk": "^3.18.3",

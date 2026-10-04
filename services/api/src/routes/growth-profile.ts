@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { and, desc, eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
@@ -152,6 +152,72 @@ async function loadCanonicalProfile(
   }
 }
 
+function canonicalProfileRevision(profile: CanonicalProfile) {
+  const identity = profile.identity
+  const records = profile.records.map((record) => ({
+    id: record.id,
+    updatedAt: record.updatedAt,
+    sourceKey: record.source.key,
+  }))
+  return createHash('sha256')
+    .update(JSON.stringify({ identity, records }))
+    .digest('hex')
+    .slice(0, 20)
+}
+
+async function loadPendingAssessmentImport(
+  database: DatabaseContext & { configured: true },
+  userId: string,
+  profile: CanonicalProfile,
+): Promise<{
+  assessmentSchemaReady: boolean
+  pendingImport: {
+    assessmentId: string
+    candidates: ReturnType<typeof assessmentToGrowthCandidates>
+  } | null
+}> {
+  try {
+    const rows = await database.db
+      .select({
+        id: assessments.id,
+        inputJson: assessments.inputJson,
+      })
+      .from(assessments)
+      .where(eq(assessments.userId, userId))
+      .orderBy(desc(assessments.updatedAt))
+      .limit(20)
+
+    const importedSourceKeys = new Set(
+      profile.records
+        .filter((record) => record.source.type === 'assessment')
+        .map((record) => record.source.key),
+    )
+
+    for (const row of rows) {
+      const candidates = assessmentToGrowthCandidates(row.inputJson).filter(
+        (candidate) =>
+          !importedSourceKeys.has(
+            `assessment:${row.id}:${candidate.candidateKey}`,
+          ),
+      )
+      if (candidates.length) {
+        return {
+          assessmentSchemaReady: true,
+          pendingImport: {
+            assessmentId: row.id,
+            candidates,
+          },
+        }
+      }
+    }
+
+    return { assessmentSchemaReady: true, pendingImport: null }
+  } catch (error) {
+    if (!isMissingTable(error)) throw error
+    return { assessmentSchemaReady: false, pendingImport: null }
+  }
+}
+
 const assessmentImportSchema = z.object({
   assessmentId: z.string().uuid(),
   candidateKeys: z.array(z.string().min(1).max(80)).max(40).optional(),
@@ -174,6 +240,56 @@ export function registerGrowthProfileRoutes(
       jdAdaptationReserved: true,
     },
   }))
+
+  app.post<{ Body: unknown }>('/me/growth-profile/bootstrap', async (request, reply) => {
+    if (!database.configured) {
+      return reply.code(503).send({ ok: false, error: 'database_not_configured' })
+    }
+    const session = await resolveSessionUser(request, database)
+    if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
+
+    const parsed = z
+      .object({
+        language: z.literal('zh-CN').default('zh-CN'),
+        length: z.enum(['one-page', 'detailed']).default('one-page'),
+      })
+      .strict()
+      .safeParse(request.body ?? {})
+    if (!parsed.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_growth_profile_bootstrap_options',
+      })
+    }
+
+    const result = await loadCanonicalProfile(database, session.userId)
+    const pending = await loadPendingAssessmentImport(
+      database,
+      session.userId,
+      result.profile,
+    )
+    const resumeOptions = (target: 'general' | 'technical' | 'academic') => ({
+      target,
+      language: parsed.data.language,
+      length: parsed.data.length,
+    } as const)
+
+    return {
+      ok: true,
+      generatedAt: new Date().toISOString(),
+      revision: canonicalProfileRevision(result.profile),
+      growthSchemaReady: result.growthSchemaReady,
+      assessmentSchemaReady: pending.assessmentSchemaReady,
+      profile: result.profile,
+      resumeProjections: {
+        general: buildResumeProjection(result.profile, resumeOptions('general')),
+        technical: buildResumeProjection(result.profile, resumeOptions('technical')),
+        academic: buildResumeProjection(result.profile, resumeOptions('academic')),
+      },
+      applicationProjection: buildApplicationProjection(result.profile),
+      pendingAssessmentImport: pending.pendingImport,
+    }
+  })
 
   app.get('/me/growth-profile', async (request, reply) => {
     if (!database.configured) {
