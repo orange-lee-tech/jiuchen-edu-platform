@@ -34,7 +34,7 @@
       </view>
     </view>
 
-    <view wx:if="{{importCandidates.length}}" class="section-card import-card">
+    <view wx:if="{{growthSchemaReady && importCandidates.length}}" class="section-card import-card">
       <view class="section-head">
         <view>
           <text class="section-title">复用你已经填过的资料</text>

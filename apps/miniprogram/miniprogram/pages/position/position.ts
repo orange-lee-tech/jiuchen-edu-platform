@@ -45,12 +45,15 @@ Page({
     this.setData({ canEditProfile })
 
     if (canEditProfile) {
-      void this.hydrateCachedProfile()
-
-      void this.loadAcademicProfile()
+      void this.hydrateThenLoadProfile()
     } else {
       this.setData({ profileForm: { ...EMPTY_PROFILE } })
     }
+  },
+
+  async hydrateThenLoadProfile() {
+    await this.hydrateCachedProfile()
+    await this.loadAcademicProfile()
   },
 
   async hydrateCachedProfile() {

@@ -68,8 +68,12 @@ Page({
       canEditAcademic,
     })
 
-    void this.hydrateCachedProfile()
-    void this.loadAll()
+    void this.hydrateThenLoad()
+  },
+
+  async hydrateThenLoad() {
+    await this.hydrateCachedProfile()
+    await this.loadAll()
   },
 
   async hydrateCachedProfile() {
