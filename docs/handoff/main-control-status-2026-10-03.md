@@ -1,3 +1,10 @@
+> **SUPERSEDED FOR CURRENT EXECUTION — 2026-10-04**
+>
+> This file is retained as history. Current source of truth:
+> `docs/handoff/main-control-status-2026-10-04.md`
+>
+> In particular, the qwen3.5 runtime blocker, missing Assessment production schema, missing production case corpus, and old production release recorded below are no longer current.
+
 # Main control status — 2026-10-03 (refreshed)
 
 Repository: `orange-lee-tech/jiuchen-edu-platform`  
