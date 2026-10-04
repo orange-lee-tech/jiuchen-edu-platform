@@ -136,3 +136,20 @@ Current versioned runtime: /opt/jiuchen-api/runtime/node-v22.23.3-linux-x64/
 A fresh jiuchen-deploy SSH session may report node/npm as not found. This is expected and is not a reason to install or replace system Node.
 
 For candidate validation, first inspect /opt/jiuchen-api/runtime/node and its bin directory, then use that existing Jiuchen-owned runtime in the current shell only.
+## Production schema preflight result
+
+Read-only production inspection completed on 2026-10-04.
+
+Result:
+- assessments table: absent
+- columnCount: 0
+- indexes: none
+- user foreign key: absent because the table does not exist
+- issues: missing_table:assessments
+
+Interpretation:
+- this is a clean missing-table state;
+- no partial/drifted assessments schema was detected;
+- no reconciliation or destructive repair is required;
+- the only schema write candidate remains db:upgrade:assessment;
+- after the write, db:check:assessment must return ok=true with zero issues.
