@@ -1,3 +1,14 @@
+> **HISTORICAL PRODUCTION HANDOFF — UPDATED POINTER 2026-10-04**
+>
+> Infrastructure topology and safety boundaries below remain useful, but the active production release is no longer `e4aa5c12...`.
+>
+> Current active production release: `8e5a0ffe7869cd3f6ec8c0a8a876247798b65519`.
+> Previous rollback release: `e4aa5c12a3e905ad1dba55ac92a26609bb171259`.
+>
+> Current production/Assessment state is recorded in:
+> `docs/handoff/main-control-status-2026-10-04.md`
+> and `docs/handoff/assessment-production-gate-2026-10-04.md`.
+
 # Lane B — ECS Production / DevOps handoff — 2026-10-02
 
 ## Executive status
