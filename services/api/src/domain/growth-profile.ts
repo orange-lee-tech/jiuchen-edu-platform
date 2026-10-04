@@ -219,7 +219,7 @@ const targetWeights: Record<
 export const resumeProjectionOptionsSchema = z
   .object({
     target: z.enum(['general', 'technical', 'academic']).default('general'),
-    language: z.enum(['zh-CN', 'en']).default('zh-CN'),
+    language: z.literal('zh-CN').default('zh-CN'),
     length: z.enum(['one-page', 'detailed']).default('one-page'),
   })
   .strict()

@@ -70,12 +70,12 @@ Body:
 ```json
 {
   "target": "general | technical | academic",
-  "language": "zh-CN | en",
+  "language": "zh-CN",
   "length": "one-page | detailed"
 }
 ```
 
-The current projection is deterministic. No model call is required.
+The current projection is deterministic and Chinese-only. No model call is required. English resume wording is intentionally deferred until a bounded expression-adaptation step with user confirmation exists.
 
 ### POST /me/application-projection
 

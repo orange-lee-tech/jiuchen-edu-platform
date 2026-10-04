@@ -1009,7 +1009,7 @@ export type ResumeProjection = {
   version: 'resume-projection-v1'
   options: {
     target: 'general' | 'technical' | 'academic'
-    language: 'zh-CN' | 'en'
+    language: 'zh-CN'
     length: 'one-page' | 'detailed'
   }
   identity: CanonicalGrowthProfile['identity']
