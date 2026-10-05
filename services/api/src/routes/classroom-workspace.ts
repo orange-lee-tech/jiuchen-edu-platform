@@ -24,8 +24,10 @@ import {
 } from '../domain/classroom.js'
 import { createScheduleAIProvider } from '../services/ai-provider.js'
 import {
+  createManualScheduleFallback,
   isOwnedScheduleImportFile,
   isSupportedScheduleFileName,
+  normalizeEditableSchedule,
   parseImageSchedule,
   parseSpreadsheetSchedule,
 } from '../services/schedule-parser.js'
@@ -727,6 +729,34 @@ export function registerClassroomWorkspaceRoutes(
       return { ok: true, importId, schedule }
     } catch (error) {
       const code = error instanceof Error ? error.message : 'schedule_parse_failed'
+      const recoverable =
+        code === 'schedule_ai_provider_not_configured' ||
+        code === 'schedule_weekday_header_not_found' ||
+        code === 'schedule_spreadsheet_invalid' ||
+        code === 'schedule_ai_invalid_payload'
+
+      if (recoverable) {
+        const schedule = createManualScheduleFallback(
+          parsed.data.sourceType,
+          code,
+        )
+        await database.db
+          .update(scheduleImports)
+          .set({
+            status: 'parsed',
+            parsedJson: schedule,
+            errorCode: code,
+          })
+          .where(eq(scheduleImports.id, importId))
+
+        return {
+          ok: true,
+          importId,
+          schedule,
+          fallbackReason: code,
+        }
+      }
+
       await database.db
         .update(scheduleImports)
         .set({ status: 'failed', errorCode: code })
@@ -752,10 +782,97 @@ export function registerClassroomWorkspaceRoutes(
     const [record] = await database.db
       .select()
       .from(scheduleImports)
-      .where(eq(scheduleImports.userId, session.userId))
-      .orderBy(desc(scheduleImports.createdAt))
+      .where(
+        and(
+          eq(scheduleImports.userId, session.userId),
+          eq(scheduleImports.status, 'parsed'),
+        ),
+      )
+      .orderBy(desc(scheduleImports.updatedAt), desc(scheduleImports.createdAt))
       .limit(1)
 
-    return { ok: true, import: record ?? null }
+    if (!record) {
+      return { ok: true, import: null }
+    }
+
+    let schedule = null
+    try {
+      schedule = normalizeEditableSchedule(record.parsedJson)
+    } catch {
+      app.log.warn(
+        { importId: record.id },
+        'Latest parsed schedule has invalid persisted payload',
+      )
+    }
+
+    return {
+      ok: true,
+      import: {
+        id: record.id,
+        sourceType: record.sourceType,
+        fileName: record.fileName,
+        status: record.status,
+        errorCode: record.errorCode,
+        updatedAt: record.updatedAt.toISOString(),
+        schedule,
+      },
+    }
+  })
+
+  app.put<{
+    Params: { id: string }
+    Body: unknown
+  }>('/me/classroom/schedule-imports/:id/schedule', async (request, reply) => {
+    if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
+    const session = await resolveSessionUser(request, database)
+    if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
+
+    const [record] = await database.db
+      .select({
+        id: scheduleImports.id,
+        userId: scheduleImports.userId,
+        sourceType: scheduleImports.sourceType,
+      })
+      .from(scheduleImports)
+      .where(
+        and(
+          eq(scheduleImports.id, request.params.id),
+          eq(scheduleImports.userId, session.userId),
+        ),
+      )
+      .limit(1)
+
+    if (!record) {
+      return reply.code(404).send({ ok: false, error: 'schedule_import_not_found' })
+    }
+
+    let schedule
+    try {
+      schedule = normalizeEditableSchedule({
+        ...(request.body as Record<string, unknown>),
+        sourceType: record.sourceType,
+        editedAt: new Date().toISOString(),
+      })
+    } catch {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_schedule_edit_payload',
+      })
+    }
+
+    await database.db
+      .update(scheduleImports)
+      .set({
+        status: 'parsed',
+        parsedJson: schedule,
+        errorCode: null,
+      })
+      .where(eq(scheduleImports.id, record.id))
+
+    return {
+      ok: true,
+      importId: record.id,
+      schedule,
+    }
   })
 }

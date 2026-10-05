@@ -407,7 +407,8 @@
 }
 
 .entry-button,
-.import-button {
+.import-button,
+.week-button {
   margin-top: 22rpx;
   border: 0;
   border-radius: 16rpx;
@@ -418,7 +419,8 @@
 }
 
 .entry-button::after,
-.import-button::after {
+.import-button::after,
+.week-button::after {
   border: 0;
 }
 
@@ -433,12 +435,25 @@
   min-width: 0;
 }
 
-.import-button {
+.schedule-buttons {
+  display: flex;
+  flex-shrink: 0;
+  gap: 10rpx;
+  margin-left: 18rpx;
+}
+
+.import-button,
+.week-button {
   flex: none;
-  margin: 0 0 0 18rpx;
-  padding: 0 22rpx;
+  margin: 0;
+  padding: 0 18rpx;
   height: 66rpx;
   line-height: 66rpx;
+}
+
+.week-button {
+  background: #eaf0f8;
+  color: #315f9d;
 }
 
 .plan-title-row {

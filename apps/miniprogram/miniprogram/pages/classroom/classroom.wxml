@@ -31,7 +31,10 @@
         <text class="tool-title">{{studentName || '我的计划'}}</text>
         <text class="tool-desc">学员修改先进入待审核版本；老师通过后写入正式档案。</text>
       </view>
-      <button class="import-button" bindtap="onScheduleImport">导入课表</button>
+      <view class="schedule-buttons">
+        <button class="week-button" bindtap="onCurrentWeekSchedule">本周课表</button>
+        <button class="import-button" bindtap="onScheduleImport">导入 / 编辑</button>
+      </view>
     </view>
 
     <view class="classroom-layout">

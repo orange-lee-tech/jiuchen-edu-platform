@@ -19,7 +19,10 @@ import {
   createInternalIdentity,
   unbindInternalIdentity,
 } from '../services/internal-identities.js'
-import { fetchLatestOfficialAccountPosts } from '../services/official-account.js'
+import {
+  normalizeNewsTags,
+  syncOfficialAccountPosts,
+} from '../services/news.js'
 import { resolveSessionUser } from '../services/session.js'
 
 const createIdSchema = z.object({
@@ -37,6 +40,15 @@ const assignmentSchema = z.object({
   stageCode: z.string().trim().max(32).nullable().optional(),
   relationship: z.enum(['primary', 'support']).default('primary'),
 })
+
+const newsTagsSchema = z
+  .object({
+    tags: z
+      .array(z.string().trim().min(1).max(24))
+      .max(8)
+      .transform((tags) => [...new Set(tags.map((tag) => tag.trim()))]),
+  })
+  .strict()
 
 async function requireAdmin(
   request: FastifyRequest,
@@ -398,6 +410,7 @@ export function registerMobileAdminRoutes(
         summary: newsPosts.summary,
         coverUrl: newsPosts.coverUrl,
         articleUrl: newsPosts.articleUrl,
+        tagsJson: newsPosts.tagsJson,
         publishedAt: newsPosts.publishedAt,
         source: newsPosts.source,
         status: newsPosts.status,
@@ -408,7 +421,49 @@ export function registerMobileAdminRoutes(
 
     return {
       ok: true,
-      posts: rows,
+      posts: rows.map((row) => ({
+        ...row,
+        tags: normalizeNewsTags(row.tagsJson),
+        tagsJson: undefined,
+      })),
+    }
+  })
+
+  app.put<{
+    Params: { id: string }
+    Body: unknown
+  }>('/me/admin/news/:id/tags', async (request, reply) => {
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
+
+    const parsed = newsTagsSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_news_tags',
+      })
+    }
+
+    const [post] = await configuredDatabase.db
+      .select({ id: newsPosts.id })
+      .from(newsPosts)
+      .where(eq(newsPosts.id, request.params.id))
+      .limit(1)
+
+    if (!post) {
+      return reply.code(404).send({
+        ok: false,
+        error: 'news_post_not_found',
+      })
+    }
+
+    await configuredDatabase.db
+      .update(newsPosts)
+      .set({ tagsJson: parsed.data.tags })
+      .where(eq(newsPosts.id, post.id))
+
+    return {
+      ok: true,
+      tags: parsed.data.tags,
     }
   })
 
@@ -423,45 +478,12 @@ export function registerMobileAdminRoutes(
     }
 
     try {
-      const posts = await fetchLatestOfficialAccountPosts(env)
-
-      for (const post of posts) {
-        const [existing] = await configuredDatabase.db
-          .select({ id: newsPosts.id })
-          .from(newsPosts)
-          .where(eq(newsPosts.sourceKey, post.sourceKey))
-          .limit(1)
-
-        if (existing) {
-          await configuredDatabase.db
-            .update(newsPosts)
-            .set({
-              title: post.title,
-              summary: post.summary,
-              coverUrl: post.coverUrl,
-              articleUrl: post.articleUrl,
-              publishedAt: post.publishedAt,
-              status: 'active',
-            })
-            .where(eq(newsPosts.id, existing.id))
-        } else {
-          await configuredDatabase.db.insert(newsPosts).values({
-            id: randomUUID(),
-            source: 'wechat_official',
-            sourceKey: post.sourceKey,
-            title: post.title,
-            summary: post.summary,
-            coverUrl: post.coverUrl,
-            articleUrl: post.articleUrl,
-            publishedAt: post.publishedAt,
-            status: 'active',
-          })
-        }
-      }
-
+      const result = await syncOfficialAccountPosts(configuredDatabase, env)
       return {
         ok: true,
-        synced: posts.length,
+        synced: result.total,
+        created: result.created,
+        updated: result.updated,
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'official_account_sync_failed'

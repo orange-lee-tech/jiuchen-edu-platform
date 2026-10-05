@@ -13,6 +13,7 @@ import {
   getAdminUsers,
   syncOfficialAccountNews,
   unbindAdminInternalId,
+  updateAdminNewsTags,
   type AdminAssignment,
   type AdminInternalId,
   type AdminNewsPost,
@@ -256,6 +257,45 @@ Page({
         } catch (error) {
           const message = error instanceof Error ? error.message : '移除失败'
           wx.showToast({ title: message, icon: 'none' })
+        }
+      },
+    })
+  },
+
+  onEditNewsTags(event: WechatMiniprogram.BaseEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const post = this.data.posts.find((item) => item.id === id)
+    if (!post) return
+
+    wx.showModal({
+      title: '管理资讯标签',
+      content: post.tags.join('、'),
+      editable: true,
+      placeholderText: '多个标签用逗号、顿号或空格分隔；留空即删除全部标签',
+      confirmText: '保存',
+      success: async (result) => {
+        if (!result.confirm) return
+        const raw = String(result.content || '')
+        const tags = [...new Set(
+          raw
+            .split(/[，,、;；\s]+/)
+            .map((item) => item.trim())
+            .filter(Boolean),
+        )].slice(0, 8)
+
+        try {
+          this.setData({ actionLoading: true })
+          await updateAdminNewsTags(id, tags)
+          this.setData({ posts: await getAdminNews() })
+          wx.showToast({
+            title: tags.length ? '标签已更新' : '标签已清空',
+            icon: 'success',
+          })
+        } catch (error) {
+          const message = error instanceof Error ? error.message : '标签保存失败'
+          wx.showToast({ title: message, icon: 'none' })
+        } finally {
+          this.setData({ actionLoading: false })
         }
       },
     })

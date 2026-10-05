@@ -192,8 +192,12 @@ Page({
     })
   },
 
+  onCurrentWeekSchedule() {
+    wx.navigateTo({ url: '/pages/schedule-import/schedule-import?view=current' })
+  },
+
   onScheduleImport() {
-    wx.navigateTo({ url: '/pages/schedule-import/schedule-import' })
+    wx.navigateTo({ url: '/pages/schedule-import/schedule-import?view=manage' })
   },
 
   onTeacherWorkspace() {

@@ -9,7 +9,10 @@ type AccessTokenResponse = {
 
 type PublishedArticle = {
   title?: string
+  author?: string
   digest?: string
+  content?: string
+  content_source_url?: string
   thumb_url?: string
   url?: string
 }
@@ -66,6 +69,21 @@ async function getAccessToken(env: AppEnv) {
   return cachedToken.token
 }
 
+function normalizePublishedHtml(value: string | undefined) {
+  if (!value?.trim()) return null
+
+  return value
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\sdata-src=/gi, ' src=')
+    .replace(
+      /<img\b([^>]*)>/gi,
+      (_full, attributes: string) =>
+        `<img${attributes} style="max-width:100%;height:auto;box-sizing:border-box;" />`,
+    )
+}
+
 export type OfficialAccountPost = {
   sourceKey: string
   title: string
@@ -73,6 +91,11 @@ export type OfficialAccountPost = {
   coverUrl: string | null
   articleUrl: string | null
   publishedAt: Date | null
+  content: {
+    html: string | null
+    author: string | null
+    contentSourceUrl: string | null
+  }
 }
 
 export async function fetchLatestOfficialAccountPosts(
@@ -124,6 +147,11 @@ export async function fetchLatestOfficialAccountPosts(
         coverUrl: article.thumb_url?.trim() || null,
         articleUrl: article.url?.trim() || null,
         publishedAt,
+        content: {
+          html: normalizePublishedHtml(article.content),
+          author: article.author?.trim() || null,
+          contentSourceUrl: article.content_source_url?.trim() || null,
+        },
       })
     })
   }

@@ -2,7 +2,7 @@
   <view class="news-head">
     <view>
       <text class="page-title">保研资讯</text>
-      <text class="page-desc">把分散的信息，整理成可行动的时间线</text>
+      <text class="page-desc">服务号内容同步到小程序内阅读，管理员标签用于分类与后续个性化推荐</text>
     </view>
     <text class="source-chip">{{sourceLabel}}</text>
   </view>
@@ -21,13 +21,16 @@
 
   <view
     class="featured surface"
-    data-url="{{featured.articleUrl}}"
+    data-id="{{featured.id}}"
     bindtap="onArticleTap"
   >
-    <text class="featured-tag">{{featured.tag}}</text>
-    <text class="featured-title">{{featured.title}}</text>
-    <text class="featured-summary">{{featured.summary}}</text>
-    <text class="featured-more">{{featured.articleUrl ? '查看服务号原文 ›' : '预览内容'}}</text>
+    <image wx:if="{{featured.coverUrl}}" class="featured-cover" src="{{featured.coverUrl}}" mode="aspectFill" />
+    <view class="featured-body">
+      <text class="featured-tag">{{featured.primaryTag}}</text>
+      <text class="featured-title">{{featured.title}}</text>
+      <text class="featured-summary">{{featured.summary}}</text>
+      <text class="featured-more">{{featured.id ? '小程序内阅读全文 ›' : '等待同步内容'}}</text>
+    </view>
   </view>
 
   <view class="section-head">
@@ -40,13 +43,19 @@
       wx:for="{{articles}}"
       wx:key="id"
       class="article-card surface"
-      data-url="{{item.articleUrl}}"
+      data-id="{{item.id}}"
       bindtap="onArticleTap"
     >
-      <view class="article-tag">{{item.tag}}</view>
-      <text class="article-school">{{item.school}}</text>
-      <text class="article-title">{{item.title}}</text>
-      <text class="article-meta">{{item.meta}}</text>
+      <image wx:if="{{item.coverUrl}}" class="article-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+      <view class="article-main">
+        <view class="article-tags">
+          <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text>
+          <text wx:if="{{item.tags.length === 0}}" class="article-tag muted">未分类</text>
+        </view>
+        <text class="article-title">{{item.title}}</text>
+        <text wx:if="{{item.summary}}" class="article-summary">{{item.summary}}</text>
+        <text class="article-meta">{{item.meta}}</text>
+      </view>
     </view>
 
     <view wx:if="{{!loading && articles.length === 0}}" class="empty surface">

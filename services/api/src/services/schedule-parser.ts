@@ -20,6 +20,8 @@ export type ParsedSchedule = {
   sourceType: 'spreadsheet' | 'image'
   courses: ParsedScheduleCourse[]
   warnings: string[]
+  termStartDate?: string | null
+  editedAt?: string | null
 }
 
 export const MAX_SCHEDULE_SPREADSHEET_BYTES = 5 * 1024 * 1024
@@ -36,25 +38,41 @@ const DAY_ALIASES: Array<{ index: number; label: string; tokens: string[] }> = [
   { index: 4, label: '周四', tokens: ['周四', '星期四', '礼拜四', '四'] },
   { index: 5, label: '周五', tokens: ['周五', '星期五', '礼拜五', '五'] },
   { index: 6, label: '周六', tokens: ['周六', '星期六', '礼拜六', '六'] },
-  { index: 7, label: '周日', tokens: ['周日', '星期日', '星期天', '礼拜日', '日', '天'] },
+  { index: 7, label: '周日', tokens: ['周日', '星期日', '星期天', '礼拜日', '礼拜天', '日', '天'] },
 ]
 
-const courseSchema = z.object({
-  name: z.string().trim().min(1).max(160),
-  day: z.string().trim().min(1).max(16),
-  dayIndex: z.number().int().min(1).max(7),
-  slot: z.string().trim().min(1).max(80),
-  startSection: z.number().int().min(1).max(50).nullable(),
-  endSection: z.number().int().min(1).max(50).nullable(),
-  time: z.string().trim().max(80).nullable(),
-  location: z.string().trim().max(160).nullable(),
-  teacher: z.string().trim().max(120).nullable(),
-  weeks: z.string().trim().max(160).nullable(),
-  raw: z.string().max(1000),
-})
+export const parsedScheduleCourseSchema = z
+  .object({
+    name: z.string().trim().min(1).max(160),
+    day: z.string().trim().min(1).max(16),
+    dayIndex: z.number().int().min(1).max(7),
+    slot: z.string().trim().min(1).max(80),
+    startSection: z.number().int().min(1).max(50).nullable(),
+    endSection: z.number().int().min(1).max(50).nullable(),
+    time: z.string().trim().max(80).nullable(),
+    location: z.string().trim().max(160).nullable(),
+    teacher: z.string().trim().max(120).nullable(),
+    weeks: z.string().trim().max(160).nullable(),
+    raw: z.string().max(1000),
+  })
+  .strict()
+
+export const editableScheduleSchema = z
+  .object({
+    sourceType: z.enum(['spreadsheet', 'image']),
+    courses: z.array(parsedScheduleCourseSchema).max(MAX_SCHEDULE_COURSES),
+    warnings: z.array(z.string().trim().min(1).max(300)).max(20).default([]),
+    termStartDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .nullable()
+      .optional(),
+    editedAt: z.string().datetime().nullable().optional(),
+  })
+  .strict()
 
 const schedulePayloadSchema = z.object({
-  courses: z.array(courseSchema).max(MAX_SCHEDULE_COURSES),
+  courses: z.array(parsedScheduleCourseSchema).max(MAX_SCHEDULE_COURSES),
   warnings: z.array(z.string().trim().min(1).max(300)).max(20).optional().default([]),
 })
 
@@ -63,9 +81,23 @@ function text(value: unknown) {
 }
 
 function inferDay(value: string) {
-  const normalized = value.replace(/\s+/g, '')
+  const normalized = value
+    .replace(/\s+/g, '')
+    .replace(/[：:]/g, '')
+    .replace(/^课程表/, '')
+
+  const exact = DAY_ALIASES.find((day) =>
+    day.tokens.some((token) => normalized === token),
+  )
+  if (exact) return exact
+
+  const fullLabel = normalized.match(/(?:星期|礼拜|周)([一二三四五六日天])/)
+  if (!fullLabel) return undefined
+
+  const suffix = fullLabel[1]
   return DAY_ALIASES.find((day) =>
-    day.tokens.some((token) => normalized === token || normalized.includes(token)),
+    day.tokens.includes(suffix) ||
+    day.tokens.some((token) => token.endsWith(suffix)),
   )
 }
 
@@ -88,10 +120,19 @@ function parseCourseCell(rawValue: string) {
   let time: string | null = null
 
   for (const line of lines.slice(1)) {
-    if (/周|week/i.test(line) && !weeks) weeks = line
-    else if (/老师|教师|教授|讲师/.test(line) && !teacher) teacher = line
-    else if (/教室|楼|馆|室|校区|实验室/.test(line) && !location) location = line
-    else if (/\d{1,2}:\d{2}/.test(line) && !time) time = line
+    if (/(?:第?\d+(?:[-~—至,，、]\d+)*周|\d+周|单双周|单周|双周|week)/i.test(line) && !weeks) {
+      weeks = line
+    } else if (/老师|教师|教授|讲师|任课/.test(line) && !teacher) {
+      teacher = line.replace(/^(?:老师|教师|任课教师|任课)[:：]?/, '').trim() || line
+    } else if (
+      (/教室|教学楼|楼|馆|室|校区|实验室|地点/.test(line) ||
+        /^[A-Za-z]{0,3}\d{2,4}(?:[-－]\d+)?$/.test(line)) &&
+      !location
+    ) {
+      location = line.replace(/^地点[:：]?/, '').trim() || line
+    } else if (/\d{1,2}:\d{2}/.test(line) && !time) {
+      time = line
+    }
   }
 
   return { name, location, teacher, weeks, time }
@@ -114,6 +155,21 @@ function canonicalSchedule(
       day: DAY_ALIASES[course.dayIndex - 1]?.label ?? course.day,
     })),
     warnings: parsed.data.warnings,
+    termStartDate: null,
+    editedAt: null,
+  }
+}
+
+export function normalizeEditableSchedule(value: unknown): ParsedSchedule {
+  const parsed = editableScheduleSchema.parse(value)
+  return {
+    ...parsed,
+    courses: parsed.courses.map((course) => ({
+      ...course,
+      day: DAY_ALIASES[course.dayIndex - 1]?.label ?? course.day,
+    })),
+    termStartDate: parsed.termStartDate ?? null,
+    editedAt: parsed.editedAt ?? null,
   }
 }
 
@@ -144,81 +200,143 @@ export function isOwnedScheduleImportFile(fileID: string, userId: string) {
   return fileID.includes(expected)
 }
 
-export function parseSpreadsheetSchedule(buffer: Buffer): ParsedSchedule {
-  if (buffer.byteLength > MAX_SCHEDULE_SPREADSHEET_BYTES) {
-    throw new Error('schedule_spreadsheet_too_large')
+type DayColumnGroup = {
+  dayIndex: number
+  day: string
+  columns: number[]
+}
+
+function mergedColumnsForHeaderCell(
+  sheet: XLSX.WorkSheet,
+  row: number,
+  column: number,
+) {
+  const merges = (sheet['!merges'] ?? []) as XLSX.Range[]
+  const merge = merges.find(
+    (range) =>
+      row >= range.s.r &&
+      row <= range.e.r &&
+      column >= range.s.c &&
+      column <= range.e.c &&
+      range.s.r === row &&
+      range.s.c === column,
+  )
+
+  if (!merge) return [column]
+
+  const columns: number[] = []
+  for (let current = merge.s.c; current <= merge.e.c; current += 1) {
+    columns.push(current)
   }
+  return columns
+}
 
-  const workbook = XLSX.read(buffer, {
-    type: 'buffer',
-    cellDates: false,
-    sheetRows: MAX_SCHEDULE_ROWS + 1,
-  })
-
-  if (workbook.SheetNames.length > MAX_SCHEDULE_SHEETS) {
-    throw new Error('schedule_too_many_sheets')
-  }
-
-  const firstSheet = workbook.Sheets[workbook.SheetNames[0]]
-  if (!firstSheet) {
-    throw new Error('schedule_spreadsheet_empty')
-  }
-
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(firstSheet, {
-    header: 1,
-    raw: false,
-    defval: '',
-  })
-
-  if (rows.length === 0) {
-    throw new Error('schedule_spreadsheet_empty')
-  }
-  if (rows.length > MAX_SCHEDULE_ROWS) {
-    throw new Error('schedule_too_many_rows')
-  }
-  if (rows.some((row) => row.length > MAX_SCHEDULE_COLUMNS)) {
-    throw new Error('schedule_too_many_columns')
-  }
-
-  let headerIndex = -1
-  let dayColumns: Array<{ column: number; dayIndex: number; day: string }> = []
-
-  for (let rowIndex = 0; rowIndex < Math.min(rows.length, 12); rowIndex += 1) {
+function detectDayGroups(
+  sheet: XLSX.WorkSheet,
+  rows: unknown[][],
+) {
+  for (let rowIndex = 0; rowIndex < Math.min(rows.length, 30); rowIndex += 1) {
     const row = rows[rowIndex] ?? []
-    const candidates = row
-      .map((cell, column) => ({ column, day: inferDay(text(cell)) }))
-      .filter((item) => item.day)
+    const byDay = new Map<number, DayColumnGroup>()
 
-    if (candidates.length >= 3) {
-      headerIndex = rowIndex
-      dayColumns = candidates.map((item) => ({
-        column: item.column,
-        dayIndex: item.day!.index,
-        day: item.day!.label,
-      }))
-      break
+    row.forEach((cell, column) => {
+      const day = inferDay(text(cell))
+      if (!day) return
+
+      const columns = mergedColumnsForHeaderCell(sheet, rowIndex, column)
+      const existing = byDay.get(day.index)
+      if (existing) {
+        existing.columns = [...new Set([...existing.columns, ...columns])]
+        return
+      }
+
+      byDay.set(day.index, {
+        dayIndex: day.index,
+        day: day.label,
+        columns,
+      })
+    })
+
+    const groups = [...byDay.values()].sort((left, right) => left.dayIndex - right.dayIndex)
+    if (groups.length >= 3) {
+      return {
+        headerIndex: rowIndex,
+        groups,
+      }
     }
   }
 
-  if (headerIndex < 0 || dayColumns.length === 0) {
-    throw new Error('schedule_weekday_header_not_found')
+  return null
+}
+
+function detectSlotColumn(
+  rows: unknown[][],
+  headerIndex: number,
+  groups: DayColumnGroup[],
+) {
+  const minDayColumn = Math.min(...groups.flatMap((group) => group.columns))
+  const header = rows[headerIndex] ?? []
+
+  for (let column = 0; column < minDayColumn; column += 1) {
+    const label = text(header[column]).replace(/\s+/g, '')
+    if (/节次|节数|课节|时间|时段/.test(label)) return column
   }
 
+  return Math.max(0, minDayColumn - 1)
+}
+
+function looksLikeSubheader(value: string) {
+  const parts = value
+    .split(/\n/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+  if (!parts.length) return true
+
+  return parts.every((part) =>
+    /^(课程|课程名|课程名称|地点|教室|教师|老师|任课教师|周次|时间|节次|备注)$/.test(part),
+  )
+}
+
+function combineDayCells(row: unknown[], columns: number[]) {
+  const parts = columns
+    .map((column) => text(row[column]))
+    .filter(Boolean)
+  return [...new Set(parts)].join('\n')
+}
+
+function parseSheetSchedule(
+  sheet: XLSX.WorkSheet,
+  rows: unknown[][],
+): ParsedScheduleCourse[] | null {
+  const header = detectDayGroups(sheet, rows)
+  if (!header) return null
+
+  const slotColumn = detectSlotColumn(rows, header.headerIndex, header.groups)
   const courses: ParsedScheduleCourse[] = []
-  for (let rowIndex = headerIndex + 1; rowIndex < rows.length; rowIndex += 1) {
+  const seen = new Set<string>()
+
+  for (let rowIndex = header.headerIndex + 1; rowIndex < rows.length; rowIndex += 1) {
     const row = rows[rowIndex] ?? []
-    const slot = text(row[0]) || '第' + (rowIndex - headerIndex) + '行'
+    const slotCandidate = text(row[slotColumn]) || text(row[0])
+    const slot = slotCandidate || '第' + (rowIndex - header.headerIndex) + '行'
     const sections = sectionRange(slot)
 
-    for (const column of dayColumns) {
-      const raw = text(row[column.column])
-      if (!raw || /^[-—/\\]+$/.test(raw)) continue
+    for (const group of header.groups) {
+      const raw = combineDayCells(row, group.columns)
+      if (!raw || /^[-—/\\]+$/.test(raw) || looksLikeSubheader(raw)) continue
 
       const parsed = parseCourseCell(raw)
+      if (!parsed.name) continue
+
+      const key = `${group.dayIndex}|${slot}|${raw}`
+      if (seen.has(key)) continue
+      seen.add(key)
+
       courses.push({
         name: parsed.name,
-        day: column.day,
-        dayIndex: column.dayIndex,
+        day: group.day,
+        dayIndex: group.dayIndex,
         slot,
         startSection: sections.start,
         endSection: sections.end,
@@ -235,17 +353,66 @@ export function parseSpreadsheetSchedule(buffer: Buffer): ParsedSchedule {
     }
   }
 
-  return canonicalSchedule(
-    'spreadsheet',
-    {
-      courses,
-      warnings:
-        courses.length > 0
-          ? []
-          : ['已识别星期表头，但未检测到课程单元格，请检查表格布局。'],
-    },
-    'schedule_spreadsheet_invalid',
-  )
+  return courses
+}
+
+export function parseSpreadsheetSchedule(buffer: Buffer): ParsedSchedule {
+  if (buffer.byteLength > MAX_SCHEDULE_SPREADSHEET_BYTES) {
+    throw new Error('schedule_spreadsheet_too_large')
+  }
+
+  const workbook = XLSX.read(buffer, {
+    type: 'buffer',
+    cellDates: false,
+    sheetRows: MAX_SCHEDULE_ROWS + 1,
+  })
+
+  if (workbook.SheetNames.length > MAX_SCHEDULE_SHEETS) {
+    throw new Error('schedule_too_many_sheets')
+  }
+
+  if (workbook.SheetNames.length === 0) {
+    throw new Error('schedule_spreadsheet_empty')
+  }
+
+  let headerFound = false
+
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName]
+    if (!sheet) continue
+
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+      header: 1,
+      raw: false,
+      defval: '',
+    })
+
+    if (rows.length === 0) continue
+    if (rows.length > MAX_SCHEDULE_ROWS) {
+      throw new Error('schedule_too_many_rows')
+    }
+    if (rows.some((row) => row.length > MAX_SCHEDULE_COLUMNS)) {
+      throw new Error('schedule_too_many_columns')
+    }
+
+    const courses = parseSheetSchedule(sheet, rows)
+    if (courses === null) continue
+    headerFound = true
+
+    if (courses.length > 0) {
+      return canonicalSchedule(
+        'spreadsheet',
+        { courses, warnings: [] },
+        'schedule_spreadsheet_invalid',
+      )
+    }
+  }
+
+  if (!headerFound) {
+    throw new Error('schedule_weekday_header_not_found')
+  }
+
+  throw new Error('schedule_spreadsheet_invalid')
 }
 
 function mimeFromName(fileName: string) {
@@ -293,4 +460,22 @@ export async function parseImageSchedule(
     payload,
     'schedule_ai_invalid_payload',
   )
+}
+
+export function createManualScheduleFallback(
+  sourceType: ParsedSchedule['sourceType'],
+  reason: string,
+): ParsedSchedule {
+  const message =
+    reason === 'schedule_ai_provider_not_configured'
+      ? '图片自动识别模型尚未配置。已保留一个可手动编辑的课表，你可以直接新增课程。'
+      : '自动解析没有可靠识别出课表结构。已进入手动校正模式，你可以直接新增或修改课程。'
+
+  return {
+    sourceType,
+    courses: [],
+    warnings: [message],
+    termStartDate: null,
+    editedAt: null,
+  }
 }

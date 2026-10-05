@@ -30,7 +30,9 @@
     "db:upgrade:credit-payment": "tsx src/db/upgrade-credit-payment-foundation.ts",
     "db:upgrade:growth-profile": "tsx src/db/upgrade-growth-profile.ts",
     "db:check:growth-profile": "tsx src/db/check-growth-profile-foundation.ts",
-    "db:check:credit-payment": "tsx src/db/check-credit-payment-foundation.ts"
+    "db:check:credit-payment": "tsx src/db/check-credit-payment-foundation.ts",
+    "db:check:news-experience": "tsx src/db/check-news-experience.ts",
+    "db:upgrade:news-experience": "tsx src/db/upgrade-news-experience.ts"
   },
   "dependencies": {
     "@cloudbase/node-sdk": "^3.18.3",

@@ -4,6 +4,7 @@
     "pages/position/position",
     "pages/classroom/classroom",
     "pages/news/news",
+    "pages/news-detail/news-detail",
     "pages/profile/profile",
     "pages/growth-profile/growth-profile",
     "pages/login/login",

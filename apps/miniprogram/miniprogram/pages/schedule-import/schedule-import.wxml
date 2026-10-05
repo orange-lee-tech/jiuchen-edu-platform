@@ -1,40 +1,119 @@
 <view class="page-shell">
   <view class="import-head">
-    <text class="page-title">导入课表</text>
-    <text class="page-desc">直接使用微信文件选择、相册/相机与 CloudBase。表格按星期表头与课程单元格解析；图片依赖已配置的多模态模型，不做假解析。</text>
+    <text class="page-title">我的课表</text>
+    <text class="page-desc">Excel / CSV 先走确定性解析；复杂格式自动降级为手动校正。图片在多模态模型未配置时也不会卡死，可直接手动补录。</text>
   </view>
 
-  <view class="import-actions">
-    <button class="import-card surface" bindtap="onChooseSpreadsheet" loading="{{parsing}}">
+  <view class="mode-tabs">
+    <view class="mode-tab {{viewMode === 'current' ? 'active' : ''}}" data-mode="current" bindtap="onViewModeTap">本周课表</view>
+    <view class="mode-tab {{viewMode === 'all' ? 'active' : ''}}" data-mode="all" bindtap="onViewModeTap">全部课表</view>
+    <view class="mode-tab {{viewMode === 'manage' ? 'active' : ''}}" data-mode="manage" bindtap="onViewModeTap">导入 / 编辑</view>
+  </view>
+
+  <view wx:if="{{schedule}}" class="term-card surface">
+    <view>
+      <text class="term-title">{{currentWeekLabel}}</text>
+      <text class="term-desc">本周筛选依据课程的“周次”字段；未写周次的课程默认每周显示。</text>
+    </view>
+    <picker mode="date" value="{{termStartDate}}" bindchange="onTermStartChange">
+      <view class="date-picker">{{termStartDate ? '第一周周一：' + termStartDate : '设置第一周周一'}} ›</view>
+    </picker>
+  </view>
+
+  <view wx:if="{{viewMode === 'manage'}}" class="import-actions">
+    <button class="import-card surface" bindtap="onChooseSpreadsheet" loading="{{parsing}}" disabled="{{parsing}}">
       <text class="import-icon">表</text>
       <text class="import-title">微信文件 / Excel / CSV</text>
-      <text class="import-desc">支持 xlsx、xls、csv；复杂合并单元格或特殊教务导出格式可能需要转换</text>
+      <text class="import-desc">支持 xlsx、xls、csv；会识别多工作表、常见合并星期表头与课程单元格。</text>
     </button>
-    <button class="import-card surface" bindtap="onChooseImage" loading="{{parsing}}">
+    <button class="import-card surface" bindtap="onChooseImage" loading="{{parsing}}" disabled="{{parsing}}">
       <text class="import-icon">图</text>
       <text class="import-title">课表截图 / 拍照</text>
-      <text class="import-desc">从相册选择或直接拍摄课表</text>
+      <text class="import-desc">已配置图片模型则自动识别；未配置时进入手动校正，不再直接失败。</text>
     </button>
   </view>
 
-  <view wx:if="{{fileName}}" class="file-note">当前文件：{{fileName}}{{parsing ? ' · 解析中…' : ''}}</view>
+  <view wx:if="{{fileName}}" class="file-note">
+    当前课表：{{fileName}}{{parsing ? ' · 解析中…' : saving ? ' · 保存中…' : ''}}
+  </view>
+
+  <view wx:if="{{schedule && schedule.warnings.length}}" class="warnings">
+    <view wx:for="{{schedule.warnings}}" wx:key="*this" class="warning">{{item}}</view>
+  </view>
 
   <view wx:if="{{schedule}}" class="result-section">
     <view class="section-head">
-      <text class="section-title">解析结果</text>
-      <text class="section-note">{{schedule.courses.length}} 门课程</text>
+      <view>
+        <text class="section-title">{{viewMode === 'current' ? '本周课程' : viewMode === 'all' ? '全部课程' : '课表校正'}}</text>
+        <text class="section-note">
+          {{viewMode === 'current' && currentWeek === 0 ? '先设置学期第一周周一' : visibleCourses.length + ' 门课程'}}
+        </text>
+      </view>
+      <button wx:if="{{viewMode === 'manage'}}" class="add-course" bindtap="onAddCourse">+ 新增课程</button>
     </view>
 
-    <view wx:for="{{schedule.courses}}" wx:key="index" class="course-card surface">
-      <view>
+    <view
+      wx:for="{{visibleCourses}}"
+      wx:key="index"
+      class="course-card surface"
+    >
+      <view class="course-main">
         <text class="course-name">{{item.name}}</text>
         <text class="course-meta">{{item.day}} · {{item.slot}}</text>
-        <text wx:if="{{item.location}}" class="course-meta">{{item.location}}</text>
-        <text wx:if="{{item.teacher}}" class="course-meta">{{item.teacher}}</text>
-        <text wx:if="{{item.weeks}}" class="course-meta">{{item.weeks}}</text>
+        <text wx:if="{{item.location}}" class="course-meta">地点：{{item.location}}</text>
+        <text wx:if="{{item.teacher}}" class="course-meta">教师：{{item.teacher}}</text>
+        <text wx:if="{{item.weeks}}" class="course-meta">周次：{{item.weeks}}</text>
+      </view>
+      <view wx:if="{{viewMode === 'manage'}}" class="course-actions">
+        <button class="mini" data-index="{{index}}" bindtap="onEditCourse">编辑</button>
+        <button class="mini danger" data-index="{{index}}" bindtap="onDeleteCourse">删除</button>
       </view>
     </view>
 
-    <view wx:for="{{schedule.warnings}}" wx:key="*this" class="warning">{{item}}</view>
+    <view wx:if="{{visibleCourses.length === 0}}" class="empty surface">
+      <text wx:if="{{viewMode === 'current' && currentWeek === 0}}">设置“本学期第一周周一”后即可单独显示本周课表。</text>
+      <text wx:elif="{{viewMode === 'manage'}}">当前没有课程。你可以重新导入，或直接“新增课程”手动补录。</text>
+      <text wx:else>当前视图没有匹配课程。</text>
+    </view>
+  </view>
+
+  <view wx:else-if="{{!parsing}}" class="empty surface">
+    <text>还没有可用课表。切换到“导入 / 编辑”上传 Excel、CSV 或课表图片。</text>
+  </view>
+
+  <view wx:if="{{editing}}" class="editor-mask">
+    <view class="editor-sheet">
+      <view class="editor-head">
+        <text class="editor-title">{{editingIndex >= 0 ? '编辑课程' : '新增课程'}}</text>
+        <text class="editor-close" bindtap="onCancelEdit">×</text>
+      </view>
+
+      <text class="field-label">课程名</text>
+      <input class="field-input" value="{{courseDraft.name}}" placeholder="例如：工程热力学" bindinput="onDraftName" />
+
+      <text class="field-label">星期</text>
+      <picker range="{{dayOptions}}" value="{{courseDraft.dayIndex - 1}}" bindchange="onDraftDay">
+        <view class="field-picker">{{courseDraft.day}} ›</view>
+      </picker>
+
+      <text class="field-label">节次</text>
+      <input class="field-input" value="{{courseDraft.slot}}" placeholder="例如：第3-4节" bindinput="onDraftSlot" />
+
+      <text class="field-label">周次</text>
+      <input class="field-input" value="{{courseDraft.weeks || ''}}" placeholder="例如：1-16周 / 1-16周单周" bindinput="onDraftWeeks" />
+
+      <text class="field-label">地点</text>
+      <input class="field-input" value="{{courseDraft.location || ''}}" placeholder="可选" bindinput="onDraftLocation" />
+
+      <text class="field-label">教师</text>
+      <input class="field-input" value="{{courseDraft.teacher || ''}}" placeholder="可选" bindinput="onDraftTeacher" />
+
+      <view class="editor-actions">
+        <button class="secondary" bindtap="onCancelEdit">取消</button>
+        <button class="primary" loading="{{saving}}" disabled="{{saving}}" bindtap="onSaveCourse">保存课程</button>
+      </view>
+
+      <text class="editor-note">这里是学员自己的临时课表，保存后立即生效，不进入老师审核流程。</text>
+    </view>
   </view>
 </view>

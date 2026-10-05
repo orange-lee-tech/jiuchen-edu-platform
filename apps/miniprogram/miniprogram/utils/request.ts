@@ -429,23 +429,67 @@ export type ParsedSchedule = {
   sourceType: 'spreadsheet' | 'image'
   courses: ParsedScheduleCourse[]
   warnings: string[]
+  termStartDate?: string | null
+  editedAt?: string | null
+}
+
+export type ScheduleImportView = {
+  id: string
+  sourceType: 'spreadsheet' | 'image'
+  fileName: string
+  status: 'parsed'
+  errorCode: string | null
+  updatedAt: string
+  schedule: ParsedSchedule | null
 }
 
 export async function createScheduleImport(payload: {
   fileID: string
   fileName: string
   sourceType: 'spreadsheet' | 'image'
-}): Promise<{ importId: string; schedule: ParsedSchedule }> {
+}): Promise<{ importId: string; schedule: ParsedSchedule; fallbackReason?: string }> {
   const result = await request<{
     ok: true
     importId: string
     schedule: ParsedSchedule
+    fallbackReason?: string
   }>(
     '/me/classroom/schedule-imports',
     'POST',
     payload as unknown as WechatMiniprogram.IAnyObject,
   )
-  return { importId: result.importId, schedule: result.schedule }
+  return {
+    importId: result.importId,
+    schedule: result.schedule,
+    fallbackReason: result.fallbackReason,
+  }
+}
+
+export async function getLatestScheduleImport(): Promise<ScheduleImportView | null> {
+  const result = await request<{ ok: true; import: ScheduleImportView | null }>(
+    '/me/classroom/schedule-imports/latest',
+  )
+  return result.import
+}
+
+export async function updateScheduleImport(
+  id: string,
+  schedule: ParsedSchedule,
+): Promise<ParsedSchedule> {
+  const result = await request<{
+    ok: true
+    importId: string
+    schedule: ParsedSchedule
+  }>(
+    `/me/classroom/schedule-imports/${encodeURIComponent(id)}/schedule`,
+    'PUT',
+    {
+      courses: schedule.courses,
+      warnings: schedule.warnings,
+      termStartDate: schedule.termStartDate ?? null,
+    } as unknown as WechatMiniprogram.IAnyObject,
+  )
+  return result.schedule
 }
 
 
@@ -531,6 +575,7 @@ export type AdminNewsPost = {
   summary: string | null
   coverUrl: string | null
   articleUrl: string | null
+  tags: string[]
   publishedAt: string | null
   source: 'manual' | 'wechat_official'
   status: 'active' | 'hidden'
@@ -629,6 +674,18 @@ export async function syncOfficialAccountNews(): Promise<number> {
   return result.synced
 }
 
+export async function updateAdminNewsTags(
+  id: string,
+  tags: string[],
+): Promise<string[]> {
+  const result = await request<{ ok: true; tags: string[] }>(
+    `/me/admin/news/${encodeURIComponent(id)}/tags`,
+    'PUT',
+    { tags } as unknown as WechatMiniprogram.IAnyObject,
+  )
+  return result.tags
+}
+
 
 export type AdminUser = {
   id: string
@@ -663,13 +720,29 @@ export type NewsPost = {
   summary: string | null
   coverUrl: string | null
   articleUrl: string | null
+  tags: string[]
   publishedAt: string | null
   source: 'manual' | 'wechat_official'
+}
+
+export type NewsPostDetail = NewsPost & {
+  content: {
+    html: string | null
+    author: string | null
+    contentSourceUrl: string | null
+  }
 }
 
 export async function getNewsPosts(): Promise<NewsPost[]> {
   const result = await request<{ ok: true; posts: NewsPost[] }>('/news')
   return result.posts
+}
+
+export async function getNewsPost(id: string): Promise<NewsPostDetail> {
+  const result = await request<{ ok: true; post: NewsPostDetail }>(
+    `/news/${encodeURIComponent(id)}`,
+  )
+  return result.post
 }
 
 

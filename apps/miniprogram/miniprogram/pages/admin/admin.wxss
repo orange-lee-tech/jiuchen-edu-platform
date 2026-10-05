@@ -148,3 +148,31 @@
   background: #fff1ef;
   color: #b4534b;
 }
+
+
+.news-row {
+  align-items: flex-start;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 10rpx;
+}
+
+.tag-chip,
+.tag-empty {
+  display: inline-block;
+  padding: 5rpx 10rpx;
+  border-radius: 8rpx;
+  background: #eef3f8;
+  color: #536173;
+  font-size: 18rpx;
+  line-height: 1.4;
+}
+
+.tag-empty {
+  background: #f3f4f6;
+  color: #9297a0;
+}

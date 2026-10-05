@@ -81,12 +81,18 @@
     </view>
 
     <view class="card">
-      <text class="card-title">已同步内容</text>
-      <view wx:for="{{posts}}" wx:key="id" class="list-row">
+      <text class="card-title">已同步内容与标签</text>
+      <text class="card-note">服务号发布接口不提供可依赖的“合集标签”字段，小程序以这里的管理员标签作为个性化推荐的稳定分类源。留空保存即可删除全部标签。</text>
+      <view wx:for="{{posts}}" wx:key="id" class="list-row news-row">
         <view class="row-main">
           <text class="row-title">{{item.title}}</text>
           <text class="row-desc">{{item.source === 'wechat_official' ? '服务号同步' : '手动'}} · {{item.status}}</text>
+          <view class="tag-list">
+            <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="tag-chip">{{tag}}</text>
+            <text wx:if="{{item.tags.length === 0}}" class="tag-empty">未分类</text>
+          </view>
         </view>
+        <button class="mini" data-id="{{item.id}}" bindtap="onEditNewsTags">管理标签</button>
       </view>
     </view>
   </block>

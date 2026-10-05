@@ -196,6 +196,8 @@ await ensureTable(
     \`summary\` varchar(500) NULL,
     \`cover_url\` varchar(1000) NULL,
     \`article_url\` varchar(1000) NULL,
+    \`content_json\` json NULL,
+    \`tags_json\` json NULL,
     \`published_at\` timestamp NULL,
     \`status\` enum('active','hidden') NOT NULL DEFAULT 'active',
     \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -136,6 +136,8 @@ export const newsPosts = mysqlTable('news_posts', {
   summary: varchar('summary', { length: 500 }),
   coverUrl: varchar('cover_url', { length: 1000 }),
   articleUrl: varchar('article_url', { length: 1000 }),
+  contentJson: json('content_json'),
+  tagsJson: json('tags_json'),
   publishedAt: timestamp('published_at'),
   status: mysqlEnum('status', ['active', 'hidden']).notNull().default('active'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
