@@ -6,14 +6,6 @@ if (!databaseUrl) throw new Error('DATABASE_URL is required')
 
 const connection = await mysql.createConnection(databaseUrl)
 
-const textColumns = [
-  'source_key',
-  'title',
-  'summary',
-  'cover_url',
-  'article_url',
-]
-
 try {
   const [tableRows] = await connection.query<mysql.RowDataPacket[]>(
     `SELECT table_collation AS tableCollation
@@ -37,15 +29,6 @@ try {
        FROM information_schema.columns
       WHERE table_schema = DATABASE()
         AND table_name = 'news_posts'
-        AND column_name IN (
-          'source_key',
-          'title',
-          'summary',
-          'cover_url',
-          'article_url',
-          'content_json',
-          'tags_json'
-        )
       ORDER BY ordinal_position`,
   )
 
@@ -74,17 +57,24 @@ try {
     }
   }
 
-  for (const expected of textColumns) {
+  for (const expected of ['summary', 'cover_url', 'article_url']) {
     const column = columns.find((item) => item.columnName === expected)
     if (!column) {
       issues.push(`missing_column:${expected}`)
       continue
     }
+    if (column.dataType.toLowerCase() !== 'text') {
+      issues.push(`unexpected_type:${expected}:${column.dataType}`)
+    }
+  }
 
-    const charset = column.characterSetName?.toLowerCase() ?? ''
-    if (charset !== 'utf8mb4') {
+  for (const column of columns) {
+    if (
+      column.characterSetName &&
+      column.characterSetName.toLowerCase() !== 'utf8mb4'
+    ) {
       issues.push(
-        `unsupported_charset:${expected}:${column.characterSetName ?? 'null'}`,
+        `unsupported_charset:${column.columnName}:${column.characterSetName}`,
       )
     }
   }
