@@ -120,7 +120,7 @@ Page({
   filterArticles(
     articles: NewsCard[],
     categoryIndex: number,
-    categories = this.data.categories,
+    categories: string[],
   ) {
     if (categoryIndex === 0) return articles
     const category = categories[categoryIndex]
@@ -135,6 +135,7 @@ Page({
     const filtered = this.filterArticles(
       this.data.allArticles,
       currentCategory,
+      this.data.categories,
     )
     this.setData({
       currentCategory,
