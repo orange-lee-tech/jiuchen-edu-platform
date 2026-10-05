@@ -233,3 +233,36 @@ defect. Preserve source content and repair the schema contract instead.
 
 Before the production charset write, inspect `information_schema` read-only and review
 the exact `ALTER TABLE ... CONVERT TO CHARACTER SET utf8mb4` candidate.
+
+
+## 9. Official Account sync incident — RESOLVED
+
+The production schema inspection confirmed the whole `news_posts` table was
+`utf8mb3_general_ci`, including the text/enum columns. The existing table contained
+7 rows.
+
+The repair was executed with a pre-change backup and post-change row-count check:
+
+- `summary` -> TEXT;
+- `cover_url` -> TEXT;
+- `article_url` -> TEXT;
+- table/character columns -> `utf8mb4_unicode_ci`;
+- row count remained unchanged;
+- production health passed after migration.
+
+The Official Account sync was then retried and completed successfully. Production
+list/detail verification found synchronized `wechat_official` content with a non-empty
+persisted article body.
+
+Final classification:
+
+**RESOLVED — schema contract defect fixed; Official Account backend production path
+PASS.**
+
+Preventive lesson:
+
+When a real external payload violates one persistence constraint, review the entire
+payload-to-schema contract before retrying. In this incident, the first visible failure
+was four-byte Unicode on an utf8mb3 column, while the same payload also demonstrated
+that the historical `summary varchar(500)` contract was too narrow. Future preflight
+must consider charset, lengths, nullability and indexed-key limits together.
