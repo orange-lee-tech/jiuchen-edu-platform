@@ -1,6 +1,6 @@
 # Assessment Report Experience V2 — Product Requirements — 2026-10-05
 
-Status: **APPROVED PRODUCT DIRECTION / NOT YET IMPLEMENTED**
+Status: **IMPLEMENTED IN CODE / CI AND REAL-DEVICE ACCEPTANCE REQUIRED**
 
 Repository: `orange-lee-tech/jiuchen-edu-platform`  
 Branch: `p1/foundation`
@@ -391,3 +391,15 @@ V2 is not accepted unless all of the following are true:
 - unrelated Blueprint/navigation construction.
 
 Those require their own work packages.
+
+
+## Implementation checkpoint — 2026-10-05
+
+The V2 product direction has now been implemented as a presentation/export layer on
+top of the persisted Assessment result.
+
+Implementation details and acceptance checklist:
+`docs/handoff/assessment-report-v2-implementation-2026-10-05.md`.
+
+The implementation deliberately did not reopen Assessment Runtime or change
+`assessment-output-v1`.

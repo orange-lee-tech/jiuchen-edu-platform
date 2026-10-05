@@ -9,49 +9,65 @@
     <view class="report-hero">
       <text class="eyebrow">AI 保研评估报告</text>
       <text class="report-title">{{assessment.input.profile.university}} · {{assessment.input.profile.major}}</text>
-      <text class="report-meta">基于当次结构化资料与真实案例证据生成</text>
-    </view>
-
-    <view class="card summary-card">
-      <text class="section-title">背景概览</text>
-      <text class="body-text">{{output.profileSummary}}</text>
-    </view>
-
-    <view class="card">
-      <text class="section-title">证据依据</text>
-      <text wx:if="{{output.evidenceItems.length === 0}}" class="empty">当前报告没有可展示的外部证据条目</text>
-      <view wx:for="{{output.evidenceItems}}" wx:key="ref" class="evidence-row">
-        <text class="finding-title">{{item.title}}</text>
-        <text class="evidence-meta">{{item.metaLabel}}</text>
-        <text wx:if="{{item.excerpt}}" class="evidence-excerpt">{{item.excerpt}}</text>
-        <text class="evidence-ref">引用：{{item.ref}}</text>
+      <text class="report-meta">{{assessmentDate}} · {{assessment.model.name || '评估模型'}}</text>
+      <view class="report-actions">
+        <button class="action-button primary-action" bindtap="onCopyReport">复制报告</button>
+        <button class="action-button" loading="{{exporting}}" disabled="{{exporting}}" bindtap="onDownloadReport">下载报告</button>
       </view>
     </view>
 
-    <view class="two-column">
-      <view class="card finding-card strengths-card">
+    <view class="section-card strengths-card">
+      <view class="section-heading">
+        <text class="section-number">01</text>
         <text class="section-title">优势</text>
-        <text wx:if="{{output.strengths.length === 0}}" class="empty">暂无明确优势结论</text>
-        <view wx:for="{{output.strengths}}" wx:key="title" class="finding">
-          <text class="finding-title">{{item.title}}</text>
-          <text class="body-text">{{item.detail}}</text>
-        </view>
       </view>
-      <view class="card finding-card risks-card">
-        <text class="section-title">风险</text>
-        <text wx:if="{{output.risks.length === 0}}" class="empty">暂无明确风险结论</text>
-        <view wx:for="{{output.risks}}" wx:key="title" class="finding">
-          <text class="finding-title">{{item.title}}</text>
-          <text class="body-text">{{item.detail}}</text>
+      <text wx:if="{{output.strengths.length === 0}}" class="empty">暂无明确优势结论</text>
+      <view wx:for="{{output.strengths}}" wx:key="title" class="finding">
+        <text class="finding-title">{{item.title}}</text>
+        <view class="body-with-citations">
+          <text class="body-text" user-select="true">{{item.detail}}</text>
+          <button
+            wx:for="{{item.citations}}"
+            wx:for-item="citation"
+            wx:key="ref"
+            class="citation-link"
+            data-index="{{citation.index}}"
+            catchtap="onReferenceTap"
+          >[{{citation.index}}]</button>
         </view>
       </view>
     </view>
 
-    <view class="section-label">目标评估</view>
-    <view wx:if="{{output.targetAssessments.length === 0}}" class="card">
+    <view class="section-card risks-card">
+      <view class="section-heading">
+        <text class="section-number">02</text>
+        <text class="section-title">风险</text>
+      </view>
+      <text wx:if="{{output.risks.length === 0}}" class="empty">暂无明确风险结论</text>
+      <view wx:for="{{output.risks}}" wx:key="title" class="finding">
+        <text class="finding-title">{{item.title}}</text>
+        <view class="body-with-citations">
+          <text class="body-text" user-select="true">{{item.detail}}</text>
+          <button
+            wx:for="{{item.citations}}"
+            wx:for-item="citation"
+            wx:key="ref"
+            class="citation-link"
+            data-index="{{citation.index}}"
+            catchtap="onReferenceTap"
+          >[{{citation.index}}]</button>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-heading outside-heading">
+      <text class="section-number">03</text>
+      <text class="section-title">目标评估</text>
+    </view>
+    <view wx:if="{{output.targetAssessments.length === 0}}" class="section-card">
       <text class="empty">当前报告没有可展示的目标判断</text>
     </view>
-    <view wx:for="{{output.targetAssessments}}" wx:key="schoolName" class="card target-card">
+    <view wx:for="{{output.targetAssessments}}" wx:key="schoolName" class="section-card target-card">
       <view class="target-head">
         <view>
           <text class="target-school">{{item.schoolName}}</text>
@@ -59,54 +75,153 @@
         </view>
         <text class="tier {{item.tierTone}}">{{item.tierLabel}}</text>
       </view>
-      <text class="body-text rationale">{{item.rationale}}</text>
+
+      <view class="body-with-citations rationale">
+        <text class="body-text" user-select="true">{{item.rationale}}</text>
+        <button
+          wx:for="{{item.citations}}"
+          wx:for-item="citation"
+          wx:key="ref"
+          class="citation-link"
+          data-index="{{citation.index}}"
+          catchtap="onReferenceTap"
+        >[{{citation.index}}]</button>
+      </view>
+
       <view wx:if="{{item.gapItems.length}}" class="subsection">
         <text class="sub-title">关键差距</text>
-        <text wx:for="{{item.gapItems}}" wx:key="*this" class="bullet">· {{item}}</text>
+        <text wx:for="{{item.gapItems}}" wx:key="*this" class="bullet" user-select="true">· {{item}}</text>
       </view>
       <view wx:if="{{item.actions.length}}" class="subsection">
         <text class="sub-title">针对性动作</text>
-        <text wx:for="{{item.actions}}" wx:key="*this" class="bullet">· {{item}}</text>
+        <text wx:for="{{item.actions}}" wx:key="*this" class="bullet" user-select="true">· {{item}}</text>
       </view>
     </view>
 
-    <view class="card">
-      <text class="section-title">推荐行动</text>
+    <view class="section-card uncertainty-card">
+      <view class="section-heading">
+        <text class="section-number">04</text>
+        <text class="section-title">不确定性</text>
+      </view>
+      <text wx:if="{{output.uncertainties.length === 0}}" class="empty">当前报告未标记额外不确定项</text>
+      <text wx:for="{{output.uncertainties}}" wx:key="*this" class="bullet" user-select="true">· {{item}}</text>
+    </view>
+
+    <view class="section-card">
+      <view class="section-heading">
+        <text class="section-number">05</text>
+        <text class="section-title">推荐行动</text>
+      </view>
       <text wx:if="{{output.recommendedActions.length === 0}}" class="empty">暂无额外行动建议</text>
       <view wx:for="{{output.recommendedActions}}" wx:key="title" class="action-row">
         <text class="priority {{item.priority}}">{{item.priorityLabel}}</text>
         <view class="action-content">
           <text class="finding-title">{{item.title}}</text>
-          <text class="body-text">{{item.rationale}}</text>
+          <text class="body-text" user-select="true">{{item.rationale}}</text>
           <text wx:if="{{item.timeframe}}" class="timeframe">建议周期：{{item.timeframe}}</text>
         </view>
       </view>
     </view>
 
-    <view class="card">
-      <text class="section-title">相似案例</text>
-      <text wx:if="{{output.similarCases.length === 0}}" class="empty">当前证据中没有足够相似的案例</text>
-      <view wx:for="{{output.similarCases}}" wx:key="caseId" class="case-row">
-        <view class="case-head">
-          <text class="finding-title">案例 {{index + 1}}</text>
-          <text class="source-chip">{{item.sourceType === 'jiuchen' ? '九辰服务案例' : '历史真实案例'}}</text>
-        </view>
-        <text class="body-text">{{item.similarityReason}}</text>
-        <text class="case-result">结果参照：{{item.resultSummary}}</text>
-        <text class="evidence-ref">证据引用：{{item.evidenceRef}}</text>
+    <view class="section-card service-card">
+      <view class="section-heading">
+        <text class="section-number">06</text>
+        <text class="section-title">九辰方案</text>
       </view>
+
+      <block wx:if="{{recommendation}}">
+        <text class="service-name">{{recommendation.name}}</text>
+        <text class="service-match">对应问题：{{recommendation.matchedNeedsLabel}}</text>
+        <text class="body-text" user-select="true">{{recommendation.reason}}</text>
+        <button class="inline-action" bindtap="onServiceDetailTap">查看方案详情</button>
+      </block>
+
+      <block wx:else>
+        <text class="finding-title">暂不强行推荐</text>
+        <text class="body-text" user-select="true">当前评估与现有服务方案未形成足够明确的匹配。这里不为了商业转化硬塞产品；如需进一步判断，可携带本报告联系九辰老师。</text>
+      </block>
     </view>
 
-    <view class="card uncertainty-card">
-      <text class="section-title">不确定性</text>
-      <text wx:if="{{output.uncertainties.length === 0}}" class="empty">模型未标记额外不确定项</text>
-      <text wx:for="{{output.uncertainties}}" wx:key="*this" class="bullet">· {{item}}</text>
+    <view class="section-card contact-card">
+      <view class="section-heading">
+        <text class="section-number">07</text>
+        <text class="section-title">联系老师</text>
+      </view>
+      <text class="body-text" user-select="true">可携带本次评估结果与老师确认目标梯度、关键差距和下一阶段执行安排。老师可结合你的时间窗口与现有材料进一步判断。</text>
+      <button class="contact-button" bindtap="onCustomerServiceTap">联系九辰老师</button>
     </view>
 
-    <view class="disclaimer">
-      <text class="disclaimer-title">使用说明</text>
-      <text class="disclaimer-text">{{output.disclaimer}}</text>
+    <view class="section-card usage-card">
+      <view class="section-heading">
+        <text class="section-number">08</text>
+        <text class="section-title">使用说明</text>
+      </view>
+      <text class="usage-line" user-select="true">{{output.disclaimer}}</text>
+      <text class="usage-line" user-select="true">本报告基于当次填写资料与当前可用证据形成，不构成录取保证。</text>
+      <text class="usage-line" user-select="true">历史记录中的已完成报告为持久化结果；查看、复制、下载与展开引用不会触发二次模型调用。</text>
+      <text class="usage-line" user-select="true">若个人背景发生实质变化，请主动发起新的评估，而不是让旧报告静默改写。</text>
     </view>
+
+    <view class="section-card references-card">
+      <view class="section-heading">
+        <text class="section-number">09</text>
+        <text class="section-title">参考案例</text>
+      </view>
+      <text class="section-note">案例只作为分析证据。点击编号查看与本次判断相关的案例详情。</text>
+
+      <text wx:if="{{references.length === 0}}" class="empty">当前正文没有直接引用可展示的案例</text>
+
+      <button
+        wx:for="{{references}}"
+        wx:key="ref"
+        class="reference-row"
+        data-index="{{item.index}}"
+        bindtap="onReferenceTap"
+      >
+        <text class="reference-index">[{{item.index}}]</text>
+        <view class="reference-main">
+          <text class="reference-title">{{item.title}}</text>
+          <text wx:if="{{item.metaLabel}}" class="reference-meta">{{item.metaLabel}}</text>
+          <text wx:if="{{item.similarityReason}}" class="reference-reason">{{item.similarityReason}}</text>
+        </view>
+        <text class="reference-arrow">›</text>
+      </button>
+    </view>
+
     <button class="secondary history-link" bindtap="onViewHistory">查看全部历史评估</button>
   </block>
+
+  <view wx:if="{{selectedReference}}" class="reference-mask" catchtap="onCloseReference">
+    <view class="reference-sheet" catchtap="onStopTap">
+      <view class="reference-sheet-head">
+        <text class="reference-sheet-index">[{{selectedReference.index}}]</text>
+        <button class="reference-close" bindtap="onCloseReference">×</button>
+      </view>
+      <text class="reference-sheet-title">{{selectedReference.title}}</text>
+      <text wx:if="{{selectedReference.metaLabel}}" class="reference-sheet-meta">{{selectedReference.metaLabel}}</text>
+
+      <view wx:if="{{selectedReference.similarityReason}}" class="reference-detail-block">
+        <text class="reference-detail-label">与本次判断的关联</text>
+        <text class="reference-detail-text" user-select="true">{{selectedReference.similarityReason}}</text>
+      </view>
+
+      <view wx:if="{{selectedReference.resultSummary}}" class="reference-detail-block">
+        <text class="reference-detail-label">结果参照</text>
+        <text class="reference-detail-text" user-select="true">{{selectedReference.resultSummary}}</text>
+      </view>
+
+      <view wx:if="{{selectedReference.excerpt}}" class="reference-detail-block">
+        <text class="reference-detail-label">案例摘要</text>
+        <text class="reference-detail-text" user-select="true">{{selectedReference.excerpt}}</text>
+      </view>
+
+      <text wx:if="{{selectedReference.caseId}}" class="reference-case-id">案例标识：{{selectedReference.caseId}}</text>
+    </view>
+  </view>
+
+  <canvas
+    canvas-id="reportExportCanvas"
+    class="export-canvas"
+    style="height: {{exportCanvasHeight}}px;"
+  ></canvas>
 </view>
