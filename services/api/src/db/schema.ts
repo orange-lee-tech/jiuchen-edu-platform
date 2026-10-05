@@ -6,6 +6,7 @@ import {
   mysqlEnum,
   mysqlTable,
   timestamp,
+  text,
   varchar,
 } from 'drizzle-orm/mysql-core'
 
@@ -133,9 +134,9 @@ export const newsPosts = mysqlTable('news_posts', {
   source: mysqlEnum('source', ['manual', 'wechat_official']).notNull(),
   sourceKey: varchar('source_key', { length: 160 }).notNull().unique(),
   title: varchar('title', { length: 255 }).notNull(),
-  summary: varchar('summary', { length: 500 }),
-  coverUrl: varchar('cover_url', { length: 1000 }),
-  articleUrl: varchar('article_url', { length: 1000 }),
+  summary: text('summary'),
+  coverUrl: text('cover_url'),
+  articleUrl: text('article_url'),
   contentJson: json('content_json'),
   tagsJson: json('tags_json'),
   publishedAt: timestamp('published_at'),
