@@ -199,3 +199,51 @@ Production closeout for News + Schedule:
 
 If the operator has not yet completed the Official Account IP whitelist, that is the
 first manual dependency.
+
+
+---
+
+## 2026-10-05 production-preflight progress update
+
+The following previously pending operational gates are now complete:
+
+- production `WECHAT_OA_APP_ID` / `WECHAT_OA_APP_SECRET`: installed securely;
+- `/health/config`: `officialAccountConfigured=true`;
+- real WeChat token probe: PASS;
+- WeChat-observed ECS outbound IPv4: `121.40.168.181`;
+- Official Account server-IP whitelist: effective;
+- immutable candidate release prepared:
+  `d23f0f128fdb6fec648e6405df672e41734b3ece`;
+- candidate API tests: 126 / 126 PASS;
+- candidate build: PASS;
+- candidate ownership / non-writable-content checks: PASS;
+- candidate runtime readability as `jiuchen-api`: PASS;
+- candidate Node syntax/access check: PASS.
+
+Production is still intentionally pinned to:
+
+```text
+8e5a0ffe7869cd3f6ec8c0a8a876247798b65519
+```
+
+No READY marker, approved-release change, promotion or News schema write has occurred.
+
+During this preflight, one active-production `/health` request returned 503 with
+`connect ETIMEDOUT` after approximately three seconds. Without restart or
+configuration change, public readiness, private readiness and an independent MySQL
+`SELECT 1` all passed shortly afterward. This is recorded as a transient database
+connection timeout, not a candidate-release failure.
+
+Canonical incident / prevention record:
+
+```text
+docs/handoff/production-closeout-incidents-2026-10-05.md
+```
+
+Next gate remains:
+
+```text
+production read-only db:check:news-experience
+```
+
+Do not promote before that schema gate is understood.
