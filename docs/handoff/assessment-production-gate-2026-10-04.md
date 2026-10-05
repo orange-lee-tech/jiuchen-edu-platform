@@ -1,6 +1,6 @@
 # Assessment Production Gate — 2026-10-04
 
-Status: READY FOR READ-ONLY PRODUCTION PREFLIGHT
+Status: **PASS — REAL-DEVICE PRODUCTION ACCEPTANCE COMPLETE**
 
 Repository: orange-lee-tech/jiuchen-edu-platform
 Branch: p1/foundation
@@ -15,7 +15,7 @@ Nothing in this gate authorizes work on Customer AI, User AI Profile, Classroom,
 
 ## Accepted AI runtime contract
 
-- provider: Alibaba Bailian
+- provider: Qianwen AI Platform pay-as-you-go / OpenAI-compatible
 - model: qwen3.8-flash
 - mode: non-thinking
 - temperature: 0
@@ -27,8 +27,8 @@ Nothing in this gate authorizes work on Customer AI, User AI Profile, Classroom,
 
 Required production env names:
 
-- ASSESSMENT_AI_PROVIDER=aliyun-bailian
-- ASSESSMENT_AI_BASE_URL=<approved Bailian OpenAI-compatible endpoint>
+- ASSESSMENT_AI_PROVIDER=qianwen-maas
+- ASSESSMENT_AI_BASE_URL=https://maas.qianwenaiapi.com/compatible-mode/v1
 - ASSESSMENT_AI_API_KEY=<secret; never print or commit>
 - ASSESSMENT_AI_MODEL=qwen3.8-flash
 - ASSESSMENT_AI_TEMPERATURE=0
@@ -208,14 +208,14 @@ For every successful external-service setup, immediately record the following in
 - date last verified;
 - which workload uses it.
 
-For Assessment AI, the previously verified Beijing OpenAI-compatible Base URL is:
-https://dashscope.aliyuncs.com/compatible-mode/v1
+For the production `sk-ws-*` credential actually in use after the 2026-10-05 incident, the verified OpenAI-compatible Base URL is:
+https://maas.qianwenaiapi.com/compatible-mode/v1
 
 The API key remains secret and must stay outside Git.
 ## Assessment production runtime configuration gate — PASS
 
 Production configuration verification confirmed:
-- provider: aliyun-bailian;
+- provider: qianwen-maas;
 - Base URL configured;
 - API key configured;
 - model: qwen3.8-flash;
@@ -354,3 +354,39 @@ Scope freeze:
 
 If all six steps PASS, change this gate to PASS and record:
 `Assessment AI Runtime 当前阶段 CLOSED。除主控重新派发 Schedule AI / Customer AI 等新工作包外，不再修改 Assessment Runtime。`
+
+
+## 2026-10-05 final real-device acceptance — PASS
+
+The operator completed the customer-visible production chain across two devices:
+
+1. A new Assessment was created and the real production AI run completed.
+2. The Result page rendered the persisted structured report.
+3. The operator then opened the mini-program on a phone, signed in, entered Assessment History and selected the previously completed Assessment.
+4. The persisted result opened successfully on the phone.
+5. No second model call was triggered while reopening the succeeded Assessment.
+
+This satisfies the final persisted-result reuse requirement and closes the remaining
+real-device blocker.
+
+Final conclusion:
+
+- Assessment Production Gate: **PASS**;
+- real production model call from the mini-program: **PASS**;
+- result persistence: **PASS**;
+- cross-device History reopen: **PASS**;
+- second-call suppression on reopen: **PASS**;
+- selected runtime remains `qwen3.8-flash`, non-thinking, temperature 0, strict
+  `json_schema`;
+- current production provider configuration is `qianwen-maas` with
+  `https://maas.qianwenaiapi.com/compatible-mode/v1`;
+- production case root remains `/opt/jiuchen-api/shared/cases`.
+
+**Assessment AI Runtime 当前阶段 CLOSED。除主控重新派发新的 Assessment 工作包，
+或生产事故直接证明 Runtime 存在缺陷外，不再修改 Assessment Runtime。**
+
+The product-quality improvements identified during acceptance are deliberately tracked
+as a separate report-experience work package, not as a reason to reopen the production
+runtime gate:
+
+`docs/product/assessment-report-experience-v2-2026-10-05.md`

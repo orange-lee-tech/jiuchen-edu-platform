@@ -261,3 +261,52 @@ Freeze rule:
 - do not start Schedule AI, Customer AI, payment, Blueprint, navigation, or UI work from this lane.
 
 AI Runtime is **not yet formally CLOSED** only because the real-device acceptance evidence is outstanding. No further Assessment Runtime modification is planned unless that acceptance exposes a direct defect.
+
+
+## 2026-10-05 real-device Production Gate — PASS / Assessment Runtime CLOSED
+
+The final device-bound acceptance has now completed.
+
+Observed customer-visible chain:
+- create/save Assessment input: PASS;
+- real production `qwen3.8-flash` execution: PASS;
+- Result page renders: PASS;
+- succeeded Assessment persists: PASS;
+- operator signed in on a phone after completing the run on the computer;
+- History showed the previous Assessment;
+- opening that persisted result on the phone: PASS;
+- no second model invocation occurred on reopen: PASS.
+
+The 2026-10-05 production incident also corrected the provider identity used by the
+deployed credential. Historical benchmark notes above retain their original wording,
+but the active production configuration is:
+
+```text
+ASSESSMENT_AI_PROVIDER=qianwen-maas
+ASSESSMENT_AI_BASE_URL=https://maas.qianwenaiapi.com/compatible-mode/v1
+ASSESSMENT_AI_MODEL=qwen3.8-flash
+ASSESSMENT_AI_RESPONSE_FORMAT=json_schema
+ASSESSMENT_AI_EXTRA_BODY_JSON={"enable_thinking":false}
+ASSESSMENT_CASE_DATA_ROOT=/opt/jiuchen-api/shared/cases
+```
+
+Do not reinterpret older `aliyun-bailian` / DashScope entries as the current
+production host. The incident record is canonical for that correction:
+`docs/handoff/assessment-production-incident-2026-10-05.md`.
+
+Status:
+- Assessment model selection: CLOSED / ACCEPT;
+- Assessment Production Gate: PASS;
+- Assessment Runtime: **CLOSED**;
+- no further benchmark, prompt tuning or runtime modification is authorized merely to
+  improve report presentation.
+
+Acceptance did expose a separate product/report-experience backlog:
+- cases should become citations/reference material rather than dominate the beginning
+  of the report;
+- copy/download export should be supported;
+- appropriate Jiuchen service recommendations should be included;
+- report section order should be product-defined.
+
+Those requirements are tracked separately in:
+`docs/product/assessment-report-experience-v2-2026-10-05.md`.

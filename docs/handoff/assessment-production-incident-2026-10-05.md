@@ -1,6 +1,6 @@
 # Assessment Production Incident Log — 2026-10-05
 
-Status: **RESOLVED at runtime / real-device closeout still requires final persisted-result reopen check**
+Status: **CLOSED — runtime restored and real-device persisted-result acceptance PASS**
 
 Repository: `orange-lee-tech/jiuchen-edu-platform`  
 Integration branch: `p1/foundation`  
@@ -256,3 +256,22 @@ real-device acceptance chain.
 
 Once History successfully reopens the same succeeded Assessment without a second
 model call, record the Production Gate as PASS and close this incident operationally.
+
+
+## Final incident closure — 2026-10-05
+
+The operator completed the remaining cross-device persistence check after the runtime
+repair:
+
+- Assessment completed successfully on the computer;
+- the operator then signed into the mini-program on a phone;
+- Assessment History contained the completed Assessment;
+- opening the persisted result on the phone rendered the existing result;
+- no second model call occurred.
+
+The Assessment Production Gate is therefore PASS and this incident is operationally
+closed.
+
+The report-quality observations made during that acceptance are product improvements,
+not unresolved incident defects. They are tracked in:
+`docs/product/assessment-report-experience-v2-2026-10-05.md`.
