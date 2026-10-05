@@ -247,3 +247,59 @@ production read-only db:check:news-experience
 ```
 
 Do not promote before that schema gate is understood.
+
+
+---
+
+## 2026-10-05 backend production gate — PASS
+
+Operator evidence confirms the complete backend News production chain now passes.
+
+Completed:
+
+- production News schema columns present;
+- `news_posts` converted from `utf8mb3_general_ci` to
+  `utf8mb4_unicode_ci`;
+- `summary`, `cover_url`, and `article_url` widened to `TEXT`;
+- existing row count preserved across the charset/type migration;
+- production health remained PASS after the schema repair;
+- Official Account sync completed successfully;
+- public `GET /news` returned synchronized posts;
+- public `GET /news/:id` returned a synchronized `wechat_official` post with
+  non-empty persisted body content;
+- four-byte Unicode from the Official Account payload is now accepted.
+
+Production API release remains the already-promoted News + Schedule runtime:
+
+```text
+d23f0f128fdb6fec648e6405df672e41734b3ece
+```
+
+Repository hardening after the production incident is newer than that runtime release.
+The latest hardening HEAD at this checkpoint is:
+
+```text
+17ac70ad5a36ca0b31eb2e0d5a057ac32a26a5b0
+```
+
+Its Push CI #1232 and PR CI #1233 both PASS.
+
+These later changes harden future schema creation/check/migration behavior; they are not
+required to prove the already-running News read/sync path, which has passed against the
+repaired production schema.
+
+### Remaining gate
+
+Backend News production gate is **PASS**.
+
+The lane is not fully customer-closed until the mini-program package containing the
+News detail page and Schedule UX is built/uploaded and the following real-device checks
+pass:
+
+- News list -> native article detail -> body render;
+- admin tag add/edit/remove/clear;
+- re-sync preserves admin tags;
+- real xls/xlsx schedule import;
+- manual add/edit/delete and persistence;
+- current-week view;
+- image-import manual fallback when Schedule AI is not configured.
