@@ -179,3 +179,57 @@ At the end of this record:
 - Official Account token probe is healthy;
 - production News schema preflight is the next gate;
 - no production schema write is authorized merely by this incident record.
+
+
+## 7. Official Account first-sync charset failure
+
+After the News schema columns were added and the new API release was promoted, the
+first real Official Account sync reached WeChat successfully and returned published
+article data, but the first insert into `news_posts` failed.
+
+Observed database error:
+
+```text
+ER_TRUNCATED_WRONG_VALUE_FOR_FIELD
+Incorrect string value: '\xF0\x9F\x93\x8C ...' for column 'summary'
+```
+
+The rejected bytes begin with a four-byte UTF-8 emoji (for example `📌`).
+
+Important classification:
+
+- WeChat credential / IP whitelist: PASS;
+- Official Account fetch: PASS;
+- article payload acquisition: PASS;
+- new `content_json` / `tags_json` columns: present;
+- production release activation: PASS;
+- database persistence of article text containing four-byte Unicode: FAIL.
+
+This is therefore **not** an Official Account API failure. It is a production schema
+character-set compatibility defect in the existing `news_posts` text columns/table.
+
+The original `news_posts` creation SQL inherited the database/server default charset
+because it did not explicitly declare `utf8mb4`. The production failure proves that at
+least `summary` cannot currently persist four-byte Unicode.
+
+Repository hardening was added in commit:
+
+```text
+85851d926ee080bbcfe57f2befc528bae32b6420
+fix: support utf8mb4 official account news
+```
+
+Hardening includes:
+
+- News schema checker now reports table collation and text-column character sets;
+- News upgrade candidate can convert `news_posts` to
+  `utf8mb4 / utf8mb4_unicode_ci`;
+- fresh identity-v2 creation explicitly creates `news_posts` as utf8mb4.
+
+Operational rule:
+
+Do not strip emoji or silently sanitize valid Unicode to work around a database charset
+defect. Preserve source content and repair the schema contract instead.
+
+Before the production charset write, inspect `information_schema` read-only and review
+the exact `ALTER TABLE ... CONVERT TO CHARACTER SET utf8mb4` candidate.
