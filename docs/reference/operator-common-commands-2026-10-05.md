@@ -590,3 +590,56 @@ When production Assessment breaks, use this order:
 This order is designed to avoid repeating the 2026-10-05 incident pattern: guessing
 from config-presence flags, changing multiple layers at once, or treating the
 downstream 409 as the original failure.
+
+
+---
+
+## 18. Transient readiness failure triage
+
+One production incident on 2026-10-05 showed why a single `/health` 503 must not
+trigger immediate restart/configuration changes.
+
+Observed pattern:
+
+```text
+/health/live -> 200
+/health      -> 503 after ~3s, connect ETIMEDOUT
+(no restart / no config change)
+/health      -> 200
+private /health -> 200
+independent DB SELECT 1 -> PASS
+```
+
+Use this exact order when readiness alone fails:
+
+```bash
+curl -sS -i https://api.jiuchenedu.com/health; echo
+curl -sS -i http://172.25.80.203:3100/health; echo
+journalctl -u jiuchen-api.service --since "15 minutes ago" --no-pager | tail -n 150
+journalctl -u jiuchen-api.service --since "15 minutes ago" --no-pager | grep -Ei 'database|mysql|timeout|ETIMEDOUT|ECONN|PROTOCOL|health|pool' | tail -n 100
+```
+
+When database connectivity is implicated, use an independent non-secret `SELECT 1`
+probe before changing the service.
+
+Classification rule:
+
+- one timeout followed by public + private readiness PASS and independent DB PASS:
+  record as transient, do not restart merely to clear it;
+- repeated readiness failure or independent DB failure:
+  stop release work and treat as a production dependency incident;
+- if `current` still points to the old release, do not blame an unpromoted candidate.
+
+Also remember:
+
+- `curl -f` hides useful 503 response bodies; use `curl -sS -i` during diagnosis;
+- liveness, readiness, config-presence flags and real provider/API probes are separate
+  evidence layers;
+- a real external-service probe is required before declaring a configured integration
+  operational.
+
+Canonical incident record:
+
+```text
+docs/handoff/production-closeout-incidents-2026-10-05.md
+```
