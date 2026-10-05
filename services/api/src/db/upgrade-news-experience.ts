@@ -175,6 +175,36 @@ await ensureColumn(
   'ALTER TABLE `news_posts` ADD COLUMN `tags_json` JSON NULL AFTER `content_json`',
 )
 
+await withFreshConnection(async (connection) => {
+  const [rows] = await connection.query<mysql.RowDataPacket[]>(
+    `SELECT column_name AS columnName, data_type AS dataType
+       FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+        AND table_name = 'news_posts'
+        AND column_name IN ('summary','cover_url','article_url')`,
+  )
+
+  const types = new Map(
+    rows.map((row) => [
+      String(row.columnName ?? ''),
+      String(row.dataType ?? '').toLowerCase(),
+    ]),
+  )
+
+  if (
+    types.get('summary') !== 'text' ||
+    types.get('cover_url') !== 'text' ||
+    types.get('article_url') !== 'text'
+  ) {
+    await connection.query(
+      'ALTER TABLE `news_posts` MODIFY COLUMN `summary` TEXT NULL, MODIFY COLUMN `cover_url` TEXT NULL, MODIFY COLUMN `article_url` TEXT NULL',
+    )
+    console.log('✓ news_posts summary / URLs widened to TEXT')
+  } else {
+    console.log('✓ news_posts long text columns already ready')
+  }
+})
+
 await ensureNewsUtf8mb4()
 
 console.log('✓ news experience schema is ready')
