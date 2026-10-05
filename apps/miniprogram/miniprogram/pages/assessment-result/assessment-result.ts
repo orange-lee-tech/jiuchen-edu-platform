@@ -640,9 +640,16 @@ Page({
     const top = 72
     const bottom = 72
     const footerHeight = 48
+    const visualHeight = lines.reduce(
+      (total, line) =>
+        total +
+        lineHeight +
+        (/^[一二三四五六七八九十]+、/.test(line) ? 10 : 0),
+      0,
+    )
     const height = Math.max(
       900,
-      top + lines.length * lineHeight + bottom + footerHeight,
+      top + visualHeight + bottom + footerHeight,
     )
 
     return new Promise<string>((resolve, reject) => {
