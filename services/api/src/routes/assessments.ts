@@ -79,11 +79,14 @@ function assessmentImportErrorReply(
     material_document_result_compression_unsupported: 'assessment_import_parser_failed',
     material_document_temp_url_failed: 'assessment_import_source_download_failed',
     material_document_parser_timeout: 'assessment_import_parser_timeout',
+    material_document_type_not_supported: 'assessment_import_file_type_not_allowed',
   }
   const code =
     rawCode.startsWith('assessment_import_')
       ? rawCode
-      : materialCodeMap[rawCode] ?? 'assessment_import_ai_failed'
+      : rawCode.startsWith('material_document_parser_failed:')
+        ? 'assessment_import_parser_failed'
+        : materialCodeMap[rawCode] ?? 'assessment_import_ai_failed'
 
   const status =
     code === 'assessment_import_file_too_large'
