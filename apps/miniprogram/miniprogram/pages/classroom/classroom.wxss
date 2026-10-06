@@ -67,9 +67,56 @@
   box-shadow: 0 8rpx 26rpx rgba(33, 40, 58, 0.05);
 }
 
+.schedule-nav {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin: 10rpx;
+  padding: 12rpx 10rpx;
+  border-radius: 14rpx;
+  background: #eef4fb;
+}
+
+.schedule-nav-icon {
+  display: flex;
+  flex: 0 0 34rpx;
+  width: 34rpx;
+  height: 34rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10rpx;
+  background: #315f9d;
+  color: #fff;
+  font-size: 17rpx;
+  font-weight: 800;
+}
+
+.schedule-nav-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.schedule-nav-title,
+.schedule-nav-note {
+  display: block;
+}
+
+.schedule-nav-title {
+  color: #315f9d;
+  font-size: 20rpx;
+  font-weight: 800;
+}
+
+.schedule-nav-note {
+  margin-top: 2rpx;
+  color: #8492a2;
+  font-size: 14rpx;
+  line-height: 1.2;
+}
+
 .timeline {
   position: relative;
-  padding: 16rpx 10rpx 24rpx;
+  padding: 8rpx 10rpx 24rpx;
 }
 
 .timeline::before {
@@ -406,9 +453,7 @@
   line-height: 1.7;
 }
 
-.entry-button,
-.import-button,
-.week-button {
+.entry-button {
   margin-top: 22rpx;
   border: 0;
   border-radius: 16rpx;
@@ -418,9 +463,7 @@
   font-weight: 700;
 }
 
-.entry-button::after,
-.import-button::after,
-.week-button::after {
+.entry-button::after {
   border: 0;
 }
 
@@ -433,27 +476,6 @@
 .student-tools > view {
   flex: 1;
   min-width: 0;
-}
-
-.schedule-buttons {
-  display: flex;
-  flex-shrink: 0;
-  gap: 10rpx;
-  margin-left: 18rpx;
-}
-
-.import-button,
-.week-button {
-  flex: none;
-  margin: 0;
-  padding: 0 18rpx;
-  height: 66rpx;
-  line-height: 66rpx;
-}
-
-.week-button {
-  background: #eaf0f8;
-  color: #315f9d;
 }
 
 .plan-title-row {
