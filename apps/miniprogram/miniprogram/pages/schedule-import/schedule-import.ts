@@ -1,4 +1,3 @@
-import { getSavedAuthResult } from '../../utils/auth'
 import {
   createScheduleImport,
   friendlyRequestError,
@@ -7,34 +6,11 @@ import {
   type ParsedSchedule,
   type ParsedScheduleCourse,
 } from '../../utils/request'
+import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
 
 const MAX_SPREADSHEET_BYTES = 5 * 1024 * 1024
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const DAY_OPTIONS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
-
-function safeName(value: string) {
-  return value.replace(/[^0-9A-Za-z._-]/g, '_')
-}
-
-function uploadCloudFile(filePath: string, fileName: string): Promise<string> {
-  const auth = getSavedAuthResult()
-  if (!auth) return Promise.reject(new Error('请先登录'))
-  const identity = auth.user.id
-  const cloudPath = `schedule-imports/${safeName(identity)}/${Date.now()}-${safeName(fileName)}`
-
-  return new Promise((resolve, reject) => {
-    wx.cloud.uploadFile({
-      cloudPath,
-      filePath,
-      success(result) {
-        resolve(result.fileID)
-      },
-      fail(error) {
-        reject(new Error(error.errMsg || '文件上传失败'))
-      },
-    })
-  })
-}
 
 function sectionRange(value: string) {
   const nums = value.match(/\d+/g)?.map(Number) ?? []
@@ -231,7 +207,7 @@ Page({
         visibleCourses: [],
       })
 
-      const fileID = await uploadCloudFile(filePath, fileName)
+      const fileID = await uploadAuthenticatedCloudFile({ namespace: 'schedule-imports', filePath, fileName })
       const result = await createScheduleImport({ fileID, fileName, sourceType })
       const schedule = result.schedule
 
