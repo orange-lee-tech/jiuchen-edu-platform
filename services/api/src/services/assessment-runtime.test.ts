@@ -645,3 +645,229 @@ test('assessment runtime uses only assessment-scoped AI configuration', () => {
 
   assert.equal(customerOnlyRuntime.provider.isConfigured(), false)
 })
+
+
+test('assessment runtime contains repeated invalid general refs after bounded repair', async () => {
+  let repairs = 0
+  const retriever: AssessmentRetriever = {
+    async retrieve() {
+      return {
+        version: 'knowledge-v1',
+        evidence: [{
+          ref: 'case:real',
+          kind: 'case',
+          sourceType: 'external',
+          sourceId: 'real',
+          title: '真实案例',
+          sourceLabel: '案例库',
+        }],
+      }
+    },
+  }
+
+  const invalidOutput = {
+    profileSummary: '背景摘要',
+    strengths: [{
+      title: '无依据优势',
+      detail: '该条引用不存在的证据。',
+      evidenceRefs: ['case:invented'],
+    }],
+    risks: [],
+    targetAssessments: [{
+      schoolName: '目标大学',
+      tier: 'match',
+      rationale: '使用真实案例。',
+      gapItems: [],
+      actions: [],
+      evidenceRefs: ['case:real'],
+    }],
+    recommendedActions: [],
+    similarCases: [],
+    uncertainties: [],
+    disclaimer: '本结果用于规划辅助。',
+  }
+
+  const provider: AssessmentModelProvider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async analyze() { return invalidOutput },
+    async repair() {
+      repairs += 1
+      return invalidOutput
+    },
+  }
+
+  const result = await executeAssessment({ retriever, provider }, input)
+
+  assert.equal(repairs, 1)
+  assert.deepEqual(result.output.strengths, [])
+  assert.equal(result.output.targetAssessments[0].tier, 'match')
+  assert.deepEqual(result.output.targetAssessments[0].evidenceRefs, ['case:real'])
+})
+
+test('assessment runtime conservatively downgrades target when repeated invalid refs survive repair', async () => {
+  let repairs = 0
+  const retriever: AssessmentRetriever = {
+    async retrieve() {
+      return {
+        version: 'knowledge-empty-v1',
+        evidence: [],
+      }
+    },
+  }
+
+  const invalidOutput = {
+    profileSummary: '背景摘要',
+    strengths: [],
+    risks: [],
+    targetAssessments: [{
+      schoolName: '目标大学',
+      tier: 'match',
+      rationale: '引用了不存在的案例并据此判断。',
+      gapItems: ['无证据差距'],
+      actions: ['无证据动作'],
+      evidenceRefs: ['case:invented'],
+    }],
+    recommendedActions: [],
+    similarCases: [],
+    uncertainties: [],
+    disclaimer: '本结果用于规划辅助。',
+  }
+
+  const provider: AssessmentModelProvider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async analyze() { return invalidOutput },
+    async repair() {
+      repairs += 1
+      return invalidOutput
+    },
+  }
+
+  const result = await executeAssessment({ retriever, provider }, input)
+  const target = result.output.targetAssessments[0]
+
+  assert.equal(repairs, 1)
+  assert.equal(target.tier, 'insufficient_data')
+  assert.equal(target.rationale, '当前检索证据不足，无法对该目标作出可靠梯度判断。')
+  assert.deepEqual(target.gapItems, [])
+  assert.deepEqual(target.actions, [])
+  assert.deepEqual(target.evidenceRefs, ['input:target:1'])
+})
+
+test('assessment runtime removes repeated invalid similar cases after bounded repair', async () => {
+  let repairs = 0
+  const retriever: AssessmentRetriever = {
+    async retrieve() {
+      return {
+        version: 'knowledge-v1',
+        evidence: [{
+          ref: 'case:real',
+          kind: 'case',
+          sourceType: 'external',
+          sourceId: 'real',
+          title: '真实案例',
+          sourceLabel: '案例库',
+        }],
+      }
+    },
+  }
+
+  const invalidOutput = {
+    profileSummary: '背景摘要',
+    strengths: [],
+    risks: [],
+    targetAssessments: [{
+      schoolName: '目标大学',
+      tier: 'match',
+      rationale: '使用真实案例。',
+      gapItems: [],
+      actions: [],
+      evidenceRefs: ['case:real'],
+    }],
+    recommendedActions: [],
+    similarCases: [{
+      caseId: 'invented',
+      sourceType: 'external',
+      similarityReason: '不存在的案例。',
+      resultSummary: '不存在的结果。',
+      evidenceRef: 'case:invented',
+    }],
+    uncertainties: [],
+    disclaimer: '本结果用于规划辅助。',
+  }
+
+  const provider: AssessmentModelProvider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async analyze() { return invalidOutput },
+    async repair() {
+      repairs += 1
+      return invalidOutput
+    },
+  }
+
+  const result = await executeAssessment({ retriever, provider }, input)
+
+  assert.equal(repairs, 1)
+  assert.deepEqual(result.output.similarCases, [])
+})
+
+test('assessment runtime does not sanitize target coverage mismatches', async () => {
+  let repairs = 0
+  const retriever: AssessmentRetriever = {
+    async retrieve() {
+      return {
+        version: 'knowledge-v1',
+        evidence: [{
+          ref: 'case:real',
+          kind: 'case',
+          sourceType: 'external',
+          sourceId: 'real',
+          title: '真实案例',
+          sourceLabel: '案例库',
+        }],
+      }
+    },
+  }
+
+  const invalidOutput = {
+    profileSummary: '背景摘要',
+    strengths: [],
+    risks: [],
+    targetAssessments: [{
+      schoolName: '错误目标大学',
+      tier: 'match',
+      rationale: '目标覆盖错误。',
+      gapItems: [],
+      actions: [],
+      evidenceRefs: ['case:real'],
+    }],
+    recommendedActions: [],
+    similarCases: [],
+    uncertainties: [],
+    disclaimer: '本结果用于规划辅助。',
+  }
+
+  const provider: AssessmentModelProvider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async analyze() { return invalidOutput },
+    async repair() {
+      repairs += 1
+      return invalidOutput
+    },
+  }
+
+  await assert.rejects(
+    executeAssessment({ retriever, provider }, input),
+    (error: unknown) =>
+      error instanceof AssessmentEvidenceReferenceError &&
+      error.message === 'assessment_target_coverage_invalid',
+  )
+  assert.equal(repairs, 1)
+})
