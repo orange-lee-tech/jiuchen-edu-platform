@@ -258,6 +258,76 @@ export function getAllowedInputEvidenceRefs(input: AssessmentInput) {
   return refs
 }
 
+function conservativelySanitizeEvidenceReferences(
+  rawOutput: unknown,
+  input: AssessmentInput,
+  knowledge: AssessmentKnowledgeContext,
+): AssessmentOutput {
+  const output = validateAssessmentOutput(rawOutput)
+  const evidenceByRef = new Map(knowledge.evidence.map((item) => [item.ref, item]))
+  const allowedRefs = new Set([
+    ...getAllowedInputEvidenceRefs(input),
+    ...knowledge.evidence.map((item) => item.ref),
+  ])
+
+  const sanitizeRefs = (refs: string[]) =>
+    refs.filter((ref, index) => allowedRefs.has(ref) && refs.indexOf(ref) === index)
+
+  const sanitizeFindings = (findings: AssessmentOutput['strengths']) =>
+    findings.flatMap((finding) => {
+      const evidenceRefs = sanitizeRefs(finding.evidenceRefs)
+      return evidenceRefs.length ? [{ ...finding, evidenceRefs }] : []
+    })
+
+  const targetAssessments = output.targetAssessments.map((target, index) => {
+    const evidenceRefs = sanitizeRefs(target.evidenceRefs)
+    const hasRetrievedTargetEvidence = evidenceRefs.some((ref) => {
+      const evidence = evidenceByRef.get(ref)
+      return evidence && ['school', 'program', 'case'].includes(evidence.kind)
+    })
+
+    if (hasRetrievedTargetEvidence || target.tier === 'insufficient_data') {
+      return {
+        ...target,
+        evidenceRefs:
+          evidenceRefs.length > 0
+            ? evidenceRefs
+            : [`input:target:${index + 1}`],
+      }
+    }
+
+    return {
+      ...target,
+      tier: 'insufficient_data' as const,
+      rationale: '当前检索证据不足，无法对该目标作出可靠梯度判断。',
+      gapItems: [],
+      actions: [],
+      evidenceRefs:
+        evidenceRefs.length > 0
+          ? evidenceRefs
+          : [`input:target:${index + 1}`],
+    }
+  })
+
+  const similarCases = output.similarCases.filter((similarCase) => {
+    const evidence = evidenceByRef.get(similarCase.evidenceRef)
+    return Boolean(
+      evidence &&
+      evidence.kind === 'case' &&
+      evidence.sourceId === similarCase.caseId &&
+      evidence.sourceType === similarCase.sourceType
+    )
+  })
+
+  return {
+    ...output,
+    strengths: sanitizeFindings(output.strengths),
+    risks: sanitizeFindings(output.risks),
+    targetAssessments,
+    similarCases,
+  }
+}
+
 function validateAssessmentResult(
   rawOutput: unknown,
   input: AssessmentInput,
@@ -380,7 +450,24 @@ export async function executeAssessment(
       validationError:
         error instanceof Error ? error.message : 'assessment_output_invalid',
     })
-    output = validateAssessmentResult(rawOutput, input, knowledge)
+
+    try {
+      output = validateAssessmentResult(rawOutput, input, knowledge)
+    } catch (repairError) {
+      if (
+        !(repairError instanceof AssessmentEvidenceReferenceError) ||
+        repairError.message === 'assessment_target_coverage_invalid'
+      ) {
+        throw repairError
+      }
+
+      const sanitized = conservativelySanitizeEvidenceReferences(
+        rawOutput,
+        input,
+        knowledge,
+      )
+      output = validateAssessmentResult(sanitized, input, knowledge)
+    }
   }
 
   return {
