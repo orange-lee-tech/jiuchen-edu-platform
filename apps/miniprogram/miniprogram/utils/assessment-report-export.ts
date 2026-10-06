@@ -14,18 +14,10 @@ export type AssessmentReportReference = {
   sourceType: 'jiuchen' | 'external' | 'official' | 'internal'
 }
 
-export type AssessmentServiceRecommendation = {
-  documentKey: string
-  name: string
-  matchedNeeds: string[]
-  reason: string
-}
-
 export type AssessmentReportExportContext = {
   assessment: AssessmentRecord
   displayName: string
   references: AssessmentReportReference[]
-  recommendation: AssessmentServiceRecommendation | null
 }
 
 const CHINESE_NUMBERS = [
@@ -146,7 +138,7 @@ function pushFindingSection(
 export function buildAssessmentReportPlainText(
   context: AssessmentReportExportContext,
 ) {
-  const { assessment, references, recommendation } = context
+  const { assessment, references } = context
   const output = assessment.output
 
   if (!output) return ''
@@ -188,17 +180,7 @@ export function buildAssessmentReportPlainText(
     lines.push('')
   })
 
-  lines.push('四、不确定性')
-  if (!output.uncertainties.length) {
-    lines.push('（一）当前报告未标记额外不确定项。', '')
-  } else {
-    output.uncertainties.forEach((item, index) => {
-      lines.push(`（${chineseNumber(index)}）${item}`)
-    })
-    lines.push('')
-  }
-
-  lines.push('五、推荐行动')
+  lines.push('四、推荐行动')
   if (!output.recommendedActions.length) {
     lines.push('（一）暂无额外行动建议。', '')
   } else {
@@ -212,44 +194,15 @@ export function buildAssessmentReportPlainText(
     })
   }
 
-  lines.push('六、九辰方案')
-  if (recommendation) {
-    lines.push(
-      `（一）${recommendation.name}`,
-      `1. 对应问题：${recommendation.matchedNeeds.join('、') || '本次评估识别出的关键提升需求'}`,
-      `2. 推荐理由：${recommendation.reason}`,
-      '3. 建议下一步：先与九辰老师确认你的目标、时间窗口和当前材料，再判断是否进入该服务方案。',
-      '',
-    )
-  } else {
-    lines.push(
-      '（一）暂不强行推荐',
-      '1. 当前评估与现有服务方案未形成足够明确的匹配，不为了商业转化强行推荐产品。',
-      '2. 如需进一步判断，可携带本报告联系九辰老师。',
-      '',
-    )
-  }
-
   lines.push(
-    '七、联系老师',
+    '五、联系老师',
     '（一）人工咨询',
     '1. 可携带本次评估结果联系九辰老师，重点确认目标梯度、关键差距与下一阶段执行安排。',
-    recommendation
-      ? `2. 若咨询“${recommendation.name}”，请同时说明本报告中对应的风险与行动项。`
-      : '2. 如需服务方案建议，请先说明目标院校、时间窗口和当前最希望解决的问题。',
+    '2. 咨询时建议同时说明目标院校、时间窗口和当前最希望解决的问题。',
     '',
   )
 
-  lines.push(
-    '八、使用说明',
-    `（一）${output.disclaimer}`,
-    '（二）本报告基于当次填写资料与当前可用证据形成，不构成录取保证。',
-    '（三）已完成的评估会保存在历史记录中；查看、复制、下载和展开引用均不应触发二次模型调用。',
-    '（四）若个人背景发生实质变化，应主动发起新的评估，而不是让旧报告静默改写。',
-    '',
-  )
-
-  lines.push('九、参考案例')
+  lines.push('六、参考案例')
   if (!references.length) {
     lines.push('当前正文没有直接引用可展示的案例。')
   } else {
@@ -277,7 +230,7 @@ export function buildAssessmentReportPlainText(
 export function buildAssessmentReportMarkdown(
   context: AssessmentReportExportContext,
 ) {
-  const { assessment, references, recommendation } = context
+  const { assessment, references } = context
   const output = assessment.output
   if (!output) return ''
 
@@ -335,12 +288,7 @@ export function buildAssessmentReportMarkdown(
     }
   })
 
-  lines.push('## 四、不确定性', '')
-  if (!output.uncertainties.length) lines.push('当前报告未标记额外不确定项。', '')
-  output.uncertainties.forEach((item) => lines.push(`- ${item}`))
-  lines.push('')
-
-  lines.push('## 五、推荐行动', '')
+  lines.push('## 四、推荐行动', '')
   if (!output.recommendedActions.length) lines.push('暂无额外行动建议。', '')
   output.recommendedActions.forEach((item, index) => {
     lines.push(
@@ -352,37 +300,12 @@ export function buildAssessmentReportMarkdown(
     if (item.timeframe) lines.push(`建议周期：${item.timeframe}`, '')
   })
 
-  lines.push('## 六、九辰方案', '')
-  if (recommendation) {
-    lines.push(
-      `### ${recommendation.name}`,
-      '',
-      `- 对应问题：${recommendation.matchedNeeds.join('、') || '本次评估识别出的关键提升需求'}`,
-      `- 推荐理由：${recommendation.reason}`,
-      '- 建议下一步：先与九辰老师确认目标、时间窗口和当前材料，再判断是否进入该服务方案。',
-      '',
-    )
-  } else {
-    lines.push(
-      '当前评估与现有服务方案未形成足够明确的匹配，因此不强行推荐产品。如需进一步判断，可携带本报告联系九辰老师。',
-      '',
-    )
-  }
-
   lines.push(
-    '## 七、联系老师',
+    '## 五、联系老师',
     '',
-    '可携带本次评估结果联系九辰老师，重点确认目标梯度、关键差距与下一阶段执行安排。',
+    '可携带本次评估结果联系九辰老师，重点确认目标梯度、关键差距和下一阶段执行安排。',
     '',
-    '## 八、使用说明',
-    '',
-    output.disclaimer,
-    '',
-    '- 本报告基于当次填写资料与当前可用证据形成，不构成录取保证。',
-    '- 已完成的评估会保存在历史记录中；查看、复制、下载和展开引用均不应触发二次模型调用。',
-    '- 若个人背景发生实质变化，应主动发起新的评估，而不是让旧报告静默改写。',
-    '',
-    '## 九、参考案例',
+    '## 六、参考案例',
     '',
   )
 
