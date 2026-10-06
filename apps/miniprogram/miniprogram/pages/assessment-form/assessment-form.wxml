@@ -8,6 +8,19 @@
   <view wx:if="{{loading}}" class="card">正在加载资料…</view>
 
   <block wx:else>
+    <view class="card import-card">
+      <view class="import-copy">
+        <text class="section-title">导入已有材料</text>
+        <text class="import-desc">支持 Word、PDF 与常见图片。系统先识别并预填表单，你确认、修改后再提交 AI 评估。</text>
+      </view>
+      <button
+        class="import-button"
+        loading="{{importing}}"
+        disabled="{{importing}}"
+        bindtap="onImportMaterial"
+      >导入材料</button>
+    </view>
+
     <view class="card">
       <view class="section-head">
         <text class="section-title">基础背景</text>
