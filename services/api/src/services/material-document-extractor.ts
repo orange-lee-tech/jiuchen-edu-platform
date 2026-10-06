@@ -21,6 +21,7 @@ export type MaterialExtractRequest = {
   fileName: string
   kind: MaterialDocumentKind
   maxPages?: number
+  maxBytes?: number
 }
 
 export type MaterialExtractResult = {
@@ -358,6 +359,39 @@ async function downloadResultText(resultUrl: string) {
   return readZipTextEntry(buffer)
 }
 
+async function assertRemoteSizeWithinLimit(
+  fileUrl: string,
+  maxBytes?: number,
+) {
+  if (!maxBytes) return
+
+  try {
+    const response = await fetchWithTimeout(
+      fileUrl,
+      { method: 'HEAD' },
+      5_000,
+    )
+    if (!response.ok) return
+    const contentLength = Number(response.headers.get('content-length') || 0)
+    if (
+      Number.isFinite(contentLength) &&
+      contentLength > 0 &&
+      contentLength > maxBytes
+    ) {
+      throw new Error('material_document_file_too_large')
+    }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === 'material_document_file_too_large'
+    ) {
+      throw error
+    }
+    // Some private CDN links do not support HEAD. In that case the provider
+    // still enforces its own file limits without loading the source into ECS.
+  }
+}
+
 async function temporaryFileUrl(
   env: AppEnv,
   fileID: string,
@@ -398,6 +432,7 @@ export function createTencentMaterialDocumentExtractor(
       }
 
       const fileUrl = await temporaryFileUrl(env, input.fileID)
+      await assertRemoteSizeWithinLimit(fileUrl, input.maxBytes)
       const maxPages = Math.min(
         Math.max(input.maxPages ?? DEFAULT_MAX_PAGES, 1),
         DEFAULT_MAX_PAGES,
