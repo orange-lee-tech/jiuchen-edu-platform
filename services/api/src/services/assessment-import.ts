@@ -432,6 +432,7 @@ export function createAssessmentImportService(
         fileName: input.fileName,
         kind: input.sourceType,
         maxPages: 20,
+        maxBytes: maxAssessmentImportBytes(input.sourceType),
       })
       const bounded = boundedSourceText(extracted.text)
       const candidate = await parseCandidateWithProvider(
