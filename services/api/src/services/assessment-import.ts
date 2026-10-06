@@ -1,21 +1,20 @@
-import { inflateRawSync } from 'node:zlib'
-import tcb from '@cloudbase/node-sdk'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import {
   createAssessmentAIProvider,
-  createScheduleAIProvider,
   JsonModelProviderInvalidJsonError,
   type JsonModelProvider,
-  type JsonModelUserContent,
 } from './ai-provider.js'
+import {
+  createTencentMaterialDocumentExtractor,
+  type MaterialDocumentExtractor,
+} from './material-document-extractor.js'
 
 export type AssessmentImportSourceType = 'document' | 'image'
 
 export const MAX_ASSESSMENT_DOCUMENT_BYTES = 8 * 1024 * 1024
 export const MAX_ASSESSMENT_IMAGE_BYTES = 5 * 1024 * 1024
 const MAX_SOURCE_TEXT_CHARS = 30_000
-const MAX_PDF_PAGES = 20
 
 const nullableText = (max: number) =>
   z.string().trim().min(1).max(max).nullable()
@@ -269,7 +268,7 @@ export function isSupportedAssessmentImportFileName(
 ) {
   const lower = fileName.toLowerCase()
   if (sourceType === 'document') {
-    return lower.endsWith('.docx') || lower.endsWith('.pdf')
+    return lower.endsWith('.doc') || lower.endsWith('.docx') || lower.endsWith('.pdf')
   }
   return ['.jpg', '.jpeg', '.png', '.webp'].some((ext) =>
     lower.endsWith(ext),
@@ -280,205 +279,6 @@ export function maxAssessmentImportBytes(sourceType: AssessmentImportSourceType)
   return sourceType === 'image'
     ? MAX_ASSESSMENT_IMAGE_BYTES
     : MAX_ASSESSMENT_DOCUMENT_BYTES
-}
-
-function mimeFromName(fileName: string) {
-  const lower = fileName.toLowerCase()
-  if (lower.endsWith('.png')) return 'image/png'
-  if (lower.endsWith('.webp')) return 'image/webp'
-  return 'image/jpeg'
-}
-
-function createCloudBaseApp(env: AppEnv) {
-  const credentials =
-    env.TENCENTCLOUD_SECRETID && env.TENCENTCLOUD_SECRETKEY
-      ? {
-          secretId: env.TENCENTCLOUD_SECRETID,
-          secretKey: env.TENCENTCLOUD_SECRETKEY,
-        }
-      : env.CLOUDBASE_APIKEY
-        ? { accessKey: env.CLOUDBASE_APIKEY }
-        : {}
-
-  return tcb.init({
-    env: env.CLOUDBASE_ENV_ID ?? tcb.SYMBOL_CURRENT_ENV,
-    ...credentials,
-    timeout: 60_000,
-  })
-}
-
-export interface AssessmentImportStorageProvider {
-  download(
-    fileID: string,
-    sourceType: AssessmentImportSourceType,
-  ): Promise<Buffer>
-  delete(fileID: string): Promise<void>
-}
-
-class CloudBaseAssessmentImportStorageProvider
-  implements AssessmentImportStorageProvider
-{
-  constructor(private readonly env: AppEnv) {}
-
-  async download(fileID: string, sourceType: AssessmentImportSourceType) {
-    const app = createCloudBaseApp(this.env)
-    const result = await app.downloadFile({ fileID })
-    if (!result.fileContent) {
-      throw new Error('assessment_import_file_download_failed')
-    }
-
-    const buffer = Buffer.from(result.fileContent)
-    if (buffer.byteLength > maxAssessmentImportBytes(sourceType)) {
-      throw new Error('assessment_import_file_too_large')
-    }
-
-    return buffer
-  }
-
-  async delete(fileID: string) {
-    const app = createCloudBaseApp(this.env)
-    const result = await app.deleteFile({ fileList: [fileID] })
-    const item = result.fileList?.[0]
-    if (item?.code && item.code !== 'SUCCESS') {
-      throw new Error('assessment_import_file_cleanup_failed')
-    }
-  }
-}
-
-function findEndOfCentralDirectory(buffer: Buffer) {
-  const signature = 0x06054b50
-  const start = Math.max(0, buffer.length - 65_557)
-  for (let offset = buffer.length - 22; offset >= start; offset -= 1) {
-    if (buffer.readUInt32LE(offset) === signature) return offset
-  }
-  throw new Error('assessment_import_docx_invalid')
-}
-
-function readZipEntry(buffer: Buffer, wantedName: string) {
-  const eocd = findEndOfCentralDirectory(buffer)
-  const entryCount = buffer.readUInt16LE(eocd + 10)
-  let offset = buffer.readUInt32LE(eocd + 16)
-
-  for (let index = 0; index < entryCount; index += 1) {
-    if (buffer.readUInt32LE(offset) !== 0x02014b50) {
-      throw new Error('assessment_import_docx_invalid')
-    }
-
-    const compressionMethod = buffer.readUInt16LE(offset + 10)
-    const compressedSize = buffer.readUInt32LE(offset + 20)
-    const uncompressedSize = buffer.readUInt32LE(offset + 24)
-    const fileNameLength = buffer.readUInt16LE(offset + 28)
-    const extraLength = buffer.readUInt16LE(offset + 30)
-    const commentLength = buffer.readUInt16LE(offset + 32)
-    const localHeaderOffset = buffer.readUInt32LE(offset + 42)
-    const name = buffer
-      .subarray(offset + 46, offset + 46 + fileNameLength)
-      .toString('utf8')
-
-    if (name === wantedName) {
-      if (uncompressedSize > 8 * 1024 * 1024) {
-        throw new Error('assessment_import_docx_too_complex')
-      }
-      if (buffer.readUInt32LE(localHeaderOffset) !== 0x04034b50) {
-        throw new Error('assessment_import_docx_invalid')
-      }
-      const localNameLength = buffer.readUInt16LE(localHeaderOffset + 26)
-      const localExtraLength = buffer.readUInt16LE(localHeaderOffset + 28)
-      const dataOffset =
-        localHeaderOffset + 30 + localNameLength + localExtraLength
-      const compressed = buffer.subarray(
-        dataOffset,
-        dataOffset + compressedSize,
-      )
-
-      if (compressionMethod === 0) return Buffer.from(compressed)
-      if (compressionMethod === 8) return inflateRawSync(compressed)
-      throw new Error('assessment_import_docx_compression_unsupported')
-    }
-
-    offset += 46 + fileNameLength + extraLength + commentLength
-  }
-
-  return null
-}
-
-function decodeXmlEntities(value: string) {
-  return value
-    .replace(/&#(\d+);/g, (_match, code) =>
-      String.fromCodePoint(Number(code)),
-    )
-    .replace(/&#x([0-9a-f]+);/gi, (_match, code) =>
-      String.fromCodePoint(Number.parseInt(code, 16)),
-    )
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-}
-
-function documentXmlToText(xml: string) {
-  return decodeXmlEntities(
-    xml
-      .replace(/<w:tab\b[^>]*\/>/g, '\t')
-      .replace(/<w:br\b[^>]*\/>/g, '\n')
-      .replace(/<\/w:tc>/g, '\t')
-      .replace(/<\/w:p>/g, '\n')
-      .replace(/<[^>]+>/g, ''),
-  )
-    .replace(/\u00a0/g, ' ')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
-export function extractDocxText(buffer: Buffer) {
-  const documentXml = readZipEntry(buffer, 'word/document.xml')
-  if (!documentXml) throw new Error('assessment_import_docx_invalid')
-
-  const text = documentXmlToText(documentXml.toString('utf8'))
-  if (!text) throw new Error('assessment_import_document_text_empty')
-  return text
-}
-
-export async function extractPdfText(buffer: Buffer) {
-  const { getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  const loadingTask = getDocument({
-    data: new Uint8Array(buffer),
-    useSystemFonts: true,
-  })
-
-  try {
-    const document = await loadingTask.promise
-    const pageCount = Math.min(document.numPages, MAX_PDF_PAGES)
-    const pages: string[] = []
-
-    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
-      const page = await document.getPage(pageNumber)
-      const content = await page.getTextContent()
-      const pageText = content.items
-        .map((item) =>
-          item && typeof item === 'object' && 'str' in item
-            ? String(item.str ?? '')
-            : '',
-        )
-        .filter(Boolean)
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-      if (pageText) pages.push(pageText)
-      page.cleanup()
-    }
-
-    const text = pages.join('\n').trim()
-    if (!text) throw new Error('assessment_import_pdf_text_empty')
-    return {
-      text,
-      truncatedPages: document.numPages > MAX_PDF_PAGES,
-    }
-  } finally {
-    await loadingTask.destroy()
-  }
 }
 
 function boundedSourceText(text: string) {
@@ -512,26 +312,19 @@ const IMPORT_SYSTEM_PROMPT =
   '英语成绩按 CET-4/CET-6/IELTS/TOEFL/GRE 分类。' +
   '无法可靠判断的字段填 null 或空数组，并在 warnings 中说明，不要编造。'
 
-function importPrompt(user: JsonModelUserContent, repair?: string): JsonModelUserContent {
+function importPrompt(text: string, repair?: string) {
   const instruction =
     '请抽取可用于保研评估表单预填的结构化资料。只输出 schema 要求的 JSON。' +
     (repair
       ? '上一次输出未通过校验：' + repair + '。请重新完整输出，仍然只能提取材料中明确存在的事实。'
       : '')
 
-  if (typeof user === 'string') {
-    return instruction + '\n\n材料正文：\n' + user
-  }
-
-  return [
-    { type: 'text', text: instruction },
-    ...user,
-  ]
+  return instruction + '\n\n材料正文：\n' + text
 }
 
 async function parseCandidateWithProvider(
   provider: JsonModelProvider,
-  user: JsonModelUserContent,
+  text: string,
 ) {
   if (!provider.isConfigured()) {
     throw new Error('assessment_import_provider_not_configured')
@@ -544,7 +337,7 @@ async function parseCandidateWithProvider(
     try {
       raw = await provider.generateJson({
         system: IMPORT_SYSTEM_PROMPT,
-        user: importPrompt(user, repairReason || undefined),
+        user: importPrompt(text, repairReason || undefined),
         maxTokens: 4200,
         jsonSchema: {
           name: 'assessment_import_candidate_v1',
@@ -612,23 +405,14 @@ export interface AssessmentImportService {
   cleanup(fileID: string): Promise<void>
 }
 
-export function createAssessmentImportService(env: AppEnv): AssessmentImportService {
-  const storage = new CloudBaseAssessmentImportStorageProvider(env)
+export function createAssessmentImportService(
+  env: AppEnv,
+  extractor: MaterialDocumentExtractor = createTencentMaterialDocumentExtractor(env),
+): AssessmentImportService {
   const textProvider = createAssessmentAIProvider(env)
-  const imageProviders = [
-    createScheduleAIProvider(env),
-    createAssessmentAIProvider(env),
-  ].filter(
-    (provider, index, all) =>
-      provider.isConfigured() &&
-      all.findIndex(
-        (item) =>
-          item.provider === provider.provider && item.model === provider.model,
-      ) === index,
-  )
 
   return {
-    configured: textProvider.isConfigured() && Boolean(env.CLOUDBASE_ENV_ID),
+    configured: textProvider.isConfigured() && extractor.configured,
 
     async parse(input) {
       if (
@@ -643,72 +427,25 @@ export function createAssessmentImportService(env: AppEnv): AssessmentImportServ
         throw new Error('assessment_import_file_not_owned')
       }
 
-      const buffer = await storage.download(input.fileID, input.sourceType)
-
-      if (input.sourceType === 'image') {
-        if (!imageProviders.length) {
-          throw new Error('assessment_import_image_provider_not_configured')
-        }
-
-        const dataUrl =
-          'data:' +
-          mimeFromName(input.fileName) +
-          ';base64,' +
-          buffer.toString('base64')
-
-        let lastError: unknown
-        for (const provider of imageProviders) {
-          try {
-            const candidate = await parseCandidateWithProvider(provider, [
-              {
-                type: 'text',
-                text: '这是学生简历或保研材料图片。请直接读取图片文字并结构化。',
-              },
-              {
-                type: 'image_url',
-                image_url: { url: dataUrl },
-              },
-            ])
-            return {
-              candidate,
-              summary: candidateSummary(candidate),
-            }
-          } catch (error) {
-            lastError = error
-          }
-        }
-
-        throw lastError instanceof Error
-          ? lastError
-          : new Error('assessment_import_image_parse_failed')
-      }
-
-      let extractedText: string
-      let pdfTruncated = false
-      const lower = input.fileName.toLowerCase()
-
-      if (lower.endsWith('.docx')) {
-        extractedText = extractDocxText(buffer)
-      } else if (lower.endsWith('.pdf')) {
-        const pdf = await extractPdfText(buffer)
-        extractedText = pdf.text
-        pdfTruncated = pdf.truncatedPages
-      } else {
-        throw new Error('assessment_import_file_type_not_allowed')
-      }
-
-      const bounded = boundedSourceText(extractedText)
+      const extracted = await extractor.extract({
+        fileID: input.fileID,
+        fileName: input.fileName,
+        kind: input.sourceType,
+        maxPages: 20,
+      })
+      const bounded = boundedSourceText(extracted.text)
       const candidate = await parseCandidateWithProvider(
         textProvider,
         bounded.text,
       )
 
+      candidate.warnings.push(...extracted.warnings)
       if (bounded.truncated) {
-        candidate.warnings.push('材料文字较长，仅分析了开头与结尾的主要内容。')
+        candidate.warnings.push(
+          '材料正文较长，结构化阶段仅保留了开头与结尾的主要文字；请人工确认。',
+        )
       }
-      if (pdfTruncated) {
-        candidate.warnings.push('PDF 超过 20 页，仅分析前 20 页。')
-      }
+      candidate.warnings = [...new Set(candidate.warnings)].slice(0, 12)
 
       return {
         candidate,
@@ -717,7 +454,7 @@ export function createAssessmentImportService(env: AppEnv): AssessmentImportServ
     },
 
     cleanup(fileID) {
-      return storage.delete(fileID)
+      return extractor.cleanup(fileID)
     },
   }
 }
