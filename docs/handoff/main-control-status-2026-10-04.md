@@ -1,3 +1,8 @@
+> **SUPERSEDED FOR CURRENT EXECUTION — 2026-10-06**
+>
+> Current source of truth: `docs/handoff/main-control-status-2026-10-06.md`.
+> This 2026-10-04 file is retained for history only.
+
 # Main control status — 2026-10-04
 
 Repository: `orange-lee-tech/jiuchen-edu-platform`  
