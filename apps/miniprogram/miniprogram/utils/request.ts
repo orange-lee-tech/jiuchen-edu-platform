@@ -181,6 +181,7 @@ export function friendlyRequestError(
     assessment_import_parser_not_configured: '材料解析服务尚未配置',
     assessment_import_parser_not_enabled: '腾讯云文档解析服务尚未开通，请联系管理员开通后重试',
     assessment_import_parser_billing_unavailable: '材料解析服务当前无可用额度，请联系管理员',
+    assessment_import_parser_permission_denied: '腾讯云账号尚未授予文档解析权限，请联系管理员配置 OCR 权限',
     assessment_import_parser_timeout: '材料解析超时，请稍后重试或换一份更精简的文件',
     assessment_import_parser_failed: '腾讯云材料解析暂时失败，请稍后重试',
     assessment_import_parser_result_too_large: '解析结果过大，请使用更精简的材料',
