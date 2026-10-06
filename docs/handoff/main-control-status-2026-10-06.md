@@ -283,3 +283,39 @@ If the active sprint passes, the next candidate order is:
 9. **Current-week Schedule embellishment** — lowest priority; it is only a convenience view after reliable import/edit.
 
 This priority order intentionally favors customer-visible product quality and delivery over premature monetization mechanics or low-value convenience features.
+
+
+## 12. Assessment background execution closeout
+
+Assessment synchronous-wait UX has been reworked in repository and the implementation lane is CLOSED.
+
+Code closeout baseline:
+- feature: `6f38da2cfeea49a91ee254e0494e94492db26071`
+- client contract follow-up: `1df10a1b0aac3f6ab75ebd45ca8cf9db9132616f`
+- final code verification: `ada821a2894652b24d41a2593550fe06fa812c6e`
+- docs closeout: `494366590610473edbd2a2098f9ca5280ba762cb`
+
+Behavior:
+- authenticated `POST /me/assessments/:id/run` persists `running` and returns HTTP 202 instead of keeping the client waiting for the model runtime;
+- the API owns a serial database-backed worker that scans persisted `running` rows and resumes them after process start;
+- terminal state remains persisted as `succeeded` or `failed`;
+- Assessment History polls only while visible and while running items exist;
+- completion notification is an explicit adapter contract but is currently disabled: `channel=none`, `configured=false`, `reason=not_configured`;
+- real WeChat subscribe-message delivery still requires a verified template ID plus explicit user opt-in.
+
+Validation:
+- Mini Program typecheck PASS;
+- Admin build PASS;
+- API typecheck/test/build PASS;
+- API tests 131 PASS / 0 FAIL;
+- final closeout push/PR CI PASS.
+
+Production rollout is **not yet complete**.
+
+Current production API remains:
+`34892d8c44052d955224b1e1882cde34a73a53f7`
+
+Do not reopen Assessment model/Prompt/RAG work. The next step is a controlled production rollout and experience-build acceptance of:
+`quick submit -> History running -> user may leave -> later succeeded/failed`.
+
+Because repository HEAD contains post-production work from several modules, rollout must use a reviewed/frozen release candidate rather than blindly promoting an arbitrary moving HEAD.
