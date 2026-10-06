@@ -20,8 +20,7 @@ export function createDatabaseContext(env: AppEnv) {
 
   const common = {
     connectionLimit: 5,
-    connectTimeout: 3000,
-    enableKeepAlive: true,
+    // Production cold handshakes have repeatedly exceeded 3s immediately after\n    // service restart while succeeding moments later. Keep this bounded but less\n    // trigger-happy so readiness does not report a false outage during cold connect.\n    connectTimeout: 5000,\n    enableKeepAlive: true,
   }
 
   const pool = env.DATABASE_URL
