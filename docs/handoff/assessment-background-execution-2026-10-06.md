@@ -1,6 +1,6 @@
 # Assessment Background Execution — 2026-10-06
 
-Status: IMPLEMENTED
+Status: **CLOSED — implementation and CI PASS; production rollout pending main-control scheduling**
 
 ## Scope
 
@@ -24,3 +24,42 @@ Current/default adapter:
 - result: `not_configured`
 
 No WeChat subscribe-message template, consent flow, or verified delivery configuration is claimed in this change.
+
+
+## Verification
+
+Final branch head at closeout:
+
+`ada821a2894652b24d41a2593550fe06fa812c6e`
+
+CI:
+- Push CI: PASS
+- PR CI: PASS
+- Mini Program typecheck: PASS
+- Admin build: PASS
+- API typecheck/test/build: PASS
+- API tests: 131 PASS / 0 FAIL
+
+## WeChat notification integration boundary
+
+The official WeChat completion-notification path is the native subscribe-message flow:
+
+1. select/configure a real subscription-message template in WeChat Public Platform and obtain the template ID;
+2. request explicit user subscription permission in the Mini Program with `wx.requestSubscribeMessage`;
+3. send the terminal notification from the backend through the WeChat subscribe-message send API.
+
+The current code intentionally stops before step 1 because no verified Assessment completion template ID and user-consent flow have been supplied.
+
+The reusable adapter is therefore present, but its production/default state remains:
+
+- `channel=none`
+- `configured=false`
+- `reason=not_configured`
+
+Do not describe WeChat subscription-message delivery as complete until a real template, user authorization path, server delivery implementation and real-device delivery acceptance all pass.
+
+## Rollout status
+
+No production rollout was performed in this lane.
+
+Reason: the current `p1/foundation` branch contains work beyond the currently active production Assessment hotfix baseline. Main control should schedule an isolated API release and a matching WeChat experience-version upload rather than promoting unrelated branch changes accidentally.
