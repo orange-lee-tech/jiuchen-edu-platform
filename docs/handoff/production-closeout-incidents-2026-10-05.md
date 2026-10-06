@@ -266,3 +266,28 @@ payload-to-schema contract before retrying. In this incident, the first visible 
 was four-byte Unicode on an utf8mb3 column, while the same payload also demonstrated
 that the historical `summary varchar(500)` contract was too narrow. Future preflight
 must consider charset, lengths, nullability and indexed-key limits together.
+
+
+## 10. Repeated post-restart DB connect timeout — hardening action
+
+After enabling Schedule AI and restarting only `jiuchen-api.service`, the same pattern
+recurred:
+
+- service active;
+- `/health/live`: PASS;
+- `/health/config`: PASS with `scheduleAiConfigured=true`;
+- first `/health`: 503;
+- prior incident evidence already showed `connect ETIMEDOUT` at the 3000 ms database
+  connect timeout and recovery without intervention.
+
+Because this is now a repeated post-restart pattern rather than a one-off observation,
+the repository database client timeout is hardened from 3000 ms to 5000 ms. This does
+not change the database endpoint, pool size, credentials or health semantics; it only
+gives a cold TCP/MySQL handshake a slightly larger bounded window.
+
+Operational rule:
+
+- do not restart repeatedly to clear this symptom;
+- if liveness/config are healthy, retry readiness and inspect the exact error;
+- persistent failure after the wider timeout remains a real dependency incident and
+  must not be masked.
