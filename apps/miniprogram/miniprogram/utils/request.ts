@@ -79,6 +79,7 @@ export type ClassroomView = {
   student: StudentSummary
   stage: ClassroomStage
   showGuidance: boolean
+  guidanceRecordsReady: boolean
   mentors: ClassroomMentor[]
   records: ClassroomCoachingRecord[]
   plans: ClassroomPlan[]
