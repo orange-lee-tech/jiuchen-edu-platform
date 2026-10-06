@@ -1,3 +1,4 @@
+import { getSavedAuthResult } from '../../utils/auth'
 import { getNewsPosts, type NewsPost } from '../../utils/request'
 
 type NewsCard = {
@@ -8,6 +9,7 @@ type NewsCard = {
   tags: string[]
   primaryTag: string
   coverUrl: string
+  coverFailed: boolean
 }
 
 const FALLBACK_FEATURED: NewsCard = {
@@ -18,6 +20,7 @@ const FALLBACK_FEATURED: NewsCard = {
   tags: [],
   primaryTag: '近期关注',
   coverUrl: '',
+  coverFailed: false,
 }
 
 function formatDate(value: string | null) {
@@ -27,6 +30,11 @@ function formatDate(value: string | null) {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${month}-${day}`
+}
+
+function normalizeRemoteUrl(value: string | null | undefined) {
+  if (!value) return ''
+  return value.replace(/^http:\/\//i, 'https://')
 }
 
 function toCard(post: NewsPost): NewsCard {
@@ -39,7 +47,8 @@ function toCard(post: NewsPost): NewsCard {
       .join(' · '),
     tags: post.tags,
     primaryTag: post.tags[0] || '未分类',
-    coverUrl: post.coverUrl ?? '',
+    coverUrl: normalizeRemoteUrl(post.coverUrl),
+    coverFailed: false,
   }
 }
 
@@ -93,7 +102,26 @@ Page({
         return
       }
 
-      const cards = posts.map(toCard)
+      const auth = getSavedAuthResult()
+      const canSeeUnclassified = Boolean(
+        auth && ['teacher', 'staff', 'admin'].includes(auth.user.role),
+      )
+      const visiblePosts = canSeeUnclassified
+        ? posts
+        : posts.filter((post) => post.tags.length > 0)
+
+      const cards = visiblePosts.map(toCard)
+      if (cards.length === 0) {
+        this.setData({
+          categories: ['推荐'],
+          currentCategory: 0,
+          featured: FALLBACK_FEATURED,
+          allArticles: [],
+          articles: [],
+        })
+        return
+      }
+
       const first = cards[0]
       const categories = ['推荐', ...uniqueTags(cards)]
 
@@ -139,6 +167,28 @@ Page({
     )
     this.setData({
       currentCategory,
+      featured: filtered[0] || FALLBACK_FEATURED,
+      articles: filtered.slice(1),
+    })
+  },
+
+  onCoverError(event: WechatMiniprogram.BaseEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!id) return
+
+    const allArticles = this.data.allArticles.map((article) =>
+      article.id === id
+        ? { ...article, coverFailed: true }
+        : article,
+    )
+    const filtered = this.filterArticles(
+      allArticles,
+      this.data.currentCategory,
+      this.data.categories,
+    )
+
+    this.setData({
+      allArticles,
       featured: filtered[0] || FALLBACK_FEATURED,
       articles: filtered.slice(1),
     })
