@@ -82,6 +82,7 @@ function emptyStageView(stage: ClassroomStage, index: number) {
     stageDescription: stage.description,
     plans: [] as PlanCard[],
     showGuidance: stage.mode !== 'internship',
+    guidanceRecordsReady: true,
     mentors: [] as ClassroomMentor[],
     records: [] as Array<ClassroomCoachingRecord & { dateLabel: string }>,
   }
@@ -145,6 +146,7 @@ Page({
         studentName: initial.student.name,
         plans: initial.plans.map(toPlanCard),
         showGuidance: initial.showGuidance,
+        guidanceRecordsReady: initial.guidanceRecordsReady,
         mentors: initial.mentors,
         records: initial.records.map((record) => ({
           ...record,
@@ -167,6 +169,7 @@ Page({
       studentName: result.student.name,
       plans: result.plans.map(toPlanCard),
       showGuidance: result.showGuidance,
+      guidanceRecordsReady: result.guidanceRecordsReady,
       mentors: result.mentors,
       records: result.records.map((record) => ({
         ...record,
