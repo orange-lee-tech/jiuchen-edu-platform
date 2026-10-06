@@ -98,18 +98,9 @@
       </view>
     </view>
 
-    <view class="section-card uncertainty-card">
-      <view class="section-heading">
-        <text class="section-number">04</text>
-        <text class="section-title">不确定性</text>
-      </view>
-      <text wx:if="{{output.uncertainties.length === 0}}" class="empty">当前报告未标记额外不确定项</text>
-      <text wx:for="{{output.uncertainties}}" wx:key="*this" class="bullet" user-select="true">· {{item}}</text>
-    </view>
-
     <view class="section-card">
       <view class="section-heading">
-        <text class="section-number">05</text>
+        <text class="section-number">04</text>
         <text class="section-title">推荐行动</text>
       </view>
       <text wx:if="{{output.recommendedActions.length === 0}}" class="empty">暂无额外行动建议</text>
@@ -123,48 +114,18 @@
       </view>
     </view>
 
-    <view class="section-card service-card">
-      <view class="section-heading">
-        <text class="section-number">06</text>
-        <text class="section-title">九辰方案</text>
-      </view>
-
-      <block wx:if="{{recommendation}}">
-        <text class="service-name">{{recommendation.name}}</text>
-        <text class="service-match">对应问题：{{recommendation.matchedNeedsLabel}}</text>
-        <text class="body-text" user-select="true">{{recommendation.reason}}</text>
-        <button class="inline-action" bindtap="onServiceDetailTap">查看方案详情</button>
-      </block>
-
-      <block wx:else>
-        <text class="finding-title">暂不强行推荐</text>
-        <text class="body-text" user-select="true">当前评估与现有服务方案未形成足够明确的匹配。这里不为了商业转化硬塞产品；如需进一步判断，可携带本报告联系九辰老师。</text>
-      </block>
-    </view>
-
     <view class="section-card contact-card">
       <view class="section-heading">
-        <text class="section-number">07</text>
+        <text class="section-number">05</text>
         <text class="section-title">联系老师</text>
       </view>
       <text class="body-text" user-select="true">可携带本次评估结果与老师确认目标梯度、关键差距和下一阶段执行安排。老师可结合你的时间窗口与现有材料进一步判断。</text>
       <button class="contact-button" bindtap="onCustomerServiceTap">联系九辰老师</button>
     </view>
 
-    <view class="section-card usage-card">
-      <view class="section-heading">
-        <text class="section-number">08</text>
-        <text class="section-title">使用说明</text>
-      </view>
-      <text class="usage-line" user-select="true">{{output.disclaimer}}</text>
-      <text class="usage-line" user-select="true">本报告基于当次填写资料与当前可用证据形成，不构成录取保证。</text>
-      <text class="usage-line" user-select="true">历史记录中的已完成报告为持久化结果；查看、复制、下载与展开引用不会触发二次模型调用。</text>
-      <text class="usage-line" user-select="true">若个人背景发生实质变化，请主动发起新的评估，而不是让旧报告静默改写。</text>
-    </view>
-
     <view class="section-card references-card">
       <view class="section-heading">
-        <text class="section-number">09</text>
+        <text class="section-number">06</text>
         <text class="section-title">参考案例</text>
       </view>
       <text class="section-note">案例只作为分析证据。点击编号查看与本次判断相关的案例详情。</text>
