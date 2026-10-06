@@ -1,0 +1,17 @@
+[Unit]
+Description=Jiuchen Official Account news sync
+After=network-online.target jiuchen-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=jiuchen-api
+Group=jiuchen-api
+WorkingDirectory=/opt/jiuchen-api/current/services/api
+EnvironmentFile=/etc/jiuchen-api/production.env
+ExecStart=/opt/jiuchen-api/runtime/node/bin/node /opt/jiuchen-api/current/services/api/dist/scripts/sync-official-account.js
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/opt/jiuchen-api /etc/jiuchen-api
