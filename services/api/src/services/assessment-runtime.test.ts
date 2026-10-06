@@ -155,6 +155,52 @@ test('assessment runtime rejects target analysis without retrieved evidence', as
   )
 })
 
+test('assessment runtime allows insufficient_data without retrieved target evidence', async () => {
+  const retriever: AssessmentRetriever = {
+    async retrieve() {
+      return {
+        version: 'knowledge-empty-v1',
+        evidence: [],
+      }
+    },
+  }
+
+  const provider: AssessmentModelProvider = {
+    provider: 'mock-provider',
+    model: 'mock-model',
+    isConfigured: () => true,
+    async analyze() {
+      return {
+        profileSummary: '背景摘要',
+        strengths: [],
+        risks: [],
+        targetAssessments: [
+          {
+            schoolName: '目标大学',
+            tier: 'insufficient_data',
+            rationale: '当前只有用户输入，缺少足够的真实检索证据。',
+            gapItems: [],
+            actions: [],
+            evidenceRefs: ['input:target:1'],
+          },
+        ],
+        recommendedActions: [],
+        similarCases: [],
+        uncertainties: ['缺少可用于目标院校判断的检索证据。'],
+        disclaimer: '本结果用于规划辅助。',
+      }
+    },
+  }
+
+  const result = await executeAssessment({ retriever, provider }, input)
+
+  assert.equal(result.output.targetAssessments[0].tier, 'insufficient_data')
+  assert.deepEqual(
+    result.output.targetAssessments[0].evidenceRefs,
+    ['input:target:1'],
+  )
+})
+
 test('assessment runtime rejects invented evidence ids', async () => {
   const retriever: AssessmentRetriever = {
     async retrieve() {

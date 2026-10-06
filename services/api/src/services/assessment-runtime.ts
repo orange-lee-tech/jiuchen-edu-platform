@@ -296,10 +296,12 @@ function validateAssessmentResult(
 
   for (const target of output.targetAssessments) {
     validateGeneralRefs(target.evidenceRefs)
-    if (!target.evidenceRefs.some((ref) => {
+    const hasRetrievedTargetEvidence = target.evidenceRefs.some((ref) => {
       const evidence = evidenceByRef.get(ref)
       return evidence && ['school', 'program', 'case'].includes(evidence.kind)
-    })) {
+    })
+
+    if (!hasRetrievedTargetEvidence && target.tier !== 'insufficient_data') {
       throw new AssessmentEvidenceReferenceError(
         'target_assessment_requires_retrieved_evidence',
       )
