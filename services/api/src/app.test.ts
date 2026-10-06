@@ -83,6 +83,8 @@ test('GET /health/config exposes only configuration presence', async () => {
       cloudbaseCamConfigured: false,
       cloudbaseExternalConfigured: false,
       assessmentAiConfigured: false,
+      assessmentBackgroundExecution: false,
+      assessmentCompletionNotificationConfigured: false,
       scheduleAiConfigured: false,
       customerAiConfigured: false,
     },
@@ -154,6 +156,15 @@ test('assessment metadata is available without database or model provider', asyn
       competitionExperiences: 12,
     },
     providerConfigured: false,
+    backgroundExecution: {
+      enabled: true,
+      stateStore: 'assessments',
+      terminalStates: ['succeeded', 'failed'],
+    },
+    completionNotification: {
+      channel: 'none',
+      configured: false,
+    },
     outputPolicy: {
       preciseAdmissionProbability: false,
       evidenceRequiredForClaims: true,
