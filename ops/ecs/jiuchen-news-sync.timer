@@ -1,0 +1,12 @@
+[Unit]
+Description=Sync Jiuchen Official Account news every 30 minutes
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=30min
+RandomizedDelaySec=2min
+Persistent=true
+Unit=jiuchen-news-sync.service
+
+[Install]
+WantedBy=timers.target
