@@ -310,6 +310,8 @@ const IMPORT_SYSTEM_PROMPT =
   '只有材料明确表达“意向/目标/申请”时才填 targets。' +
   '科研经历优先保留项目名称、个人职责、方法工具和产出；竞赛优先保留赛事、奖项和个人角色。' +
   '英语成绩按 CET-4/CET-6/IELTS/TOEFL/GRE 分类。' +
+  '奖学金、荣誉、核心课程、实习、校园经历、专业技能或其他与保研判断有关但没有独立字段承载的重要事实，压缩整理进 profile.backgroundNote；不要因为字段有限而丢失这些事实。' +
+  '手机号、邮箱、身份证号、家庭住址等与评估无关的个人联系方式不要写入任何输出字段。' +
   '无法可靠判断的字段填 null 或空数组，并在 warnings 中说明，不要编造。'
 
 function importPrompt(text: string, repair?: string) {
