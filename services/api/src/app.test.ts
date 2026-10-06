@@ -84,6 +84,7 @@ test('GET /health/config exposes only configuration presence', async () => {
       cloudbaseExternalConfigured: false,
       assessmentAiConfigured: false,
       assessmentBackgroundExecution: false,
+      assessmentMaterialImportConfigured: false,
       assessmentCompletionNotificationConfigured: false,
       scheduleAiConfigured: false,
       customerAiConfigured: false,
@@ -168,6 +169,11 @@ test('assessment metadata is available without database or model provider', asyn
     outputPolicy: {
       preciseAdmissionProbability: false,
       evidenceRequiredForClaims: true,
+    },
+    materialImport: {
+      enabled: false,
+      documentFormats: ['doc', 'docx', 'pdf'],
+      imageFormats: ['jpg', 'jpeg', 'png', 'webp'],
     },
   })
 
