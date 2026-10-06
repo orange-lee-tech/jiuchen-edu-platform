@@ -35,12 +35,15 @@
 
     <view class="classroom-layout">
       <scroll-view class="stage-sidebar" scroll-y enhanced show-scrollbar="{{false}}">
-        <view class="schedule-nav" bindtap="onCurrentWeekSchedule">
-          <view class="schedule-nav-icon">课</view>
-          <view class="schedule-nav-copy">
-            <text class="schedule-nav-title">课表</text>
-            <text class="schedule-nav-note">本周 / 导入</text>
+        <view class="schedule-nav">
+          <view class="schedule-nav-main" bindtap="onScheduleImport">
+            <view class="schedule-nav-icon">课</view>
+            <view class="schedule-nav-copy">
+              <text class="schedule-nav-title">课表</text>
+              <text class="schedule-nav-note">导入 / 编辑</text>
+            </view>
           </view>
+          <view class="schedule-nav-quick" bindtap="onCurrentWeekSchedule">快捷看本周</view>
         </view>
         <view class="timeline">
           <view
