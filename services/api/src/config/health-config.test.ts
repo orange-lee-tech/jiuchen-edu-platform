@@ -40,6 +40,8 @@ test('health config reports credential presence without exposing secret values',
     cloudbaseCamConfigured: true,
     cloudbaseExternalConfigured: true,
     assessmentAiConfigured: true,
+    assessmentBackgroundExecution: false,
+    assessmentCompletionNotificationConfigured: false,
     scheduleAiConfigured: true,
     customerAiConfigured: true,
   })
