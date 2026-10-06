@@ -408,8 +408,8 @@ export interface AssessmentImportService {
 export function createAssessmentImportService(
   env: AppEnv,
   extractor: MaterialDocumentExtractor = createTencentMaterialDocumentExtractor(env),
+  textProvider: JsonModelProvider = createAssessmentAIProvider(env),
 ): AssessmentImportService {
-  const textProvider = createAssessmentAIProvider(env)
 
   return {
     configured: textProvider.isConfigured() && extractor.configured,
