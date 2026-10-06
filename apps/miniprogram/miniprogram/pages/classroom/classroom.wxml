@@ -142,8 +142,8 @@
           </view>
 
           <view wx:else class="pending-card surface">
-            <text class="pending-title">暂无辅导记录</text>
-            <text class="pending-desc">不会再用演示记录填充这里。</text>
+            <text class="pending-title">{{guidanceRecordsReady ? '暂无辅导记录' : '辅导记录模块正在准备'}}</text>
+            <text class="pending-desc">{{guidanceRecordsReady ? '不会再用演示记录填充这里。' : '当前计划与课表仍可正常使用；辅导记录数据库完成升级后会自动恢复。'}}</text>
           </view>
         </block>
       </view>
