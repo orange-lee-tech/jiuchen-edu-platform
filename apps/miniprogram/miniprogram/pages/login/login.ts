@@ -37,12 +37,7 @@ Page({
   },
 
   onAgreementTap() {
-    wx.showModal({
-      title: '用户协议（占位）',
-      content: '当前为开发阶段占位协议。正式上线前将替换为经审核的完整用户协议文本。',
-      showCancel: false,
-      confirmText: '我知道了',
-    })
+    wx.navigateTo({ url: '/pages/user-agreement/user-agreement' })
   },
 
   async onWechatLogin() {
