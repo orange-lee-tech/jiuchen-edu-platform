@@ -68,13 +68,25 @@
 }
 
 .schedule-nav {
+  margin: 10rpx;
+  padding: 10rpx;
+  border-radius: 14rpx;
+  background: #eef4fb;
+}
+
+.schedule-nav-main {
   display: flex;
   align-items: center;
   gap: 8rpx;
-  margin: 10rpx;
-  padding: 12rpx 10rpx;
-  border-radius: 14rpx;
-  background: #eef4fb;
+}
+
+.schedule-nav-quick {
+  margin-top: 8rpx;
+  padding-top: 8rpx;
+  border-top: 1rpx solid #d9e5f3;
+  color: #5f6f82;
+  font-size: 14rpx;
+  text-align: center;
 }
 
 .schedule-nav-icon {
