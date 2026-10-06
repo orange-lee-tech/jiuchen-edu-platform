@@ -1,11 +1,9 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import {
   getMyAssessment,
-  getProducts,
   type AssessmentEvidence,
   type AssessmentOutput,
   type AssessmentRecord,
-  type ProductSummary,
 } from '../../utils/request'
 import { openWechatCustomerService } from '../../utils/customer-service'
 import {
@@ -17,7 +15,6 @@ import {
   writeAssessmentReportFile,
   type AssessmentReportExportContext,
   type AssessmentReportReference,
-  type AssessmentServiceRecommendation,
 } from '../../utils/assessment-report-export'
 
 const TIER_VIEW = {
@@ -47,168 +44,6 @@ type ResultView = AssessmentOutput & {
   recommendedActions: Array<AssessmentOutput['recommendedActions'][number] & {
     priorityLabel: string
   }>
-}
-
-type RecommendationCandidate = {
-  product: ProductSummary
-  score: number
-  needs: string[]
-}
-
-type RecommendationView = AssessmentServiceRecommendation & {
-  matchedNeedsLabel: string
-}
-
-const NEED_RULES = [
-  {
-    label: '科研与论文产出',
-    reportKeywords: ['科研', '论文', '发表', '专利', '实验室', '研究经历'],
-    productKeywords: ['科研', '论文', '发表', '研究'],
-    weight: 5,
-  },
-  {
-    label: '竞赛与创新项目',
-    reportKeywords: ['竞赛', '比赛', '挑战杯', '互联网+', '创新创业'],
-    productKeywords: ['竞赛', '比赛', '创新创业', '科技作品'],
-    weight: 4,
-  },
-  {
-    label: '英语能力',
-    reportKeywords: ['英语', '六级', '四级', 'cet', '雅思', '托福'],
-    productKeywords: ['英语', '六级', '四级', '雅思', '托福'],
-    weight: 3,
-  },
-  {
-    label: '绩点与排名',
-    reportKeywords: ['绩点', 'gpa', '排名', '成绩'],
-    productKeywords: ['绩点', 'gpa', '课程', '成绩'],
-    weight: 3,
-  },
-  {
-    label: '申请与面试准备',
-    reportKeywords: ['面试', '夏令营', '预推免', '文书', '简历', '申请'],
-    productKeywords: ['面试', '夏令营', '预推免', '文书', '简历', '申请'],
-    weight: 3,
-  },
-] as const
-
-const ELITE_TARGET_KEYWORDS = [
-  '清华',
-  '北京大学',
-  '北大',
-  '复旦',
-  '上海交通',
-  '上交',
-  '浙江大学',
-  '浙大',
-  '南京大学',
-  '南大',
-  '中国科学技术大学',
-  '中科大',
-]
-
-function compactText(value: unknown) {
-  return String(value ?? '').toLocaleLowerCase('zh-CN')
-}
-
-function productSearchText(product: ProductSummary) {
-  return compactText(
-    [
-      product.productName,
-      product.title,
-      JSON.stringify(product.product),
-      JSON.stringify(product.highlights),
-    ].join(' '),
-  )
-}
-
-function reportSearchText(assessment: AssessmentRecord) {
-  const output = assessment.output
-  return compactText(
-    JSON.stringify({
-      risks: output?.risks ?? [],
-      targets: output?.targetAssessments ?? [],
-      actions: output?.recommendedActions ?? [],
-      inputTargets: assessment.input.targets,
-    }),
-  )
-}
-
-function hasAny(text: string, keywords: readonly string[]) {
-  return keywords.some((keyword) => text.includes(keyword.toLocaleLowerCase('zh-CN')))
-}
-
-function buildServiceRecommendation(
-  products: ProductSummary[],
-  assessment: AssessmentRecord,
-): RecommendationView | null {
-  if (!assessment.output || !products.length) return null
-
-  const reportText = reportSearchText(assessment)
-  const targetText = compactText(
-    assessment.input.targets.map((target) => target.schoolName).join(' '),
-  )
-  const hasEliteTarget = hasAny(targetText, ELITE_TARGET_KEYWORDS)
-  const reachCount = assessment.output.targetAssessments.filter(
-    (target) => target.tier === 'reach',
-  ).length
-  const stableCount = assessment.output.targetAssessments.filter(
-    (target) => target.tier === 'match' || target.tier === 'conservative',
-  ).length
-
-  const candidates: RecommendationCandidate[] = products.map((product) => {
-    const searchable = productSearchText(product)
-    const needs: string[] = []
-    let score = 0
-
-    for (const rule of NEED_RULES) {
-      if (
-        hasAny(reportText, rule.reportKeywords) &&
-        hasAny(searchable, rule.productKeywords)
-      ) {
-        score += rule.weight
-        needs.push(rule.label)
-      }
-    }
-
-    if (hasEliteTarget && /清北|华五/.test(searchable)) {
-      score += 8
-      needs.push('高目标院校专项准备')
-    }
-
-    if (reachCount > 0 && searchable.includes('跃升')) {
-      score += 5
-      needs.push('冲刺目标能力提升')
-    }
-
-    if (stableCount > 0 && searchable.includes('稳录')) {
-      score += 3
-      needs.push('目标稳妥落地')
-    }
-
-    return {
-      product,
-      score,
-      needs: [...new Set(needs)],
-    }
-  })
-
-  const best = candidates.sort((left, right) => right.score - left.score)[0]
-  if (!best || best.score < 3) return null
-
-  const matchedNeeds = best.needs.slice(0, 3)
-  const needText = matchedNeeds.length
-    ? matchedNeeds.join('、')
-    : '本次评估识别出的关键提升需求'
-
-  return {
-    documentKey: best.product.documentKey,
-    name: best.product.productName,
-    matchedNeeds,
-    matchedNeedsLabel: matchedNeeds.join('、') || '本次评估识别出的关键提升需求',
-    reason:
-      `本次评估的主要需求集中在${needText}；在当前九辰服务方案库中，「${best.product.productName}」的公开服务描述与这些问题匹配度最高。最终是否适用仍建议结合时间窗口和现有材料与老师确认。`,
-  }
 }
 
 function buildReferences(
@@ -355,7 +190,6 @@ Page({
     assessment: null as AssessmentRecord | null,
     output: null as ResultView | null,
     references: [] as AssessmentReportReference[],
-    recommendation: null as RecommendationView | null,
     selectedReference: null as AssessmentReportReference | null,
     exportCanvasHeight: 1600,
   },
@@ -393,22 +227,10 @@ Page({
       )
       const output = buildResultView(assessment.output, references)
 
-      let recommendation: RecommendationView | null = null
-      try {
-        const products = await getProducts()
-        recommendation = buildServiceRecommendation(products, assessment)
-      } catch (error) {
-        console.info(
-          'Product recommendation source unavailable; report remains usable.',
-          error,
-        )
-      }
-
       this.setData({
         assessment,
         output,
         references,
-        recommendation,
         assessmentDate: formatAssessmentDate(
           assessment.completedAt || assessment.updatedAt,
         ),
@@ -427,7 +249,6 @@ Page({
       assessment: this.data.assessment,
       displayName: this.data.displayName,
       references: this.data.references,
-      recommendation: this.data.recommendation,
     }
   },
 
@@ -444,14 +265,6 @@ Page({
 
   onStopTap() {
     // Keep the reference sheet open when the sheet itself is tapped.
-  },
-
-  onServiceDetailTap() {
-    const recommendation = this.data.recommendation
-    if (!recommendation) return
-    wx.navigateTo({
-      url: `/pages/product-detail/product-detail?documentKey=${encodeURIComponent(recommendation.documentKey)}`,
-    })
   },
 
   onCustomerServiceTap() {
