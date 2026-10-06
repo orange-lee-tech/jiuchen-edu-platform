@@ -84,6 +84,12 @@ function normalizePublishedHtml(value: string | undefined) {
     )
 }
 
+function normalizeRemoteUrl(value: string | undefined) {
+  const normalized = value?.trim()
+  if (!normalized) return null
+  return normalized.replace(/^http:\/\//i, 'https://')
+}
+
 export type OfficialAccountPost = {
   sourceKey: string
   title: string
@@ -144,13 +150,13 @@ export async function fetchLatestOfficialAccountPosts(
         sourceKey: `${articleId}:${index}`,
         title: article.title,
         summary: article.digest?.trim() || null,
-        coverUrl: article.thumb_url?.trim() || null,
-        articleUrl: article.url?.trim() || null,
+        coverUrl: normalizeRemoteUrl(article.thumb_url),
+        articleUrl: normalizeRemoteUrl(article.url),
         publishedAt,
         content: {
           html: normalizePublishedHtml(article.content),
           author: article.author?.trim() || null,
-          contentSourceUrl: article.content_source_url?.trim() || null,
+          contentSourceUrl: normalizeRemoteUrl(article.content_source_url),
         },
       })
     })
