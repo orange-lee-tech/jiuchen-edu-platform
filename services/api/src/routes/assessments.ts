@@ -70,6 +70,7 @@ function assessmentImportErrorReply(
     material_document_source_download_failed: 'assessment_import_source_download_failed',
     material_document_file_too_large: 'assessment_import_file_too_large',
     material_document_parser_billing_unavailable: 'assessment_import_parser_billing_unavailable',
+    material_document_parser_permission_denied: 'assessment_import_parser_permission_denied',
     material_document_result_missing: 'assessment_import_parser_failed',
     material_document_result_download_failed: 'assessment_import_parser_failed',
     material_document_result_invalid: 'assessment_import_parser_failed',
@@ -99,7 +100,8 @@ function assessmentImportErrorReply(
           : code === 'assessment_import_provider_not_configured' ||
               code === 'assessment_import_parser_not_configured' ||
               code === 'assessment_import_parser_not_enabled' ||
-              code === 'assessment_import_parser_billing_unavailable'
+              code === 'assessment_import_parser_billing_unavailable' ||
+              code === 'assessment_import_parser_permission_denied'
             ? 503
             : 502
 
