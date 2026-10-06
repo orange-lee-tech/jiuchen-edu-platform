@@ -234,3 +234,40 @@
 .suggestion-item:last-child {
   border-bottom: 0;
 }
+
+.import-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.import-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.import-desc {
+  display: block;
+  margin-top: 8rpx;
+  color: #7d838e;
+  font-size: 20rpx;
+  line-height: 1.55;
+}
+
+.import-button {
+  flex: 0 0 148rpx;
+  width: 148rpx;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 14rpx;
+  background: #2f6fed;
+  color: #ffffff;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 68rpx;
+}
+
+.import-button::after {
+  border: 0;
+}
