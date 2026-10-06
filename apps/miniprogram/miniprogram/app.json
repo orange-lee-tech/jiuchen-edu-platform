@@ -8,6 +8,7 @@
     "pages/profile/profile",
     "pages/growth-profile/growth-profile",
     "pages/login/login",
+    "pages/user-agreement/user-agreement",
     "pages/profile-edit/profile-edit",
     "pages/admin/admin",
     "pages/assessment-form/assessment-form",
