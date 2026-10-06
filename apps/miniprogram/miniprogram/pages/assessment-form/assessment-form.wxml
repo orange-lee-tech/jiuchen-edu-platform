@@ -120,14 +120,14 @@
       <text class="status-title">{{providerConfigured ? 'AI 运行环境已配置' : '当前仅保存 Draft'}}</text>
       <text class="status-desc">
         {{providerConfigured
-          ? '运行时将先检索院校 / 项目 / 案例证据，再调用模型。'
+          ? '提交后将在后台完成分析，可离开此页并在历史评估中查看进度。'
           : '案例 Retriever 与真实模型接入前，不生成模拟匹配分或录取概率。'}}
       </text>
     </view>
 
     <view class="actions">
       <button class="secondary" loading="{{saving}}" bindtap="onSaveDraft">保存评估草稿</button>
-      <button class="primary" loading="{{saving}}" bindtap="onRunAssessment">运行 AI 评估</button>
+      <button class="primary" loading="{{saving}}" bindtap="onRunAssessment">提交后台评估</button>
     </view>
   </block>
 </view>

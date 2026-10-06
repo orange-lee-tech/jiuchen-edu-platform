@@ -2,7 +2,7 @@
   <view class="hero">
     <text class="eyebrow">ASSESSMENT HISTORY</text>
     <text class="title">我的保研评估</text>
-    <text class="desc">已完成的报告会长期保留当次输入、模型与证据版本，方便随时回看。</text>
+    <text class="desc">提交后可直接离开，后台分析进度与完成结果会在这里持续更新。</text>
   </view>
 
   <view wx:if="{{loading}}" class="state-card">正在加载…</view>
@@ -29,6 +29,8 @@
         <text>{{item.dateLabel}}</text>
         <text wx:if="{{item.status === 'succeeded'}}" class="link">查看报告 ›</text>
         <text wx:elif="{{item.status === 'draft'}}" class="link">继续编辑 ›</text>
+        <text wx:elif="{{item.status === 'running'}}" class="link">后台分析中…</text>
+        <text wx:elif="{{item.status === 'failed'}}" class="link">运行失败</text>
       </view>
     </view>
   </view>
