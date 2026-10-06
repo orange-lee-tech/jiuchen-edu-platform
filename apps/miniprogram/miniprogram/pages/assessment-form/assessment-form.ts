@@ -670,9 +670,22 @@ Page({
         wx.redirectTo({
           url: `/pages/assessment-result/assessment-result?id=${encodeURIComponent(result.id)}`,
         })
-      } else {
-        wx.showToast({ title: '评估未完成，请稍后重试', icon: 'none' })
+        return
       }
+
+      if (result.status === 'running') {
+        wx.showToast({
+          title: '已提交后台分析',
+          icon: 'success',
+          duration: 1200,
+        })
+        wx.redirectTo({
+          url: '/pages/assessment-history/assessment-history',
+        })
+        return
+      }
+
+      wx.showToast({ title: '评估未进入运行状态，请稍后重试', icon: 'none' })
     } catch (error) {
       wx.showToast({
         title: friendlyRequestError(error, '评估运行失败，请稍后重试'),

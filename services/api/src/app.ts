@@ -20,6 +20,8 @@ import {
   createScheduleAIProvider,
 } from './services/ai-provider.js'
 import { createAssessmentRuntimeFromEnv } from './services/assessment-runtime.js'
+import { createAssessmentBackgroundWorker } from './services/assessment-background.js'
+import { createAssessmentNotificationAdapter } from './services/assessment-notification.js'
 import { createCommercialConfig } from './services/commercial-config.js'
 import { createWechatPayGatewayFromEnv } from './services/wechat-pay.js'
 
@@ -35,6 +37,18 @@ export function buildApp(env: AppEnv) {
   const scheduleAI = createScheduleAIProvider(env)
   const customerAI = createCustomerServiceAIProvider(env)
   const commercialConfig = createCommercialConfig(env)
+  const assessmentCommercial = {
+    creditEnforcementEnabled: commercialConfig.creditEnforcementEnabled,
+    freeGrant: commercialConfig.freeGrant,
+  }
+  const assessmentNotification = createAssessmentNotificationAdapter()
+  const assessmentWorker = createAssessmentBackgroundWorker({
+    database,
+    runtime: assessmentRuntime,
+    commercial: assessmentCommercial,
+    notification: assessmentNotification,
+    logger: app.log,
+  })
   const wechatPay = createWechatPayGatewayFromEnv(env)
   const cloudbaseCamConfigured = Boolean(
     env.TENCENTCLOUD_SECRETID && env.TENCENTCLOUD_SECRETKEY,
@@ -67,6 +81,9 @@ export function buildApp(env: AppEnv) {
       cloudbaseCamConfigured,
       cloudbaseExternalConfigured,
       assessmentAiConfigured: assessmentRuntime.provider.isConfigured(),
+      assessmentBackgroundExecution: database.configured,
+      assessmentCompletionNotificationConfigured:
+        assessmentWorker.completionNotification.configured,
       scheduleAiConfigured: scheduleAI.isConfigured(),
       customerAiConfigured: customerAI.isConfigured(),
     },
@@ -171,10 +188,13 @@ export function buildApp(env: AppEnv) {
   registerTeacherRoutes(app, database)
   registerMobileAdminRoutes(app, database, env)
   registerNewsRoutes(app, database)
-  registerAssessmentRoutes(app, database, assessmentRuntime, {
-    creditEnforcementEnabled: commercialConfig.creditEnforcementEnabled,
-    freeGrant: commercialConfig.freeGrant,
-  })
+  registerAssessmentRoutes(
+    app,
+    database,
+    assessmentRuntime,
+    assessmentCommercial,
+    assessmentWorker,
+  )
   registerProductRoutes(app, database)
   registerBrandRoutes(app)
   registerClassroomWorkspaceRoutes(app, database, env)
@@ -182,7 +202,12 @@ export function buildApp(env: AppEnv) {
   registerCommercialRoutes(app, database, commercialConfig, wechatPay)
   registerAdminRoutes(app, database, env)
 
+  app.addHook('onReady', async () => {
+    assessmentWorker.start()
+  })
+
   app.addHook('onClose', async () => {
+    assessmentWorker.stop()
     if (database.configured) {
       await database.pool.end()
     }

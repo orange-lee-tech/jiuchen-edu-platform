@@ -883,6 +883,15 @@ export async function getAssessmentMeta(): Promise<{
     competitionExperiences: number
   }
   providerConfigured: boolean
+  backgroundExecution: {
+    enabled: boolean
+    stateStore: 'assessments'
+    terminalStates: Array<'succeeded' | 'failed'>
+  }
+  completionNotification: {
+    channel: 'none' | 'wechat_subscribe'
+    configured: boolean
+  }
   outputPolicy: {
     preciseAdmissionProbability: false
     evidenceRequiredForClaims: true
