@@ -303,3 +303,54 @@ pass:
 - manual add/edit/delete and persistence;
 - current-week view;
 - image-import manual fallback when Schedule AI is not configured.
+
+
+---
+
+## 2026-10-06 Schedule AI configuration + real XLS diagnosis
+
+Production Schedule AI configuration now has direct provider evidence:
+
+- provider: qianwen-maas;
+- base URL: existing production Qianwen-compatible endpoint;
+- model: qwen3-vl-plus;
+- real multimodal probe: HTTP 200;
+- model correctly described the test image;
+- production env remains root:root mode 0600;
+- /health/config reports scheduleAiConfigured=true;
+- Assessment AI remains configured.
+
+A first /health call immediately after service restart again returned 503 while
+/health/live and /health/config were healthy. This matches the previously recorded
+post-restart cold DB connection pattern. Repository hardening increases the bounded DB
+connect timeout from 3000 ms to 5000 ms in commit
+38fb1480b5a076d23a2042bb5c33f609141db8c6.
+
+### Real CSU/WPS XLS root cause
+
+The operator-provided real WPS .xls fixture was inspected. Its structure is regular and
+should be handled deterministically rather than delegated to AI.
+
+The original parser failed for multiple concrete reasons:
+
+1. clock rows such as 08:00 were parsed as section numbers 8 and 0, producing an
+   invalid endSection=0 and causing canonical validation failure;
+2. week expressions such as 3-8[周], 12-15[周], and 2-4,8-20[双周] were not recognized;
+3. room forms such as 科教北203 and C座502 were not consistently recognized;
+4. a split teacher/week form such as
+   哈纳提·吐尔森哈力 + (讲师)3,5[周] needed joining rather than treating the title/week
+   fragment as the teacher itself.
+
+Repository fixes:
+
+- 5c53a329c99582f86f5d742e5cb1e8200f47cf76
+  fix: parse WPS timetable clock rows
+- bfc133826ef0f6633b6b708f8c615ccb2491f9af
+  test: cover CSU WPS timetable import
+
+The regression test mirrors the real CSU/WPS layout with merged weekday headers,
+clock-based rows, bracketed week expressions, Chinese building-room strings and the
+split teacher/title/week case.
+
+Do not re-test the real XLS against production until these commits are included in a
+new backend release; the currently active runtime predates them.
