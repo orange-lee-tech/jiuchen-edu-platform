@@ -223,3 +223,63 @@ For current work:
 3. current code and production evidence;
 4. older 2026-10-04 and earlier handoffs for history only.
 
+
+
+## 11. Priority update — 2026-10-06 evening sprint
+
+The Assessment 502 incident is now CLOSED.
+
+Production hotfix:
+`34892d8c44052d955224b1e1882cde34a73a53f7`
+
+Real experience-build evidence:
+- fresh Assessment completed;
+- `POST /me/assessments/:id/run` returned HTTP 200;
+- runtime was approximately 54 seconds;
+- no new 502 / execution-failed record in the acceptance window;
+- user-visible result rendered successfully.
+
+The incident closeout is:
+`docs/handoff/assessment-502-production-incident-closeout-2026-10-06.md`
+
+### Active sprint focus
+
+Primary effort now moves to:
+
+1. **non-blocking Assessment execution UX**
+   - submission must not trap the user on a loading page for the full model runtime;
+   - History is the reliable in-app completion/status surface;
+   - WeChat subscription-message notification is an enhancement/follow-up once the approved template contract is available;
+   - do not reopen model selection, Prompt, RAG or benchmark work.
+
+2. **notification / operations mechanism**
+   - Assessment completion notification;
+   - new Official Account posts that remain unclassified must surface an in-app pending-classification signal to staff who are allowed to act;
+   - WeChat subscription messages augment, but do not replace, reliable in-app state.
+
+3. **Schedule final closure**
+   - ship the reviewed real-XLS parser fixes;
+   - re-test the exact real WPS/CSU file;
+   - preserve import/edit as the primary Schedule action;
+   - “current week” remains a secondary convenience view and must not displace import/edit.
+
+4. **News final closure**
+   - confirm automatic sync is actually active in production;
+   - confirm article detail, cover/media, server tags and re-sync tag preservation;
+   - close the unclassified-content operations loop.
+
+### Candidate priority after the active sprint
+
+If the active sprint passes, the next candidate order is:
+
+1. **Experience Blueprint / full-site UI and UX consolidation** — highest candidate priority.
+2. **Customer AI Lite** — FAQ/RAG-first, low-cost model, human handoff remains guaranteed.
+3. **Product Knowledge operationalization** — promote only when live content operations need DB-backed editing/import rather than bundled fallback.
+4. **Opportunity deterministic personalization** — only after real tags/deadlines/profile signals exist.
+5. **Admin operational-efficiency improvements** — batch tagging/assignment/search based on real operator pain.
+6. **Commercial productionization / real WeChat Pay** — intentionally lower priority until business pricing/free-grant decisions and merchant materials are ready.
+7. **AI fine-tuning** — only if real production error patterns prove RAG/Prompt/Schema insufficient.
+8. **Custom TabBar** — only if native four-slot role-aware navigation is proven insufficient.
+9. **Current-week Schedule embellishment** — lowest priority; it is only a convenience view after reliable import/edit.
+
+This priority order intentionally favors customer-visible product quality and delivery over premature monetization mechanics or low-value convenience features.
