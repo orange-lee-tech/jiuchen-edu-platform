@@ -24,7 +24,17 @@
     data-id="{{featured.id}}"
     bindtap="onArticleTap"
   >
-    <image wx:if="{{featured.coverUrl}}" class="featured-cover" src="{{featured.coverUrl}}" mode="aspectFill" />
+    <view class="featured-media">
+      <image
+        wx:if="{{featured.coverUrl && !featured.coverFailed}}"
+        class="featured-cover"
+        src="{{featured.coverUrl}}"
+        mode="aspectFill"
+        data-id="{{featured.id}}"
+        binderror="onCoverError"
+      />
+      <view wx:else class="cover-fallback featured-fallback">讯</view>
+    </view>
     <view class="featured-body">
       <text class="featured-tag">{{featured.primaryTag}}</text>
       <text class="featured-title">{{featured.title}}</text>
@@ -46,7 +56,17 @@
       data-id="{{item.id}}"
       bindtap="onArticleTap"
     >
-      <image wx:if="{{item.coverUrl}}" class="article-cover" src="{{item.coverUrl}}" mode="aspectFill" />
+      <view class="article-media">
+        <image
+          wx:if="{{item.coverUrl && !item.coverFailed}}"
+          class="article-cover"
+          src="{{item.coverUrl}}"
+          mode="aspectFill"
+          data-id="{{item.id}}"
+          binderror="onCoverError"
+        />
+        <view wx:else class="cover-fallback">讯</view>
+      </view>
       <view class="article-main">
         <view class="article-tags">
           <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text>
