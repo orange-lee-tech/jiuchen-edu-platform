@@ -344,6 +344,7 @@ async function loadClassroom(
         .orderBy(asc(studentTeacherAssignments.createdAt))
     : []
 
+  let guidanceRecordsReady = true
   let records: Array<{
     id: string
     teacherId: string | null
@@ -377,6 +378,7 @@ async function loadClassroom(
         .orderBy(desc(coachingRecords.occurredAt))
     } catch (error) {
       if (!isMissingTableError(error)) throw error
+      guidanceRecordsReady = false
       records = []
     }
   }
@@ -387,6 +389,7 @@ async function loadClassroom(
     stage,
     showGuidance,
     mentors,
+    guidanceRecordsReady,
     records: records.map((record) => ({
       ...record,
       occurredAt: record.occurredAt.toISOString(),
