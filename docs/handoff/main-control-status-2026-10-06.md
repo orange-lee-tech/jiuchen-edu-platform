@@ -319,3 +319,49 @@ Do not reopen Assessment model/Prompt/RAG work. The next step is a controlled pr
 `quick submit -> History running -> user may leave -> later succeeded/failed`.
 
 Because repository HEAD contains post-production work from several modules, rollout must use a reviewed/frozen release candidate rather than blindly promoting an arbitrary moving HEAD.
+
+
+## 13. Assessment import + Classroom UI integration — 2026-10-07
+
+The isolated work package `p1/assessment-import-classroom-ui-20261006` is integrated into `p1/foundation` by fast-forward.
+
+Integrated HEAD:
+`03059c5aa0c7a48a8cf6c5fc5d2ab94b4cc4bb30`
+
+Integration properties:
+- feature branch was ahead of `p1/foundation` and behind by 0;
+- merge base was the prior `p1/foundation` HEAD;
+- no conflict resolution or history rewrite was required;
+- isolated branch final CI was PASS;
+- integration branch CI must still be observed on the new HEAD before production rollout.
+
+Integrated scope:
+- Assessment evidence-reference containment carried forward;
+- Assessment report sections/export renumbered to continuous 01–06;
+- consultant-style Assessment guidance hardened from real manual-assessment/resume examples;
+- Assessment material import for Word/PDF/images through CloudBase temporary object -> pluggable document extractor -> structured candidate -> explicit user confirmation -> form prefill;
+- Tencent Cloud `MultimodalDocParse` extractor adapter;
+- shared CloudBase upload helper;
+- bounded file/page/text/result sizes and source cleanup;
+- Classroom schedule-import priority correction;
+- current-week schedule demoted to a convenience timeline entry;
+- Classroom guidance readiness now degrades honestly when `coaching_records` is absent instead of failing the whole page.
+
+### External capability gate
+
+Code integration does not mean material import is production-ready.
+
+Required external gate:
+1. Tencent Cloud OCR / multimodal document parsing service is actually opened for the production account.
+2. The production CAM principal is authorized for the required OCR operation.
+3. Billing/quota is usable.
+4. A real API probe succeeds against `MultimodalDocParse`.
+5. Only after the live probe passes should the API release be rolled out and DOCX/PDF/image mini-program acceptance run.
+
+Important: `/health/config assessmentMaterialImportConfigured=true` proves only that the required environment credentials/provider prerequisites are present in code. It does **not** prove that the Tencent OCR product is opened, CAM authorization is sufficient, or billing/quota is usable. The live probe is authoritative.
+
+### Classroom guidance schema
+
+The Classroom change intentionally allows Plan/Schedule to remain usable when `coaching_records` is absent.
+
+The final `coaching_records` schema upgrade remains a separate production write gate. It must not block integration of the Assessment import or the rest of Classroom, and it must not be executed without the normal production schema approval process.
