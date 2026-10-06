@@ -238,6 +238,12 @@ async function requestTencentDocumentParse(
     ) {
       throw new Error('material_document_parser_billing_unavailable')
     }
+    if (
+      code.startsWith('AuthFailure.') ||
+      code === 'UnauthorizedOperation'
+    ) {
+      throw new Error('material_document_parser_permission_denied')
+    }
     throw new Error('material_document_parser_failed:' + code)
   }
 
