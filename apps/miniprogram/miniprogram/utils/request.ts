@@ -176,6 +176,18 @@ export function friendlyRequestError(
     growth_profile_schema_not_ready: '成长履历服务正在准备中，请稍后重试',
     assessment_or_growth_schema_not_ready: '成长履历与评估数据正在准备中，请稍后重试',
     assessment_provider_not_configured: 'AI模型尚未接入，暂时不能运行评估',
+    assessment_import_provider_not_configured: '材料结构化模型尚未配置',
+    assessment_import_parser_not_configured: '材料解析服务尚未配置',
+    assessment_import_parser_not_enabled: '腾讯云文档解析服务尚未开通，请联系管理员开通后重试',
+    assessment_import_parser_billing_unavailable: '材料解析服务当前无可用额度，请联系管理员',
+    assessment_import_parser_timeout: '材料解析超时，请稍后重试或换一份更精简的文件',
+    assessment_import_parser_result_too_large: '解析结果过大，请使用更精简的材料',
+    assessment_import_source_download_failed: '上传文件暂时无法读取，请重新选择文件',
+    assessment_import_document_text_empty: '没有识别到可用文字，请换清晰文件或图片重试',
+    assessment_import_file_too_large: '材料文件过大，请压缩后重试',
+    assessment_import_file_type_not_allowed: '暂不支持该材料格式，请使用 Word、PDF 或常见图片',
+    assessment_import_ai_failed: '材料已读取，但结构化失败，请稍后重试',
+
     schedule_ai_provider_not_configured: '图片课表识别服务尚未接入，当前请先使用表格导入',
     schedule_spreadsheet_invalid: '未识别出有效课表结构，请检查星期表头与课程单元格布局',
     schedule_weekday_header_not_found: '未找到周一至周日表头，请检查课表格式',
@@ -896,6 +908,11 @@ export async function getAssessmentMeta(): Promise<{
     preciseAdmissionProbability: false
     evidenceRequiredForClaims: true
   }
+  materialImport: {
+    enabled: boolean
+    documentFormats: string[]
+    imageFormats: string[]
+  }
 }> {
   const result = await request<{
     ok: true
@@ -924,9 +941,54 @@ export async function getAssessmentMeta(): Promise<{
       preciseAdmissionProbability: false
       evidenceRequiredForClaims: true
     }
+    materialImport: {
+      enabled: boolean
+      documentFormats: string[]
+      imageFormats: string[]
+    }
   }>('/assessments/meta')
   return result
 }
+
+export type AssessmentImportCandidate = {
+  profile: {
+    university: string | null
+    major: string | null
+    currentGrade: string | null
+    gpaText: string | null
+    rankText: string | null
+    backgroundNote: string | null
+  }
+  english: AssessmentEnglishRecord[]
+  research: AssessmentResearchExperience[]
+  competitions: AssessmentCompetitionExperience[]
+  targets: AssessmentTarget[]
+  warnings: string[]
+}
+
+export async function importAssessmentProfileMaterial(payload: {
+  fileID: string
+  fileName: string
+  sourceType: 'document' | 'image'
+}): Promise<{
+  candidate: AssessmentImportCandidate
+  summary: string
+}> {
+  const result = await request<{
+    ok: true
+    candidate: AssessmentImportCandidate
+    summary: string
+  }>(
+    '/me/assessments/import-profile',
+    'POST',
+    payload as unknown as WechatMiniprogram.IAnyObject,
+  )
+  return {
+    candidate: result.candidate,
+    summary: result.summary,
+  }
+}
+
 
 export async function createAssessmentDraft(
   input: AssessmentInput,
