@@ -446,7 +446,6 @@ export async function extractPdfText(buffer: Buffer) {
   const loadingTask = getDocument({
     data: new Uint8Array(buffer),
     useSystemFonts: true,
-    isEvalSupported: false,
   })
 
   try {
