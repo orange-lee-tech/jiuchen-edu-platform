@@ -5,15 +5,18 @@ import {
   getAssessmentMeta,
   getMyAcademicProfile,
   getMyAssessment,
+  importAssessmentProfileMaterial,
   runMyAssessment,
   updateMyAcademicProfile,
   updateAssessmentDraft,
   type AssessmentCompetitionExperience,
   type AssessmentEnglishRecord,
+  type AssessmentImportCandidate,
   type AssessmentResearchExperience,
   type AssessmentTarget,
   type AcademicProfile,
 } from '../../utils/request'
+import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
 
 type AcademicProfileField = keyof AcademicProfile
 
@@ -205,12 +208,34 @@ const ENGLISH_TYPES = [
   { value: 'other', label: '其他' },
 ] as const
 
+const MAX_IMPORT_DOCUMENT_BYTES = 8 * 1024 * 1024
+const MAX_IMPORT_IMAGE_BYTES = 5 * 1024 * 1024
+
+function mergeUnique<T>(
+  current: T[],
+  incoming: T[],
+  keyOf: (item: T) => string,
+  limit: number,
+) {
+  const seen = new Set<string>()
+  return [...current, ...incoming]
+    .filter((item) => {
+      const key = keyOf(item).trim().toLocaleLowerCase('zh-CN')
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, limit)
+}
+
 Page({
   data: {
     loading: true,
     saving: false,
     profileSaving: false,
+    importing: false,
     providerConfigured: false,
+    materialImportConfigured: false,
     draftId: '',
     profile: {
       university: '',
@@ -273,6 +298,7 @@ Page({
 
       this.setData({
         providerConfigured: meta.providerConfigured,
+        materialImportConfigured: meta.materialImport.enabled,
         draftId: draft?.id || '',
         profile: {
           university: draftProfile?.university || profile.university || '',
@@ -313,6 +339,205 @@ Page({
     wx.pageScrollTo({
       selector: `#section-${section}`,
       duration: 220,
+    })
+  },
+
+  onImportMaterial() {
+    if (!this.data.materialImportConfigured) {
+      wx.showModal({
+        title: '材料导入暂不可用',
+        content: '材料解析服务尚未完成配置。你仍可继续手动填写评估资料。',
+        showCancel: false,
+      })
+      return
+    }
+
+    wx.showActionSheet({
+      itemList: ['Word / PDF 文件', '图片'],
+      success: (result) => {
+        if (result.tapIndex === 0) this.onChooseImportDocument()
+        if (result.tapIndex === 1) this.onChooseImportImage()
+      },
+    })
+  },
+
+  onChooseImportDocument() {
+    wx.chooseMessageFile({
+      count: 1,
+      type: 'file',
+      extension: ['doc', 'docx', 'pdf'],
+      success: (result) => {
+        const file = result.tempFiles[0]
+        if (!file) return
+        void this.uploadAndImportMaterial(
+          file.path,
+          file.name || 'resume.pdf',
+          'document',
+          file.size ?? 0,
+        )
+      },
+    })
+  },
+
+  onChooseImportImage() {
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      success: (result) => {
+        const file = result.tempFiles[0]
+        if (!file) return
+        const lower = file.tempFilePath.toLowerCase()
+        const extension = lower.includes('.png')
+          ? 'png'
+          : lower.includes('.webp')
+            ? 'webp'
+            : 'jpg'
+        void this.uploadAndImportMaterial(
+          file.tempFilePath,
+          'resume.' + extension,
+          'image',
+          file.size ?? 0,
+        )
+      },
+    })
+  },
+
+  async uploadAndImportMaterial(
+    filePath: string,
+    fileName: string,
+    sourceType: 'document' | 'image',
+    fileSize: number,
+  ) {
+    const maxBytes =
+      sourceType === 'image'
+        ? MAX_IMPORT_IMAGE_BYTES
+        : MAX_IMPORT_DOCUMENT_BYTES
+
+    if (fileSize > maxBytes) {
+      wx.showModal({
+        title: '材料文件过大',
+        content:
+          sourceType === 'image'
+            ? '单张图片请控制在 5MB 以内。'
+            : 'Word / PDF 请控制在 8MB 以内，建议只上传与保研评估有关的核心材料。',
+        showCancel: false,
+      })
+      return
+    }
+
+    try {
+      this.setData({ importing: true })
+      wx.showLoading({ title: '正在识别材料' })
+      const fileID = await uploadAuthenticatedCloudFile({
+        namespace: 'assessment-imports',
+        filePath,
+        fileName,
+      })
+      const result = await importAssessmentProfileMaterial({
+        fileID,
+        fileName,
+        sourceType,
+      })
+      wx.hideLoading()
+
+      const warningText = result.candidate.warnings
+        .slice(0, 3)
+        .join('\n')
+      const content =
+        result.summary +
+        '\n\n导入只负责预填，不会直接提交评估；已有内容会保留，识别结果会补充到空白字段和经历列表。' +
+        (warningText ? '\n\n请注意：\n' + warningText : '')
+
+      wx.showModal({
+        title: '应用识别结果？',
+        content,
+        confirmText: '应用预填',
+        cancelText: '不应用',
+        success: (modal) => {
+          if (!modal.confirm) return
+          this.applyImportedCandidate(result.candidate)
+          wx.showToast({
+            title: '已预填，请核对',
+            icon: 'success',
+          })
+        },
+      })
+    } catch (error) {
+      wx.hideLoading()
+      wx.showModal({
+        title: '材料导入失败',
+        content: friendlyRequestError(
+          error,
+          '材料暂时无法解析，请稍后重试或改用手动填写',
+        ),
+        showCancel: false,
+      })
+    } finally {
+      this.setData({ importing: false })
+    }
+  },
+
+  applyImportedCandidate(candidate: AssessmentImportCandidate) {
+    const currentProfile = this.data.profile
+    const incomingProfile = candidate.profile
+    const profile = {
+      university:
+        currentProfile.university || incomingProfile.university || '',
+      major: currentProfile.major || incomingProfile.major || '',
+      currentGrade:
+        currentProfile.currentGrade || incomingProfile.currentGrade || '',
+      gpaText: currentProfile.gpaText || incomingProfile.gpaText || '',
+      rankText: currentProfile.rankText || incomingProfile.rankText || '',
+      backgroundNote:
+        currentProfile.backgroundNote || incomingProfile.backgroundNote || '',
+    }
+
+    const english = mergeUnique(
+      this.data.english,
+      candidate.english,
+      (item) => item.type + '|' + item.score,
+      6,
+    )
+    const research = mergeUnique(
+      this.data.research,
+      candidate.research,
+      (item) => item.title + '|' + (item.organization || ''),
+      12,
+    )
+    const competitions = mergeUnique(
+      this.data.competitions,
+      candidate.competitions,
+      (item) => item.name + '|' + (item.award || ''),
+      12,
+    )
+    const currentTargets = this.data.targets.filter((item) =>
+      item.schoolName.trim(),
+    )
+    const targets = mergeUnique(
+      currentTargets,
+      candidate.targets,
+      (item) => item.schoolName + '|' + (item.programName || ''),
+      5,
+    )
+
+    this.setData({
+      profile,
+      english,
+      research,
+      competitions,
+      competitionSuggestions: competitions.map(() => []),
+      targets:
+        targets.length > 0
+          ? targets
+          : [
+              {
+                schoolName: '',
+                programName: '',
+                researchDirection: '',
+                note: '',
+              },
+            ],
     })
   },
 
