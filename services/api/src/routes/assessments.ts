@@ -64,10 +64,26 @@ function assessmentImportErrorReply(
   error: unknown,
 ) {
   const rawCode = error instanceof Error ? error.message : 'assessment_import_failed'
+  const materialCodeMap: Record<string, string> = {
+    material_document_parser_not_configured: 'assessment_import_parser_not_configured',
+    material_document_parser_not_enabled: 'assessment_import_parser_not_enabled',
+    material_document_source_download_failed: 'assessment_import_source_download_failed',
+    material_document_file_too_large: 'assessment_import_file_too_large',
+    material_document_parser_billing_unavailable: 'assessment_import_parser_billing_unavailable',
+    material_document_result_missing: 'assessment_import_parser_failed',
+    material_document_result_download_failed: 'assessment_import_parser_failed',
+    material_document_result_invalid: 'assessment_import_parser_failed',
+    material_document_result_too_large: 'assessment_import_parser_result_too_large',
+    material_document_result_text_missing: 'assessment_import_document_text_empty',
+    material_document_result_text_empty: 'assessment_import_document_text_empty',
+    material_document_result_compression_unsupported: 'assessment_import_parser_failed',
+    material_document_temp_url_failed: 'assessment_import_source_download_failed',
+    material_document_parser_timeout: 'assessment_import_parser_timeout',
+  }
   const code =
     rawCode.startsWith('assessment_import_')
       ? rawCode
-      : 'assessment_import_ai_failed'
+      : materialCodeMap[rawCode] ?? 'assessment_import_ai_failed'
 
   const status =
     code === 'assessment_import_file_too_large'
@@ -75,14 +91,12 @@ function assessmentImportErrorReply(
       : code === 'assessment_import_file_type_not_allowed' ||
           code === 'assessment_import_file_not_owned'
         ? 400
-        : code === 'assessment_import_document_text_empty' ||
-            code === 'assessment_import_pdf_text_empty' ||
-            code === 'assessment_import_docx_invalid' ||
-            code === 'assessment_import_docx_too_complex' ||
-            code === 'assessment_import_docx_compression_unsupported'
+        : code === 'assessment_import_document_text_empty'
           ? 422
           : code === 'assessment_import_provider_not_configured' ||
-              code === 'assessment_import_image_provider_not_configured'
+              code === 'assessment_import_parser_not_configured' ||
+              code === 'assessment_import_parser_not_enabled' ||
+              code === 'assessment_import_parser_billing_unavailable'
             ? 503
             : 502
 
@@ -228,7 +242,7 @@ export function registerAssessmentRoutes(
     },
     materialImport: {
       enabled: importService.configured,
-      documentFormats: ['docx', 'pdf'],
+      documentFormats: ['doc', 'docx', 'pdf'],
       imageFormats: ['jpg', 'jpeg', 'png', 'webp'],
     },
   }))
