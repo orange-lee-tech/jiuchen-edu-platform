@@ -85,9 +85,11 @@ function assessmentImportErrorReply(
   const code =
     rawCode.startsWith('assessment_import_')
       ? rawCode
-      : rawCode.startsWith('material_document_parser_failed:')
-        ? 'assessment_import_parser_failed'
-        : materialCodeMap[rawCode] ?? 'assessment_import_ai_failed'
+      : rawCode.startsWith('material_document_parser_failed:InternalError')
+        ? 'assessment_import_parser_internal_error'
+        : rawCode.startsWith('material_document_parser_failed:')
+          ? 'assessment_import_parser_failed'
+          : materialCodeMap[rawCode] ?? 'assessment_import_ai_failed'
 
   const status =
     code === 'assessment_import_file_too_large'
