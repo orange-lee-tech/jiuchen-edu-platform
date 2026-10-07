@@ -12,7 +12,6 @@ const TENCENT_OCR_VERSION = '2018-11-19'
 const TENCENT_OCR_ACTION = 'MultimodalDocParse'
 const TENCENT_OCR_ENDPOINT = 'https://' + TENCENT_OCR_HOST
 const MAX_RESULT_ARCHIVE_BYTES = 6 * 1024 * 1024
-const DEFAULT_MAX_PAGES = 20
 
 export type MaterialDocumentKind = 'document' | 'image'
 
@@ -170,7 +169,6 @@ async function requestTencentDocumentParse(
   env: AppEnv,
   fileUrl: string,
   fileName: string,
-  maxPages: number,
 ) {
   if (!env.TENCENTCLOUD_SECRETID || !env.TENCENTCLOUD_SECRETKEY) {
     throw new Error('material_document_parser_not_configured')
@@ -188,10 +186,6 @@ async function requestTencentDocumentParse(
     EnableSubImg: false,
     TaskType: 0,
   }
-  if (fileType === 1 || fileType === 2) {
-    body.PageRange = '1-' + String(maxPages)
-  }
-
   const payload = JSON.stringify(body)
   const timestamp = Math.floor(Date.now() / 1000)
   const authorization = tencentAuthorization({
@@ -244,7 +238,10 @@ async function requestTencentDocumentParse(
     ) {
       throw new Error('material_document_parser_permission_denied')
     }
-    throw new Error('material_document_parser_failed:' + code)
+    const requestId = raw.Response?.RequestId || 'unknown'
+    throw new Error(
+      'material_document_parser_failed:' + code + ':request=' + requestId,
+    )
   }
 
   const resultUrl = raw.Response?.ResultUrl
@@ -439,23 +436,16 @@ export function createTencentMaterialDocumentExtractor(
 
       const fileUrl = await temporaryFileUrl(env, input.fileID)
       await assertRemoteSizeWithinLimit(fileUrl, input.maxBytes)
-      const maxPages = Math.min(
-        Math.max(input.maxPages ?? DEFAULT_MAX_PAGES, 1),
-        DEFAULT_MAX_PAGES,
-      )
       const resultUrl = await requestTencentDocumentParse(
         env,
         fileUrl,
         input.fileName,
-        maxPages,
       )
       const text = await downloadResultText(resultUrl)
       const warnings =
         input.kind === 'document'
           ? [
-              '为控制解析成本与资源占用，文档最多读取前 ' +
-                String(maxPages) +
-                ' 页；请在预填后人工确认关键字段。',
+              '当前由腾讯云按完整文档解析；建议上传精简材料，并在预填后人工确认关键字段。',
             ]
           : ['图片文字由腾讯云文档解析识别；请在预填后人工确认关键字段。']
 
