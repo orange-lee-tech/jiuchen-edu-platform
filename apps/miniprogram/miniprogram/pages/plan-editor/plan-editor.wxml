@@ -6,6 +6,7 @@
   </view>
 
   <view class="surface editor-card">
+    <view wx:if="{{schedulePrefillCount > 0}}" class="empty-note">已从最近一次课表带入 {{schedulePrefillCount}} 门课程。当前只是你的编辑草稿，补充目标后点击底部保存才会提交老师审核。</view>
     <text class="field-label">计划名称</text>
     <input class="title-input" value="{{title}}" placeholder="填写计划名称" bindinput="onTitleInput" />
 

@@ -1,6 +1,7 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import {
   getClassroomStages,
+  getLatestScheduleImport,
   getMyClassroom,
   type ClassroomCoachingRecord,
   type ClassroomMentor,
@@ -88,13 +89,17 @@ function emptyStageView(stage: ClassroomStage, index: number) {
   }
 }
 
-function toPlanCard(plan: ClassroomPlan): PlanCard {
+function toPlanCard(plan: ClassroomPlan, scheduleCourseCount = 0): PlanCard {
   const template = PLAN_CARDS[plan.type]
   const completed = plan.items.filter((item) => item.status === 'done').length
   return {
     ...template,
     title: plan.title,
     progress: `${completed} / ${plan.items.length}`,
+    note:
+      plan.type === 'gpa' && plan.items.length === 0 && scheduleCourseCount > 0
+        ? `已导入 ${scheduleCourseCount} 门课程，点击进入后生成课程成绩计划`
+        : template.note,
     revisionStatus: plan.revisionStatus || (plan.id ? 'approved' : 'none'),
   }
 }
@@ -104,6 +109,7 @@ Page({
     mode: 'guest' as 'guest' | 'unbound' | 'student' | 'teacher',
     loading: false,
     studentName: '',
+    scheduleCourseCount: 0,
     stages: FALLBACK_STAGES,
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
@@ -131,20 +137,23 @@ Page({
 
     this.setData({ mode: 'student', loading: true })
     try {
-      const [stages, initial] = await Promise.all([
+      const [stages, initial, latestSchedule] = await Promise.all([
         getClassroomStages().catch(() => FALLBACK_STAGES),
         getMyClassroom(),
+        getLatestScheduleImport().catch(() => null),
       ])
       const index = Math.max(
         0,
         stages.findIndex((stage) => stage.code === initial.stage.code),
       )
       const stage = stages[index] || initial.stage
+      const scheduleCourseCount = latestSchedule?.schedule?.courses.length ?? 0
       this.setData({
         stages,
         ...emptyStageView(stage, index),
         studentName: initial.student.name,
-        plans: initial.plans.map(toPlanCard),
+        scheduleCourseCount,
+        plans: initial.plans.map((plan) => toPlanCard(plan, scheduleCourseCount)),
         showGuidance: initial.showGuidance,
         guidanceRecordsReady: initial.guidanceRecordsReady,
         mentors: initial.mentors,
@@ -167,7 +176,7 @@ Page({
 
     this.setData({
       studentName: result.student.name,
-      plans: result.plans.map(toPlanCard),
+      plans: result.plans.map((plan) => toPlanCard(plan, this.data.scheduleCourseCount)),
       showGuidance: result.showGuidance,
       guidanceRecordsReady: result.guidanceRecordsReady,
       mentors: result.mentors,

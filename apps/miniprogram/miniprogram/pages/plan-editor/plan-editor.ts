@@ -1,5 +1,6 @@
 import {
   friendlyRequestError,
+  getLatestScheduleImport,
   getMyClassroom,
   getMyPlanVersions,
   getTeacherStudentClassroom,
@@ -36,6 +37,7 @@ Page({
     items: [] as PlanEditorItem[],
     versions: [] as PlanRevision[],
     revisionStatus: 'none' as 'none' | 'pending' | 'approved',
+    schedulePrefillCount: 0,
     statusOptions: STATUS_OPTIONS,
   },
 
@@ -62,16 +64,38 @@ Page({
       const plan = classroom.plans.find((item) => item.type === this.data.type)
       if (!plan) throw new Error('当前阶段没有该计划')
 
+      const revisionStatus = plan.revisionStatus || (plan.id ? 'approved' : 'none')
+      const items = plan.items.map((item) => ({
+        name: item.name,
+        target: item.target,
+        status: item.status,
+      }))
       this.setData({
         studentName: this.data.studentName || classroom.student.name,
         title: plan.title,
-        items: plan.items.map((item) => ({
-          name: item.name,
-          target: item.target,
-          status: item.status,
-        })),
-        revisionStatus: plan.revisionStatus || (plan.id ? 'approved' : 'none'),
+        items,
+        revisionStatus,
+        schedulePrefillCount: 0,
       })
+
+      if (!this.data.teacherMode && this.data.type === 'gpa' && items.length === 0 && revisionStatus === 'none') {
+        const latestSchedule = await getLatestScheduleImport().catch(() => null)
+        const courseNames = Array.from(new Set(
+          (latestSchedule?.schedule?.courses ?? [])
+            .map((course) => course.name.trim())
+            .filter(Boolean),
+        ))
+        if (courseNames.length > 0) {
+          this.setData({
+            items: courseNames.map((name) => ({
+              name,
+              target: '',
+              status: 'pending' as const,
+            })),
+            schedulePrefillCount: courseNames.length,
+          })
+        }
+      }
 
       if (!this.data.teacherMode) {
         const versions = await getMyPlanVersions(this.data.stageCode, this.data.type).catch(() => [])

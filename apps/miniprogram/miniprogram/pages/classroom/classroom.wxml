@@ -89,7 +89,7 @@
                 </view>
                 <text class="plan-note">{{item.note}}</text>
               </view>
-              <text class="plan-arrow">›</text>
+              <text class="plan-arrow">编辑 ›</text>
             </view>
             <view class="plan-card-foot">
               <text class="progress-label">完成进度</text>
