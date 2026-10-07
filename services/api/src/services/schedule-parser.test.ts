@@ -214,3 +214,63 @@ test('manual fallback is explicit instead of pretending an image was parsed', ()
   assert.deepEqual(fallback.courses, [])
   assert.match(fallback.warnings[0] ?? '', /手动编辑/)
 })
+
+
+test('parseSpreadsheetSchedule supports CSU WPS timetable layout with clock slots', () => {
+  const workbook = XLSX.utils.book_new()
+  const sheet = XLSX.utils.aoa_to_sheet([
+    ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['', '学生个人课表', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['', '学年学期：2026-2027-1', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['', '', '星期日', '', '星期一', '', '星期二', '', '星期三', '', '星期四', '', '星期五', '', '星期六', ''],
+    ['', '08:00', '', '', '', '', '', '', '实验设计与数据处理\n杨莺(副教授)\n3-8[周]\n科教北201', '', '热力发电厂\n苏文(副教授)\n1-6[周]\n科教北201', '', '习近平新时代中国特色社会主义思想概论\n夏丹妮(讲师)\n2-4,8-20[双周]\nC座502', '', '', ''],
+    ['', '09:00', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['', '10:00', '', '', '分布式能源\n饶政华(教授)\n12-15[周]\n科教北203', '', '', '', '', '', '', '', '形势与政策\n哈纳提·吐尔森哈力\n(讲师)3,5[周]\n科教北303', '', '', ''],
+    ['', '11:00', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  ])
+
+  sheet['!merges'] = [
+    { s: { r: 3, c: 2 }, e: { r: 3, c: 3 } },
+    { s: { r: 3, c: 4 }, e: { r: 3, c: 5 } },
+    { s: { r: 3, c: 6 }, e: { r: 3, c: 7 } },
+    { s: { r: 3, c: 8 }, e: { r: 3, c: 9 } },
+    { s: { r: 3, c: 10 }, e: { r: 3, c: 11 } },
+    { s: { r: 3, c: 12 }, e: { r: 3, c: 13 } },
+    { s: { r: 3, c: 14 }, e: { r: 3, c: 15 } },
+    { s: { r: 4, c: 8 }, e: { r: 5, c: 9 } },
+    { s: { r: 4, c: 10 }, e: { r: 5, c: 11 } },
+    { s: { r: 4, c: 12 }, e: { r: 5, c: 13 } },
+    { s: { r: 6, c: 4 }, e: { r: 7, c: 5 } },
+    { s: { r: 6, c: 12 }, e: { r: 7, c: 13 } },
+  ]
+
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Sheet1')
+
+  const bytes = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
+  const result = parseSpreadsheetSchedule(Buffer.from(bytes))
+
+  assert.equal(result.courses.length, 5)
+
+  const thermal = result.courses.find((course) => course.name === '热力发电厂')
+  assert.ok(thermal)
+  assert.equal(thermal.day, '周四')
+  assert.equal(thermal.startSection, null)
+  assert.equal(thermal.endSection, null)
+  assert.equal(thermal.time, '08:00')
+  assert.equal(thermal.teacher, '苏文(副教授)')
+  assert.equal(thermal.weeks, '1-6[周]')
+  assert.equal(thermal.location, '科教北201')
+
+  const policy = result.courses.find((course) => course.name === '形势与政策')
+  assert.ok(policy)
+  assert.equal(policy.teacher, '哈纳提·吐尔森哈力 (讲师)')
+  assert.equal(policy.weeks, '3,5[周]')
+  assert.equal(policy.location, '科教北303')
+
+  const ideology = result.courses.find(
+    (course) => course.name === '习近平新时代中国特色社会主义思想概论',
+  )
+  assert.ok(ideology)
+  assert.equal(ideology.weeks, '2-4,8-20[双周]')
+  assert.equal(ideology.location, 'C座502')
+})

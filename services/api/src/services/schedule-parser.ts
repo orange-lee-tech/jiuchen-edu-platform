@@ -101,10 +101,28 @@ function inferDay(value: string) {
   )
 }
 
+function looksLikeClockSlot(value: string) {
+  return /^\s*\d{1,2}:\d{2}(?:\s*[-~—至]\s*\d{1,2}:\d{2})?\s*$/.test(value)
+}
+
 function sectionRange(value: string) {
+  if (looksLikeClockSlot(value)) return { start: null, end: null }
+
   const nums = value.match(/\d+/g)?.map(Number) ?? []
   if (nums.length === 0) return { start: null, end: null }
   return { start: nums[0], end: nums[nums.length - 1] }
+}
+
+const WEEK_EXPRESSION =
+  /(?:第?\d+(?:[-~—至,，、]\d+)*(?:\[(?:单|双)?周\]|(?:单|双)?周)|单双周|单周|双周|week(?:s)?\s*\d+(?:[-~,]\d+)*)/i
+
+function looksLikeLocation(value: string) {
+  const normalized = value.trim()
+  return (
+    /教室|教学楼|楼|馆|室|校区|实验室|地点|座|科教/.test(normalized) ||
+    /^[A-Za-z]\s*座?\s*\d{2,4}(?:[-－]\d+)?$/i.test(normalized) ||
+    /^[\p{Script=Han}A-Za-z·_-]{1,20}\d{2,4}(?:[-－]\d+)?$/u.test(normalized)
+  )
 }
 
 function parseCourseCell(rawValue: string) {
@@ -115,25 +133,39 @@ function parseCourseCell(rawValue: string) {
 
   const name = lines[0] || rawValue.trim()
   let location: string | null = null
-  let teacher: string | null = null
   let weeks: string | null = null
   let time: string | null = null
+  const teacherParts: string[] = []
 
   for (const line of lines.slice(1)) {
-    if (/(?:第?\d+(?:[-~—至,，、]\d+)*周|\d+周|单双周|单周|双周|week)/i.test(line) && !weeks) {
-      weeks = line
-    } else if (/老师|教师|教授|讲师|任课/.test(line) && !teacher) {
-      teacher = line.replace(/^(?:老师|教师|任课教师|任课)[:：]?/, '').trim() || line
-    } else if (
-      (/教室|教学楼|楼|馆|室|校区|实验室|地点/.test(line) ||
-        /^[A-Za-z]{0,3}\d{2,4}(?:[-－]\d+)?$/.test(line)) &&
-      !location
-    ) {
-      location = line.replace(/^地点[:：]?/, '').trim() || line
-    } else if (/\d{1,2}:\d{2}/.test(line) && !time) {
+    if (/\d{1,2}:\d{2}/.test(line) && !time) {
       time = line
+      continue
     }
+
+    if (looksLikeLocation(line) && !location) {
+      location = line.replace(/^地点[:：]?/, '').trim() || line
+      continue
+    }
+
+    const weekMatch = line.match(WEEK_EXPRESSION)
+    let remainder = line
+
+    if (weekMatch) {
+      if (!weeks) weeks = weekMatch[0]
+      remainder = line.replace(weekMatch[0], '').trim()
+    }
+
+    remainder = remainder
+      .replace(/^(?:老师|教师|任课教师|任课)[:：]?/, '')
+      .trim()
+
+    if (remainder) teacherParts.push(remainder)
   }
+
+  const teacher = teacherParts.length
+    ? teacherParts.join(' ').replace(/\s+/g, ' ').trim()
+    : null
 
   return { name, location, teacher, weeks, time }
 }
@@ -340,7 +372,7 @@ function parseSheetSchedule(
         slot,
         startSection: sections.start,
         endSection: sections.end,
-        time: parsed.time,
+        time: parsed.time ?? (looksLikeClockSlot(slot) ? slot : null),
         location: parsed.location,
         teacher: parsed.teacher,
         weeks: parsed.weeks,

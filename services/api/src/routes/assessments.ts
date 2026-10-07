@@ -9,24 +9,28 @@ import {
   ASSESSMENT_INPUT_SCHEMA_VERSION,
   ASSESSMENT_OUTPUT_SCHEMA_VERSION,
   assessmentInputSchema,
-  normalizeAssessmentInput,
 } from '../domain/assessment.js'
 import { canUseAssessment } from '../domain/auth-policy.js'
 import {
-  AssessmentProviderUnavailableError,
   createUnconfiguredAssessmentRuntime,
-  executeAssessment,
   type AssessmentRuntime,
 } from '../services/assessment-runtime.js'
+import type {
+  AssessmentCommercialOptions,
+  AssessmentRunDispatcher,
+} from '../services/assessment-background.js'
 import {
   CommercialStateError,
   beginAssessmentRunWithCredit,
   grantFreeCredits,
-  persistAssessmentFailureAndReleaseCredit,
-  persistAssessmentSuccessAndConsumeCredit,
-  resetAssessmentDraftAndReleaseCredit,
 } from '../services/credit-ledger.js'
 import { resolveSessionUser } from '../services/session.js'
+import {
+  createUnconfiguredAssessmentImportService,
+  isOwnedAssessmentImportFile,
+  isSupportedAssessmentImportFileName,
+  type AssessmentImportService,
+} from '../services/assessment-import.js'
 
 const createAssessmentSchema = z
   .object({
@@ -34,17 +38,77 @@ const createAssessmentSchema = z
   })
   .strict()
 
-type AssessmentCommercialOptions = {
-  creditEnforcementEnabled: boolean
-  freeGrant: {
-    version: string
-    amount: number
-  } | null
-}
+const assessmentImportRequestSchema = z
+  .object({
+    fileID: z.string().min(1).max(1000),
+    fileName: z.string().min(1).max(255),
+    sourceType: z.enum(['document', 'image']),
+  })
+  .strict()
 
 const DEFAULT_COMMERCIAL_OPTIONS: AssessmentCommercialOptions = {
   creditEnforcementEnabled: false,
   freeGrant: null,
+}
+
+const DEFAULT_RUN_DISPATCHER: Pick<
+  AssessmentRunDispatcher,
+  'wake' | 'completionNotification'
+> = {
+  wake() {},
+  completionNotification: { channel: 'none', configured: false },
+}
+
+function assessmentImportErrorReply(
+  reply: FastifyReply,
+  error: unknown,
+) {
+  const rawCode = error instanceof Error ? error.message : 'assessment_import_failed'
+  const materialCodeMap: Record<string, string> = {
+    material_document_parser_not_configured: 'assessment_import_parser_not_configured',
+    material_document_parser_not_enabled: 'assessment_import_parser_not_enabled',
+    material_document_source_download_failed: 'assessment_import_source_download_failed',
+    material_document_file_too_large: 'assessment_import_file_too_large',
+    material_document_parser_billing_unavailable: 'assessment_import_parser_billing_unavailable',
+    material_document_parser_permission_denied: 'assessment_import_parser_permission_denied',
+    material_document_result_missing: 'assessment_import_parser_failed',
+    material_document_result_download_failed: 'assessment_import_parser_failed',
+    material_document_result_invalid: 'assessment_import_parser_failed',
+    material_document_result_too_large: 'assessment_import_parser_result_too_large',
+    material_document_result_text_missing: 'assessment_import_document_text_empty',
+    material_document_result_text_empty: 'assessment_import_document_text_empty',
+    material_document_result_compression_unsupported: 'assessment_import_parser_failed',
+    material_document_temp_url_failed: 'assessment_import_source_download_failed',
+    material_document_parser_timeout: 'assessment_import_parser_timeout',
+    material_document_type_not_supported: 'assessment_import_file_type_not_allowed',
+  }
+  const code =
+    rawCode.startsWith('assessment_import_')
+      ? rawCode
+      : rawCode.startsWith('material_document_parser_failed:')
+        ? 'assessment_import_parser_failed'
+        : materialCodeMap[rawCode] ?? 'assessment_import_ai_failed'
+
+  const status =
+    code === 'assessment_import_file_too_large'
+      ? 413
+      : code === 'assessment_import_file_type_not_allowed' ||
+          code === 'assessment_import_file_not_owned'
+        ? 400
+        : code === 'assessment_import_document_text_empty'
+          ? 422
+          : code === 'assessment_import_provider_not_configured' ||
+              code === 'assessment_import_parser_not_configured' ||
+              code === 'assessment_import_parser_not_enabled' ||
+              code === 'assessment_import_parser_billing_unavailable' ||
+              code === 'assessment_import_parser_permission_denied'
+            ? 503
+            : 502
+
+  return reply.code(status).send({
+    ok: false,
+    error: code,
+  })
 }
 
 function assessmentCommercialErrorReply(
@@ -150,6 +214,12 @@ export function registerAssessmentRoutes(
   database: DatabaseContext,
   runtime: AssessmentRuntime = createUnconfiguredAssessmentRuntime(),
   commercial: AssessmentCommercialOptions = DEFAULT_COMMERCIAL_OPTIONS,
+  dispatcher: Pick<
+    AssessmentRunDispatcher,
+    'wake' | 'completionNotification'
+  > = DEFAULT_RUN_DISPATCHER,
+  importService: AssessmentImportService =
+    createUnconfiguredAssessmentImportService(),
 ) {
   app.get('/assessments/meta', async () => ({
     ok: true,
@@ -165,11 +235,94 @@ export function registerAssessmentRoutes(
       competitionExperiences: 12,
     },
     providerConfigured: runtime.provider.isConfigured(),
+    backgroundExecution: {
+      enabled: true,
+      stateStore: 'assessments',
+      terminalStates: ['succeeded', 'failed'],
+    },
+    completionNotification: dispatcher.completionNotification,
     outputPolicy: {
       preciseAdmissionProbability: false,
       evidenceRequiredForClaims: true,
     },
+    materialImport: {
+      enabled: importService.configured,
+      documentFormats: ['doc', 'docx', 'pdf'],
+      imageFormats: ['jpg', 'jpeg', 'png', 'webp'],
+    },
   }))
+
+  app.post<{ Body: unknown }>('/me/assessments/import-profile', async (request, reply) => {
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const user = await resolveSessionUser(request, database)
+    if (!user) {
+      return reply.code(401).send({
+        ok: false,
+        error: 'unauthorized',
+      })
+    }
+
+    if (!canUseAssessment(user.role)) {
+      return reply.code(403).send({
+        ok: false,
+        error: 'assessment_not_available_for_role',
+      })
+    }
+
+    const parsed = assessmentImportRequestSchema.safeParse(request.body ?? {})
+    if (!parsed.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_assessment_import_payload',
+      })
+    }
+
+    if (!isSupportedAssessmentImportFileName(
+      parsed.data.fileName,
+      parsed.data.sourceType,
+    )) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'assessment_import_file_type_not_allowed',
+      })
+    }
+
+    if (!isOwnedAssessmentImportFile(parsed.data.fileID, user.userId)) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'assessment_import_file_not_owned',
+      })
+    }
+
+    try {
+      const result = await importService.parse({
+        ...parsed.data,
+        userId: user.userId,
+      })
+      return {
+        ok: true,
+        ...result,
+      }
+    } catch (error) {
+      app.log.warn({ err: error }, 'Assessment material import failed')
+      return assessmentImportErrorReply(reply, error)
+    } finally {
+      try {
+        await importService.cleanup(parsed.data.fileID)
+      } catch (cleanupError) {
+        app.log.warn(
+          { err: cleanupError },
+          'Assessment import temporary source cleanup failed',
+        )
+      }
+    }
+  })
 
   app.post<{ Body: unknown }>('/me/assessments', async (request, reply) => {
     if (!database.configured) {
@@ -541,7 +694,6 @@ export function registerAssessmentRoutes(
       }
 
       const startedAt = new Date()
-      let inputJson = row.inputJson
 
       if (commercial.creditEnforcementEnabled) {
         try {
@@ -552,14 +704,12 @@ export function registerAssessmentRoutes(
               grant: commercial.freeGrant,
             })
           }
-
-          const started = await beginAssessmentRunWithCredit({
+          await beginAssessmentRunWithCredit({
             database,
             userId: user.userId,
             assessmentId: row.id,
             startedAt,
           })
-          inputJson = started.inputJson
         } catch (error) {
           if (error instanceof CommercialStateError) {
             return assessmentCommercialErrorReply(reply, error)
@@ -579,189 +729,32 @@ export function registerAssessmentRoutes(
           .where(eq(assessments.id, row.id))
       }
 
-      let normalizedInput: ReturnType<typeof normalizeAssessmentInput>
-      try {
-        normalizedInput = normalizeAssessmentInput(inputJson)
-      } catch (error) {
-        app.log.error(
-          { err: error, assessmentId: row.id },
-          'Persisted Assessment input is invalid',
-        )
-
-        if (commercial.creditEnforcementEnabled) {
-          try {
-            await persistAssessmentFailureAndReleaseCredit({
-              database,
-              userId: user.userId,
-              assessmentId: row.id,
-              failureCode: 'assessment_input_invalid',
-              completedAt: new Date(),
-            })
-          } catch (persistenceError) {
-            app.log.error(
-              { err: persistenceError, assessmentId: row.id },
-              'Failed to persist invalid-input Assessment terminal state',
-            )
-          }
-        } else {
-          await database.db
-            .update(assessments)
-            .set({
-              status: 'failed',
-              failureCode: 'assessment_input_invalid',
-              creditConsumed: false,
-              completedAt: new Date(),
-            })
-            .where(eq(assessments.id, row.id))
-        }
-
-        return reply.code(500).send({
-          ok: false,
-          error: 'assessment_input_invalid',
-        })
-      }
-
-      let result: Awaited<ReturnType<typeof executeAssessment>>
-      try {
-        result = await executeAssessment(runtime, normalizedInput)
-      } catch (error) {
-        if (error instanceof AssessmentProviderUnavailableError) {
-          if (commercial.creditEnforcementEnabled) {
-            try {
-              await resetAssessmentDraftAndReleaseCredit({
-                database,
-                userId: user.userId,
-                assessmentId: row.id,
-              })
-            } catch (persistenceError) {
-              app.log.error(
-                { err: persistenceError, assessmentId: row.id },
-                'Failed to reset Assessment and release credit reservation',
-              )
-              return reply.code(503).send({
-                ok: false,
-                error: 'assessment_failure_persistence_pending',
-              })
-            }
-          } else {
-            await database.db
-              .update(assessments)
-              .set({
-                status: 'draft',
-                startedAt: null,
-                failureCode: null,
-              })
-              .where(eq(assessments.id, row.id))
-          }
-
-          return reply.code(503).send({
-            ok: false,
-            error: 'assessment_provider_not_configured',
-          })
-        }
-
-        app.log.warn(
-          { err: error, assessmentId: row.id },
-          'Assessment execution failed',
-        )
-
-        if (commercial.creditEnforcementEnabled) {
-          try {
-            await persistAssessmentFailureAndReleaseCredit({
-              database,
-              userId: user.userId,
-              assessmentId: row.id,
-              failureCode: 'assessment_execution_failed',
-              completedAt: new Date(),
-            })
-          } catch (persistenceError) {
-            app.log.error(
-              { err: persistenceError, assessmentId: row.id },
-              'Failed to persist Assessment failure and release reservation',
-            )
-            return reply.code(503).send({
-              ok: false,
-              error: 'assessment_failure_persistence_pending',
-            })
-          }
-        } else {
-          await database.db
-            .update(assessments)
-            .set({
-              status: 'failed',
-              failureCode: 'assessment_execution_failed',
-              creditConsumed: false,
-              completedAt: new Date(),
-            })
-            .where(eq(assessments.id, row.id))
-        }
-
-        return reply.code(502).send({
-          ok: false,
-          error: 'assessment_execution_failed',
-        })
-      }
-
-      const completedAt = new Date()
-
-      try {
-        if (commercial.creditEnforcementEnabled) {
-          await persistAssessmentSuccessAndConsumeCredit({
-            database,
-            userId: user.userId,
-            assessmentId: row.id,
-            provider: result.provider,
-            model: result.model,
-            knowledgeVersion: result.knowledgeVersion,
-            evidence: result.evidence,
-            output: result.output,
-            completedAt,
-          })
-        } else {
-          await database.db
-            .update(assessments)
-            .set({
-              status: 'succeeded',
-              provider: result.provider,
-              model: result.model,
-              knowledgeVersion: result.knowledgeVersion,
-              evidenceJson: result.evidence,
-              outputJson: result.output,
-              failureCode: null,
-              creditConsumed: false,
-              completedAt,
-            })
-            .where(eq(assessments.id, row.id))
-        }
-      } catch (error) {
-        app.log.error(
-          { err: error, assessmentId: row.id },
-          'Assessment result persistence / credit settlement failed',
-        )
-
-        return reply.code(503).send({
-          ok: false,
-          error: 'assessment_result_persistence_pending',
-        })
-      }
-
-      const [completed] = await database.db
+      const [queued] = await database.db
         .select()
         .from(assessments)
-        .where(eq(assessments.id, row.id))
+        .where(and(
+          eq(assessments.id, row.id),
+          eq(assessments.userId, user.userId),
+        ))
         .limit(1)
 
-      if (!completed) {
+      if (!queued) {
         return reply.code(503).send({
           ok: false,
-          error: 'assessment_complete_readback_failed',
+          error: 'assessment_queue_readback_failed',
         })
       }
 
-      return {
+      dispatcher.wake()
+
+      return reply.code(202).send({
         ok: true,
-        assessment: serializeAssessment(completed),
-      }
+        execution: {
+          mode: 'background',
+          observableFrom: '/me/assessments',
+        },
+        assessment: serializeAssessment(queued),
+      })
     },
   )
 }

@@ -191,6 +191,12 @@ class JsonAssessmentModelProvider implements AssessmentModelProvider {
         'strengths/risks 若仅引用 input ref，只描述用户自身已知情况，不得夹带外部基准。' +
         'strengths/risks 只能引用 allowedInputEvidenceRefs 或 knowledge.evidence 中的 ref；每个 targetAssessments 必须引用至少一条 kind=school/program/case 的真实检索证据。' +
         'similarCases 只能引用 kind=case 的真实 evidence，caseId 必须等于该 evidence 的 sourceId，sourceType 必须一致。' +
+        '评估风格参考成熟保研顾问的人工定位：先抓住本科背景、排名/GPA、英语、科研、竞赛与目标方向之间真正影响申请判断的变量，不做流水账复述。' +
+        '目标判断使用冲刺/匹配/稳妥三档思路，但必须由当前证据支持；不要把学校层级本身当成唯一依据，也不要生成录取概率。' +
+        '对跨专业或跨方向目标，明确指出“已有能力可迁移到哪里”和“缺少哪些核心知识/材料”，不要只写笼统的跨专业风险。' +
+        '行动建议要像人工咨询一样可执行并有先后顺序：优先识别资格/材料/联系导师/报名窗口/文书适配/面试准备等阻塞项；只有 evidence 明确包含时才能写具体截止日期、语言门槛或院校规则。' +
+        '同一用户存在多个目标方向时，建议允许按方向拆分文书与面试准备重点，突出已有项目方法、个人职责和可迁移能力，避免一套泛化表述覆盖所有目标。' +
+        '推荐行动优先输出“现在最该做什么、为什么、完成到什么程度”，避免空泛的提升绩点、加强科研之类套话。' +
         'targetAssessments 要逐一覆盖用户输入的目标院校。资料不足时明确写入 uncertainties，并使用 insufficient_data，而不是编造结论。' +
         (repair
           ? '这是唯一一次修复机会。上次输出未通过 assessment-output-v1；请完全重写为上述完整 JSON 对象，不要只修局部，也不要重复输出数字/字符串/数组。保持有证据的有效内容，不要添加新事实。'
@@ -256,6 +262,76 @@ export function getAllowedInputEvidenceRefs(input: AssessmentInput) {
   input.targets.forEach((_, index) => refs.push(`input:target:${index + 1}`))
   if (input.preferences) refs.push('input:preferences')
   return refs
+}
+
+function conservativelySanitizeEvidenceReferences(
+  rawOutput: unknown,
+  input: AssessmentInput,
+  knowledge: AssessmentKnowledgeContext,
+): AssessmentOutput {
+  const output = validateAssessmentOutput(rawOutput)
+  const evidenceByRef = new Map(knowledge.evidence.map((item) => [item.ref, item]))
+  const allowedRefs = new Set([
+    ...getAllowedInputEvidenceRefs(input),
+    ...knowledge.evidence.map((item) => item.ref),
+  ])
+
+  const sanitizeRefs = (refs: string[]) =>
+    refs.filter((ref, index) => allowedRefs.has(ref) && refs.indexOf(ref) === index)
+
+  const sanitizeFindings = (findings: AssessmentOutput['strengths']) =>
+    findings.flatMap((finding) => {
+      const evidenceRefs = sanitizeRefs(finding.evidenceRefs)
+      return evidenceRefs.length ? [{ ...finding, evidenceRefs }] : []
+    })
+
+  const targetAssessments = output.targetAssessments.map((target, index) => {
+    const evidenceRefs = sanitizeRefs(target.evidenceRefs)
+    const hasRetrievedTargetEvidence = evidenceRefs.some((ref) => {
+      const evidence = evidenceByRef.get(ref)
+      return evidence && ['school', 'program', 'case'].includes(evidence.kind)
+    })
+
+    if (hasRetrievedTargetEvidence || target.tier === 'insufficient_data') {
+      return {
+        ...target,
+        evidenceRefs:
+          evidenceRefs.length > 0
+            ? evidenceRefs
+            : [`input:target:${index + 1}`],
+      }
+    }
+
+    return {
+      ...target,
+      tier: 'insufficient_data' as const,
+      rationale: '当前检索证据不足，无法对该目标作出可靠梯度判断。',
+      gapItems: [],
+      actions: [],
+      evidenceRefs:
+        evidenceRefs.length > 0
+          ? evidenceRefs
+          : [`input:target:${index + 1}`],
+    }
+  })
+
+  const similarCases = output.similarCases.filter((similarCase) => {
+    const evidence = evidenceByRef.get(similarCase.evidenceRef)
+    return Boolean(
+      evidence &&
+      evidence.kind === 'case' &&
+      evidence.sourceId === similarCase.caseId &&
+      evidence.sourceType === similarCase.sourceType
+    )
+  })
+
+  return {
+    ...output,
+    strengths: sanitizeFindings(output.strengths),
+    risks: sanitizeFindings(output.risks),
+    targetAssessments,
+    similarCases,
+  }
 }
 
 function validateAssessmentResult(
@@ -380,7 +456,24 @@ export async function executeAssessment(
       validationError:
         error instanceof Error ? error.message : 'assessment_output_invalid',
     })
-    output = validateAssessmentResult(rawOutput, input, knowledge)
+
+    try {
+      output = validateAssessmentResult(rawOutput, input, knowledge)
+    } catch (repairError) {
+      if (
+        !(repairError instanceof AssessmentEvidenceReferenceError) ||
+        repairError.message === 'assessment_target_coverage_invalid'
+      ) {
+        throw repairError
+      }
+
+      const sanitized = conservativelySanitizeEvidenceReferences(
+        rawOutput,
+        input,
+        knowledge,
+      )
+      output = validateAssessmentResult(sanitized, input, knowledge)
+    }
   }
 
   return {

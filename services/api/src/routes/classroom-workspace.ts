@@ -57,6 +57,33 @@ const scheduleImportSchema = z.object({
 
 type PlanItemPayload = z.infer<typeof itemSchema>
 
+function isMissingTableError(error: unknown) {
+  const seen = new Set<unknown>()
+  let current: unknown = error
+
+  for (let depth = 0; depth < 8; depth += 1) {
+    if (!current || typeof current !== 'object' || seen.has(current)) {
+      return false
+    }
+    seen.add(current)
+    const candidate = current as {
+      code?: unknown
+      errno?: unknown
+      sqlState?: unknown
+      cause?: unknown
+    }
+    if (
+      String(candidate.code ?? '') === 'ER_NO_SUCH_TABLE' ||
+      Number(candidate.errno) === 1146 ||
+      String(candidate.sqlState ?? '') === '42S02'
+    ) {
+      return true
+    }
+    current = candidate.cause
+  }
+  return false
+}
+
 function normalizedItems(value: unknown): Array<PlanItemPayload & { id: string; sortOrder: number }> {
   if (!Array.isArray(value)) return []
   return value.flatMap((entry, index) => {
@@ -317,8 +344,20 @@ async function loadClassroom(
         .orderBy(asc(studentTeacherAssignments.createdAt))
     : []
 
-  const records = showGuidance
-    ? await database.db
+  let guidanceRecordsReady = true
+  let records: Array<{
+    id: string
+    teacherId: string | null
+    teacherName: string | null
+    stageCode: string
+    title: string
+    content: string
+    occurredAt: Date
+  }> = []
+
+  if (showGuidance) {
+    try {
+      records = await database.db
         .select({
           id: coachingRecords.id,
           teacherId: coachingRecords.teacherId,
@@ -337,7 +376,12 @@ async function loadClassroom(
           ),
         )
         .orderBy(desc(coachingRecords.occurredAt))
-    : []
+    } catch (error) {
+      if (!isMissingTableError(error)) throw error
+      guidanceRecordsReady = false
+      records = []
+    }
+  }
 
   return {
     ok: true as const,
@@ -345,6 +389,7 @@ async function loadClassroom(
     stage,
     showGuidance,
     mentors,
+    guidanceRecordsReady,
     records: records.map((record) => ({
       ...record,
       occurredAt: record.occurredAt.toISOString(),
