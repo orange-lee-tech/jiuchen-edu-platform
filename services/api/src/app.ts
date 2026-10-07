@@ -22,6 +22,7 @@ import {
 import { createAssessmentRuntimeFromEnv } from './services/assessment-runtime.js'
 import { createAssessmentBackgroundWorker } from './services/assessment-background.js'
 import { createAssessmentNotificationAdapter } from './services/assessment-notification.js'
+import { createAssessmentImportService } from './services/assessment-import.js'
 import { createCommercialConfig } from './services/commercial-config.js'
 import { createWechatPayGatewayFromEnv } from './services/wechat-pay.js'
 
@@ -34,6 +35,7 @@ export function buildApp(env: AppEnv) {
 
   const database = createDatabaseContext(env)
   const assessmentRuntime = createAssessmentRuntimeFromEnv(env)
+  const assessmentImport = createAssessmentImportService(env)
   const scheduleAI = createScheduleAIProvider(env)
   const customerAI = createCustomerServiceAIProvider(env)
   const commercialConfig = createCommercialConfig(env)
@@ -82,6 +84,7 @@ export function buildApp(env: AppEnv) {
       cloudbaseExternalConfigured,
       assessmentAiConfigured: assessmentRuntime.provider.isConfigured(),
       assessmentBackgroundExecution: database.configured,
+      assessmentMaterialImportConfigured: assessmentImport.configured,
       assessmentCompletionNotificationConfigured:
         assessmentWorker.completionNotification.configured,
       scheduleAiConfigured: scheduleAI.isConfigured(),
@@ -194,6 +197,7 @@ export function buildApp(env: AppEnv) {
     assessmentRuntime,
     assessmentCommercial,
     assessmentWorker,
+    assessmentImport,
   )
   registerProductRoutes(app, database)
   registerBrandRoutes(app)

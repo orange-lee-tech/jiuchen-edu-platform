@@ -25,10 +25,24 @@ import {
   grantFreeCredits,
 } from '../services/credit-ledger.js'
 import { resolveSessionUser } from '../services/session.js'
+import {
+  createUnconfiguredAssessmentImportService,
+  isOwnedAssessmentImportFile,
+  isSupportedAssessmentImportFileName,
+  type AssessmentImportService,
+} from '../services/assessment-import.js'
 
 const createAssessmentSchema = z
   .object({
     input: assessmentInputSchema,
+  })
+  .strict()
+
+const assessmentImportRequestSchema = z
+  .object({
+    fileID: z.string().min(1).max(1000),
+    fileName: z.string().min(1).max(255),
+    sourceType: z.enum(['document', 'image']),
   })
   .strict()
 
@@ -43,6 +57,58 @@ const DEFAULT_RUN_DISPATCHER: Pick<
 > = {
   wake() {},
   completionNotification: { channel: 'none', configured: false },
+}
+
+function assessmentImportErrorReply(
+  reply: FastifyReply,
+  error: unknown,
+) {
+  const rawCode = error instanceof Error ? error.message : 'assessment_import_failed'
+  const materialCodeMap: Record<string, string> = {
+    material_document_parser_not_configured: 'assessment_import_parser_not_configured',
+    material_document_parser_not_enabled: 'assessment_import_parser_not_enabled',
+    material_document_source_download_failed: 'assessment_import_source_download_failed',
+    material_document_file_too_large: 'assessment_import_file_too_large',
+    material_document_parser_billing_unavailable: 'assessment_import_parser_billing_unavailable',
+    material_document_parser_permission_denied: 'assessment_import_parser_permission_denied',
+    material_document_result_missing: 'assessment_import_parser_failed',
+    material_document_result_download_failed: 'assessment_import_parser_failed',
+    material_document_result_invalid: 'assessment_import_parser_failed',
+    material_document_result_too_large: 'assessment_import_parser_result_too_large',
+    material_document_result_text_missing: 'assessment_import_document_text_empty',
+    material_document_result_text_empty: 'assessment_import_document_text_empty',
+    material_document_result_compression_unsupported: 'assessment_import_parser_failed',
+    material_document_temp_url_failed: 'assessment_import_source_download_failed',
+    material_document_parser_timeout: 'assessment_import_parser_timeout',
+    material_document_type_not_supported: 'assessment_import_file_type_not_allowed',
+  }
+  const code =
+    rawCode.startsWith('assessment_import_')
+      ? rawCode
+      : rawCode.startsWith('material_document_parser_failed:')
+        ? 'assessment_import_parser_failed'
+        : materialCodeMap[rawCode] ?? 'assessment_import_ai_failed'
+
+  const status =
+    code === 'assessment_import_file_too_large'
+      ? 413
+      : code === 'assessment_import_file_type_not_allowed' ||
+          code === 'assessment_import_file_not_owned'
+        ? 400
+        : code === 'assessment_import_document_text_empty'
+          ? 422
+          : code === 'assessment_import_provider_not_configured' ||
+              code === 'assessment_import_parser_not_configured' ||
+              code === 'assessment_import_parser_not_enabled' ||
+              code === 'assessment_import_parser_billing_unavailable' ||
+              code === 'assessment_import_parser_permission_denied'
+            ? 503
+            : 502
+
+  return reply.code(status).send({
+    ok: false,
+    error: code,
+  })
 }
 
 function assessmentCommercialErrorReply(
@@ -152,6 +218,8 @@ export function registerAssessmentRoutes(
     AssessmentRunDispatcher,
     'wake' | 'completionNotification'
   > = DEFAULT_RUN_DISPATCHER,
+  importService: AssessmentImportService =
+    createUnconfiguredAssessmentImportService(),
 ) {
   app.get('/assessments/meta', async () => ({
     ok: true,
@@ -177,7 +245,84 @@ export function registerAssessmentRoutes(
       preciseAdmissionProbability: false,
       evidenceRequiredForClaims: true,
     },
+    materialImport: {
+      enabled: importService.configured,
+      documentFormats: ['doc', 'docx', 'pdf'],
+      imageFormats: ['jpg', 'jpeg', 'png', 'webp'],
+    },
   }))
+
+  app.post<{ Body: unknown }>('/me/assessments/import-profile', async (request, reply) => {
+    if (!database.configured) {
+      return reply.code(503).send({
+        ok: false,
+        error: 'database_not_configured',
+      })
+    }
+
+    const user = await resolveSessionUser(request, database)
+    if (!user) {
+      return reply.code(401).send({
+        ok: false,
+        error: 'unauthorized',
+      })
+    }
+
+    if (!canUseAssessment(user.role)) {
+      return reply.code(403).send({
+        ok: false,
+        error: 'assessment_not_available_for_role',
+      })
+    }
+
+    const parsed = assessmentImportRequestSchema.safeParse(request.body ?? {})
+    if (!parsed.success) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'invalid_assessment_import_payload',
+      })
+    }
+
+    if (!isSupportedAssessmentImportFileName(
+      parsed.data.fileName,
+      parsed.data.sourceType,
+    )) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'assessment_import_file_type_not_allowed',
+      })
+    }
+
+    if (!isOwnedAssessmentImportFile(parsed.data.fileID, user.userId)) {
+      return reply.code(400).send({
+        ok: false,
+        error: 'assessment_import_file_not_owned',
+      })
+    }
+
+    try {
+      const result = await importService.parse({
+        ...parsed.data,
+        userId: user.userId,
+      })
+      return {
+        ok: true,
+        ...result,
+      }
+    } catch (error) {
+      app.log.warn({ err: error }, 'Assessment material import failed')
+      return assessmentImportErrorReply(reply, error)
+    } finally {
+      try {
+        await importService.cleanup(parsed.data.fileID)
+      } catch (cleanupError) {
+        app.log.warn(
+          { err: cleanupError },
+          'Assessment import temporary source cleanup failed',
+        )
+      }
+    }
+  })
 
   app.post<{ Body: unknown }>('/me/assessments', async (request, reply) => {
     if (!database.configured) {
