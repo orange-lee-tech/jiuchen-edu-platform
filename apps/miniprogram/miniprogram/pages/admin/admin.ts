@@ -184,7 +184,7 @@ Page({
     const id = String(event.currentTarget.dataset.id || '')
     wx.showModal({
       title: '撤销授权',
-      content: '撤销后对应账号恢复为游客，ID禁用；恢复授权后编号重新可认领，不会自动绑定原账号。'
+      content: '撤销后对应账号恢复为游客，ID禁用；恢复授权后编号重新可认领，不会自动绑定原账号。',
       success: async (result) => {
         if (!result.confirm) return
         try {
