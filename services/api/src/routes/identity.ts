@@ -8,7 +8,7 @@ import {
   teachers,
   users,
 } from '../db/schema.js'
-import { normalizeInternalBusinessId } from '../domain/internal-id.js'
+import { classifyInternalIdClaim, normalizeInternalBusinessId } from '../domain/internal-id.js'
 import { resolveSessionUser } from '../services/session.js'
 
 const claimSchema = z.object({
@@ -109,30 +109,21 @@ export function registerIdentityRoutes(
         type: internalIds.type,
         claimMode: internalIds.claimMode,
         status: internalIds.status,
+        userId: internalIds.userId,
         entityId: internalIds.entityId,
       })
       .from(internalIds)
-      .where(
-        and(
-          eq(internalIds.businessId, normalized),
-          eq(internalIds.status, 'available'),
-        ),
-      )
+      .where(eq(internalIds.businessId, normalized))
       .limit(1)
 
-    if (!identity || (identity.type !== 'admin' && identity.claimMode !== 'self')) {
-      return reply.code(400).send({
+    const claimError = classifyInternalIdClaim(identity)
+    if (claimError) {
+      return reply.code(claimError === 'invalid_internal_id' ? 400 : 409).send({
         ok: false,
-        error: 'invalid_internal_id',
+        error: claimError,
       })
     }
-
-    if (identity.type !== 'admin' && !identity.entityId) {
-      return reply.code(409).send({
-        ok: false,
-        error: 'internal_id_not_ready',
-      })
-    }
+    if (!identity) throw new Error('unreachable_missing_identity')
 
     try {
       await database.db.transaction(async (tx) => {

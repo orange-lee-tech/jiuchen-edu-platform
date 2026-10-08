@@ -143,7 +143,7 @@ try {
     for (const row of created) {
       console.log(`${row.type}\t${row.businessId}`)
     }
-    console.log('注意：admin ID 不允许用户自助认领，必须由已有管理员或本地后台绑定。')
+    console.log('注意：可用的 admin ID 允许本人首次认领；请只向指定持有人私下交付。')
   }
 } finally {
   await connection.end()
