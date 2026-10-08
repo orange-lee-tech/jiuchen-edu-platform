@@ -35,13 +35,16 @@
 
     <view class="card">
       <text class="card-title">ID 列表</text>
+      <text class="card-note">暂停：保留原绑定，但立即阻止访问。撤销：解除绑定、恢复游客权限。恢复：重新启用编号。</text>
       <view wx:for="{{internalIds}}" wx:key="id" class="list-row">
         <view class="row-main">
           <text class="row-title">{{item.businessId}}</text>
           <text class="row-desc">{{item.type}} · {{item.status}}</text>
         </view>
-        <button wx:if="{{item.status === 'claimed'}}" class="mini" data-id="{{item.id}}" bindtap="onUnbindId">解绑</button>
-        <button wx:else class="mini danger" data-id="{{item.id}}" bindtap="onDeleteId">删除</button>
+        <button wx:if="{{item.status === 'claimed' || item.status === 'available'}}" class="mini" data-id="{{item.id}}" bindtap="onPauseId">暂停</button>
+        <button wx:if="{{item.userId}}" class="mini danger" data-id="{{item.id}}" bindtap="onUnbindId">撤销授权</button>
+        <button wx:if="{{item.status === 'disabled'}}" class="mini" data-id="{{item.id}}" bindtap="onRestoreId">恢复</button>
+        <button wx:if="{{item.status === 'available'}}" class="mini danger" data-id="{{item.id}}" bindtap="onDeleteId">删除</button>
       </view>
     </view>
   </block>

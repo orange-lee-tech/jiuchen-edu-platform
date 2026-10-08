@@ -139,18 +139,6 @@ Page({
       return
     }
 
-    // Security boundary: possession of a JCA code must never grant admin access.
-    // Explain the expected admin-assisted binding workflow instead of showing
-    // the generic invalid-code error from the self-claim endpoint.
-    if (/^JCA-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(businessId)) {
-      wx.showModal({
-        title: '管理员ID需后台授权',
-        content: '管理员ID不支持在个人资料自行认领。请先使用未绑定身份的微信账号登录，再由已有管理员在「我的 → 内部用户与ID → 绑定游客账号」中完成绑定。',
-        showCancel: false,
-      })
-      return
-    }
-
     try {
       this.setData({ claiming: true })
       const result = await claimMyInternalIdentity(businessId)

@@ -78,3 +78,16 @@ If a phone preview contradicts these expectations while the local files match th
 - Client now recognizes full-width alphanumeric pasted codes and shows a workflow explanation for JCA identifiers before calling self-claim.
 - Previous `invalid_internal_id` failures for other codes are not retrospectively diagnosed: verify available/claimed/disabled status and target environment via existing authenticated admin ID list.
 - No business-ID format or existing database record was changed.
+
+## Admin ID bootstrap and lifecycle — approved 2026-10-08
+
+- Business requirement: correct, unclaimed, available admin ID can self-bind on profile page. No existing administrator required. This fixes bootstrap deadlock.
+- Admin codes are high-value one-time enrollment credentials. Only distribute privately and only to the intended person; once claimed, code cannot be used again until explicitly revoked + restored.
+- Lifecycle reuses existing DB `internal_ids.status` without schema changes:
+  - `available` + unbound: self-claim any type incl. JCA (admin).
+  - `claimed` + bound: active; pause -> `disabled` + bound; session resolver rejects on every authenticated request, including existing session tokens.
+  - `disabled` + bound: restore -> `claimed` + bound; revoke -> `disabled` + unbound and former account role -> `user`.
+  - `disabled` + unbound: restore -> `available` + unbound; next authenticated user can claim the code.
+- Admin panel cannot pause or revoke its own admin ID; server enforces this.
+- Administrative changes must be made on the server and deployed; pre-deployment client preview alone does not confer admin permissions.
+- Regression acceptance: available JCA claim first admin; second user cannot claim same code; pause blocks preexisting admin session; restore re-enables; revoke downgrades role and disables code; restore makes it available. Confirm stock teacher/student flows unaffected.

@@ -5,6 +5,8 @@ import {
   createAdminInternalId,
   deleteAdminAssignment,
   deleteAdminInternalId,
+  pauseAdminInternalId,
+  restoreAdminInternalId,
   getAdminAssignments,
   getAdminInternalIds,
   getAdminNews,
@@ -181,17 +183,53 @@ Page({
   onUnbindId(event: WechatMiniprogram.BaseEvent) {
     const id = String(event.currentTarget.dataset.id || '')
     wx.showModal({
-      title: '解绑内部ID',
-      content: '解绑后对应账号会恢复为游客，该内部ID会变为禁用状态。',
+      title: '撤销授权',
+      content: '撤销后对应账号恢复为游客，ID禁用；恢复授权后编号重新可认领，不会自动绑定原账号。'
       success: async (result) => {
         if (!result.confirm) return
         try {
           await unbindAdminInternalId(id)
           await this.loadData()
-          wx.showToast({ title: '已解绑', icon: 'none' })
+          wx.showToast({ title: '授权已撤销', icon: 'none' })
         } catch (error) {
           const message = error instanceof Error ? error.message : '解绑失败'
           wx.showToast({ title: message, icon: 'none' })
+        }
+      },
+    })
+  },
+
+  onPauseId(event: WechatMiniprogram.BaseEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    wx.showModal({
+      title: '暂停内部ID',
+      content: '已绑定账号将立即无法进行授权操作；恢复后原账号可以继续使用。',
+      success: async (result) => {
+        if (!result.confirm) return
+        try {
+          await pauseAdminInternalId(id)
+          await this.loadData()
+          wx.showToast({ title: '已暂停', icon: 'none' })
+        } catch (error) {
+          wx.showToast({ title: friendlyRequestError(error, '暂停失败'), icon: 'none' })
+        }
+      },
+    })
+  },
+
+  onRestoreId(event: WechatMiniprogram.BaseEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    wx.showModal({
+      title: '恢复内部ID',
+      content: '暂停中的ID恢复原账号访问；已撤销授权的ID恢复为可认领状态。',
+      success: async (result) => {
+        if (!result.confirm) return
+        try {
+          await restoreAdminInternalId(id)
+          await this.loadData()
+          wx.showToast({ title: '已恢复', icon: 'success' })
+        } catch (error) {
+          wx.showToast({ title: friendlyRequestError(error, '恢复失败'), icon: 'none' })
         }
       },
     })
