@@ -201,6 +201,12 @@ export function friendlyRequestError(
     invalid_internal_id: '内部ID不正确，请核对后重试',
     internal_id_locked: '内部ID已绑定，如需变更请联系管理员',
     internal_id_not_ready: '内部ID尚未准备完成，请联系九辰工作人员',
+    internal_id_not_available: '该编号已认领，或当前不可用',
+    internal_id_suspended: '内部ID已暂停，暂时无法访问',
+    internal_id_not_disabled: '编号并非暂停或撤销状态',
+    internal_id_not_active: '编号并非可用状态',
+    internal_id_state_changed: '编号状态已变化，请刷新后重试',
+    cannot_modify_own_admin_id: '不能暂停或撤销自己的管理员ID',
     role_already_assigned: '当前账号已有内部身份',
   }
 
@@ -539,13 +545,13 @@ export async function claimMyInternalIdentity(
   businessId: string,
 ): Promise<{
   identity: InternalIdentity
-  role: 'student' | 'teacher'
+  role: 'student' | 'teacher' | 'admin'
   locked: true
 }> {
   const result = await request<{
     ok: true
     identity: InternalIdentity
-    role: 'student' | 'teacher'
+    role: 'student' | 'teacher' | 'admin'
     locked: true
   }>(
     '/me/internal-id/claim',
@@ -614,6 +620,14 @@ export async function createAdminInternalId(
     { type, name },
   )
   return result.identity
+}
+
+export async function pauseAdminInternalId(id: string): Promise<void> {
+  await request<{ ok: true }>(`/me/admin/internal-ids/${id}/pause`, 'POST', {})
+}
+
+export async function restoreAdminInternalId(id: string): Promise<void> {
+  await request<{ ok: true }>(`/me/admin/internal-ids/${id}/restore`, 'POST', {})
 }
 
 export async function unbindAdminInternalId(id: string): Promise<void> {
