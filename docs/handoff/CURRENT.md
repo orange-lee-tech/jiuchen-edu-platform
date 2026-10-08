@@ -62,3 +62,11 @@ If a phone preview contradicts these expectations while the local files match th
 - Current client newsroom added an authorized in-app pending-classification count; admin list sorts unclassified first while preserving existing tags.
 - A new article is not claimed to produce a device-level push notification. WeChat subscription template and user opt-in are separate and deferred.
 - Once News operations acceptance passes, move directly to Blueprint Phase 1; do not restart infra, AI providers or commerce.
+
+## Verified News timer gap and temporary test IDs — 2026-10-08
+
+- Operator read-only ECS evidence: `jiuchen-news-sync.service` and `jiuchen-news-sync.timer` were not installed; timer inactive; no unit logs. The compiled sync script is already present in the active production release.
+- Existing repo service and timer unit files must be installed into systemd and explicitly verified with one successful sync before enabling the recurring timer. Do not restart `jiuchen-api.service`.
+- `ops/ecs/issue-acceptance-identities.mjs` is an **explicit opt-in**, root-only, idempotent maintenance helper for exactly one unclaimed student ID and one admin ID in the `acceptance-20261008` test batch. It calls the canonical transactional business identity factory and never edits existing roles/records.
+- Administrator IDs cannot be self-claimed; an authorized administrator must bind an available administrator ID to an ordinary logged-in WeChat user account.
+- Retire test identities after acceptance; do not promote them to real customers.
