@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { and, eq, isNull } from 'drizzle-orm'
 import type { FastifyRequest } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
-import { userSessions, users } from '../db/schema.js'
+import { internalIds, userSessions, users } from '../db/schema.js'
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
@@ -53,10 +53,12 @@ export async function resolveSessionUser(
       role: users.role,
       displayName: users.displayName,
       status: users.status,
+      internalIdStatus: internalIds.status,
       expiresAt: userSessions.expiresAt,
     })
     .from(userSessions)
     .innerJoin(users, eq(userSessions.userId, users.id))
+    .leftJoin(internalIds, eq(internalIds.userId, users.id))
     .where(
       and(
         eq(userSessions.tokenHash, hashToken(token)),
@@ -66,7 +68,7 @@ export async function resolveSessionUser(
     )
     .limit(1)
 
-  if (!row || row.expiresAt.getTime() <= Date.now()) {
+  if (!row || row.expiresAt.getTime() <= Date.now() || row.internalIdStatus === 'disabled') {
     return null
   }
 

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { DatabaseContext } from '../db/client.js'
@@ -120,29 +120,36 @@ export function registerIdentityRoutes(
       )
       .limit(1)
 
-    if (!identity || identity.claimMode !== 'self' || identity.type === 'admin') {
+    if (!identity || (identity.type !== 'admin' && identity.claimMode !== 'self')) {
       return reply.code(400).send({
         ok: false,
         error: 'invalid_internal_id',
       })
     }
 
-    if (!identity.entityId) {
+    if (identity.type !== 'admin' && !identity.entityId) {
       return reply.code(409).send({
         ok: false,
         error: 'internal_id_not_ready',
       })
     }
 
-    await database.db.transaction(async (tx) => {
-      await tx
+    try {
+      await database.db.transaction(async (tx) => {
+      // Atomic one-time claim: concurrent requests cannot activate the same code.
+      const [claimed] = await tx
         .update(internalIds)
         .set({
           userId: sessionUser.userId,
           status: 'claimed',
           claimedAt: new Date(),
         })
-        .where(eq(internalIds.id, identity.id))
+        .where(and(
+          eq(internalIds.id, identity.id),
+          eq(internalIds.status, 'available'),
+          isNull(internalIds.userId),
+        ))
+      if (claimed.affectedRows !== 1) throw new Error('internal_id_not_available')
 
       await tx
         .update(users)
@@ -161,6 +168,13 @@ export function registerIdentityRoutes(
           .where(eq(teachers.id, identity.entityId!))
       }
     })
+
+    } catch (error) {
+      if (error instanceof Error && error.message === 'internal_id_not_available') {
+        return reply.code(409).send({ ok: false, error: 'internal_id_not_available' })
+      }
+      throw error
+    }
 
     return {
       ok: true,
