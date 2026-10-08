@@ -53,11 +53,13 @@ test "$(cat "$PREPARED/COMMIT_SHA")" = "$NEW"
 BAD=$(find "$PREPARED" -xdev ! -type l \( -perm -0020 -o -perm -0002 \) -print -quit)
 test -z "$BAD"
 
-runuser -u jiuchen-api -- test -r "$PREPARED/services/api/dist/server.js"
-runuser -u jiuchen-api -- "$NODE" --check "$PREPARED/services/api/dist/server.js"
-
-mv "$PREPARED" "$TARGET"
+# staging is intentionally not traversable by the API service user.
+# Make the immutable release reachable first, then validate service-user access.
+test ! -e "$TARGET" && test ! -L "$TARGET"
+mv -T "$PREPARED" "$TARGET"
 test "$(cat "$TARGET/COMMIT_SHA")" = "$NEW"
+runuser -u jiuchen-api -- test -r "$TARGET/services/api/dist/server.js"
+runuser -u jiuchen-api -- "$NODE" --check "$TARGET/services/api/dist/server.js"
 
 echo "IDENTITY_V2_RELEASE_BUILD_PASS"
 echo "PREPARED_RELEASE=$NEW"
