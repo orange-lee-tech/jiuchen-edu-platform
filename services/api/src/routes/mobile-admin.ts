@@ -168,7 +168,14 @@ export function registerMobileAdminRoutes(
   app.post<{ Params: { id: string } }>(
     '/me/admin/internal-ids/:id/unbind',
     async (request, reply) => {
-      if (!(await requireAdmin(request, reply, configuredDatabase))) return
+      const operator = await requireAdmin(request, reply, configuredDatabase)
+      if (!operator) return
+      const [identity] = await configuredDatabase.db
+        .select({ userId: internalIds.userId })
+        .from(internalIds).where(eq(internalIds.id, request.params.id)).limit(1)
+      if (identity?.userId === operator.userId) {
+        return reply.code(409).send({ ok: false, error: 'cannot_modify_own_admin_id' })
+      }
 
       try {
         await unbindInternalIdentity(configuredDatabase, request.params.id)
@@ -180,6 +187,55 @@ export function registerMobileAdminRoutes(
           error: message,
         })
       }
+    },
+  )
+
+  // No new schema: disabled with userId = paused; disabled without userId =
+  // revoked or unissued ID. Both reject use/claim until restored by an admin.
+  app.post<{ Params: { id: string } }>(
+    '/me/admin/internal-ids/:id/pause',
+    async (request, reply) => {
+      const operator = await requireAdmin(request, reply, configuredDatabase)
+      if (!operator) return
+      const [identity] = await configuredDatabase.db
+        .select({ status: internalIds.status, userId: internalIds.userId })
+        .from(internalIds).where(eq(internalIds.id, request.params.id)).limit(1)
+      if (!identity) return reply.code(404).send({ ok: false, error: 'internal_id_not_found' })
+      if (identity.userId === operator.userId)
+        return reply.code(409).send({ ok: false, error: 'cannot_modify_own_admin_id' })
+      if (identity.status !== 'claimed' && identity.status !== 'available')
+        return reply.code(409).send({ ok: false, error: 'internal_id_not_active' })
+      const [updated] = await configuredDatabase.db.update(internalIds)
+        .set({ status: 'disabled' })
+        .where(and(eq(internalIds.id, request.params.id), eq(internalIds.status, identity.status)))
+      if (updated.affectedRows !== 1)
+        return reply.code(409).send({ ok: false, error: 'internal_id_state_changed' })
+      return { ok: true }
+    },
+  )
+
+  // If bound: restore the existing identity + account. If unbound: make this
+  // one-time ID available for claiming again, without granting a user role.
+  app.post<{ Params: { id: string } }>(
+    '/me/admin/internal-ids/:id/restore',
+    async (request, reply) => {
+      const operator = await requireAdmin(request, reply, configuredDatabase)
+      if (!operator) return
+      const [identity] = await configuredDatabase.db
+        .select({ status: internalIds.status, userId: internalIds.userId })
+        .from(internalIds).where(eq(internalIds.id, request.params.id)).limit(1)
+      if (!identity) return reply.code(404).send({ ok: false, error: 'internal_id_not_found' })
+      if (identity.userId === operator.userId)
+        return reply.code(409).send({ ok: false, error: 'cannot_modify_own_admin_id' })
+      if (identity.status !== 'disabled')
+        return reply.code(409).send({ ok: false, error: 'internal_id_not_disabled' })
+      const status = identity.userId ? 'claimed' : 'available'
+      const [updated] = await configuredDatabase.db.update(internalIds)
+        .set({ status })
+        .where(and(eq(internalIds.id, request.params.id), eq(internalIds.status, 'disabled')))
+      if (updated.affectedRows !== 1)
+        return reply.code(409).send({ ok: false, error: 'internal_id_state_changed' })
+      return { ok: true, status }
     },
   )
 

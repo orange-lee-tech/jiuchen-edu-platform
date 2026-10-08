@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { DatabaseContext } from '../db/client.js'
@@ -8,7 +8,7 @@ import {
   teachers,
   users,
 } from '../db/schema.js'
-import { normalizeInternalBusinessId } from '../domain/internal-id.js'
+import { classifyInternalIdClaim, normalizeInternalBusinessId } from '../domain/internal-id.js'
 import { resolveSessionUser } from '../services/session.js'
 
 const claimSchema = z.object({
@@ -109,40 +109,38 @@ export function registerIdentityRoutes(
         type: internalIds.type,
         claimMode: internalIds.claimMode,
         status: internalIds.status,
+        userId: internalIds.userId,
         entityId: internalIds.entityId,
       })
       .from(internalIds)
-      .where(
-        and(
-          eq(internalIds.businessId, normalized),
-          eq(internalIds.status, 'available'),
-        ),
-      )
+      .where(eq(internalIds.businessId, normalized))
       .limit(1)
 
-    if (!identity || identity.claimMode !== 'self' || identity.type === 'admin') {
-      return reply.code(400).send({
+    const claimError = classifyInternalIdClaim(identity)
+    if (claimError) {
+      return reply.code(claimError === 'invalid_internal_id' ? 400 : 409).send({
         ok: false,
-        error: 'invalid_internal_id',
+        error: claimError,
       })
     }
+    if (!identity) throw new Error('unreachable_missing_identity')
 
-    if (!identity.entityId) {
-      return reply.code(409).send({
-        ok: false,
-        error: 'internal_id_not_ready',
-      })
-    }
-
-    await database.db.transaction(async (tx) => {
-      await tx
+    try {
+      await database.db.transaction(async (tx) => {
+      // Atomic one-time claim: concurrent requests cannot activate the same code.
+      const [claimed] = await tx
         .update(internalIds)
         .set({
           userId: sessionUser.userId,
           status: 'claimed',
           claimedAt: new Date(),
         })
-        .where(eq(internalIds.id, identity.id))
+        .where(and(
+          eq(internalIds.id, identity.id),
+          eq(internalIds.status, 'available'),
+          isNull(internalIds.userId),
+        ))
+      if (claimed.affectedRows !== 1) throw new Error('internal_id_not_available')
 
       await tx
         .update(users)
@@ -161,6 +159,13 @@ export function registerIdentityRoutes(
           .where(eq(teachers.id, identity.entityId!))
       }
     })
+
+    } catch (error) {
+      if (error instanceof Error && error.message === 'internal_id_not_available') {
+        return reply.code(409).send({ ok: false, error: 'internal_id_not_available' })
+      }
+      throw error
+    }
 
     return {
       ok: true,
