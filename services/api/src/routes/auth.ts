@@ -161,10 +161,10 @@ async function finalizeLogin(
   user: Pick<LoginUser, 'id' | 'role' | 'displayName'>,
   agreementVersion: string,
 ) {
-  await recordUserAgreement(database, user.id, agreementVersion)
-
-  const session = await issueSession(database, user.id)
   const businessIdentity = await loadBusinessIdentity(database, user.id)
+  if (businessIdentity?.status === 'disabled') throw new Error('internal_id_suspended')
+  await recordUserAgreement(database, user.id, agreementVersion)
+  const session = await issueSession(database, user.id)
 
   return {
     ok: true as const,
@@ -250,6 +250,9 @@ export function registerAuthRoutes(
 
       return finalizeLogin(database, user, body.data.agreementVersion)
     } catch (error) {
+      if (error instanceof Error && error.message === 'internal_id_suspended') {
+        return reply.code(403).send({ ok: false, error: 'internal_id_suspended' })
+      }
       app.log.warn({ err: error }, 'WeChat identity bootstrap failed')
       return reply.code(502).send({
         ok: false,
@@ -362,6 +365,9 @@ export function registerAuthRoutes(
 
       return finalizeLogin(database, user, body.data.agreementVersion)
     } catch (error) {
+      if (error instanceof Error && error.message === 'internal_id_suspended') {
+        return reply.code(403).send({ ok: false, error: 'internal_id_suspended' })
+      }
       app.log.warn({ err: error }, 'WeChat phone bootstrap failed')
       return reply.code(502).send({
         ok: false,
