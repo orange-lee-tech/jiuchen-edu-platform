@@ -7,7 +7,7 @@
   <view class="tabs">
     <view class="tab {{section === 'admin-users' ? 'active' : ''}}" data-section="admin-users" bindtap="onSectionChange">内部ID</view>
     <view class="tab {{section === 'admin-assignments' ? 'active' : ''}}" data-section="admin-assignments" bindtap="onSectionChange">师生分配</view>
-    <view class="tab {{section === 'admin-news' ? 'active' : ''}}" data-section="admin-news" bindtap="onSectionChange">动态同步</view>
+    <view class="tab {{section === 'admin-news' ? 'active' : ''}}" data-section="admin-news" bindtap="onSectionChange">动态同步{{pendingClassificationCount > 0 ? ' · 待分类 ' + pendingClassificationCount : ''}}</view>
   </view>
 
   <view wx:if="{{loading}}" class="card">正在加载…</view>
@@ -81,8 +81,8 @@
     </view>
 
     <view class="card">
-      <text class="card-title">已同步内容与标签</text>
-      <text class="card-note">服务号发布接口不提供可依赖的“合集标签”字段，小程序以这里的管理员标签作为个性化推荐的稳定分类源。留空保存即可删除全部标签。</text>
+      <text class="card-title">已同步内容与标签 · 待分类 {{pendingClassificationCount}} 篇</text>
+      <text class="card-note">未分类文章置顶；添加标签后学员才可见。重新同步不会覆盖已有标签。留空保存会再次隐藏该文章对学员的展示。</text>
       <view wx:for="{{posts}}" wx:key="id" class="list-row news-row">
         <view class="row-main">
           <text class="row-title">{{item.title}}</text>

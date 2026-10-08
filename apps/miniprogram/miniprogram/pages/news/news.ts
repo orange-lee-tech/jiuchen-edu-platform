@@ -81,6 +81,8 @@ Page({
     featured: FALLBACK_FEATURED,
     articles: [] as NewsCard[],
     allArticles: [] as NewsCard[],
+    pendingClassificationCount: 0,
+    pendingClassificationRole: 'none' as 'none' | 'admin' | 'reviewer',
   },
 
   onShow() {
@@ -90,6 +92,9 @@ Page({
   async loadNews() {
     try {
       this.setData({ loading: true })
+      const auth = getSavedAuthResult()
+      const role = auth?.user.role ?? 'user'
+      const canSeeUnclassified = ['teacher', 'staff', 'admin'].includes(role)
       const posts = await getNewsPosts()
       if (posts.length === 0) {
         this.setData({
@@ -98,14 +103,18 @@ Page({
           featured: FALLBACK_FEATURED,
           allArticles: [],
           articles: [],
+          pendingClassificationCount: 0,
+          pendingClassificationRole: 'none',
         })
         return
       }
 
-      const auth = getSavedAuthResult()
-      const canSeeUnclassified = Boolean(
-        auth && ['teacher', 'staff', 'admin'].includes(auth.user.role),
-      )
+      const pendingClassificationCount = canSeeUnclassified
+        ? posts.filter((post) => post.tags.length === 0).length
+        : 0
+      const pendingClassificationRole = role === 'admin'
+        ? 'admin'
+        : canSeeUnclassified ? 'reviewer' : 'none'
       const visiblePosts = canSeeUnclassified
         ? posts
         : posts.filter((post) => post.tags.length > 0)
@@ -118,6 +127,8 @@ Page({
           featured: FALLBACK_FEATURED,
           allArticles: [],
           articles: [],
+          pendingClassificationCount,
+          pendingClassificationRole,
         })
         return
       }
@@ -132,6 +143,8 @@ Page({
         featured: first,
         allArticles: cards,
         articles: cards.slice(1),
+        pendingClassificationCount,
+        pendingClassificationRole,
       })
     } catch (error) {
       console.info('Synchronized news is unavailable.', error)
@@ -139,6 +152,8 @@ Page({
         featured: FALLBACK_FEATURED,
         allArticles: [],
         articles: [],
+        pendingClassificationCount: 0,
+        pendingClassificationRole: 'none',
       })
     } finally {
       this.setData({ loading: false })
@@ -156,6 +171,11 @@ Page({
       return articles.filter((article) => article.tags.length === 0)
     }
     return articles.filter((article) => article.tags.includes(category))
+  },
+
+  onManageNewsTags() {
+    if (this.data.pendingClassificationRole !== 'admin') return
+    wx.navigateTo({ url: '/pages/admin/admin?section=admin-news' })
   },
 
   onCategoryTap(event: WechatMiniprogram.BaseEvent) {

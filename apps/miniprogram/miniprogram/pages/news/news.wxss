@@ -208,3 +208,21 @@
   font-size: 22rpx;
   text-align: center;
 }
+
+/* Editorial operations notice: shown to authorized staff, not student users. */
+.pending-news-note {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 18rpx;
+  padding: 18rpx 20rpx;
+  border: 1rpx solid #dce5ee;
+  border-radius: 8rpx;
+  background: #f2f6fa;
+}
+.pending-news-text { flex: 1; min-width: 0; }
+.pending-news-title, .pending-news-desc { display: block; }
+.pending-news-title { color: #2b3c50; font-size: 24rpx; font-weight: 700; }
+.pending-news-desc { margin-top: 6rpx; color: #667788; font-size: 20rpx; line-height: 1.5; }
+.pending-news-action { flex-shrink: 0; margin: 0; padding: 0 14rpx; background: #375f92; border-radius: 7rpx; color: #fff; font-size: 21rpx; line-height: 58rpx; }
+.pending-news-action::after { border: 0; }

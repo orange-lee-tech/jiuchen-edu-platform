@@ -7,6 +7,14 @@
     <text class="source-chip">{{sourceLabel}}</text>
   </view>
 
+  <view wx:if="{{pendingClassificationCount > 0}}" class="pending-news-note">
+    <view class="pending-news-text">
+      <text class="pending-news-title">当前列表有 {{pendingClassificationCount}} 篇资讯待分类</text>
+      <text class="pending-news-desc">{{pendingClassificationRole === 'admin' ? '分类后学员才能在资讯中看到，点击处理标签。' : '新同步文章需要管理员添加标签后才能向学员展示。'}}</text>
+    </view>
+    <button wx:if="{{pendingClassificationRole === 'admin'}}" class="pending-news-action" bindtap="onManageNewsTags">处理标签</button>
+  </view>
+
   <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
     <view class="category-row">
       <view

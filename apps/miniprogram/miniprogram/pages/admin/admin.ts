@@ -24,6 +24,17 @@ import {
 
 type Section = 'admin-users' | 'admin-assignments' | 'admin-news'
 
+function newsReviewState(posts: AdminNewsPost[]) {
+  // Review queue is derived from existing canonical tags; no secondary state store.
+  const sorted = [...posts].sort(
+    (a, b) => Number(b.tags.length === 0) - Number(a.tags.length === 0),
+  )
+  return {
+    posts: sorted,
+    pendingClassificationCount: posts.filter((post) => post.tags.length === 0).length,
+  }
+}
+
 const ID_TYPES = [
   { value: 'student', label: '学员ID' },
   { value: 'teacher', label: '老师ID' },
@@ -41,6 +52,7 @@ Page({
     teachers: [] as AdminTeacher[],
     assignments: [] as AdminAssignment[],
     posts: [] as AdminNewsPost[],
+    pendingClassificationCount: 0,
     idTypes: ID_TYPES,
     newIdTypeIndex: 0,
     newIdName: '',
@@ -91,7 +103,7 @@ Page({
         students,
         teachers,
         assignments,
-        posts,
+        ...newsReviewState(posts),
         availableIds,
         guestUsers,
         bindIdIndex: Math.min(this.data.bindIdIndex, Math.max(0, availableIds.length - 1)),
@@ -286,7 +298,7 @@ Page({
         try {
           this.setData({ actionLoading: true })
           await updateAdminNewsTags(id, tags)
-          this.setData({ posts: await getAdminNews() })
+          this.setData(newsReviewState(await getAdminNews()))
           wx.showToast({
             title: tags.length ? '标签已更新' : '标签已清空',
             icon: 'success',
@@ -306,7 +318,7 @@ Page({
       this.setData({ actionLoading: true })
       const synced = await syncOfficialAccountNews()
       wx.showToast({ title: `已同步 ${synced} 条`, icon: 'success' })
-      this.setData({ posts: await getAdminNews() })
+      this.setData(newsReviewState(await getAdminNews()))
     } catch (error) {
       const message = error instanceof Error ? error.message : ''
       const title = message.includes('official_account_not_configured')
