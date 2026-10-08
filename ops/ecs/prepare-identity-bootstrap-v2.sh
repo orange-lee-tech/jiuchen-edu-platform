@@ -25,8 +25,8 @@ done
 
 "$NODE" -v
 sha256sum "$PKG"
-tar -tzf "$PKG" | grep -qx 'services/api/package.json'
-tar -tzf "$PKG" | grep -qx 'services/api/package-lock.json'
+tar -tzf "$PKG" | grep -x 'services/api/package.json' >/dev/null
+tar -tzf "$PKG" | grep -x 'services/api/package-lock.json' >/dev/null
 
 mkdir -p "$WORK"
 tar -xzf "$PKG" -C "$WORK"
