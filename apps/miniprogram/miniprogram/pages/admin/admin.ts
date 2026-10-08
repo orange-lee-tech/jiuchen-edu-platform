@@ -7,6 +7,7 @@ import {
   deleteAdminInternalId,
   pauseAdminInternalId,
   restoreAdminInternalId,
+  friendlyRequestError,
   getAdminAssignments,
   getAdminInternalIds,
   getAdminNews,
