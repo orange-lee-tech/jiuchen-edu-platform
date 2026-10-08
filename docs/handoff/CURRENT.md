@@ -70,3 +70,11 @@ If a phone preview contradicts these expectations while the local files match th
 - `ops/ecs/issue-acceptance-identities.mjs` is an **explicit opt-in**, root-only, idempotent maintenance helper for exactly one unclaimed student ID and one admin ID in the `acceptance-20261008` test batch. It calls the canonical transactional business identity factory and never edits existing roles/records.
 - Administrator IDs cannot be self-claimed; an authorized administrator must bind an available administrator ID to an ordinary logged-in WeChat user account.
 - Retire test identities after acceptance; do not promote them to real customers.
+
+## Internal-ID acceptance correction — 2026-10-08
+
+- An acceptance admin ID of `JCA-...` was entered into the user self-claim surface. The error is expected from server authorization, not proof of a hyphen/encoding problem. Do not advise admin self-claim again.
+- Existing server `/me/internal-id/claim` allows only available `student` or `teacher` records with `claimMode=self`. `admin` is deliberately disallowed regardless of valid ID.
+- Client now recognizes full-width alphanumeric pasted codes and shows a workflow explanation for JCA identifiers before calling self-claim.
+- Previous `invalid_internal_id` failures for other codes are not retrospectively diagnosed: verify available/claimed/disabled status and target environment via existing authenticated admin ID list.
+- No business-ID format or existing database record was changed.
