@@ -242,8 +242,8 @@ test('CloudBase initialization remains before debug transport auth validation', 
 test('professional slots expose existing matching actions and no staff admin destination', () => {
   for (const kind of ['teacher', 'admin']) {
     for (const slot of ['home', 'plan', 'opportunity']) {
-      const h = harness(), component = h.component('role-shell', { phase: 'ready', kind, slot })
-      component.observers['slot, kind'].call(component, slot, kind)
+      const h = harness(), component = h.component('role-shell', { phase: 'ready', kind, viewSlot: slot })
+      component.observers['viewSlot, kind'].call(component, slot, kind)
       assert.ok(component.data.actions.length > 0)
       for (const action of component.data.actions) {
         assert.ok(kind === 'admin' ? action.url.startsWith('/pages/admin/admin?section=admin-') : action.url === '/pages/teacher-students/teacher-students')
@@ -344,4 +344,37 @@ test('WXML is balanced and changed surfaces use real registered handlers', () =>
     assert.equal(stack.length, 0)
     for (const match of source.matchAll(/(?:bindtap|binderror)="(\w+)"/g)) assert.equal(typeof page[match[1]], 'function', `${name}: ${match[1]}`)
   }
+})
+
+
+test('role-shell uses an ordinary view-slot property instead of reserved WXML slot and shows distinct role tabs', () => {
+  const component = fs.readFileSync(path.join(root, 'components/role-shell/role-shell.ts'), 'utf8')
+  const template = fs.readFileSync(path.join(root, 'components/role-shell/role-shell.wxml'), 'utf8')
+  const expected = {
+    index: 'home',
+    classroom: 'plan',
+    news: 'opportunity',
+    profile: 'mine',
+  }
+  assert.match(component, /viewSlot:\s*\{\s*type:\s*String/)
+  assert.match(component, /'viewSlot, kind'/)
+  assert.doesNotMatch(template, /\bslot\s*!==\s*'mine'/)
+  for (const [page, slot] of Object.entries(expected)) {
+    const html = fs.readFileSync(path.join(root, \`pages/\${page}/\${page}.wxml\`), 'utf8')
+    assert.ok(html.includes(\`<role-shell view-slot="\${slot}"\`), \`\${page} binds the explicit view-slot value\`)
+    assert.ok(!html.includes('<role-shell slot='), \`\${page} must not use native slot attribute\`)
+  }
+  for (const kind of ['admin', 'teacher']) {
+    const h = harness(), cmp = h.component('role-shell', { phase:'ready', kind, viewSlot:'mine' })
+    cmp.observers['viewSlot, kind'].call(cmp, 'mine', kind)
+    assert.equal(cmp.data.actions.length, 0, 'Mine must never duplicate Workbench actions')
+    const home = h.component('role-shell', { phase:'ready', kind, viewSlot:'home' })
+    home.observers['viewSlot, kind'].call(home, 'home', kind)
+    assert.ok(home.data.actions.length > 0)
+  }
+})
+
+test('current-week plan badge follows the selected view', () => {
+  const html = fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxml'), 'utf8')
+  assert.match(html, /selectedView === 'week' \? '本周课表' : currentStageLabel/)
 })
