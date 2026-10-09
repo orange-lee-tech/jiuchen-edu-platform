@@ -3,10 +3,10 @@
   <text class="state-description">{{phase === 'loading' ? '确认后会显示与你身份对应的入口。' : message}}</text>
   <button wx:if="{{phase === 'error'}}" class="primary" bindtap="onRetry">重新确认身份</button>
 </view>
-<view wx:elif="{{kind !== 'student' && slot !== 'mine'}}" class="workspace">
+<view wx:elif="{{kind !== 'student' && viewSlot !== 'mine'}}" class="workspace">
   <view class="workspace-intro">
     <text class="eyebrow">九辰保研 · {{roleLabel}}</text>
-    <image class="workspace-icon" src="/assets/icons/{{slot === 'home' ? 'workbench' : slot === 'plan' ? 'users' : kind === 'admin' ? 'business' : 'coaching'}}-active.png" /><text class="workspace-title">{{title}}</text>
+    <image class="workspace-icon" src="/assets/icons/{{viewSlot === 'home' ? 'workbench' : viewSlot === 'plan' ? 'users' : kind === 'admin' ? 'business' : 'coaching'}}-active.png" /><text class="workspace-title">{{title}}</text>
     <text class="workspace-description">{{description}}</text>
     <button wx:if="{{actions.length}}" class="primary" loading="{{opening}}" disabled="{{opening}}" data-key="{{actions[0].key}}" bindtap="onAction"><image class="button-icon" src="/assets/icons/{{actions[0].key === 'assignments' ? 'assignments' : actions[0].key === 'reviews' ? 'coaching' : 'users'}}-active.png" />{{actions[0].title}}</button>
   </view>
