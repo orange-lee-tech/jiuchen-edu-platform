@@ -22,6 +22,10 @@ Page({
       website: school?.website || '',
       intro: school?.introSource || '',
       address: school?.addressSource || '',
+      stats: school?.verifiedStats?.sourceUrl || '',
+      admissions: school?.admissions?.url || '',
+      catalogs: school?.admissions?.catalogsUrl || '',
+      summer: school?.admissions?.summerUrl || '',
       moe: MOE_985_SOURCE, c9: C9_SOURCE,
     }
     const url = urls[key]

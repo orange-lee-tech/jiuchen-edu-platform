@@ -21,6 +21,21 @@ export type School = {
   address: string
   addressSource: string
   founded: string
+  verifiedStats?: {
+    campusCount: number
+    collegeCount: number
+    doubleFirstSubjects: number
+    sourceUrl: string
+    sourceChecked: string
+  }
+  admissions?: {
+    title: string
+    url: string
+    catalogsTitle: string
+    catalogsUrl: string
+    summerTitle: string
+    summerUrl: string
+  }
 }
 
 const tuples: ReadonlyArray<readonly [string,string,string,string]> = [
@@ -267,7 +282,22 @@ const verifiedExtras: Record<string, Partial<School>> = {
     "introSource": "https://www.nju.edu.cn/ndgk/ndjj.htm",
     "address": "江苏省南京市栖霞区仙林大道163号（仙林校区）",
     "addressSource": "https://history.nju.edu.cn/e7/e9/c28610a452585/page.htm",
-    "founded": "1902"
+    "founded": "1902",
+    "verifiedStats": {
+      "campusCount": 4,
+      "collegeCount": 40,
+      "doubleFirstSubjects": 16,
+      "sourceUrl": "https://yzb.nju.edu.cn/main.htm",
+      "sourceChecked": "2026-10-10"
+    },
+    "admissions": {
+      "title": "南京大学研究生招生网",
+      "url": "https://yzb.nju.edu.cn/",
+      "catalogsTitle": "2026年9月研究生学科专业目录",
+      "catalogsUrl": "https://xkb.nju.edu.cn/zysz/list.htm",
+      "summerTitle": "夏令营与推免通知",
+      "summerUrl": "https://yzb.nju.edu.cn/"
+    }
   },
   "北京大学": {
     "website": "https://www.pku.edu.cn/",

@@ -5,10 +5,18 @@
     <view class="hero-tags"><text>985 工程</text><text wx:if="{{school.isC9}}">C9 联盟</text><text>官方名单已核对</text></view>
   </view>
   <view class="detail-overview">
-    <view class="fact-cell"><text class="fact-key">所在城市</text><text class="fact-value">{{school.city}}</text></view>
-    <view class="fact-cell"><text class="fact-key">985 建设名单</text><text class="fact-value">已核验</text></view>
-    <view class="fact-cell"><text class="fact-key">C9 联盟</text><text class="fact-value">{{school.isC9 ? '是' : '否'}}</text></view>
+    <block wx:if="{{school.verifiedStats}}">
+      <view class="fact-cell"><text class="fact-key">校区</text><text class="fact-value">{{school.verifiedStats.campusCount}}</text></view>
+      <view class="fact-cell"><text class="fact-key">学院</text><text class="fact-value">{{school.verifiedStats.collegeCount}}</text></view>
+      <view class="fact-cell"><text class="fact-key">双一流建设学科</text><text class="fact-value">{{school.verifiedStats.doubleFirstSubjects}}</text></view>
+    </block>
+    <block wx:else>
+      <view class="fact-cell"><text class="fact-key">所在城市</text><text class="fact-value">{{school.city}}</text></view>
+      <view class="fact-cell"><text class="fact-key">985 建设名单</text><text class="fact-value">已核验</text></view>
+      <view class="fact-cell"><text class="fact-key">C9 联盟</text><text class="fact-value">{{school.isC9 ? '是' : '否'}}</text></view>
+    </block>
   </view>
+  <view wx:if="{{school.verifiedStats}}" class="stats-source" data-key="stats" bindtap="copyUrl">上述数据来自学校招生网（核对日期 {{school.verifiedStats.sourceChecked}}）· 复制来源 ›</view>
   <view class="detail-card">
     <view class="detail-heading"><text>学校简介</text><text class="detail-hint">官方来源优先</text></view>
     <text class="intro-text">{{hasIntro ? school.intro : '已核验该校位于教育部公布的985工程建设高校名单中。学校历史介绍及最新情况尚未完成逐校官网核验，不使用未经核实的介绍或统计数字。'}}</text>
@@ -26,6 +34,12 @@
   </view>
   <view class="detail-card project-card">
     <view class="detail-heading"><text>学院与招生项目</text><text class="detail-hint">按当年文件核实</text></view>
+    <view wx:if="{{school.admissions}}" class="official-admissions">
+      <text class="official-admissions-heading">已核实的院校招生资料</text>
+      <view class="official-admissions-link" data-key="admissions" bindtap="copyUrl"><text>{{school.admissions.title}}</text><text>复制链接 ›</text></view>
+      <view class="official-admissions-link" data-key="catalogs" bindtap="copyUrl"><text>{{school.admissions.catalogsTitle}}</text><text>复制链接 ›</text></view>
+      <view class="official-admissions-link" data-key="summer" bindtap="copyUrl"><text>{{school.admissions.summerTitle}}</text><text>复制链接 ›</text></view>
+    </view>
     <view class="project-guide"><text class="project-number">01</text><view><text class="project-title">核对学院与方向</text><text class="project-note">先确认学院、专业代码和研究方向，不能以学校层次替代项目要求。</text></view></view>
     <view class="project-guide"><text class="project-number">02</text><view><text class="project-title">获取最新招生原文</text><text class="project-note">以目标学校研究生院及具体院系的当年推免通知和专业目录为准。</text></view></view>
     <view class="project-guide"><text class="project-number">03</text><view><text class="project-title">联系九辰辅导老师</text><text class="project-note">结合本科背景和可核验案例分析，不承诺录取结果。</text></view></view>

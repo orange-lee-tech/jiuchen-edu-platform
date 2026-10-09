@@ -35,3 +35,10 @@ page{background:#eaf5f1;}
 .project-title{display:block;font-size:26rpx;font-weight:800;color:#164b4e;}
 .project-note{display:block;font-size:23rpx;line-height:1.55;color:#536e6a;margin-top:6rpx;}
 .project-warning{margin-top:19rpx;padding:18rpx 16rpx;background:#fff4dd;color:#7f6127;font-size:22rpx;line-height:1.6;border-left:5rpx solid #e8b244;}
+
+.stats-source{margin:-7rpx 2rpx 16rpx;font-size:20rpx;line-height:1.5;color:#277b6e;text-align:right;}
+.official-admissions{margin:10rpx 0 18rpx;padding:16rpx 18rpx;background:#e9f8f4;border-left:5rpx solid #12a799;border-radius:8rpx;}
+.official-admissions-heading{display:block;color:#0a756e;font-size:23rpx;font-weight:800;margin-bottom:7rpx;}
+.official-admissions-link{display:flex;justify-content:space-between;gap:13rpx;align-items:center;padding:16rpx 0;border-bottom:1rpx solid #cde9e2;}
+.official-admissions-link text:first-child{min-width:0;flex:1;font-size:23rpx;color:#1a4b4b;line-height:1.5;}
+.official-admissions-link text:last-child{flex:none;color:#13877c;font-size:21rpx;}
