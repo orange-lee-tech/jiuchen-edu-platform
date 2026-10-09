@@ -1,5 +1,8 @@
 # Main control status — 2026-10-06
 
+> **HISTORICAL SNAPSHOT — superseded for execution on 2026-10-09.** This dated memo's old production SHA, priority order and `Phase 1 not authorized` statements are no longer current instructions.
+> Read `docs/handoff/CURRENT.md` and `docs/handoff/phase1-codex-execution-2026-10-09.md` before work. Original incident/test evidence below is intentionally preserved.
+
 Repository: `orange-lee-tech/jiuchen-edu-platform`  
 Integration branch: `p1/foundation`  
 Verified repository HEAD at write time: `ddf76a8b6650de3e83f63170fb6144b20c02e9e8`  
