@@ -1,5 +1,5 @@
 <view class="classroom-page">
-  <role-shell slot="plan" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <role-shell view-slot="plan" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready' && shellKind === 'student'}}">
   <view class="classroom-top">
     <view>
