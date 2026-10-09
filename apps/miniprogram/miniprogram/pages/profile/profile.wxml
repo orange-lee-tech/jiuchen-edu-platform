@@ -24,3 +24,4 @@
   </block>
 </view>
 <first-use-guide />
+<official-website-dialog id="website-dialog" />
