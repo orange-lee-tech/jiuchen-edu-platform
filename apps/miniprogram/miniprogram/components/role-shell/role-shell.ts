@@ -11,7 +11,7 @@ const content: Record<string, { title: string; description: string; actions: Act
   'teacher-home': { title: '从学员的下一步开始', description: '查看学员阶段规划，处理他们提交的更新。', actions: [students, reviews] },
   'teacher-plan': { title: '学员与阶段规划', description: '进入获授权学员的资料与规划，接续日常辅导。', actions: [students] },
   'teacher-opportunity': { title: '跟进学员的规划更新', description: '审核学员提交的版本，或进入学员规划进行调整。', actions: [reviews, students] },
-  'admin-home': { title: '把服务关系安排清楚', description: '从用户身份、师生分配与资讯维护进入日常管理。', actions: [users, assignments, articles] },
+  'admin-home': { title: '先找到需要处理的编号', description: '从真实编号查找与账号状态开始。师生分配和资讯运营集中在“业务”。', actions: [users] },
   'admin-plan': { title: '用户身份与内部编号', description: '打开现有管理页，查看账号和业务身份的真实状态。', actions: [users] },
   'admin-opportunity': { title: '师生分配与资讯维护', description: '维护服务关系和内容分类，操作结果由服务器确认。', actions: [assignments, articles] },
 }

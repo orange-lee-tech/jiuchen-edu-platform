@@ -10,13 +10,13 @@
     </view>
     <text class="section-heading">准备与行动</text>
     <view class="action-list">
-      <button class="action-row" bindtap="onAssessment"><view class="action-main"><text class="action-title">背景评估与历史结果</text><text class="action-description">整理背景，查看有依据的分析与建议</text></view><text class="arrow">›</text></button>
-      <button class="action-row" bindtap="onPlanning"><view class="action-main"><text class="action-title">我的阶段规划</text><text class="action-description">九辰学员查看规划、导入课表与接续辅导</text></view><text class="arrow">›</text></button>
-      <button class="action-row" bindtap="onNews"><view class="action-main"><text class="action-title">阅读保研文章</text><text class="action-description">查看已同步、已分类的服务号内容</text></view><text class="arrow">›</text></button>
+      <button class="action-row" bindtap="onAssessment"><image class="action-icon" src="/assets/icons/assessment-active.png" /><view class="action-main"><text class="action-title">背景评估与历史结果</text><text class="action-description">整理背景，查看有依据的分析与建议</text></view><text class="arrow">›</text></button>
+      <button class="action-row" bindtap="onPlanning"><image class="action-icon" src="/assets/icons/calendar-active.png" /><view class="action-main"><text class="action-title">我的阶段规划</text><text class="action-description">九辰学员查看规划、导入课表与接续辅导</text></view><text class="arrow">›</text></button>
+      <button class="action-row" bindtap="onNews"><image class="action-icon" src="/assets/icons/opportunity-active.png" /><view class="action-main"><text class="action-title">阅读保研文章</text><text class="action-description">查看已同步、已分类的服务号内容</text></view><text class="arrow">›</text></button>
     </view>
     <view class="service-section">
       <text class="section-heading">认识九辰</text>
-      <view class="service-links"><button bindtap="onProducts">服务介绍</button><button bindtap="onBrand">关于九辰</button><button bindtap="onCustomerService">联系顾问</button></view>
+      <view class="service-links"><button bindtap="onProducts">服务介绍</button><button bindtap="onBrand">关于九辰</button><button bindtap="onCustomerService"><image class="link-icon" src="/assets/icons/service-active.png" />联系顾问</button><button bindtap="onWebsite"><image class="link-icon" src="/assets/icons/website-active.png" />九辰官网 · 复制地址</button></view>
       <text class="service-note">服务方案提供介绍与咨询，课程不在线购买。</text>
     </view>
   </block>

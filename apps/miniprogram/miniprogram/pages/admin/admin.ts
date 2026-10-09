@@ -1,5 +1,6 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import { authorizePage, safeBack } from '../../utils/navigation'
+import { filterInternalIds, internalIdView, ID_FILTERS } from '../../utils/admin-id-view'
 import {
   bindAdminInternalId,
   createAdminAssignment,
@@ -51,6 +52,10 @@ Page({
     loading: true,
     actionLoading: false,
     internalIds: [] as AdminInternalId[],
+    visibleIds: [] as ReturnType<typeof internalIdView>[],
+    idQuery: '', idFilter: 0, idFilters: ID_FILTERS,
+    userQuery: '', visibleUsers: [] as Array<AdminUser & { roleLabel: string; statusLabel: string }>,
+    formMode: '' as '' | 'create' | 'bind', loadError: '',
     users: [] as AdminUser[],
     students: [] as StudentSummary[],
     teachers: [] as AdminTeacher[],
@@ -61,7 +66,7 @@ Page({
     newIdTypeIndex: 0,
     newIdName: '',
     availableIds: [] as AdminInternalId[],
-    guestUsers: [] as AdminUser[],
+    guestUsers: [] as Array<AdminUser & { displayLabel: string }>,
     bindIdIndex: 0,
     bindUserIndex: 0,
     studentIndex: 0,
@@ -91,7 +96,7 @@ Page({
 
   async loadData() {
     try {
-      this.setData({ loading: true })
+      this.setData({ loading: true, loadError: '' })
       const [internalIds, users, students, teachers, assignments, posts] = await Promise.all([
         getAdminInternalIds(),
         getAdminUsers(),
@@ -102,7 +107,7 @@ Page({
       ])
 
       const availableIds = internalIds.filter((item) => item.status === 'available')
-      const guestUsers = users.filter((item) => item.status === 'active' && item.role === 'user')
+      const guestUsers = users.filter((item) => item.status === 'active' && item.role === 'user').map(item => ({ ...item, displayLabel: `${item.displayName || '未设置显示名'} · ${item.id.slice(-6)}` }))
 
       this.setData({
         internalIds,
@@ -118,12 +123,47 @@ Page({
         studentIndex: Math.min(this.data.studentIndex, Math.max(0, students.length - 1)),
         teacherIndex: Math.min(this.data.teacherIndex, Math.max(0, teachers.length - 1)),
       })
+      this.refreshLists()
     } catch (error) {
-      const message = error instanceof Error ? error.message : '管理员数据加载失败'
+      const message = friendlyRequestError(error, '管理数据读取失败，请重试')
+      this.setData({ loadError: message })
       wx.showToast({ title: message, icon: 'none', duration: 2500 })
     } finally {
       this.setData({ loading: false })
     }
+  },
+  refreshLists() {
+    const q = this.data.userQuery.trim().toLowerCase()
+    this.setData({ visibleIds: filterInternalIds(this.data.internalIds, this.data.idQuery, this.data.idFilter, getSavedAuthResult()?.user.id), visibleUsers: this.data.users.filter(u => !q || [u.displayName, u.id].some(v => v?.toLowerCase().includes(q))).map(u => ({ ...u, roleLabel: { user: '普通用户', student: '学员', teacher: '老师', staff: '内部员工', admin: '管理员' }[u.role], statusLabel: u.status === 'active' ? '正常' : '已停用' })) })
+  },
+  onIdSearch(event: WechatMiniprogram.Input) { this.setData({ idQuery: event.detail.value }); this.refreshLists() },
+  onUserSearch(event: WechatMiniprogram.Input) { this.setData({ userQuery: event.detail.value }); this.refreshLists() },
+  onIdFilter(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ idFilter: Number(event.detail.value) }); this.refreshLists() },
+  onNewEntry() {
+    if (this.data.actionLoading) return
+    wx.showActionSheet({ itemList: ['生成新编号', '绑定已有编号'], success: result => this.setData({ formMode: result.tapIndex === 0 ? 'create' : 'bind' }) })
+  },
+  onCloseForm() { if (!this.data.actionLoading) this.setData({ formMode: '' }) },
+  onCopyId(event: WechatMiniprogram.BaseEvent) {
+    const item = this.data.internalIds.find(i => i.id === event.currentTarget.dataset.id)
+    if (item) wx.setClipboardData({ data: item.businessId, fail: () => wx.showToast({ title: '复制失败，请重试', icon: 'none' }) })
+  },
+  onIdActions(event: WechatMiniprogram.BaseEvent) {
+    if (this.data.actionLoading) return
+    const item = this.data.internalIds.find(i => i.id === event.currentTarget.dataset.id)
+    if (!item) return
+    const view = internalIdView(item, getSavedAuthResult()?.user.id)
+    if (!view.actions.length) return
+    wx.showActionSheet({ itemList: view.actions, success: result => {
+      const action = view.actions[result.tapIndex]
+      if (action === '绑定账号') {
+        this.setData({ formMode: 'bind', bindIdIndex: this.data.availableIds.findIndex(i => i.id === item.id) }); return
+      }
+      if (action === '暂停访问') this.onPauseId(event)
+      if (action === '恢复编号') this.onRestoreId(event)
+      if (action === '撤销授权') this.onUnbindId(event)
+      if (action === '删除编号') this.onDeleteId(event)
+    } })
   },
 
   onSectionChange(event: WechatMiniprogram.BaseEvent) {
@@ -141,11 +181,12 @@ Page({
   },
 
   async onCreateId() {
+    if (this.data.actionLoading) return
     const selected = ID_TYPES[this.data.newIdTypeIndex]
     try {
       this.setData({ actionLoading: true })
       await createAdminInternalId(selected.value, this.data.newIdName.trim() || null)
-      this.setData({ newIdName: '' })
+      this.setData({ newIdName: '', formMode: '' })
       wx.showToast({ title: '内部ID已生成', icon: 'success' })
       await this.loadData()
     } catch (error) {
@@ -165,6 +206,7 @@ Page({
   },
 
   async onBindId() {
+    if (this.data.actionLoading) return
     const identity = this.data.availableIds[this.data.bindIdIndex]
     const user = this.data.guestUsers[this.data.bindUserIndex]
     if (!identity || !user) {
@@ -175,6 +217,7 @@ Page({
     try {
       this.setData({ actionLoading: true })
       await bindAdminInternalId(identity.id, user.id)
+      this.setData({ formMode: '' })
       wx.showToast({ title: '绑定成功', icon: 'success' })
       await this.loadData()
     } catch (error) {
@@ -186,77 +229,40 @@ Page({
   },
 
   onUnbindId(event: WechatMiniprogram.BaseEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
-    wx.showModal({
-      title: '撤销授权',
-      content: '撤销后对应账号恢复为游客，ID禁用；恢复授权后编号重新可认领，不会自动绑定原账号。',
-      success: async (result) => {
-        if (!result.confirm) return
-        try {
-          await unbindAdminInternalId(id)
-          await this.loadData()
-          wx.showToast({ title: '授权已撤销', icon: 'none' })
-        } catch (error) {
-          const message = error instanceof Error ? error.message : '解绑失败'
-          wx.showToast({ title: message, icon: 'none' })
-        }
-      },
-    })
+    this.confirmIdAction(event, '撤销授权', unbindAdminInternalId, '撤销后账号退回普通用户，编号停用；恢复编号不会自动绑定原账号。', true)
   },
-
   onPauseId(event: WechatMiniprogram.BaseEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
-    wx.showModal({
-      title: '暂停内部ID',
-      content: '已绑定账号将立即无法进行授权操作；恢复后原账号可以继续使用。',
-      success: async (result) => {
-        if (!result.confirm) return
-        try {
-          await pauseAdminInternalId(id)
-          await this.loadData()
-          wx.showToast({ title: '已暂停', icon: 'none' })
-        } catch (error) {
-          wx.showToast({ title: friendlyRequestError(error, '暂停失败'), icon: 'none' })
-        }
-      },
-    })
+    this.confirmIdAction(event, '暂停访问', pauseAdminInternalId, '保留原绑定，但账号立即无法进行授权操作；恢复后原账号可继续使用。')
   },
-
   onRestoreId(event: WechatMiniprogram.BaseEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
-    wx.showModal({
-      title: '恢复内部ID',
-      content: '暂停中的ID恢复原账号访问；已撤销授权的ID恢复为可认领状态。',
-      success: async (result) => {
-        if (!result.confirm) return
-        try {
-          await restoreAdminInternalId(id)
-          await this.loadData()
-          wx.showToast({ title: '已恢复', icon: 'success' })
-        } catch (error) {
-          wx.showToast({ title: friendlyRequestError(error, '恢复失败'), icon: 'none' })
-        }
-      },
-    })
+    const identity = this.data.internalIds.find(i => i.id === event.currentTarget.dataset.id)
+    this.confirmIdAction(event, '恢复编号', restoreAdminInternalId, identity?.userId ? '恢复后原绑定账号重新获得访问权限。' : '恢复后编号可重新认领，不会自动授予原账号权限。')
   },
-
   onDeleteId(event: WechatMiniprogram.BaseEvent) {
+    this.confirmIdAction(event, '删除编号', deleteAdminInternalId, '永久删除未绑定编号及其占位学员/老师档案，不能撤回；已有绑定编号不可删除。', true)
+  },
+  confirmingId: false,
+  confirmIdAction(event: WechatMiniprogram.BaseEvent, title: string, operation: (id: string) => Promise<void>, consequence: string, dangerous = false) {
+    if (this.data.actionLoading || this.confirmingId) return
     const id = String(event.currentTarget.dataset.id || '')
+    const identity = this.data.internalIds.find(i => i.id === id)
+    if (!identity || !internalIdView(identity, getSavedAuthResult()?.user.id).actions.includes(title)) return
+    this.confirmingId = true
     wx.showModal({
-      title: '删除内部ID',
-      content: '仅未绑定或已解绑的ID可删除。删除对应测试学员/老师ID时，其占位业务档案也会一并删除。',
-      confirmColor: '#c2413d',
+      title, content: `${identity.businessId}\n${consequence}`, confirmText: title, cancelText: '取消', confirmColor: dangerous ? '#aa3430' : '#2459be',
       success: async (result) => {
+        this.confirmingId = false
         if (!result.confirm) return
         try {
-          await deleteAdminInternalId(id)
+          this.setData({ actionLoading: true })
+          await operation(id)
           await this.loadData()
-          wx.showToast({ title: '已删除', icon: 'none' })
+          wx.showToast({ title: `${title}成功`, icon: 'success' })
         } catch (error) {
-          const message = error instanceof Error ? error.message : '删除失败'
-          wx.showToast({ title: message, icon: 'none' })
-        }
+          wx.showToast({ title: friendlyRequestError(error, `${title}失败，请重试`), icon: 'none' })
+        } finally { this.setData({ actionLoading: false }) }
       },
+      fail: () => { this.confirmingId = false },
     })
   },
 

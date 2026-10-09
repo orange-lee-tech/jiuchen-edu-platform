@@ -61,8 +61,8 @@
 
 .article-meta {
   margin-top: 14rpx;
-  color: #8a929c;
-  font-size: 20rpx;
+  color: #5f6b78;
+  font-size: 24rpx;
 }
 
 .article-summary {
@@ -80,9 +80,9 @@
 }
 
 .article-content {
-  padding: 28rpx;
-  border: 1rpx solid #e2e6eb;
-  border-radius: 10rpx;
+  padding: 20rpx 4rpx;
+  border-top: 4rpx solid #f2b544;
+  border-radius: 0;
   background: #fff;
   color: #333b45;
   font-size: 28rpx;

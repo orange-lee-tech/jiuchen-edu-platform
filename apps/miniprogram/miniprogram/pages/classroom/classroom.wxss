@@ -1,540 +1,63 @@
-.classroom-page {
-  min-height: 100vh;
-  box-sizing: border-box;
-  padding: 24rpx 20rpx 40rpx;
-  background: #f6f7fb;
-}
-
-.classroom-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20rpx;
-  margin-bottom: 22rpx;
-  padding: 4rpx 4rpx 0;
-}
-
-.page-title,
-.page-subtitle,
-.stage-title,
-.stage-desc,
-.plan-title,
-.plan-note,
-.mentor-name,
-.mentor-desc,
-.record-title,
-.record-content,
-.pending-title,
-.pending-desc {
-  display: block;
-}
-
-.page-title {
-  color: #22252b;
-  font-size: 36rpx;
-  font-weight: 800;
-}
-
-.page-subtitle {
-  margin-top: 6rpx;
-  color: #9a9faa;
-  font-size: 21rpx;
-}
-
-.stage-badge {
-  padding: 10rpx 18rpx;
-  border-radius: 999rpx;
-  background: #ede9ff;
-  color: #7057db;
-  font-size: 21rpx;
-  font-weight: 700;
-}
-
-.classroom-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: 16rpx;
-}
-
-.stage-sidebar {
-  position: sticky;
-  top: 20rpx;
-  flex: 0 0 150rpx;
-  width: 150rpx;
-  height: calc(100vh - 200rpx);
-  border-radius: 22rpx;
-  background: #ffffff;
-  box-shadow: 0 8rpx 26rpx rgba(33, 40, 58, 0.05);
-}
-
-.current-week-nav {
-  display: flex;
-  align-items: center;
-  min-height: 66rpx;
-  margin: 10rpx 10rpx 2rpx;
-  padding: 4rpx 8rpx 4rpx 0;
-  border-radius: 14rpx;
-  background: #eef4fb;
-}
-
-.current-week-label {
-  flex: 1;
-  color: #315f9d;
-  font-size: 20rpx;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.schedule-dot {
-  background: #315f9d;
-  box-shadow: 0 0 0 2rpx #315f9d;
-}
-
-.timeline {
-  position: relative;
-  padding: 8rpx 10rpx 24rpx;
-}
-
-.timeline::before {
-  position: absolute;
-  top: 34rpx;
-  bottom: 34rpx;
-  left: 28rpx;
-  width: 2rpx;
-  background: #e4e7ee;
-  content: '';
-}
-
-.timeline-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: 66rpx;
-  padding: 4rpx 8rpx 4rpx 0;
-  border-radius: 14rpx;
-}
-
-.timeline-mark {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex: 0 0 38rpx;
-  align-items: center;
-  justify-content: center;
-  width: 38rpx;
-}
-
-.timeline-dot {
-  width: 12rpx;
-  height: 12rpx;
-  border: 4rpx solid #ffffff;
-  border-radius: 50%;
-  background: #c7cbd4;
-  box-shadow: 0 0 0 2rpx #dfe2e8;
-}
-
-.timeline-label {
-  flex: 1;
-  color: #777d88;
-  font-size: 21rpx;
-  line-height: 1.2;
-}
-
-.timeline-item.active {
-  background: #f0edff;
-}
-
-.timeline-item.active .timeline-dot {
-  background: #7359df;
-  box-shadow: 0 0 0 2rpx #7359df;
-}
-
-.timeline-item.active .timeline-label {
-  color: #6248d1;
-  font-weight: 800;
-}
-
-.classroom-main {
-  min-width: 0;
-  flex: 1;
-}
-
-.surface {
-  border: 1rpx solid #eef0f4;
-  border-radius: 22rpx;
-  background: #ffffff;
-  box-shadow: 0 8rpx 24rpx rgba(33, 40, 58, 0.04);
-}
-
-.stage-summary {
-  padding: 24rpx;
-}
-
-.stage-summary-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16rpx;
-}
-
-.stage-title {
-  color: #252830;
-  font-size: 31rpx;
-  font-weight: 800;
-}
-
-.stage-desc {
-  margin-top: 8rpx;
-  color: #898f99;
-  font-size: 20rpx;
-  line-height: 1.5;
-}
-
-.stage-state {
-  flex-shrink: 0;
-  padding: 8rpx 12rpx;
-  border-radius: 999rpx;
-  background: #edf4ff;
-  color: #3770d6;
-  font-size: 18rpx;
-}
-
-.section-title-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin: 26rpx 4rpx 14rpx;
-}
-
-.section-title {
-  color: #2b2e35;
-  font-size: 26rpx;
-  font-weight: 800;
-}
-
-.section-note {
-  color: #a0a5ae;
-  font-size: 18rpx;
-}
-
-.plan-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14rpx;
-}
-
-.plan-card {
-  padding: 20rpx;
-}
-
-.plan-card-head {
-  display: flex;
-  align-items: center;
-}
-
-.plan-icon {
-  display: flex;
-  flex: 0 0 56rpx;
-  align-items: center;
-  justify-content: center;
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 15rpx;
-  background: #f0edff;
-  color: #6b51d7;
-  font-size: 18rpx;
-  font-weight: 800;
-}
-
-.plan-heading {
-  min-width: 0;
-  flex: 1;
-  margin-left: 16rpx;
-}
-
-.plan-title {
-  color: #2b2e35;
-  font-size: 24rpx;
-  font-weight: 800;
-}
-
-.plan-note {
-  margin-top: 5rpx;
-  color: #9297a0;
-  font-size: 18rpx;
-  line-height: 1.45;
-}
-
-.plan-arrow,
-.arrow {
-  flex-shrink: 0;
-  color: #b6bac2;
-  font-size: 34rpx;
-}
-
-.plan-card-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 16rpx;
-  padding-top: 14rpx;
-  border-top: 1rpx solid #f0f1f4;
-}
-
-.progress-label {
-  color: #9a9fa8;
-  font-size: 18rpx;
-}
-
-.plan-progress {
-  color: #6c53d8;
-  font-size: 20rpx;
-  font-weight: 700;
-}
-
-.pending-card {
-  padding: 28rpx 22rpx;
-}
-
-.pending-title {
-  color: #363943;
-  font-size: 24rpx;
-  font-weight: 800;
-}
-
-.pending-desc {
-  margin-top: 8rpx;
-  color: #999ea7;
-  font-size: 19rpx;
-  line-height: 1.55;
-}
-
-.mentor-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-
-.mentor-card {
-  display: flex;
-  align-items: center;
-  padding: 20rpx;
-}
-
-.mentor-avatar {
-  display: flex;
-  flex: 0 0 66rpx;
-  align-items: center;
-  justify-content: center;
-  width: 66rpx;
-  height: 66rpx;
-  border-radius: 50%;
-  background: #f0edff;
-  color: #6c53d8;
-  font-size: 22rpx;
-  font-weight: 800;
-}
-
-.mentor-main {
-  min-width: 0;
-  flex: 1;
-  margin-left: 16rpx;
-}
-
-.mentor-name {
-  color: #30333a;
-  font-size: 23rpx;
-  font-weight: 800;
-}
-
-.mentor-desc {
-  margin-top: 6rpx;
-  color: #9297a0;
-  font-size: 18rpx;
-  line-height: 1.45;
-}
-
-.record-list {
-  padding: 4rpx 18rpx;
-}
-
-.record-row {
-  display: flex;
-  padding: 20rpx 0;
-}
-
-.record-row + .record-row {
-  border-top: 1rpx solid #f0f1f4;
-}
-
-.record-date {
-  flex: 0 0 72rpx;
-  width: 72rpx;
-  color: #6d54da;
-  font-size: 18rpx;
-  font-weight: 700;
-}
-
-.record-main {
-  min-width: 0;
-  flex: 1;
-}
-
-.record-title {
-  color: #34373e;
-  font-size: 22rpx;
-  font-weight: 800;
-}
-
-.record-content {
-  margin-top: 6rpx;
-  color: #9297a0;
-  font-size: 18rpx;
-  line-height: 1.5;
-}
-
-
-.record-teacher {
-  display: block;
-  margin-top: 5rpx;
-  color: #7b8190;
-  font-size: 17rpx;
-}
-
-
-.entry-state,
-.student-tools {
-  margin: 18rpx 24rpx;
-  padding: 28rpx;
-}
-
-.entry-title,
-.entry-desc,
-.tool-title,
-.tool-desc {
-  display: block;
-}
-
-.entry-title,
-.tool-title {
-  font-size: 30rpx;
-  font-weight: 800;
-}
-
-.entry-desc,
-.tool-desc {
-  margin-top: 12rpx;
-  color: #7f8590;
-  font-size: 22rpx;
-  line-height: 1.7;
-}
-
-.entry-button {
-  margin-top: 22rpx;
-  border: 0;
-  border-radius: 16rpx;
-  background: #2f6fed;
-  color: #fff;
-  font-size: 24rpx;
-  font-weight: 700;
-}
-
-.entry-button::after {
-  border: 0;
-}
-
-.student-tools {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.student-tools > view {
-  flex: 1;
-  min-width: 0;
-}
-
-.plan-title-row {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-}
-
-.revision-chip {
-  flex: none;
-  padding: 4rpx 9rpx;
-  border-radius: 999rpx;
-  font-size: 17rpx;
-}
-
-.revision-chip.pending {
-  background: #fff3d7;
-  color: #9a6a00;
-}
-
-.revision-chip.approved {
-  background: #eaf7ef;
-  color: #257a4b;
-}
-
-.revision-chip.none {
-  background: #f1f3f6;
-  color: #8b919a;
-}
-
-.schedule-import-button {
-  flex: 0 0 132rpx;
-  width: 132rpx;
-  margin: 0 0 0 18rpx;
-  padding: 0;
-  border: 0;
-  border-radius: 14rpx;
-  background: #edf4ff;
-  color: #315f9d;
-  font-size: 21rpx;
-  font-weight: 800;
-  line-height: 66rpx;
-}
-
-.schedule-import-button::after {
-  border: 0;
-}
-
-/* Phase 1a: readable native shell, retaining the existing stage/plan workflow. */
-.classroom-page { padding: 28rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); background: #f2f4f6; }
-.surface, .stage-sidebar, .timeline-item, .current-week-nav { border-radius: 6rpx; box-shadow: none; }
-.surface { background: #fafbfc; border-color: #d8dee6; }
-.classroom-top { align-items: flex-start; flex-wrap: wrap; }
-.page-title { font-size: 42rpx; color: #18202a; }
-.page-subtitle { font-size: 25rpx; color: #5f6b78; line-height: 1.65; }
-.stage-badge, .timeline-item.active, .plan-icon { background: #e7eef8; color: #2459be; }
-.timeline-item.active .timeline-label, .plan-progress, .record-date { color: #2459be; }
-.timeline-item.active .timeline-dot { background: #2f6fed; box-shadow: 0 0 0 2rpx #2f6fed; }
-.stage-sidebar { flex-basis: 132rpx; width: 132rpx; background: #edf2f7; }
-.timeline-label, .current-week-label { font-size: 23rpx; line-height: 1.5; }
-.timeline-item, .current-week-nav { min-height: 76rpx; }
-.stage-summary-head, .section-title-row, .plan-title-row { flex-wrap: wrap; gap: 10rpx; }
-.stage-desc, .section-note, .plan-note, .pending-desc, .mentor-desc, .record-content, .record-teacher { color: #5f6b78; font-size: 24rpx; line-height: 1.75; }
-.plan-title, .pending-title, .record-title, .mentor-name { font-size: 28rpx; line-height: 1.5; }
-.plan-arrow { font-size: 25rpx; color: #2459be; }
-.revision-chip { font-size: 22rpx; line-height: 1.5; }
-.revision-chip.none { color: #5f6b78; }
-.progress-label { color: #5f6b78; font-size: 23rpx; }
-.plan-progress { font-size: 25rpx; }
-.entry-state, .student-tools { margin: 18rpx 0; padding: 28rpx; }
-.entry-state { background: #e7eef8; border-top: 6rpx solid #2f6fed; }
-.entry-desc, .tool-desc { color: #46586e; font-size: 26rpx; line-height: 1.75; }
-.entry-button { border-radius: 8rpx; padding: 22rpx 24rpx; font-size: 28rpx; line-height: 1.5; white-space: normal; }
-.entry-button:active { background: #2459be; }
-.student-tools { flex-wrap: wrap; gap: 18rpx; }
-.schedule-import-button { flex-basis: auto; width: auto; margin: 0; padding: 18rpx 22rpx; border-radius: 8rpx; background: #2f6fed; color: #fff; font-size: 26rpx; line-height: 1.5; white-space: normal; }
-.schedule-import-button:active { background: #2459be; }
-.plan-error, .plan-loading { padding: 28rpx; background: #edf2f7; font-size: 27rpx; line-height: 1.75; color: #46586e; }
-.plan-error button { margin-top: 20rpx; border-radius: 8rpx; padding: 20rpx; background: #2f6fed; color: #fff; font-size: 27rpx; line-height: 1.5; }
-@media (max-width: 400px) {
-  .plan-icon { display: none; }
-  .plan-heading { margin-left: 0; }
-  .plan-card-head { flex-wrap: wrap; gap: 14rpx; }
-  .plan-arrow { width: 100%; text-align: right; }
-  .stage-summary { padding: 20rpx; }
-}
+.classroom-page { padding:28rpx 24rpx calc(40rpx + env(safe-area-inset-bottom)); background:#f2f4f6; color:#18202a; }
+.classroom-top { display:flex; flex-wrap:wrap; gap:16rpx; justify-content:space-between; margin-bottom:24rpx; }
+.page-title,.page-subtitle,.stage-title,.stage-desc,.plan-title,.plan-note,.mentor-name,.mentor-desc,.record-title,.record-content,.pending-title,.pending-desc,.entry-title,.entry-desc,.tool-title,.tool-desc,.record-teacher,.course-slot { display:block; }
+.page-title { font-size:42rpx; font-weight:800; color:#173b73; }
+.page-subtitle,.stage-desc,.tool-desc,.entry-desc { color:#5f6b78; font-size:25rpx; line-height:1.7; margin-top:10rpx; }
+.stage-badge { background:#fff3cf; color:#705015; font-size:24rpx; padding:12rpx 18rpx; align-self:flex-start; border-radius:6rpx; }
+.surface { border:1rpx solid #d8dee6; border-radius:6rpx; background:#fafbfc; }
+.student-tools,.entry-state { padding:24rpx; margin-bottom:24rpx; }
+.student-tools { display:flex; flex-wrap:wrap; align-items:center; gap:20rpx; border-left:6rpx solid #f2b544; }
+.student-tools > view { flex:1 1 280rpx; min-width:0; }
+.entry-state { background:#e7eef8; border-left:6rpx solid #2f6fed; }
+.entry-title,.tool-title { font-size:30rpx; font-weight:700; }
+button { border-radius:8rpx; white-space:normal; box-sizing:border-box; }
+button::after { border:0; }
+.entry-button,.schedule-import-button,.plan-error button { margin:20rpx 0 0; padding:18rpx 20rpx; font-size:26rpx; line-height:1.5; background:#2f6fed; color:#fff; }
+.schedule-import-button { margin:0; }
+.entry-button:active,.schedule-import-button:active,.plan-error button:active { background:#2459be; }
+.classroom-layout { display:flex; align-items:flex-start; gap:16rpx; }
+.stage-sidebar { flex:0 0 136rpx; width:136rpx; position:sticky; top:16rpx; height:calc(100vh - 200rpx); background:#edf2f7; border-radius:6rpx; }
+.timeline,.current-week-nav { padding:8rpx; }
+.timeline-item,.current-week-nav { display:flex; align-items:center; padding:18rpx 8rpx; min-height:78rpx; box-sizing:border-box; border-bottom:1rpx solid #d8dee6; }
+.timeline-mark { flex:0 0 20rpx; display:flex; justify-content:flex-start; }
+.timeline-dot { width:8rpx; height:8rpx; border-radius:50%; background:#89939e; }
+.timeline-label,.current-week-label { min-width:0; flex:1; font-size:25rpx; line-height:1.5; color:#46586e; }
+.timeline-label text,.current-week-label text { display:block; white-space:nowrap; }
+.timeline-item.active,.current-week-nav.active { background:#2459be; }
+.timeline-item.active .timeline-label,.current-week-nav.active .current-week-label { color:#fff; font-weight:700; }
+.timeline-item.active .timeline-dot,.current-week-nav.active .timeline-dot { background:#f2b544; }
+.classroom-main { flex:1; min-width:0; }
+.stage-summary { padding:20rpx; background:#e7eef8; border-left:4rpx solid #2f6fed; }
+.stage-summary-head { display:flex; flex-wrap:wrap; gap:12rpx; }
+.stage-title { font-size:32rpx; font-weight:800; color:#173b73; }
+.stage-state { font-size:23rpx; color:#2459be; }
+.section-title-row { display:flex; flex-wrap:wrap; align-items:baseline; gap:8rpx; justify-content:space-between; margin:28rpx 0 14rpx; }
+.section-title { font-size:29rpx; font-weight:700; }
+.section-note { font-size:23rpx; color:#5f6b78; }
+.plan-list,.mentor-list,.week-list { display:flex; flex-direction:column; gap:14rpx; margin-top:16rpx; }
+.plan-card,.mentor-card,.pending-card,.week-course { padding:20rpx; }
+.plan-card:active { background:#e7eef8; }
+.plan-card-head { display:flex; flex-wrap:wrap; align-items:center; gap:12rpx; }
+.plan-icon { display:none; }
+.plan-heading { flex:1 1 100%; min-width:0; }
+.plan-title-row { display:flex; flex-wrap:wrap; gap:10rpx; align-items:center; }
+.plan-title,.pending-title,.mentor-name,.record-title { font-size:28rpx; font-weight:700; line-height:1.5; word-break:break-word; }
+.plan-note,.pending-desc,.mentor-desc,.record-content,.record-teacher { font-size:24rpx; color:#5f6b78; line-height:1.7; margin-top:8rpx; }
+.plan-arrow { margin-left:auto; color:#2459be; font-size:25rpx; }
+.plan-card-foot { display:flex; flex-wrap:wrap; gap:10rpx; justify-content:space-between; border-top:1rpx solid #e5e9ee; padding-top:14rpx; margin-top:14rpx; font-size:24rpx; }
+.progress-label { color:#5f6b78; }
+.plan-progress { color:#2459be; font-weight:700; }
+.revision-chip { font-size:22rpx; padding:5rpx 10rpx; border-radius:6rpx; color:#5f6b78; background:#edf2f7; }
+.revision-chip.pending { background:#fff3cf; color:#705015; }
+.revision-chip.approved { background:#eaf7ef; color:#25603d; }
+.pending-card { margin-top:16rpx; }
+.mentor-card { display:flex; flex-wrap:wrap; align-items:center; gap:12rpx; }
+.mentor-main { flex:1 1 180rpx; min-width:0; }
+.mentor-avatar { color:#2459be; background:#e7eef8; padding:12rpx; font-size:24rpx; }
+.arrow { color:#2459be; font-size:34rpx; }
+.record-list { padding:0 20rpx; background:#fff3cf; }
+.record-row { padding:20rpx 0; border-bottom:1rpx solid #e5d9b6; }
+.record-date { color:#705015; font-size:24rpx; font-weight:700; margin-bottom:8rpx; }
+.record-main { min-width:0; }
+.course-slot { font-size:24rpx; color:#2459be; font-weight:700; margin-bottom:10rpx; line-height:1.5; }
+.plan-loading,.plan-error { padding:24rpx; background:#edf2f7; color:#46586e; font-size:26rpx; line-height:1.7; }

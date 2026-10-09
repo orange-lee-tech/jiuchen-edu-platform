@@ -28,8 +28,8 @@
   </view>
 
   <view wx:else class="student-layout">
-    <view wx:if="{{loadError}}" class="plan-error"><text>{{loadError}}</text><button bindtap="onRetryPlan">重新加载规划</button></view>
-    <view wx:elif="{{loading && plans.length === 0}}" class="plan-loading">正在读取你的阶段规划…</view>
+    <view wx:if="{{loadError && !studentName}}" class="plan-error"><text>{{loadError}}</text><button bindtap="onRetryPlan">重新加载规划</button></view>
+    <view wx:elif="{{loading && !studentName}}" class="plan-loading">正在读取你的阶段规划…</view>
     <block wx:else>
     <view class="student-tools surface">
       <view>
@@ -41,25 +41,38 @@
 
     <view class="classroom-layout">
       <scroll-view class="stage-sidebar" scroll-y enhanced show-scrollbar="{{false}}">
-        <view class="current-week-nav" bindtap="onCurrentWeekSchedule">
+        <view class="current-week-nav {{selectedView === 'week' ? 'active' : ''}}" bindtap="onCurrentWeekSchedule">
           <view class="timeline-mark"><view class="timeline-dot schedule-dot"></view></view>
-          <text class="current-week-label">本周课表</text>
+          <view class="current-week-label"><text>本周</text><text>课表</text></view>
         </view>
         <view class="timeline">
           <view
             wx:for="{{stages}}"
             wx:key="code"
-            class="timeline-item {{currentStage === index ? 'active' : ''}}"
+            class="timeline-item {{selectedView === 'stage' && currentStage === index ? 'active' : ''}}"
             data-index="{{index}}"
             bindtap="onStageChange"
           >
             <view class="timeline-mark"><view class="timeline-dot"></view></view>
-            <text class="timeline-label">{{item.label}}</text>
+            <view class="timeline-label"><text>{{item.yearLabel}}</text><text>{{item.periodLabel}}</text></view>
           </view>
         </view>
       </scroll-view>
 
       <view class="classroom-main">
+        <view wx:if="{{selectedView === 'week'}}" class="week-view">
+          <view class="stage-summary surface"><text class="stage-title">本周课表</text><text class="stage-desc">{{weekLabel}}</text></view>
+          <view wx:if="{{weekLoading}}" class="pending-card surface">正在读取本周课程…</view>
+          <view wx:elif="{{weekError}}" class="plan-error"><text>{{weekError}}</text><button bindtap="loadCurrentWeek">重新读取课表</button></view>
+          <view wx:elif="{{weekState !== 'ready'}}" class="pending-card surface">
+            <text class="pending-title">{{weekState === 'missing' ? '尚未导入课表' : weekState === 'date' ? '需要确认学期起始日期' : '本周没有课程'}}</text>
+            <text class="pending-desc">{{weekState === 'missing' ? '导入真实课表后，这里显示按周次筛选的课程。' : weekState === 'date' ? '在课表管理中设置本学期第一周周一，才能准确筛选本周课程。' : '按当前周次与单双周规则，没有安排课程。可查看完整课表确认。'}}</text>
+            <button class="entry-button" bindtap="onScheduleImport">{{weekState === 'missing' ? '导入课表' : '管理课表与日期'}}</button>
+          </view>
+          <view wx:else class="week-list"><view wx:for="{{weekCourses}}" wx:key="index" class="week-course surface"><text class="course-slot">{{item.day}} · {{item.slot}}</text><text class="plan-title">{{item.name}}</text><text class="plan-note">{{item.location || '地点未填写'}}{{item.teacher ? ' · ' + item.teacher : ''}}</text></view></view>
+        </view>
+        <block wx:else>
+        <view wx:if="{{loadError}}" class="plan-error"><text>{{loadError}}</text><button bindtap="onRetryPlan">重新加载阶段</button></view>
         <view class="stage-summary surface">
           <view class="stage-summary-head">
             <view>
@@ -150,6 +163,7 @@
             <text class="pending-title">{{guidanceRecordsReady ? '暂无辅导记录' : '辅导记录模块正在准备'}}</text>
             <text class="pending-desc">{{guidanceRecordsReady ? '不会再用演示记录填充这里。' : '当前计划与课表仍可正常使用；辅导记录数据库完成升级后会自动恢复。'}}</text>
           </view>
+        </block>
         </block>
       </view>
     </view>

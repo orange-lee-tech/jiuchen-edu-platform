@@ -12,14 +12,14 @@
         <text wx:if="{{post.tags.length === 0}}" class="tag muted">未分类</text>
       </view>
       <text class="article-title">{{post.title}}</text>
-      <text class="article-meta">九辰教育服务号{{dateLabel ? ' · ' + dateLabel : ''}}{{post.content.author ? ' · ' + post.content.author : ''}}</text>
+      <text class="article-meta">{{post.source === 'wechat_official' ? '九辰教育服务号' : '九辰编辑'}}{{dateLabel ? ' · ' + dateLabel : ''}}{{post.content.author ? ' · ' + post.content.author : ''}}</text>
       <text wx:if="{{post.summary}}" class="article-summary">{{post.summary}}</text>
     </view>
 
-    <image wx:if="{{post.coverUrl}}" class="cover" src="{{post.coverUrl}}" mode="widthFix" />
+    <image wx:if="{{!readerNodes.length && post.coverUrl && !coverFailed}}" class="cover" src="{{post.coverUrl}}" mode="widthFix" binderror="onCoverError" />
 
-    <view wx:if="{{post.content.html}}" class="article-content">
-      <rich-text nodes="{{post.content.html}}"></rich-text>
+    <view wx:if="{{readerNodes.length}}" class="article-content">
+      <rich-text nodes="{{readerNodes}}"></rich-text>
     </view>
 
     <view wx:else class="state-card body-missing">

@@ -1,53 +1,52 @@
 <auth-gate />
 <view class="admin-page">
   <view class="admin-head">
-    <text class="admin-title">管理员工作台</text>
+    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : '资讯运营'}}</text>
     <text class="admin-desc">仅处理高频移动操作；完整课堂编辑仍保留在电脑后台。</text>
   </view>
 
   <view class="tabs">
-    <view class="tab {{section === 'admin-users' ? 'active' : ''}}" data-section="admin-users" bindtap="onSectionChange">内部ID</view>
+    <view class="tab {{section === 'admin-users' ? 'active' : ''}}" data-section="admin-users" bindtap="onSectionChange">用户与编号</view>
     <view class="tab {{section === 'admin-assignments' ? 'active' : ''}}" data-section="admin-assignments" bindtap="onSectionChange">师生分配</view>
     <view class="tab {{section === 'admin-news' ? 'active' : ''}}" data-section="admin-news" bindtap="onSectionChange">动态同步{{pendingClassificationCount > 0 ? ' · 待分类 ' + pendingClassificationCount : ''}}</view>
   </view>
 
-  <view wx:if="{{loading}}" class="card">正在加载…</view>
+  <view wx:if="{{loading}}" class="card">正在读取最新管理数据…</view>
+  <view wx:elif="{{loadError}}" class="card"><text class="card-title">数据未能读取</text><text class="card-note">{{loadError}}</text><button class="primary" bindtap="loadData">重新读取</button></view>
 
   <block wx:elif="{{section === 'admin-users'}}">
-    <view class="card">
+    <view class="list-toolbar"><text class="card-title">内部编号</text><button class="mini" disabled="{{actionLoading}}" bindtap="onNewEntry">新增 / 绑定</button></view>
+    <view wx:if="{{formMode === 'create'}}" class="card form-card">
       <text class="card-title">生成内部ID</text>
       <picker range="{{idTypes}}" range-key="label" value="{{newIdTypeIndex}}" bindchange="onIdTypeChange">
         <view class="picker-field">{{idTypes[newIdTypeIndex].label}} ›</view>
       </picker>
       <input class="input" value="{{newIdName}}" placeholder="姓名（学生/老师可填写）" bindinput="onNameInput" />
-      <button class="primary" loading="{{actionLoading}}" bindtap="onCreateId">生成ID</button>
+      <button class="primary" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="onCreateId">生成新编号</button><button class="secondary" disabled="{{actionLoading}}" bindtap="onCloseForm">取消</button>
     </view>
 
-    <view class="card">
+    <view wx:if="{{formMode === 'bind'}}" class="card form-card">
       <text class="card-title">绑定游客账号</text>
       <picker range="{{availableIds}}" range-key="businessId" value="{{bindIdIndex}}" bindchange="onBindIdChange">
         <view class="picker-field">{{availableIds.length ? availableIds[bindIdIndex].businessId : '暂无可用ID'}} ›</view>
       </picker>
-      <picker range="{{guestUsers}}" range-key="id" value="{{bindUserIndex}}" bindchange="onBindUserChange">
-        <view class="picker-field">{{guestUsers.length ? (guestUsers[bindUserIndex].displayName || guestUsers[bindUserIndex].id) : '暂无游客账号'}} ›</view>
+      <picker range="{{guestUsers}}" range-key="displayLabel" value="{{bindUserIndex}}" bindchange="onBindUserChange">
+        <view class="picker-field">{{guestUsers.length ? guestUsers[bindUserIndex].displayLabel : '暂无可绑定账号'}} ›</view>
       </picker>
-      <button class="primary" loading="{{actionLoading}}" bindtap="onBindId">确认绑定</button>
+      <button class="primary" loading="{{actionLoading}}" disabled="{{actionLoading || !availableIds.length || !guestUsers.length}}" bindtap="onBindId">确认绑定账号</button><button class="secondary" disabled="{{actionLoading}}" bindtap="onCloseForm">取消</button>
     </view>
 
     <view class="card">
-      <text class="card-title">ID 列表</text>
-      <text class="card-note">暂停：保留原绑定，但立即阻止访问。撤销：解除绑定、恢复游客权限。恢复：重新启用编号。</text>
-      <view wx:for="{{internalIds}}" wx:key="id" class="list-row">
-        <view class="row-main">
-          <text class="row-title">{{item.businessId}}</text>
-          <text class="row-desc">{{item.type}} · {{item.status}}</text>
-        </view>
-        <button wx:if="{{item.status === 'claimed' || item.status === 'available'}}" class="mini" data-id="{{item.id}}" bindtap="onPauseId">暂停</button>
-        <button wx:if="{{item.userId}}" class="mini danger" data-id="{{item.id}}" bindtap="onUnbindId">撤销授权</button>
-        <button wx:if="{{item.status === 'disabled'}}" class="mini" data-id="{{item.id}}" bindtap="onRestoreId">恢复</button>
-        <button wx:if="{{item.status === 'available'}}" class="mini danger" data-id="{{item.id}}" bindtap="onDeleteId">删除</button>
+      <input class="input" placeholder="搜索内部编号" value="{{idQuery}}" bindinput="onIdSearch" />
+      <picker range="{{idFilters}}" value="{{idFilter}}" bindchange="onIdFilter"><view class="picker-field">{{idFilters[idFilter]}} · 匹配 {{visibleIds.length}} 个 ›</view></picker>
+      <view wx:if="{{!visibleIds.length}}" class="card-note">没有匹配的编号，请调整搜索或状态。</view>
+      <view wx:for="{{visibleIds}}" wx:key="id" class="id-row">
+        <text class="id-code" selectable>{{item.businessId}}</text>
+        <view class="id-meta"><text>{{item.typeLabel}}</text><text class="status {{item.status}}">{{item.statusLabel}}</text><text wx:if="{{item.own}}">本人编号</text></view>
+        <view class="id-actions"><button class="mini copy" data-id="{{item.id}}" bindtap="onCopyId">复制编号</button><button wx:if="{{item.actions.length}}" class="mini" disabled="{{actionLoading}}" data-id="{{item.id}}" bindtap="onIdActions">{{item.actions[0] === '暂停访问' ? '暂停 / 更多' : item.actions[0] === '恢复编号' ? '恢复 / 更多' : '绑定 / 更多'}}</button></view>
       </view>
     </view>
+    <view class="card"><text class="card-title">账号列表</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayName || '未设置显示名'}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
   </block>
 
   <block wx:elif="{{section === 'admin-assignments'}}">
@@ -90,7 +89,7 @@
       <view wx:for="{{posts}}" wx:key="id" class="list-row news-row">
         <view class="row-main">
           <text class="row-title">{{item.title}}</text>
-          <text class="row-desc">{{item.source === 'wechat_official' ? '服务号同步' : '手动'}} · {{item.status}}</text>
+          <text class="row-desc">{{item.source === 'wechat_official' ? '服务号同步' : '手动'}} · {{item.status === 'active' ? '已发布' : '已隐藏'}}</text>
           <view class="tag-list">
             <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="tag-chip">{{tag}}</text>
             <text wx:if="{{item.tags.length === 0}}" class="tag-empty">未分类</text>

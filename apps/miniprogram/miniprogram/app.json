@@ -36,19 +36,19 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页"
+        "text": "首页", "iconPath": "assets/icons/home-normal.png", "selectedIconPath": "assets/icons/home-active.png"
       },
       {
         "pagePath": "pages/classroom/classroom",
-        "text": "规划"
+        "text": "规划", "iconPath": "assets/icons/calendar-normal.png", "selectedIconPath": "assets/icons/calendar-active.png"
       },
       {
         "pagePath": "pages/news/news",
-        "text": "机会"
+        "text": "机会", "iconPath": "assets/icons/opportunity-normal.png", "selectedIconPath": "assets/icons/opportunity-active.png"
       },
       {
         "pagePath": "pages/profile/profile",
-        "text": "我的"
+        "text": "我的", "iconPath": "assets/icons/mine-normal.png", "selectedIconPath": "assets/icons/mine-active.png"
       }
     ]
   },

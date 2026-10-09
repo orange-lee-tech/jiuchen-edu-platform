@@ -1,16 +1,16 @@
 .mine-page { padding: 28rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); background: #f2f4f6; color: #18202a; }
-.identity-panel { padding: 32rpx; background: #e7eef8; border-top: 6rpx solid #2f6fed; border-radius: 6rpx; }
+.identity-panel { padding: 32rpx; background: #173b73; color:#fff; border-bottom: 6rpx solid #f2b544; border-radius: 6rpx; }
 .identity-eyebrow, .user-name, .identity-description, .section-heading, .menu-title, .menu-description, .account-note { display: block; }
-.identity-eyebrow { font-size: 24rpx; font-weight: 600; color: #2459be; }
+.identity-eyebrow { font-size: 24rpx; font-weight: 600; color: #fff3cf; }
 .user-name { margin-top: 16rpx; font-size: 42rpx; font-weight: 800; line-height: 1.4; overflow-wrap: break-word; }
-.identity-description { margin-top: 14rpx; font-size: 26rpx; line-height: 1.75; color: #46586e; }
+.identity-description { margin-top: 14rpx; font-size: 26rpx; line-height: 1.75; color: #e7eef8; }
 .identity-code-row { display: flex; align-items: center; gap: 16rpx; margin-top: 20rpx; flex-wrap: wrap; }
 .identity-code { min-width: 0; max-width: 100%; font-size: 27rpx; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 button { border-radius: 8rpx; white-space: normal; box-sizing: border-box; }
 button::after { border: 0; }
 .copy-code { margin: 0; padding: 12rpx 18rpx; font-size: 24rpx; line-height: 1.5; color: #2459be; background: #fafbfc; }
-.identity-primary { margin: 24rpx 0 0; padding: 22rpx 24rpx; color: #fff; background: #2f6fed; font-size: 28rpx; line-height: 1.5; font-weight: 700; }
-.identity-primary:active { background: #2459be; }
+.identity-primary { margin: 24rpx 0 0; padding: 22rpx 24rpx; color: #173b73; background: #fff3cf; font-size: 28rpx; line-height: 1.5; font-weight: 700; }
+.identity-primary:active { background: #f2b544; }
 .section-heading { margin: 30rpx 0 16rpx; font-size: 31rpx; font-weight: 700; }
 .menu-list { border: 1rpx solid #d8dee6; background: #fafbfc; }
 .menu-row { display: flex; align-items: center; width: 100%; padding: 26rpx; margin: 0; border-radius: 0; border-bottom: 1rpx solid #e5e9ee; background: transparent; text-align: left; }
@@ -25,3 +25,6 @@ button::after { border: 0; }
 .delete-button { margin: 24rpx 0 0; padding: 18rpx; background: transparent; color: #aa3430; font-size: 25rpx; line-height: 1.5; }
 .delete-button:active { background: #fae9e7; }
 .account-note { margin-top: 12rpx; color: #5f6b78; font-size: 23rpx; line-height: 1.75; }
+.menu-icon { width:44rpx; height:44rpx; margin-right:20rpx; flex:none; }
+.website-row { display:flex; align-items:center; margin:24rpx 0 0; width:100%; padding:22rpx; background:#e7eef8; color:#2459be; font-size:26rpx; line-height:1.5; }
+.account-actions { border-top-color:#f2b544; }

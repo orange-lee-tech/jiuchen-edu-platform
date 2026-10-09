@@ -11,6 +11,9 @@ export const TAB_LABELS: Record<ShellKind, readonly string[]> = {
 export function shellKind(role?: UserRole): ShellKind {
   return role === 'admin' ? 'admin' : role === 'teacher' || role === 'staff' ? 'teacher' : 'student'
 }
+export const TAB_ICONS: Record<ShellKind, readonly string[]> = {
+  student: ['home', 'calendar', 'opportunity', 'mine'], teacher: ['workbench', 'users', 'coaching', 'mine'], admin: ['workbench', 'users', 'business', 'mine'],
+}
 export function shellView(state: AuthState) {
   return { shellPhase: state.phase, shellKind: shellKind(state.auth?.user.role), shellRoleLabel: state.auth ? ROLE_LABELS[state.auth.user.role] : '未登录', shellMessage: state.message }
 }
@@ -31,7 +34,8 @@ export function initializeNavigation() {
   subscribeAuth((state) => {
     if (state.phase === 'loading') return
     const labels = TAB_LABELS[shellKind(state.phase === 'ready' ? state.auth?.user.role : undefined)]
-    labels.forEach((text, index) => wx.setTabBarItem({ index, text, fail: () => {} }))
+    const icons = TAB_ICONS[shellKind(state.phase === 'ready' ? state.auth?.user.role : undefined)]
+    labels.forEach((text, index) => wx.setTabBarItem({ index, text, iconPath: `assets/icons/${icons[index]}-normal.png`, selectedIconPath: `assets/icons/${icons[index]}-active.png`, fail: () => {} }))
   })
   void refreshAuthResult()
 }

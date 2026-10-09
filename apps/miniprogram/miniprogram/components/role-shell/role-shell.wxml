@@ -6,13 +6,13 @@
 <view wx:elif="{{kind !== 'student' && slot !== 'mine'}}" class="workspace">
   <view class="workspace-intro">
     <text class="eyebrow">九辰保研 · {{roleLabel}}</text>
-    <text class="workspace-title">{{title}}</text>
+    <image class="workspace-icon" src="/assets/icons/{{slot === 'home' ? 'workbench' : slot === 'plan' ? 'users' : kind === 'admin' ? 'business' : 'coaching'}}-active.png" /><text class="workspace-title">{{title}}</text>
     <text class="workspace-description">{{description}}</text>
-    <button wx:if="{{actions.length}}" class="primary" loading="{{opening}}" disabled="{{opening}}" data-key="{{actions[0].key}}" bindtap="onAction">{{actions[0].title}}</button>
+    <button wx:if="{{actions.length}}" class="primary" loading="{{opening}}" disabled="{{opening}}" data-key="{{actions[0].key}}" bindtap="onAction"><image class="button-icon" src="/assets/icons/{{actions[0].key === 'assignments' ? 'assignments' : actions[0].key === 'reviews' ? 'coaching' : 'users'}}-active.png" />{{actions[0].title}}</button>
   </view>
   <view wx:if="{{actions.length > 1}}" class="secondary-list">
     <button wx:for="{{actions}}" wx:key="key" wx:if="{{index > 0}}" class="action-row" data-key="{{item.key}}" bindtap="onAction" disabled="{{opening}}">
-      <view class="action-main"><text class="action-title">{{item.title}}</text><text class="action-description">{{item.description}}</text></view>
+      <image class="action-icon" src="/assets/icons/{{item.key === 'assignments' ? 'assignments' : item.key === 'articles' ? 'opportunity' : 'users'}}-active.png" /><view class="action-main"><text class="action-title">{{item.title}}</text><text class="action-description">{{item.description}}</text></view>
       <text class="arrow">›</text>
     </button>
   </view>

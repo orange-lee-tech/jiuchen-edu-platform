@@ -1,13 +1,13 @@
 .home-page { padding: 28rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); color: #18202a; background: #f2f4f6; }
-.home-intro { padding: 32rpx; border-top: 6rpx solid #2f6fed; border-radius: 6rpx; background: #e7eef8; }
+.home-intro { padding: 32rpx; border-bottom: 6rpx solid #f2b544; border-radius: 6rpx; background: #173b73; color: #fff; }
 .eyebrow, .home-title, .home-description, .home-caption, .section-heading, .action-title, .action-description, .service-note { display: block; }
-.eyebrow { font-size: 24rpx; font-weight: 600; color: #2459be; line-height: 1.6; }
+.eyebrow { font-size: 24rpx; font-weight: 600; color: #fff3cf; line-height: 1.6; }
 .home-title { margin-top: 18rpx; font-size: 44rpx; line-height: 1.4; font-weight: 800; }
-.home-description { margin-top: 16rpx; font-size: 27rpx; line-height: 1.8; color: #46586e; }
+.home-description { margin-top: 16rpx; font-size: 27rpx; line-height: 1.8; color: #e7eef8; }
 button { border-radius: 8rpx; white-space: normal; }
 button::after { border: 0; }
-.home-primary { margin: 28rpx 0 0; padding: 22rpx 24rpx; background: #2f6fed; color: #fff; font-size: 28rpx; font-weight: 700; line-height: 1.5; }
-.home-primary:active { background: #2459be; }
+.home-primary { margin: 28rpx 0 0; padding: 22rpx 24rpx; background: #fff3cf; color: #173b73; font-size: 28rpx; font-weight: 700; line-height: 1.5; }
+.home-primary:active { background: #f2b544; }
 .home-caption { margin-top: 16rpx; font-size: 23rpx; color: #46586e; line-height: 1.6; }
 .section-heading { margin: 30rpx 0 16rpx; font-size: 31rpx; font-weight: 700; }
 .action-list { background: #fafbfc; border: 1rpx solid #d8dee6; }
@@ -22,3 +22,6 @@ button::after { border: 0; }
 .service-links button { margin: 0; padding: 18rpx 20rpx; line-height: 1.5; font-size: 25rpx; color: #2459be; background: #edf2f7; }
 .service-links button:active { background: #e7eef8; }
 .service-note { margin-top: 14rpx; font-size: 23rpx; line-height: 1.7; color: #5f6b78; }
+.action-icon { width:44rpx; height:44rpx; margin-right:20rpx; flex:none; }
+.link-icon { width:32rpx; height:32rpx; vertical-align:middle; margin-right:10rpx; }
+.service-section { margin-top:28rpx; padding:0 0 20rpx; border-top:4rpx solid #f2b544; }

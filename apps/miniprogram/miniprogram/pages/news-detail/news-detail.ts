@@ -1,4 +1,6 @@
 import { getNewsPost, type NewsPostDetail } from '../../utils/request'
+import { articleReaderNodes, type ArticleNode } from '../../utils/article-reader'
+import { validateIntent } from '../../utils/navigation'
 
 function formatDate(value: string | null) {
   if (!value) return ''
@@ -13,14 +15,18 @@ Page({
     error: '',
     post: null as NewsPostDetail | null,
     dateLabel: '',
+    readerNodes: [] as ArticleNode[],
+    coverFailed: false,
   },
 
+  postId: '',
   onLoad(options: Record<string, string | undefined>) {
-    const id = options.id ? decodeURIComponent(options.id) : ''
+    const id = validateIntent('pages/news-detail/news-detail', options)?.params.id || ''
     if (!id) {
-      this.setData({ loading: false, error: '缺少资讯 ID' })
+      this.setData({ loading: false, error: '文章链接无法识别，请返回机会页重新选择' })
       return
     }
+    this.postId = id
     void this.loadPost(id)
   },
 
@@ -30,6 +36,8 @@ Page({
       const post = await getNewsPost(id)
       this.setData({
         post,
+        readerNodes: articleReaderNodes(post.content.html || ''),
+        coverFailed: false,
         dateLabel: formatDate(post.publishedAt),
       })
     } catch (error) {
@@ -77,11 +85,9 @@ Page({
       },
     })
   },
+  onCoverError() { this.setData({ coverFailed: true }) },
 
   onRetry() {
-    const pages = getCurrentPages()
-    const current = pages[pages.length - 1]
-    const id = String((current?.options as Record<string, string> | undefined)?.id || '')
-    if (id) void this.loadPost(decodeURIComponent(id))
+    if (this.postId) void this.loadPost(this.postId)
   },
 })

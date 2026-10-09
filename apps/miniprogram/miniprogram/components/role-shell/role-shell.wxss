@@ -1,14 +1,20 @@
 :host { display: block; }
 .workspace, .shell-state { color: #18202a; }
-.workspace-intro, .shell-state { padding: 32rpx; background: #e7eef8; border-top: 6rpx solid #2f6fed; border-radius: 6rpx; }
+.workspace-intro, .shell-state { padding: 32rpx; border-radius: 6rpx; }
+.workspace-intro { background:#173b73; color:#fff; border-bottom:6rpx solid #f2b544; }
+.shell-state { background:#e7eef8; border-top:6rpx solid #2f6fed; }
 .eyebrow, .workspace-title, .workspace-description, .state-title, .state-description, .action-title, .action-description, .note-title, .note-description { display: block; }
-.eyebrow { color: #2459be; font-size: 24rpx; font-weight: 600; }
+.eyebrow { color: #fff3cf; font-size: 24rpx; font-weight: 600; }
 .workspace-title, .state-title { margin-top: 14rpx; font-size: 42rpx; line-height: 1.4; font-weight: 800; }
-.workspace-description, .state-description { margin-top: 14rpx; color: #46586e; font-size: 26rpx; line-height: 1.75; }
+.workspace-description, .state-description { margin-top: 14rpx; font-size: 26rpx; line-height: 1.75; }
+.workspace-description { color:#e7eef8; }
+.state-description { color:#46586e; }
 button { box-sizing: border-box; border-radius: 8rpx; white-space: normal; }
 button::after { border: 0; }
 .primary { margin: 28rpx 0 0; padding: 22rpx 24rpx; background: #2f6fed; color: #fff; font-size: 28rpx; font-weight: 700; line-height: 1.5; }
 .primary:active { background: #2459be; }
+.workspace-intro .primary { background:#fff3cf; color:#173b73; }
+.workspace-intro .primary:active { background:#f2b544; }
 .primary[disabled] { background: #526e9a; color: #fff; }
 .secondary-list { margin-top: 24rpx; background: #fafbfc; border: 1rpx solid #d8dee6; }
 .action-row { display: flex; align-items: center; width: 100%; padding: 26rpx; margin: 0; border-radius: 0; text-align: left; background: transparent; border-bottom: 1rpx solid #e5e9ee; }
@@ -18,7 +24,10 @@ button::after { border: 0; }
 .action-title { font-size: 29rpx; font-weight: 700; color: #18202a; line-height: 1.5; }
 .action-description { margin-top: 8rpx; font-size: 25rpx; color: #5f6b78; line-height: 1.7; }
 .arrow { margin-left: 20rpx; color: #2459be; font-size: 40rpx; }
-.workspace-note { margin-top: 28rpx; padding: 24rpx; background: #edf2f7; border-left: 4rpx solid #a6b9d1; }
+.workspace-note { margin-top: 28rpx; padding: 24rpx; background: #fff3cf; border-left: 4rpx solid #f2b544; }
 .note-title { font-size: 27rpx; font-weight: 700; }
 .note-description { margin-top: 8rpx; color: #5f6b78; font-size: 25rpx; line-height: 1.75; }
 .text-link { margin: 12rpx 0 0; padding: 16rpx 0; text-align: left; background: transparent; color: #2459be; font-size: 26rpx; line-height: 1.5; }
+.workspace-icon { width:48rpx; height:48rpx; margin-top:20rpx; padding:10rpx; background:#e7eef8; border-radius:6rpx; }
+.action-icon { width:44rpx; height:44rpx; margin-right:20rpx; flex:none; }
+.button-icon { width:36rpx; height:36rpx; margin-right:12rpx; vertical-align:middle; }

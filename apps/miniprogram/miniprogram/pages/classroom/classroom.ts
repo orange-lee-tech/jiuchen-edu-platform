@@ -1,5 +1,6 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
+import { weeklyScheduleView, courseTimeLabel } from '../../utils/schedule-view'
 import {
   getClassroomStages,
   getLatestScheduleImport,
@@ -89,6 +90,9 @@ function emptyStageView(stage: ClassroomStage, index: number) {
     records: [] as Array<ClassroomCoachingRecord & { dateLabel: string }>,
   }
 }
+function stageLabels(stages: ClassroomStage[]) {
+  return stages.map(s => ({ ...s, yearLabel: s.label.slice(0, 2), periodLabel: s.label.slice(2) }))
+}
 
 function toPlanCard(plan: ClassroomPlan, scheduleCourseCount = 0): PlanCard {
   const template = PLAN_CARDS[plan.type]
@@ -113,12 +117,17 @@ Page({
     loadError: '',
     studentName: '',
     scheduleCourseCount: 0,
-    stages: FALLBACK_STAGES,
+    selectedView: 'stage',
+    weekLoading: false, weekError: '', weekState: 'missing', weekLabel: '',
+    weekCourses: [] as Array<{ name: string; day: string; slot: string; location: string | null; teacher: string | null }>,
+    stages: stageLabels(FALLBACK_STAGES),
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
 
   stopShell: undefined as (() => void) | undefined,
   viewGeneration: 0,
+  selectedOwner: '',
+  weekRequest: 0,
   onShow() {
     this.stopShell?.()
     this.stopShell = observeSlot('plan', (state) => {
@@ -147,12 +156,15 @@ Page({
       this.setData({ mode: 'unbound', plans: [], mentors: [], records: [] })
       return
     }
+    const sameOwner = this.selectedOwner === auth.user.id
+    this.selectedOwner = auth.user.id
+    if (!sameOwner) this.setData({ selectedView: 'stage' })
 
     this.setData({ mode: 'student', loading: true, loadError: '', plans: [], mentors: [], records: [] })
     try {
       const [stages, initial, latestSchedule] = await Promise.all([
         getClassroomStages().catch(() => FALLBACK_STAGES),
-        getMyClassroom(),
+        getMyClassroom(sameOwner ? this.data.currentStageCode : undefined),
         getLatestScheduleImport().catch(() => null),
       ])
       if (generation !== this.viewGeneration) return
@@ -163,7 +175,7 @@ Page({
       const stage = stages[index] || initial.stage
       const scheduleCourseCount = latestSchedule?.schedule?.courses.length ?? 0
       this.setData({
-        stages,
+        stages: stageLabels(stages),
         ...emptyStageView(stage, index),
         studentName: initial.student.name,
         scheduleCourseCount,
@@ -176,6 +188,7 @@ Page({
           dateLabel: this.formatRecordDate(record.occurredAt),
         })),
       })
+      if (this.data.selectedView === 'week') void this.loadCurrentWeek()
     } catch (error) {
       if (generation !== this.viewGeneration) return
       console.info('Current student classroom unavailable.', error)
@@ -208,7 +221,7 @@ Page({
     const stages = this.data.stages as ClassroomStage[]
     const stage = stages[index]
     if (!stage) return
-    this.setData(emptyStageView(stage, index))
+    this.setData({ ...emptyStageView(stage, index), selectedView: 'stage' })
     void this.reloadStage(stage.code)
   },
   async reloadStage(stageCode: string) {
@@ -228,7 +241,20 @@ Page({
   },
 
   onCurrentWeekSchedule() {
-    wx.navigateTo({ url: '/pages/schedule-import/schedule-import?view=current' })
+    this.setData({ selectedView: 'week' })
+    void this.loadCurrentWeek()
+  },
+  async loadCurrentWeek() {
+    const generation = this.viewGeneration, request = ++this.weekRequest
+    this.setData({ weekLoading: true, weekError: '', weekCourses: [] })
+    try {
+      const latest = await getLatestScheduleImport()
+      if (generation !== this.viewGeneration || request !== this.weekRequest) return
+      const view = weeklyScheduleView(latest?.schedule || null)
+      this.setData({ weekState: view.state, weekLabel: view.currentWeekLabel, weekCourses: view.visibleCourses.map(c => ({ ...c, slot: courseTimeLabel(c) })) })
+    } catch {
+      if (generation === this.viewGeneration && request === this.weekRequest) this.setData({ weekError: '本周课表读取失败，请重试。' })
+    } finally { if (generation === this.viewGeneration && request === this.weekRequest) this.setData({ weekLoading: false }) }
   },
 
   onScheduleImport() {

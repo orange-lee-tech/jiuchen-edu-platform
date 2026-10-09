@@ -8,6 +8,7 @@ import {
 } from '../../utils/request'
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
 import { authorizePage } from '../../utils/navigation'
+import { currentWeekFromStart, weekMatches } from '../../utils/schedule-view'
 
 const MAX_SPREADSHEET_BYTES = 5 * 1024 * 1024
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -17,42 +18,6 @@ function sectionRange(value: string) {
   const nums = value.match(/\d+/g)?.map(Number) ?? []
   if (nums.length === 0) return { start: null, end: null }
   return { start: nums[0], end: nums[nums.length - 1] }
-}
-
-function currentWeekFromStart(value: string | null | undefined) {
-  if (!value) return 0
-  const start = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(start.getTime())) return 0
-  const today = new Date()
-  const diff = today.getTime() - start.getTime()
-  if (diff < 0) return 0
-  return Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1
-}
-
-function weekMatches(value: string | null, week: number) {
-  if (!value || week <= 0) return true
-
-  const normalized = value
-    .replace(/第/g, '')
-    .replace(/星期/g, '')
-    .replace(/周次/g, '')
-    .replace(/周/g, '')
-    .replace(/至|—|~|～/g, '-')
-    .replace(/，|、/g, ',')
-
-  if (/单/.test(normalized) && week % 2 === 0) return false
-  if (/双/.test(normalized) && week % 2 !== 0) return false
-
-  const ranges = [...normalized.matchAll(/(\d+)\s*-\s*(\d+)/g)]
-  if (ranges.some((match) => week >= Number(match[1]) && week <= Number(match[2]))) {
-    return true
-  }
-
-  const withoutRanges = normalized.replace(/\d+\s*-\s*\d+/g, '')
-  const singles = withoutRanges.match(/\d+/g)?.map(Number) ?? []
-  if (singles.length > 0) return singles.includes(week)
-
-  return ranges.length === 0
 }
 
 function emptyDraft(): ParsedScheduleCourse {

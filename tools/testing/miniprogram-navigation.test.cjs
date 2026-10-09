@@ -17,7 +17,7 @@ const authFixture = (role = 'student', userId = id, token = 'test-session') => (
 const settle = () => new Promise((resolve) => setImmediate(resolve))
 
 function harness() {
-  const storage = new Map(), requests = [], navigations = [], tabs = []
+  const storage = new Map(), requests = [], navigations = [], tabs = [], modals = [], sheets = []
   const cache = new Map()
   const runtimeConfig = { apiTransport: 'http', apiBaseUrl: 'https://test.invalid', cloudEnvId: 'test-env' }
   let pages = [], pageDefinition, componentDefinition, appDefinition
@@ -27,7 +27,7 @@ function harness() {
     request: (options) => requests.push(options),
     cloud: { init() { cloudInitialized = true }, callContainer(options) { assert.ok(cloudInitialized, 'CloudBase must initialize before its first request'); requests.push(options) } },
     setTabBarItem: (options) => tabs.push(options), setNavigationBarTitle() {}, showToast() {},
-    showModal() {}, setClipboardData() {},
+    showModal(options) { modals.push(options) }, showActionSheet(options) { sheets.push(options) }, setClipboardData() {},
     switchTab: (options) => navigations.push({ api: 'switchTab', ...options }),
     navigateTo: (options) => navigations.push({ api: 'navigateTo', ...options }),
     redirectTo: (options) => navigations.push({ api: 'redirectTo', ...options }),
@@ -47,7 +47,7 @@ function harness() {
     const instance = { ...definition, ...definition.methods, ...extras, data: JSON.parse(JSON.stringify(definition.data)), setData(value) { Object.assign(this.data, value) }, triggerEvent() {} }
     return instance
   }
-  return { wx, storage, requests, navigations, tabs, load, runtimeConfig,
+  return { wx, storage, requests, navigations, tabs, modals, sheets, load, runtimeConfig,
     auth: load('utils/auth'), nav: load('utils/navigation'),
     setPages(value) { pages = value },
     page(route, options = {}) { load(route); const page = instantiate(pageDefinition, { route, options }); pages = [page]; return page },
@@ -65,6 +65,97 @@ test('four native paths; all 21 registered legacy pages remain', () => {
   const h = harness()
   for (const slot of ['home', 'plan', 'opportunity', 'mine']) h.nav.openSlot(slot)
   assert.ok(h.navigations.every((item) => item.api === 'switchTab' && !item.url.includes('?') && !item.url.includes('/position/')))
+})
+
+test('shared week filter covers ranges, odd/even weeks, date boundaries and sorted sections', () => {
+  const { weeklyScheduleView, weekMatches, currentWeekFromStart } = harness().load('utils/schedule-view')
+  assert.equal(currentWeekFromStart('2026-09-07', new Date('2026-09-13T15:59:59Z')), 1)
+  assert.equal(currentWeekFromStart('2026-09-07', new Date('2026-09-13T16:00:00Z')), 2)
+  assert.equal(currentWeekFromStart('2026-09-07', new Date('2026-09-01')), 0)
+  assert.equal(weekMatches('1-4,6,8-10周(单)', 9), true)
+  assert.equal(weekMatches('1-4,6,8-10周(单)', 8), false)
+  assert.equal(weekMatches('1-4,6,8-10周', 7), false)
+  assert.equal(weekMatches('2至8周(双)', 4), true)
+  const today = new Date('2026-09-14T04:00:00Z')
+  assert.equal(weeklyScheduleView(null, today).state, 'missing')
+  assert.equal(weeklyScheduleView({ courses: [] }, today).state, 'date')
+  assert.equal(weeklyScheduleView({ termStartDate: '2026-09-07', courses: [] }, today).state, 'empty')
+  const view = weeklyScheduleView({ termStartDate: '2026-09-07', courses: [{ name: 'later', dayIndex: 2, startSection: 1, weeks: null }, { name: 'last', dayIndex: 1, startSection: 5, weeks: '1-8' }, { name: 'first', dayIndex: 1, startSection: 1, weeks: '双' }] }, today)
+  assert.equal(view.state, 'ready'); assert.equal(view.visibleCourses.map(c => c.name).join(','), 'first,last,later')
+})
+
+test('current week switches the right-hand view without any navigation and failures are retryable', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture())
+  const p = h.page('pages/classroom/classroom')
+  p.onCurrentWeekSchedule()
+  assert.equal(p.data.selectedView, 'week'); assert.equal(h.navigations.length, 0)
+  h.respond(0, { error: 'failure' }, 500); await settle()
+  assert.ok(p.data.weekError); assert.equal(p.data.weekLoading, false)
+  p.loadCurrentWeek(); h.respond(1, { ok: true, import: null }); await settle()
+  assert.equal(p.data.weekState, 'missing'); assert.equal(p.data.weekError, '')
+  p.onStageChange({ currentTarget: { dataset: { index: 1 } } })
+  assert.equal(p.data.selectedView, 'stage'); assert.equal(p.data.currentStageCode, 'freshman-winter')
+  assert.equal(h.navigations.length, 0)
+  h.respond(2, { error: 'failure' }, 500); await settle()
+})
+
+test('internal ID search, four Chinese states and actions follow real status and binding', () => {
+  const { filterInternalIds, internalIdView } = harness().load('utils/admin-id-view')
+  const rows = [
+    { id: 'a', businessId: 'JCS-123456', type: 'student', status: 'available', userId: null, claimedAt: null },
+    { id: 'b', businessId: 'JCT-222222', type: 'teacher', status: 'claimed', userId: id },
+    { id: 'c', businessId: 'JCT-333333', type: 'teacher', status: 'disabled', userId: secondId, claimedAt: '2026-01-01' },
+    { id: 'd', businessId: 'JCA-444444', type: 'admin', status: 'disabled', userId: null, claimedAt: '2026-01-01' },
+  ]
+  assert.equal(filterInternalIds(rows, 'jcs 123', 0)[0].id, 'a')
+  assert.equal(filterInternalIds(rows, '', 3)[0].id, 'c')
+  assert.equal(rows.map(r => internalIdView(r).statusLabel).join(','), '可认领,已绑定,已暂停,已撤销')
+  assert.equal(internalIdView(rows[1], id).actions.length, 0)
+  assert.equal(internalIdView(rows[2]).actions.join(','), '恢复编号,撤销授权')
+  assert.equal(internalIdView(rows[0]).actions.join(','), '绑定账号,删除编号')
+})
+
+test('ID sensitive actions cancel safely, prevent duplicates and do not simulate failed writes', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture('admin'))
+  const p = h.page('pages/admin/admin'); p.data.internalIds = [{ id: 'a', businessId: 'JCS-123456', type: 'student', status: 'claimed', userId: secondId }]
+  const event = { currentTarget: { dataset: { id: 'a' } } }; let writes = 0
+  const write = async () => { writes++; throw Error('rejected') }
+  p.confirmIdAction(event, '撤销授权', write, '解除绑定', true)
+  assert.ok(h.modals[0].content.includes('JCS-123456'))
+  p.confirmIdAction(event, '撤销授权', write, '解除绑定', true)
+  assert.equal(h.modals.length, 1)
+  await h.modals[0].success({ confirm: false }); assert.equal(writes, 0)
+  p.confirmIdAction(event, '撤销授权', write, '解除绑定', true)
+  await h.modals[1].success({ confirm: true }); assert.equal(writes, 1)
+  assert.equal(p.data.internalIds[0].status, 'claimed'); assert.equal(p.data.actionLoading, false)
+})
+
+test('article reader removes duplicate fixed layout and hidden spacers but preserves normal content', () => {
+  const { articleReaderNodes } = harness().load('utils/article-reader')
+  const nodes = articleReaderNodes('<section style="padding:42px 24px;height:1200px"><p>正文第一段</p><p style="display:none;height:800px">hidden</p><img src="https://example.invalid/photo.jpg" style="width:530px;height:707px" style="max-width:100%;height:auto" /><p><strong>第二段</strong></p><table><tr><td>课程</td></tr></table></section>')
+  const serialized = JSON.stringify(nodes)
+  assert.ok(serialized.includes('正文第一段')); assert.ok(serialized.includes('第二段')); assert.ok(serialized.includes('photo.jpg')); assert.ok(serialized.includes('table'))
+  assert.ok(!/707px|1200px|hidden/.test(serialized)); assert.ok(serialized.includes('height:auto'))
+})
+
+test('article reader never retains script, events, executable URLs or unsafe styles', () => {
+  const { articleReaderNodes } = harness().load('utils/article-reader')
+  const serialized = JSON.stringify(articleReaderNodes('<script>alert(1)</script><iframe src="https://evil.invalid">bad</iframe><p onclick="steal()" style="background:url(javascript:evil);position:fixed;top:0">安全正文</p><img src="javascript:evil" /><img data-src="https://example.invalid/real.png" onerror="evil()" />'))
+  assert.ok(serialized.includes('安全正文')); assert.ok(serialized.includes('real.png'))
+  assert.ok(!/script|iframe|onclick|onerror|alert|steal|javascript|position|evil/.test(serialized))
+})
+
+test('native role icons exist, remain small, and admin Mine has no duplicate operations', async () => {
+  const h = harness(); h.nav.initializeNavigation(); h.auth.saveAuthResult(authFixture('admin'))
+  for (const tab of h.tabs.slice(-4)) for (const key of ['iconPath','selectedIconPath']) {
+    const data = fs.readFileSync(path.join(root, tab[key])); assert.ok(data.length < 10000); assert.equal(data.readUInt32BE(16), 64)
+  }
+  const p = h.page('pages/profile/profile'); p.onShow()
+  h.respond(0, { ok: true, user: authFixture('admin').user, businessIdentity: null }); await settle()
+  assert.ok(p.data.menus.every(m => !m.key.startsWith('admin-')))
+  p.onHide()
+  const c = h.component('role-shell', { kind:'admin', slot:'home', phase:'ready' })
+  c.observers['slot, kind'].call(c,'home','admin'); assert.equal(c.data.actions.length, 1)
 })
 
 test('server role replaces cached role; concurrent refresh is one read; staff is not admin', async () => {
@@ -239,7 +330,7 @@ test('hidden classroom cannot apply a late response from a previous identity', a
 })
 
 test('WXML is balanced and changed surfaces use real registered handlers', () => {
-  const pages = ['index', 'classroom', 'news', 'profile', 'position']
+  const pages = ['index', 'classroom', 'news', 'profile', 'position', 'admin', 'news-detail']
   for (const name of pages) {
     const h = harness(), page = h.page(`pages/${name}/${name}`)
     const source = fs.readFileSync(path.join(root, `pages/${name}/${name}.wxml`), 'utf8')

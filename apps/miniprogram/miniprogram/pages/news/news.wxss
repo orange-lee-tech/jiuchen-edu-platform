@@ -3,7 +3,11 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 20rpx;
-  padding: 12rpx 4rpx 22rpx;
+  padding: 24rpx;
+  margin-bottom:24rpx;
+  background:#e7eef8;
+  border-left:6rpx solid #f2b544;
+  color:#173b73;
 }
 
 /* Role entry remains primary; articles are real, independently retryable content. */

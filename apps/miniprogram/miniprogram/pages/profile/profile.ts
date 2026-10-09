@@ -1,6 +1,7 @@
 import { deleteCurrentAccount, getSavedAuthResult, logoutWechatUser, type UserRole } from '../../utils/auth'
 import { friendlyRequestError } from '../../utils/request'
 import { openWechatCustomerService } from '../../utils/customer-service'
+import { copyOfficialWebsite } from '../../utils/website'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 
 const PERSONAL_MENUS = [
@@ -17,9 +18,6 @@ const TEACHER_MENUS = [
 ]
 const ADMIN_MENUS = [
   { key: 'profile', title: '身份与个人资料', desc: '查看本人的管理员身份和编号' },
-  { key: 'admin-users', title: '用户与编号管理', desc: '管理真实账号、绑定和编号状态' },
-  { key: 'admin-assignments', title: '师生分配', desc: '维护老师与学员的服务关系' },
-  { key: 'admin-news', title: '资讯与标签管理', desc: '维护分类，按需同步服务号文章' },
   { key: 'service', title: '联系运营', desc: '咨询账号与服务问题' },
 ]
 Page({
@@ -44,6 +42,7 @@ Page({
   onHide() { this.stopShell?.(); this.setData({ shellPhase: 'loading' }) },
   onUnload() { this.stopShell?.() },
   onCustomerServiceTap() { openWechatCustomerService() },
+  onWebsite() { copyOfficialWebsite() },
   onIdentityTap() {
     if (this.data.loggedIn) openPage('/pages/profile-edit/profile-edit')
     else loginFor('pages/profile-edit/profile-edit')

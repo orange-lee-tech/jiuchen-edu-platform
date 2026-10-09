@@ -8,13 +8,14 @@
       <view wx:if="{{businessId}}" class="identity-code-row"><text class="identity-code" selectable>{{businessId}}</text><button class="copy-code" bindtap="onCopyIdentity">复制编号</button></view>
       <button class="identity-primary" bindtap="onIdentityTap">{{loggedIn ? '编辑身份与资料' : '登录并建立档案'}}</button>
     </view>
-    <text class="section-heading">{{shellKind === 'student' ? '我的资料与记录' : '我的账号与工作入口'}}</text>
+    <text class="section-heading">{{shellKind === 'student' ? '我的资料与记录' : '我的账号与支持'}}</text>
     <view class="menu-list">
       <block wx:for="{{menus}}" wx:key="key">
-        <button wx:if="{{item.key === 'service'}}" class="menu-row" bindtap="onCustomerServiceTap"><view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text></button>
-        <button wx:else class="menu-row" data-key="{{item.key}}" bindtap="onMenuTap"><view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text></button>
+        <button wx:if="{{item.key === 'service'}}" class="menu-row" bindtap="onCustomerServiceTap"><image class="menu-icon" src="/assets/icons/service-active.png" /><view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text></button>
+        <button wx:else class="menu-row" data-key="{{item.key}}" bindtap="onMenuTap"><image class="menu-icon" src="/assets/icons/{{item.key === 'growth' ? 'growth' : item.key === 'position' || item.key === 'assessment' ? 'assessment' : item.key === 'students' ? 'users' : 'mine'}}-active.png" /><view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text></button>
       </block>
     </view>
+    <button class="website-row" bindtap="onWebsite"><image class="menu-icon" src="/assets/icons/website-active.png" />九辰官网 · 复制地址</button>
     <view wx:if="{{loggedIn}}" class="account-actions">
       <button class="logout-button" loading="{{loggingOut}}" disabled="{{loggingOut || deleting}}" bindtap="onLogout">退出当前登录</button>
       <button class="delete-button" loading="{{deleting}}" disabled="{{loggingOut || deleting}}" bindtap="onDeleteAccount">注销账号</button>

@@ -1,5 +1,6 @@
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, openSlot, shellView } from '../../utils/navigation'
 import { openWechatCustomerService } from '../../utils/customer-service'
+import { copyOfficialWebsite } from '../../utils/website'
 
 Page({
   data: { ...INITIAL_SHELL, loggedIn: false },
@@ -19,5 +20,6 @@ Page({
   onNews() { openSlot('opportunity') },
   onProducts() { openPage('/pages/products/products') },
   onBrand() { openPage('/pages/brand/brand') },
+  onWebsite() { copyOfficialWebsite() },
   onCustomerService() { openWechatCustomerService() },
 })
