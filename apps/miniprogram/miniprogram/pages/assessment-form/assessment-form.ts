@@ -4,6 +4,11 @@ import {
   createAssessmentDraft,
   friendlyRequestError,
   getAssessmentMeta,
+  getCommercialMeta,
+  grantMyFreeCredits,
+  getMyCreditAccount,
+  createAssessmentPaymentOrder,
+  getAssessmentPaymentOrder,
   getMyAcademicProfile,
   getMyAssessment,
   importAssessmentProfileMaterial,
@@ -232,6 +237,14 @@ Page({
     profileReady: false,
     importing: false,
     providerConfigured: false,
+    billingEnabled: false,
+    checkoutEnabled: false,
+    creditAvailable: null as number | null,
+    creditError: '',
+    creditLoading: false,
+    purchasing: false,
+    pendingPaymentOrderId: '',
+    skuChoices: [] as Array<{ key: string; price: string; count: number }>,
     materialImportConfigured: false,
     draftId: '',
     profile: {
@@ -266,6 +279,7 @@ Page({
     // Read the canonical account profile after returning from 我的 → 编辑个人资料.
     // Never promote resume extraction or a historical draft to the source of truth.
     if (!this.data.profileReady || this.data.loading) return
+    void this.loadCredits()
     void getMyAcademicProfile().then((profile) => {
       this.setData({
         'profile.university': profile.university || '',
@@ -278,6 +292,96 @@ Page({
   },
   onOpenProfileEdit() {
     wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
+  },
+  async loadCredits() {
+    if (this.data.creditLoading || this.data.purchasing) return
+    try {
+      this.setData({ creditLoading: true, creditError: '' })
+      const meta = await getCommercialMeta()
+      if (!meta.policy.enforcementEnabled) {
+        this.setData({ billingEnabled: false, checkoutEnabled: false, creditAvailable: null, skuChoices: [] })
+        return
+      }
+      // Chargeable plans and prices are server-owned, not submitted by the client.
+      const skuChoices = meta.payment.skus.map(sku => ({
+        key: sku.key, count: sku.creditAmount, price: (sku.amountFen / 100).toFixed(2),
+      }))
+      this.setData({ billingEnabled: true, checkoutEnabled: meta.payment.checkoutEnabled, skuChoices })
+      // An idempotent server grant supports both guest=1 and student=5 lifetime policy.
+      await grantMyFreeCredits()
+      const creditAccount = await getMyCreditAccount()
+      this.setData({ creditAvailable: creditAccount.availableBalance })
+    } catch (error) {
+      this.setData({ creditAvailable: null, creditError: friendlyRequestError(error, '额度读取失败，请重试') })
+    } finally {
+      this.setData({ creditLoading: false })
+    }
+  },
+  onBuyCredit(event: WechatMiniprogram.BaseEvent) {
+    if (!this.data.checkoutEnabled || this.data.purchasing) return
+    const key = String(event.currentTarget.dataset.key ?? '')
+    const sku = this.data.skuChoices.find(item => item.key === key)
+    if (!sku) return
+    wx.showModal({
+      title: '确认充值 AI 评估次数',
+      content: `购买 ${sku.count} 次 AI 评估，实付 ¥${sku.price}。课程不在小程序内销售。`,
+      confirmText: '微信支付',
+      cancelText: '暂不购买',
+      success: result => { if (result.confirm) void this.beginCreditPurchase(sku.key) },
+    })
+  },
+  async beginCreditPurchase(skuKey: string) {
+    if (this.data.purchasing || !this.data.checkoutEnabled) return
+    this.setData({ purchasing: true })
+    try {
+      const { order, payment } = await createAssessmentPaymentOrder(skuKey)
+      this.setData({ pendingPaymentOrderId: order.id })
+      await new Promise<void>((resolve, reject) => {
+        wx.requestPayment({
+          ...payment,
+          success: () => resolve(),
+          fail: error => reject(error),
+        })
+      })
+      // wx.requestPayment success is not settlement. Only the verified server
+      // callback can mark the order paid and append the credit ledger entry.
+      await this.verifyCreditPayment()
+    } catch (error) {
+      const err = error as { errMsg?: string }
+      if (String(err?.errMsg ?? '').includes('cancel')) {
+        wx.showToast({ title: '已取消支付，未增加次数', icon: 'none' })
+      } else {
+        wx.showModal({
+          title: '支付状态待确认',
+          content: '如果你已经完成微信支付，额度可能需要等待后台通知。请使用“核实订单”刷新，不要重复购买。',
+          showCancel: false,
+        })
+      }
+    } finally {
+      this.setData({ purchasing: false })
+      void this.loadCredits()
+    }
+  },
+  async verifyCreditPayment() {
+    const id = this.data.pendingPaymentOrderId
+    if (!id) return
+    const order = await getAssessmentPaymentOrder(id)
+    if (order.status === 'paid') {
+      this.setData({ pendingPaymentOrderId: '' })
+      wx.showToast({ title: '充值已到账', icon: 'success' })
+    } else {
+      wx.showModal({
+        title: '正在核实充值订单',
+        content: '当前订单尚未被服务器确认支付成功。请稍后点击“核实订单”，无需重复付款。',
+        showCancel: false,
+      })
+    }
+  },
+  onVerifyCreditPayment() {
+    if (this.data.purchasing) return
+    void this.verifyCreditPayment().then(() => this.loadCredits()).catch(() => {
+      wx.showToast({ title: '订单暂时无法核实，请稍后重试', icon: 'none' })
+    })
   },
   async initializeForm(query: Record<string, string | undefined>) {
     const auth = getSavedAuthResult()
@@ -341,6 +445,7 @@ Page({
               },
             ],
       })
+      void this.loadCredits()
     } catch (error) {
       console.info('Assessment form bootstrap failed.', error)
       wx.showToast({ title: '评估资料暂时无法加载', icon: 'none' })

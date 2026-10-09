@@ -9,6 +9,18 @@
   <view wx:if="{{loading}}" class="card">正在加载资料…</view>
 
   <block wx:else>
+    <view wx:if="{{billingEnabled}}" class="card credit-panel">
+      <view class="section-head"><text class="section-title">AI 评估额度</text><text class="link" bindtap="loadCredits">刷新次数 ›</text></view>
+      <text wx:if="{{creditAvailable !== null}}" class="credit-balance">可用 {{creditAvailable}} 次</text>
+      <text wx:else class="credit-status">{{creditLoading ? '正在核实额度…' : creditError || '额度尚未取得'}}</text>
+      <text class="credit-subtitle">游客免费 1 次，绑定学员后累计免费 5 次；成功评估才扣除 1 次。已保存的历史报告可免费查看。</text>
+      <view wx:if="{{checkoutEnabled}}" class="credit-offers">
+        <button wx:for="{{skuChoices}}" wx:key="key" data-key="{{item.key}}" class="credit-offer" disabled="{{purchasing || creditLoading}}" loading="{{purchasing}}" bindtap="onBuyCredit">{{item.count}} 次 · ¥{{item.price}}</button>
+      </view>
+      <text wx:else class="credit-status">目前仅显示真实额度，微信充值尚未开放；可咨询客服。</text>
+      <button wx:if="{{pendingPaymentOrderId}}" class="credit-verify" bindtap="onVerifyCreditPayment">核实上一笔充值订单</button>
+    </view>
+
     <view class="card import-card">
       <view class="import-copy">
         <text class="section-title">导入已有材料</text>

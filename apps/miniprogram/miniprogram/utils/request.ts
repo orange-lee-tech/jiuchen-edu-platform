@@ -176,6 +176,10 @@ export function friendlyRequestError(
     schema_missing: '测试数据库正在升级，请稍后重试',
     assessment_schema_not_ready: 'AI评估服务正在准备中，请稍后重试',
     assessment_academic_profile_outdated: '评估学业资料已变化，请前往“我的→编辑个人资料”核对，再重新打开草稿',
+    assessment_credit_insufficient: '本次评估额度已用尽，请先充值评估次数',
+    credit_payment_schema_not_ready: '充值系统正在准备中，请稍后再试',
+    wechat_pay_not_configured: '微信支付尚未开通，请联系九辰客服',
+    commercial_checkout_not_enabled: '充值尚未开放，请稍后再试',
     growth_profile_schema_not_ready: '成长履历服务正在准备中，请稍后重试',
     assessment_or_growth_schema_not_ready: '成长履历与评估数据正在准备中，请稍后重试',
     assessment_provider_not_configured: 'AI模型尚未接入，暂时不能运行评估',
@@ -736,6 +740,42 @@ export type AdminUser = {
   status: 'active' | 'deleted'
   displayName: string | null
   createdAt: string
+}
+
+export type CreditSkuInfo = { key: string; description: string; amountFen: number; creditAmount: number }
+export type CommercialMeta = {
+  policy: { assessmentCreditCost: number; enforcementEnabled: boolean }
+  freeGrant: { configured: boolean; version?: string; amount?: number }
+  rolePolicy: { guestFree: number; studentTotalFree: number }
+  payment: { providerConfigured: boolean; checkoutEnabled: boolean; catalog: CreditSkuInfo[]; skus: CreditSkuInfo[] }
+}
+export type CreditAccount = { settledBalance: number; heldBalance: number; availableBalance: number }
+export type PaymentOrderStatus = 'pending' | 'paid' | 'closed' | 'refunded'
+export type AssessmentPaymentOrder = { id: string; status: PaymentOrderStatus; amountFen: number; creditAmount: number }
+export type AssessmentPaymentParams = { timeStamp: string; nonceStr: string; package: string; signType: 'RSA'; paySign: string }
+export async function getCommercialMeta(): Promise<CommercialMeta> {
+  const result = await request<{ ok: true } & CommercialMeta>('/commercial/meta')
+  return result
+}
+export async function grantMyFreeCredits(): Promise<CreditAccount> {
+  const result = await request<{ ok: true; account: CreditAccount }>('/me/credits/free-grant', 'POST', {})
+  return result.account
+}
+export async function getMyCreditAccount(): Promise<CreditAccount> {
+  const result = await request<{ ok: true; account: CreditAccount }>('/me/credits')
+  return result.account
+}
+export async function createAssessmentPaymentOrder(skuKey: string): Promise<{ order: AssessmentPaymentOrder; payment: AssessmentPaymentParams }> {
+  const result = await request<{ ok: true; order: AssessmentPaymentOrder; payment: AssessmentPaymentParams }>(
+    '/me/payment-orders', 'POST', { skuKey },
+  )
+  return { order: result.order, payment: result.payment }
+}
+export async function getAssessmentPaymentOrder(id: string): Promise<AssessmentPaymentOrder> {
+  const result = await request<{ ok: true; order: AssessmentPaymentOrder }>(
+    '/me/payment-orders/' + encodeURIComponent(id),
+  )
+  return result.order
 }
 
 export type AdminAnalyticsPeriod = 'week' | 'month' | 'year'

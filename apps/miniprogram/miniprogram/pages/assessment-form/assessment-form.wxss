@@ -287,3 +287,12 @@
   font-size: 21rpx;
   line-height: 1.55;
 }
+
+/* Small native credit purchasing panel: no chart or payment bundle on the client. */
+.credit-panel { border-left: 6rpx solid #2f6fed; }
+.credit-balance { display:block; font-size:48rpx; font-weight:800; color:#1b4d98; margin:12rpx 0; }
+.credit-subtitle { display:block; font-size:22rpx; line-height:1.65; color:#53677d; }
+.credit-status { display:block; color:#987026; font-size:22rpx; margin:12rpx 0; }
+.credit-offers { display:flex; gap:12rpx; flex-wrap:wrap; margin:18rpx 0 6rpx; }
+.credit-offer { margin:0; flex:1 1 220rpx; padding:14rpx; font-size:24rpx; line-height:1.6; color:white; background:#2f6fed; border-radius:8rpx; }
+.credit-verify { margin:16rpx 0 0; background:#e7eef8; color:#2459be; border-radius:6rpx; font-size:24rpx; }
