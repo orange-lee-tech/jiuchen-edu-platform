@@ -28,7 +28,7 @@ jobs:
           npm run typecheck
 
       - name: Verify native navigation and session regressions
-        run: node --test tools/testing/miniprogram-navigation.test.cjs
+        run: node --test tools/testing/miniprogram-navigation.test.cjs tools/testing/school-catalog.test.cjs
 
       - name: Install and build admin
         working-directory: apps/admin
