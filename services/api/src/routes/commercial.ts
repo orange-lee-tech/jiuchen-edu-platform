@@ -1,9 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify'
-import { z } from 'zod'
 import type { DatabaseContext } from '../db/client.js'
 import { canUseAssessment } from '../domain/auth-policy.js'
 import {
-  createPaymentOrder,
   getPaymentOrder,
   settleVerifiedPaymentNotification,
 } from '../services/payment-orders.js'
@@ -16,7 +14,6 @@ import {
   APPROVED_ASSESSMENT_SKUS,
   GUEST_FREE_COUNT,
   STUDENT_TOTAL_FREE_COUNT,
-  findCreditSku,
   freeGrantsForRole,
   type CommercialConfig,
 } from '../services/commercial-config.js'
@@ -25,10 +22,6 @@ import {
   type WechatPayGateway,
 } from '../services/wechat-pay.js'
 import { resolveSessionUser } from '../services/session.js'
-
-const createOrderSchema = z.object({
-  skuKey: z.string().trim().min(1).max(64),
-}).strict()
 
 function commercialErrorReply(
   reply: FastifyReply,
@@ -163,74 +156,13 @@ export function registerCommercialRoutes(
     }
   })
 
-  app.post<{ Body: unknown }>('/me/payment-orders', async (request, reply) => {
-    // Compliance hard gate: ordinary JSAPI is not a virtual-goods checkout.
-    // If a virtual adapter is implemented, replace this whole legacy handler
-    // with a separate explicit gateway/route and a verifiable release gate.
-    if (true) {
-      return reply.code(503).send({ ok: false, error: 'wechat_virtual_payment_adapter_required' })
-    }
-    if (!config.creditEnforcementEnabled) {
-      return reply.code(503).send({ ok: false, error: 'commercial_checkout_not_enabled' })
-    }
-    if (!database.configured) {
-      return reply.code(503).send({
-        ok: false,
-        error: 'database_not_configured',
-      })
-    }
-
-    const user = await resolveSessionUser(request, database)
-    if (!user) {
-      return reply.code(401).send({ ok: false, error: 'unauthorized' })
-    }
-    if (!canUseAssessment(user.role)) {
-      return reply.code(403).send({
-        ok: false,
-        error: 'assessment_not_available_for_role',
-      })
-    }
-
-    const parsed = createOrderSchema.safeParse(request.body)
-    if (!parsed.success) {
-      return reply.code(400).send({
-        ok: false,
-        error: 'invalid_payment_order_request',
-      })
-    }
-
-    const sku = findCreditSku(config, parsed.data.skuKey)
-    if (!sku) {
-      return reply.code(400).send({
-        ok: false,
-        error: 'payment_sku_not_found',
-      })
-    }
-
-    try {
-      const result = await createPaymentOrder({
-        database,
-        userId: user.userId,
-        sku,
-        gateway: wechatPay,
-      })
-      return reply.code(201).send({
-        ok: true,
-        ...result,
-      })
-    } catch (error) {
-      if (error instanceof CommercialStateError) {
-        return commercialErrorReply(reply, error)
-      }
-      if (error instanceof WechatPayGatewayError) {
-        return reply.code(502).send({
-          ok: false,
-          error: error.code,
-        })
-      }
-      throw error
-    }
-  })
+  // AI credits are virtual goods under WeChat's 2026 policy.
+  // Never use ordinary JSAPI order creation for assessment credits.
+  // Future checkout requires a SEPARATE reviewed virtual-payment provider.
+  app.post('/me/payment-orders', async (_request, reply) => reply.code(503).send({
+    ok: false,
+    error: 'wechat_virtual_payment_adapter_required',
+  }))
 
   app.get<{ Params: { id: string } }>(
     '/me/payment-orders/:id',
