@@ -50,10 +50,10 @@
 
 ## Phase 1a 本轮实际证据
 
-- 施工基线：`a934da0b40cba836cfca609aa75b38ac7cce6a1b`；单一导航代码批次，最终 SHA 在 Git 交接提供。
+- 施工基线：`a934da0b40cba836cfca609aa75b38ac7cce6a1b`；单一导航代码提交 `cf3fe98008ebd8d0834342189a4d90e63ccdab17`，已推送 `p1/foundation`。后续提交仅补充 CI 证据和文件清单。
 - `npm.cmd --prefix apps/miniprogram run typecheck`：PASS。
 - `node --test tools/testing/miniprogram-navigation.test.cjs`：16 项 PASS；六种身份 × 四个槽位，登录/claim/401/旧会话竞态、只读历史结果、无栈返回、页面参数与 WXML 回归。测试使用合成账号和 wx double，**不是手机/生产权限验收**。
-- CI：提交推送后查询实际 GitHub Push/PR 结果，未使用基线绿色代替新提交。结果回填在本节。
+- 代码提交 CI：[Push #37928893951](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/37928893951) / [PR #37928901681](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/37928901681) 均 SUCCESS。小程序 typecheck + 16 项导航回归、Admin typecheck/build、API typecheck/test/build 通过；未使用基线绿色代替新提交。
 - Developer Tools / 手机截图 / 真机 / 字体放大 / 键盘：**NOT RUN**。computer-use 的 node_repl 无法启动，诊断为 `windows sandbox failed: helper_unknown_error: setup refresh had errors`；没有生成或冒充手机截图。普通 shell 同样失败，获审批的终端通道可执行本地检查。
 - 完整页面契约、界面评审、局部 hot-file 校正、待验收项及回滚见 `docs/handoff/phase1a-screen-review-2026-10-09.md`。
 - 原有本地 `apps/miniprogram/project.config.json` 修改和所有原有未跟踪文件保留，不提交；`services/`、`ops/` 无代码变更。未部署生产、写 schema、改模型/Prompt/支付；Phase 1b 尚未开始。

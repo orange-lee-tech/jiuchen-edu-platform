@@ -56,13 +56,26 @@
 
 ## CI、平台及截图证据
 
-GitHub Push/PR：提交后查询并回填结果；本地 typecheck、16 项回归及 diff 检查已通过。没有单独 npm miniprogram build 脚本，未伪造 build PASS。
+代码提交 `cf3fe98008ebd8d0834342189a4d90e63ccdab17` 的 GitHub [Push #37928893951](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/37928893951) 与 [PR #37928901681](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/37928901681) 均 SUCCESS：小程序 typecheck + 16 项导航回归、Admin typecheck/build、API typecheck/test/build 通过。本地 typecheck、16 项回归及 diff 检查亦通过。没有单独 npm miniprogram build 脚本，未伪造原生 build PASS。
 
 开发者工具、手机截图、iOS/Android、实际窄屏尺寸/字体放大/键盘：**NOT RUN**。computer-use 的 node_repl 初始化失败，报 `windows sandbox failed: helper_unknown_error: setup refresh had errors`。没有用 HTML 示意图或合成账号图冒充原生手机截图。
 
 待验收：六身份冷/热启动、claim 后不二次登录、暂停旧 session、撤销/恢复、退出/注销及第二账号；外部二维码旧 path；评估草稿→后台运行→历史复看零重跑；规划审核/课表预填与导入；文章内阅读/标签；客服；成长输出。News timer、支付/生产 schema 等沿用 CURRENT 的独立 Gate。
 
 ## 提交范围与回滚
+
+代码提交：`cf3fe98008ebd8d0834342189a4d90e63ccdab17`。52 个变更文件按下表归组；后续 CI 证据提交只更新两份交接文档。
+
+| 路径前缀 | 变更文件 |
+| --- | --- |
+| `.github/workflows/` | `ci.yml` |
+| `apps/miniprogram/miniprogram/` | `app.json`、`app.ts` |
+| `apps/miniprogram/miniprogram/components/` | `auth-gate/auth-gate` 与 `role-shell/role-shell` 各 `.json/.ts/.wxml/.wxss` |
+| `apps/miniprogram/miniprogram/pages/` | `index/index`、`classroom/classroom`、`news/news`、`profile/profile` 各 `.ts/.wxml/.wxss` |
+| `apps/miniprogram/miniprogram/pages/` | `admin/admin`、`assessment-form/assessment-form`、`assessment-history/assessment-history`、`assessment-result/assessment-result`、`growth-profile/growth-profile`、`plan-editor/plan-editor`、`position/position`、`profile-edit/profile-edit`、`schedule-import/schedule-import`、`teacher-students/teacher-students` 各 `.ts/.wxml`；`login/login.ts` |
+| `apps/miniprogram/miniprogram/utils/` | `auth.ts`、`navigation.ts`、`request.ts`、`resume-document.ts`、`session.ts` |
+| `tools/testing/` | `miniprogram-navigation.test.cjs` |
+| `docs/handoff/` | `CURRENT.md`、本文件 |
 
 代码为一次协调批次；显式暂存客户端源文件、新组件、导航回归测试、CI 检查和本交接，不暂存本地 project.config.json、根目录配置、部署校验文件、cloudbaserc 或私有案例。`services/`、`ops/` 零 diff。
 
