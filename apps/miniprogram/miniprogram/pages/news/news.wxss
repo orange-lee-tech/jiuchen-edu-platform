@@ -251,3 +251,12 @@
 .pending-news-desc { margin-top: 6rpx; color: #667788; font-size: 20rpx; line-height: 1.5; }
 .pending-news-action { flex-shrink: 0; margin: 0; padding: 0 14rpx; background: #375f92; border-radius: 7rpx; color: #fff; font-size: 21rpx; line-height: 58rpx; }
 .pending-news-action::after { border: 0; }
+
+/* School directory is a separately-loaded native subpackage, never a fake feed card. */
+.school-entry{display:flex;box-sizing:border-box;align-items:center;gap:17rpx;width:100%;margin:8rpx 0 22rpx;padding:18rpx 20rpx;background:#0d8079;color:#fff;border-radius:12rpx;border-left:7rpx solid #f2b03c;}
+.school-entry-hover{opacity:.78;}
+.school-entry-icon{display:flex;align-items:center;justify-content:center;flex:none;width:65rpx;height:65rpx;background:rgba(255,255,255,.19);border-radius:9rpx;font-weight:800;font-size:29rpx;}
+.school-entry-copy{flex:1 1 0;min-width:0;display:flex;flex-direction:column;}
+.school-entry-title{font-size:29rpx;font-weight:800;color:#fff;line-height:1.4;}
+.school-entry-desc{font-size:21rpx;line-height:1.5;color:#e5faf5;margin-top:5rpx;}
+.school-entry-arrow{font-size:38rpx;line-height:1;color:#ffe5a1;}

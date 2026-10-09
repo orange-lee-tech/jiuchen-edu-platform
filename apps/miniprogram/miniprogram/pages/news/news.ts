@@ -101,6 +101,7 @@ Page({
   },
   onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading' }) },
   onUnload() { this.stopShell?.() },
+  onSchools() { openPage('/packages/schools/directory/directory') },
   onReferenceNews() {
     this.setData({ showReferenceNews: !this.data.showReferenceNews })
     if (this.data.showReferenceNews) void this.loadNews()
