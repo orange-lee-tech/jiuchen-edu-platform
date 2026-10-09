@@ -1,8 +1,11 @@
 <view class="page-shell">
+  <role-shell slot="opportunity" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <button wx:if="{{shellPhase === 'ready' && shellKind !== 'student'}}" class="reference-news-button" bindtap="onReferenceNews">{{showReferenceNews ? '收起参考文章' : '查看保研参考文章'}}</button>
+  <block wx:if="{{shellPhase === 'ready' && (shellKind === 'student' || showReferenceNews)}}">
   <view class="news-head">
     <view>
-      <text class="page-title">保研资讯</text>
-      <text class="page-desc">服务号内容同步到小程序内阅读，管理员标签用于分类与后续个性化推荐</text>
+      <text class="page-title">{{shellKind === 'student' ? '保研机会与文章' : '保研参考文章'}}</text>
+      <text class="page-desc">阅读服务号与九辰编辑文章，按人工分类查找内容。具体项目条件与时间请以文章原始来源为准。</text>
     </view>
     <text class="source-chip">{{sourceLabel}}</text>
   </view>
@@ -15,6 +18,10 @@
     <button wx:if="{{pendingClassificationRole === 'admin'}}" class="pending-news-action" bindtap="onManageNewsTags">处理标签</button>
   </view>
 
+  <view wx:if="{{loadError}}" class="news-error"><text>{{loadError}}</text><button bindtap="loadNews">重新加载文章</button></view>
+  <view wx:elif="{{loading && !allArticles.length}}" class="news-loading">正在读取文章…</view>
+  <view wx:elif="{{!allArticles.length}}" class="news-empty"><text>暂无可阅读文章</text><text class="empty-description">文章完成同步与分类后会显示在这里。</text><button bindtap="loadNews">刷新文章</button></view>
+  <block wx:else>
   <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
     <view class="category-row">
       <view
@@ -28,6 +35,7 @@
   </scroll-view>
 
   <view
+    wx:if="{{featured.id}}"
     class="featured surface"
     data-id="{{featured.id}}"
     bindtap="onArticleTap"
@@ -90,4 +98,6 @@
       当前分类暂无内容。
     </view>
   </view>
+  </block>
+  </block>
 </view>

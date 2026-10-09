@@ -1,4 +1,5 @@
 import { getSavedAuthResult } from '../../utils/auth'
+import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 import {
   getClassroomStages,
   getLatestScheduleImport,
@@ -106,19 +107,31 @@ function toPlanCard(plan: ClassroomPlan, scheduleCourseCount = 0): PlanCard {
 
 Page({
   data: {
+    ...INITIAL_SHELL,
     mode: 'guest' as 'guest' | 'unbound' | 'student' | 'teacher',
     loading: false,
+    loadError: '',
     studentName: '',
     scheduleCourseCount: 0,
     stages: FALLBACK_STAGES,
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
 
+  stopShell: undefined as (() => void) | undefined,
+  viewGeneration: 0,
   onShow() {
-    void this.initializeClassroom()
+    this.stopShell?.()
+    this.stopShell = observeSlot('plan', (state) => {
+      this.setData(shellView(state))
+      if (state.phase === 'ready') void this.initializeClassroom()
+      else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '' }) }
+    })
   },
+  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading' }) },
+  onUnload() { this.stopShell?.() },
 
   async initializeClassroom() {
+    const generation = ++this.viewGeneration
     const auth = getSavedAuthResult()
     if (!auth) {
       this.setData({ mode: 'guest', plans: [], mentors: [], records: [] })
@@ -135,13 +148,14 @@ Page({
       return
     }
 
-    this.setData({ mode: 'student', loading: true })
+    this.setData({ mode: 'student', loading: true, loadError: '', plans: [], mentors: [], records: [] })
     try {
       const [stages, initial, latestSchedule] = await Promise.all([
         getClassroomStages().catch(() => FALLBACK_STAGES),
         getMyClassroom(),
         getLatestScheduleImport().catch(() => null),
       ])
+      if (generation !== this.viewGeneration) return
       const index = Math.max(
         0,
         stages.findIndex((stage) => stage.code === initial.stage.code),
@@ -163,16 +177,18 @@ Page({
         })),
       })
     } catch (error) {
+      if (generation !== this.viewGeneration) return
       console.info('Current student classroom unavailable.', error)
-      wx.showToast({ title: '课堂资料暂时无法加载', icon: 'none' })
+      this.setData({ loadError: '规划资料暂时无法加载，请重试。' })
     } finally {
-      this.setData({ loading: false })
+      if (generation === this.viewGeneration) this.setData({ loading: false })
     }
   },
 
   async hydratePlanData(stageCode: string) {
+    const generation = this.viewGeneration
     const result = await getMyClassroom(stageCode)
-    if (this.data.currentStageCode !== stageCode) return
+    if (this.data.currentStageCode !== stageCode || generation !== this.viewGeneration) return
 
     this.setData({
       studentName: result.student.name,
@@ -193,7 +209,14 @@ Page({
     const stage = stages[index]
     if (!stage) return
     this.setData(emptyStageView(stage, index))
-    void this.hydratePlanData(stage.code)
+    void this.reloadStage(stage.code)
+  },
+  async reloadStage(stageCode: string) {
+    const generation = this.viewGeneration
+    this.setData({ loading: true, loadError: '' })
+    try { await this.hydratePlanData(stageCode) }
+    catch { if (generation === this.viewGeneration && this.data.currentStageCode === stageCode) this.setData({ loadError: '该阶段暂时无法加载，请重试。' }) }
+    finally { if (generation === this.viewGeneration && this.data.currentStageCode === stageCode) this.setData({ loading: false }) }
   },
 
   onPlanTap(event: WechatMiniprogram.BaseEvent) {
@@ -213,15 +236,19 @@ Page({
   },
 
   onTeacherWorkspace() {
-    wx.navigateTo({ url: '/pages/teacher-students/teacher-students' })
+    openPage('/pages/teacher-students/teacher-students')
   },
 
   onLogin() {
-    wx.navigateTo({ url: '/pages/login/login' })
+    loginFor('pages/profile-edit/profile-edit')
   },
 
   onBindIdentity() {
-    wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
+    openPage('/pages/profile-edit/profile-edit')
+  },
+  onRetryPlan() {
+    if (this.data.studentName) void this.reloadStage(this.data.currentStageCode)
+    else void this.initializeClassroom()
   },
 
   formatRecordDate(value: string) {

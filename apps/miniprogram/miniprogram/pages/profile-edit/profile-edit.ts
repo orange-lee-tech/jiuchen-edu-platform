@@ -17,6 +17,7 @@ import {
   saveCachedAcademicProfile,
 } from '../../utils/profile-cache'
 import { clearGrowthProfileBootstrapCache } from '../../utils/growth-profile-cache'
+import { authorizePage, openSlot, ROLE_LABELS } from '../../utils/navigation'
 
 type ProfileField = keyof AcademicProfile
 
@@ -54,7 +55,10 @@ Page({
     form: { ...EMPTY_FORM },
   },
 
-  onLoad() {
+  onLoad(options: Record<string, string>) {
+    authorizePage('pages/profile-edit/profile-edit', options, () => this.initializeProfile())
+  },
+  initializeProfile() {
     const auth = getSavedAuthResult()
 
     if (!auth) {
@@ -71,6 +75,10 @@ Page({
     })
 
     void this.hydrateThenLoad()
+  },
+  onIdentityValidated(event: WechatMiniprogram.CustomEvent<{ role: UserRole }>) {
+    const role = event.detail.role
+    this.setData({ role, canEditAcademic: role === 'user' || role === 'student' })
   },
 
   async hydrateThenLoad() {
@@ -152,8 +160,10 @@ Page({
       })
       wx.showModal({
         title: '身份绑定成功',
-        content: `已绑定内部ID：${result.identity.businessId}。此ID已锁定，如需变更请联系管理员。`,
-        showCancel: false,
+        content: `当前身份：${ROLE_LABELS[result.role]}。编号已绑定，无需重新登录。你可以留在这里保存资料，或查看对应工作区。`,
+        confirmText: result.role === 'student' ? '查看规划' : '查看工作台',
+        cancelText: '留在资料',
+        success: (response) => { if (response.confirm) openSlot(result.role === 'student' ? 'plan' : 'home') },
       })
     } catch (error) {
       wx.showToast({

@@ -1,4 +1,4 @@
-import { getApiSessionToken } from './session'
+import { clearApiSessionToken, getApiSessionToken } from './session'
 import { runtimeConfig } from '../config/runtime'
 
 export type LivenessResponse = {
@@ -169,6 +169,7 @@ export function friendlyRequestError(
     backend_version_mismatch: '测试服务尚未更新到当前版本，请稍后重试',
     network_unavailable: '暂时无法连接服务，请检查网络后重试',
     unauthorized: '登录已失效，请重新登录',
+    session_changed: '登录账号已变化，请从“我的”重新打开页面',
     wechat_login_failed: '微信登录服务暂不可用，请稍后重试',
     phone_login_failed: '手机号登录暂不可用，请稍后重试',
     database_not_configured: '测试数据库尚未配置完成',
@@ -237,11 +238,16 @@ export function request<T>(
         },
         data,
         success(response) {
+          if (sessionToken && sessionToken !== getApiSessionToken()) {
+            reject(new ApiRequestError(409, 'session_changed'))
+            return
+          }
           if (response.statusCode >= 200 && response.statusCode < 300) {
             resolve(response.data as T)
             return
           }
 
+          if (response.statusCode === 401 && sessionToken) clearApiSessionToken(sessionToken)
           reject(responseError(response.statusCode, response.data))
         },
         fail(error) {
@@ -258,11 +264,16 @@ export function request<T>(
       data,
       header: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
       success(response) {
+        if (sessionToken && sessionToken !== getApiSessionToken()) {
+          reject(new ApiRequestError(409, 'session_changed'))
+          return
+        }
         if (response.statusCode >= 200 && response.statusCode < 300) {
           resolve(response.data as T)
           return
         }
 
+        if (response.statusCode === 401 && sessionToken) clearApiSessionToken(sessionToken)
         reject(responseError(response.statusCode, response.data))
       },
       fail(error) {

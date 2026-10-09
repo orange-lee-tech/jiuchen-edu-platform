@@ -7,6 +7,7 @@ import {
   type ParsedScheduleCourse,
 } from '../../utils/request'
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
+import { authorizePage } from '../../utils/navigation'
 
 const MAX_SPREADSHEET_BYTES = 5 * 1024 * 1024
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -89,6 +90,9 @@ Page({
   },
 
   onLoad(options: Record<string, string | undefined>) {
+    authorizePage('pages/schedule-import/schedule-import', options, () => this.initializeSchedule(options))
+  },
+  initializeSchedule(options: Record<string, string | undefined>) {
     const requested = options.view === 'manage' ? 'manage' : 'current'
     this.setData({ viewMode: requested })
     void this.loadLatestSchedule()

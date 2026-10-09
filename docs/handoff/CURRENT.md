@@ -1,6 +1,6 @@
 # CURRENT — 九辰保研小程序唯一活跃交接入口
 
-**更新：2026-10-09 · Gate 0 规范纠偏完成；Phase 1a 等待 Codex 代码施工。** 本文件管理当前任务与验收状态；历史日期交接仅记录当时事实，不覆盖本文件。
+**更新：2026-10-09 · Phase 1a 四槽导航与角色 Shell 代码已实现；本地检查通过，提交后 CI 与手机验收状态见本文件末尾。** 本文件管理当前任务与验收状态；历史日期交接仅记录当时事实，不覆盖本文件。
 
 ## 权威读取顺序
 
@@ -17,7 +17,7 @@
 - 唯一日常开发集成分支：`p1/foundation`。Gate 0 前 HEAD：`7d9db7bbf55007232815184fa36539a7c8ef8924`；Codex 每次自行 `git fetch` / `git status --short` / `git rev-parse HEAD`，**不得继续以这枚旧 SHA 当新代码基线**。
 - 微信开发者工具正确项目：`C:\Users\yulia\Desktop\jiuchen-edu-platform\apps\miniprogram`。旧 `jiuchen-edu-client-gate` 是归档副本，禁止预览。保留本地 `apps/miniprogram/project.config.json` 未提交修改。
 - **生产 API，用户提供 ECS promote + public health 证据：`ea8c971008a9efd042ec43fdc62398e136262259`**；上一个可回滚 release 为 `b9993dfe1e4c1c4be70cf75d8a48873d8bc8166c`。发布曾短时连接拒绝，随后 `PROMOTE_OK`，`/health/live`、`/health` (`database=ok`)、`/health/config` 均通过。Gate 0 本身没有登录 ECS 验证实时生产版本。
-- `app.json` 截至 Gate 0 仍为**五个原生 Tab**：首页｜定位｜学堂｜资讯｜我的；产品已批准四个角色化物理入口，但 Phase 1a **代码尚未开始**。
+- `app.json` Phase 1a 已改为**四个原生 Tab**：index/classroom/news/profile。普通用户/学员：首页｜规划｜机会｜我的；teacher/staff：工作台｜学员｜辅导｜我的；admin：工作台｜用户｜业务｜我的。position 仍注册为非 Tab 页面。代码完成不等于手机视觉及业务真机验收完成。
 
 ## 已验收能力（不能被旧 TODO 推翻）
 
@@ -42,8 +42,18 @@
 
 **Gate 0（本轮 docs-only）：**修正上述历史误导、更新 V1 约束和验证清单、明确 Codex 入口；未改任何运行代码。
 
-**Phase 1a（下一轮 Codex 已放行）：**四个原生物理 Tab（index/classroom/news/profile）与安全角色标签/入口；position 降为非 Tab 但保留页面；原有 switchTab 调用与登录/权限/旧链接一次原子处理；staff 暂沿用已有 teacher-like 壳但不得提权为 admin；每个新增页面至少达到手机阅读、交互、窄屏及错误态基本要求；不改 API/Schema/生产。
+**Phase 1a（本轮代码已实现，手机验收待补）：**四个原生物理 Tab（index/classroom/news/profile）与角色入口、position 降级、旧 switchTab、登录恢复/权限协调已原子处理；staff 保持内部员工身份及已有 teacher-like 能力。新增错误态有重试/返回，身份确认期间不显示私有内容；仍需开发者工具与真机确认窄屏、字体、键盘及完整业务闭环。不改 API/Schema/生产。
 
 **Phase 1b 及后续：**经独立审批的只读 Home snapshot → 生命周期首页 → 高频事实更新/规划/机会 → 教师和管理员工作台移动 UX → 全站视觉统一 → 真机全链路回归。各批不得使用占位数据伪装完整功能。
 
 **禁止：**`main` 合并、force push、覆盖本地工作、生产 promote/写 Schema、AI 提示词/运行时和商业账本改动、虚构案例/截止日/排名/未读、将老交接当现行施工命令。
+
+## Phase 1a 本轮实际证据
+
+- 施工基线：`a934da0b40cba836cfca609aa75b38ac7cce6a1b`；单一导航代码批次，最终 SHA 在 Git 交接提供。
+- `npm.cmd --prefix apps/miniprogram run typecheck`：PASS。
+- `node --test tools/testing/miniprogram-navigation.test.cjs`：16 项 PASS；六种身份 × 四个槽位，登录/claim/401/旧会话竞态、只读历史结果、无栈返回、页面参数与 WXML 回归。测试使用合成账号和 wx double，**不是手机/生产权限验收**。
+- CI：提交推送后查询实际 GitHub Push/PR 结果，未使用基线绿色代替新提交。结果回填在本节。
+- Developer Tools / 手机截图 / 真机 / 字体放大 / 键盘：**NOT RUN**。computer-use 的 node_repl 无法启动，诊断为 `windows sandbox failed: helper_unknown_error: setup refresh had errors`；没有生成或冒充手机截图。普通 shell 同样失败，获审批的终端通道可执行本地检查。
+- 完整页面契约、界面评审、局部 hot-file 校正、待验收项及回滚见 `docs/handoff/phase1a-screen-review-2026-10-09.md`。
+- 原有本地 `apps/miniprogram/project.config.json` 修改和所有原有未跟踪文件保留，不提交；`services/`、`ops/` 无代码变更。未部署生产、写 schema、改模型/Prompt/支付；Phase 1b 尚未开始。

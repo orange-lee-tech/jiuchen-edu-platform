@@ -1,4 +1,5 @@
 import { getSavedAuthResult } from '../../utils/auth'
+import { INITIAL_SHELL, loginFor, observeShell, openSlot, shellView } from '../../utils/navigation'
 import {
   getCachedAcademicProfile,
   saveCachedAcademicProfile,
@@ -25,6 +26,7 @@ const EMPTY_PROFILE = {
 
 Page({
   data: {
+    ...INITIAL_SHELL,
     canEditProfile: false,
     profileSaving: false,
     profileForm: { ...EMPTY_PROFILE },
@@ -36,29 +38,49 @@ Page({
     ],
   },
 
+  stopAuth: undefined as (() => void) | undefined,
+  profileOwner: null as string | null,
+  profileDirty: false,
   onShow() {
+    this.stopAuth?.()
+    this.stopAuth = observeShell((state) => {
+      this.setData(shellView(state))
+      if (state.phase === 'ready') this.initializePosition()
+      else this.setData({ canEditProfile: false })
+    })
+  },
+  onHide() { this.stopAuth?.() },
+  initializePosition() {
     const auth = getSavedAuthResult()
     const canEditProfile =
       Boolean(auth) &&
       (auth?.user.role === 'user' || auth?.user.role === 'student')
 
+    const sameOwner = this.profileOwner === auth?.user.id
+    if (canEditProfile && !sameOwner) {
+      this.profileOwner = auth!.user.id
+      this.profileDirty = false
+      this.setData({ profileForm: { ...EMPTY_PROFILE } })
+    }
     this.setData({ canEditProfile })
 
-    if (canEditProfile) {
+    if (canEditProfile && !(sameOwner && this.profileDirty)) {
       void this.hydrateThenLoadProfile()
-    } else {
-      this.setData({ profileForm: { ...EMPTY_PROFILE } })
     }
   },
 
   async hydrateThenLoadProfile() {
+    const owner = this.profileOwner
     await this.hydrateCachedProfile()
+    if (owner !== this.profileOwner || owner !== getSavedAuthResult()?.user.id) return
     await this.loadAcademicProfile()
   },
 
   async hydrateCachedProfile() {
+    const owner = this.profileOwner
     const cached = await getCachedAcademicProfile()
-    if (!cached || !this.data.canEditProfile) return
+    if (!cached || !this.data.canEditProfile || this.profileDirty ||
+      owner !== this.profileOwner || owner !== getSavedAuthResult()?.user.id) return
 
     this.setData({
       profileForm: {
@@ -72,8 +94,11 @@ Page({
   },
 
   async loadAcademicProfile() {
+    const owner = this.profileOwner
     try {
       const profile = await getMyAcademicProfile()
+      if (!this.data.canEditProfile || this.profileDirty ||
+        owner !== this.profileOwner || owner !== getSavedAuthResult()?.user.id) return
       const normalized = {
         university: profile.university || '',
         major: profile.major || '',
@@ -89,6 +114,7 @@ Page({
   },
 
   onProfileInput(event: WechatMiniprogram.Input) {
+    this.profileDirty = true
     const field = String(event.currentTarget.dataset.field) as ProfileField
     if (!(field in this.data.profileForm)) return
 
@@ -129,6 +155,7 @@ Page({
         rankText: saved.rankText || '',
       }
       this.setData({ profileForm: normalized })
+      this.profileDirty = false
       await Promise.all([
         saveCachedAcademicProfile(normalized),
         clearGrowthProfileBootstrapCache(),
@@ -153,6 +180,7 @@ Page({
   },
 
   onUnload() {
+    this.stopAuth?.()
     if (profileSaveTimer) {
       clearTimeout(profileSaveTimer)
       profileSaveTimer = null
@@ -164,7 +192,7 @@ Page({
     const auth = getSavedAuthResult()
 
     if (!auth) {
-      wx.navigateTo({ url: '/pages/login/login' })
+      loginFor('pages/assessment-form/assessment-form', {}, true)
       return
     }
 
@@ -179,7 +207,7 @@ Page({
   onAssessmentHistory() {
     const auth = getSavedAuthResult()
     if (!auth) {
-      wx.navigateTo({ url: '/pages/login/login' })
+      loginFor('pages/assessment-history/assessment-history', {}, true)
       return
     }
     wx.navigateTo({ url: '/pages/assessment-history/assessment-history' })
@@ -187,13 +215,14 @@ Page({
 
   onProfileCardTap() {
     if (this.data.canEditProfile) return
-    wx.navigateTo({ url: '/pages/login/login' })
+    if (getSavedAuthResult()) openSlot('mine')
+    else loginFor('pages/position/position', {}, true)
   },
 
   onDimensionTap(event: WechatMiniprogram.BaseEvent) {
     const auth = getSavedAuthResult()
     if (!auth) {
-      wx.navigateTo({ url: '/pages/login/login' })
+      loginFor('pages/position/position', {}, true)
       return
     }
 

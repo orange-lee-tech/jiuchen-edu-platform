@@ -1,3 +1,4 @@
+import { authorizePage } from '../../utils/navigation'
 import {
   friendlyRequestError,
   getLatestScheduleImport,
@@ -42,6 +43,9 @@ Page({
   },
 
   onLoad(options: Record<string, string>) {
+    authorizePage('pages/plan-editor/plan-editor', options, () => this.initializePlanEditor(options))
+  },
+  initializePlanEditor(options: Record<string, string>) {
     const stageCode = decodeURIComponent(options.stage || '')
     const type = decodeURIComponent(options.type || '') as ClassroomPlanType
     const studentId = decodeURIComponent(options.studentId || '')

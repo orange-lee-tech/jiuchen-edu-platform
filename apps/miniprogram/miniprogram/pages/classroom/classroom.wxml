@@ -1,22 +1,24 @@
 <view class="classroom-page">
+  <role-shell slot="plan" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <block wx:if="{{shellPhase === 'ready' && shellKind === 'student'}}">
   <view class="classroom-top">
     <view>
-      <text class="page-title">我的课堂</text>
+      <text class="page-title">我的规划</text>
       <text class="page-subtitle">{{mode === 'student' ? '真实计划、版本审核与辅导进度' : '大学阶段规划与辅导工作台'}}</text>
     </view>
-    <view wx:if="{{mode === 'student'}}" class="stage-badge">{{currentStageLabel}}</view>
+    <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge">{{currentStageLabel}}</view>
   </view>
 
   <view wx:if="{{mode === 'guest'}}" class="entry-state surface">
-    <text class="entry-title">绑定学员身份后进入真实课堂</text>
-    <text class="entry-desc">游客不会显示演示学员数据。登录并绑定九辰学员 ID 后，这里只展示你自己的计划。</text>
-    <button class="entry-button" bindtap="onLogin">登录 / 绑定身份</button>
+    <text class="entry-title">接续你的大学阶段规划</text>
+    <text class="entry-desc">九辰学员登录并绑定学员编号后，可以查看自己的规划、课表与辅导记录。</text>
+    <button class="entry-button" bindtap="onLogin">登录并绑定学员身份</button>
   </view>
 
   <view wx:elif="{{mode === 'unbound'}}" class="entry-state surface">
-    <text class="entry-title">已登录，绑定九辰内部ID后进入真实课堂</text>
-    <text class="entry-desc">无需重新微信或手机号登录。前往个人资料填写九辰提供的内部ID，绑定成功后系统会自动切换学员或老师身份。</text>
-    <button class="entry-button" bindtap="onBindIdentity">去绑定身份</button>
+    <text class="entry-title">绑定学员身份，查看阶段规划</text>
+    <text class="entry-desc">填写九辰提供的学员编号即可接入服务，无需再次登录。尚未加入九辰的用户仍可从首页进入背景评估。</text>
+    <button class="entry-button" bindtap="onBindIdentity">填写九辰学员编号</button>
   </view>
 
   <view wx:elif="{{mode === 'teacher'}}" class="entry-state surface">
@@ -26,6 +28,9 @@
   </view>
 
   <view wx:else class="student-layout">
+    <view wx:if="{{loadError}}" class="plan-error"><text>{{loadError}}</text><button bindtap="onRetryPlan">重新加载规划</button></view>
+    <view wx:elif="{{loading && plans.length === 0}}" class="plan-loading">正在读取你的阶段规划…</view>
+    <block wx:else>
     <view class="student-tools surface">
       <view>
         <text class="tool-title">{{studentName || '我的计划'}}</text>
@@ -148,5 +153,7 @@
         </block>
       </view>
     </view>
+    </block>
   </view>
+  </block>
 </view>

@@ -1,4 +1,5 @@
 import { getSavedAuthResult } from '../../utils/auth'
+import { authorizePage, safeBack } from '../../utils/navigation'
 import {
   createAssessmentDraft,
   friendlyRequestError,
@@ -262,7 +263,10 @@ Page({
     ] as AssessmentTarget[],
   },
 
-  async onLoad(query: Record<string, string | undefined>) {
+  onLoad(query: Record<string, string | undefined>) {
+    authorizePage('pages/assessment-form/assessment-form', query, () => { void this.initializeForm(query) })
+  },
+  async initializeForm(query: Record<string, string | undefined>) {
     const auth = getSavedAuthResult()
     const focusSection = query.section ? decodeURIComponent(query.section) : ''
 
@@ -273,7 +277,7 @@ Page({
 
     if (auth.user.role !== 'user' && auth.user.role !== 'student') {
       wx.showToast({ title: '当前身份不使用 AI 定位', icon: 'none' })
-      wx.navigateBack()
+      safeBack()
       return
     }
 
@@ -289,7 +293,7 @@ Page({
 
       if (draft && draft.status !== 'draft') {
         wx.showToast({ title: '该记录已不能作为草稿编辑', icon: 'none' })
-        wx.navigateBack()
+        safeBack()
         return
       }
 

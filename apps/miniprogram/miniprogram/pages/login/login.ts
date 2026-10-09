@@ -5,25 +5,14 @@ import {
   type BootstrapResult,
 } from '../../utils/auth'
 import { friendlyRequestError } from '../../utils/request'
+import { clearLoginIntent, finishLoginNavigation } from '../../utils/navigation'
 
 async function finishLogin(result: BootstrapResult) {
   saveAuthResult(result)
 
-  if (result.user.role === 'user') {
-    await new Promise<void>((resolve) => {
-      wx.showModal({
-        title: '登录成功',
-        content: '当前账号为游客。可在“我的 → 个人资料”填写九辰内部ID完成身份绑定。',
-        showCancel: false,
-        success: () => resolve(),
-        fail: () => resolve(),
-      })
-    })
-  } else {
-    wx.showToast({ title: '登录成功', icon: 'success' })
-  }
+  wx.showToast({ title: '登录成功', icon: 'success' })
 
-  wx.switchTab({ url: '/pages/profile/profile' })
+  finishLoginNavigation(result)
 }
 
 Page({
@@ -31,6 +20,7 @@ Page({
     agreed: false,
     loading: false,
   },
+  onUnload() { clearLoginIntent() },
 
   onAgreementChange(event: WechatMiniprogram.CustomEvent<{ value: string[] }>) {
     this.setData({ agreed: event.detail.value.includes('accepted') })

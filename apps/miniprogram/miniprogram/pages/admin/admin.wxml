@@ -1,3 +1,4 @@
+<auth-gate />
 <view class="admin-page">
   <view class="admin-head">
     <text class="admin-title">管理员工作台</text>

@@ -1,3 +1,4 @@
+<auth-gate bind:validated="onIdentityValidated" />
 <view class="profile-edit-page">
   <view class="intro-card">
     <text class="intro-title">个人资料</text>
@@ -16,7 +17,7 @@
 
     <view wx:if="{{identityLocked && identity}}" class="locked-id">
       <text class="locked-code">{{identity.businessId}}</text>
-      <text class="locked-role">{{identity.type === 'student' ? '学员' : identity.type === 'teacher' ? '老师' : '管理员'}}</text>
+      <text class="locked-role">{{role === 'staff' ? '内部员工' : identity.type === 'student' ? '学员' : identity.type === 'teacher' ? '老师' : '管理员'}}</text>
     </view>
 
     <view wx:else class="claim-row">

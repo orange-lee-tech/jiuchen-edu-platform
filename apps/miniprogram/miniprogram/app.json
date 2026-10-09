@@ -39,16 +39,12 @@
         "text": "首页"
       },
       {
-        "pagePath": "pages/position/position",
-        "text": "定位"
-      },
-      {
         "pagePath": "pages/classroom/classroom",
-        "text": "学堂"
+        "text": "规划"
       },
       {
         "pagePath": "pages/news/news",
-        "text": "资讯"
+        "text": "机会"
       },
       {
         "pagePath": "pages/profile/profile",
@@ -57,5 +53,9 @@
     ]
   },
   "style": "v2",
+  "usingComponents": {
+    "role-shell": "/components/role-shell/role-shell",
+    "auth-gate": "/components/auth-gate/auth-gate"
+  },
   "sitemapLocation": "sitemap.json"
 }

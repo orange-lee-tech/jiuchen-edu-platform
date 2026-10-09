@@ -1,115 +1,23 @@
-<view class="page-shell">
-  <view class="hero surface">
-    <view class="brand-row">
-      <view>
-        <text class="brand">九辰保研</text>
-        <text class="brand-sub">陪你把保研每一步走清楚</text>
-      </view>
-      <button class="consult" bindtap="onCustomerServiceTap">咨询</button>
+<view class="home-page">
+  <role-shell slot="home" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <block wx:if="{{shellPhase === 'ready' && shellKind === 'student'}}">
+    <view class="home-intro">
+      <text class="eyebrow">九辰保研 · 陪你走清楚每一步</text>
+      <text class="home-title">{{loggedIn ? '从真实背景，找到下一步' : '让保研准备更有方向'}}</text>
+      <text class="home-description">整理学业背景，查看评估建议，接续阶段规划。你的资料和历史结果都能再次查看。</text>
+      <button class="home-primary" bindtap="onPrimary">{{loggedIn ? '完善我的资料' : '建立我的保研档案'}}</button>
+      <text class="home-caption">{{loggedIn ? '已登录 · 可在“我的”查看或绑定九辰身份' : '使用微信登录，已有资料可继续完善'}}</text>
     </view>
-
-    <view class="search-box" bindtap="onSearchTap">
-      <text class="search-icon">⌕</text>
-      <text class="search-placeholder">搜索院校、项目、资讯</text>
+    <text class="section-heading">准备与行动</text>
+    <view class="action-list">
+      <button class="action-row" bindtap="onAssessment"><view class="action-main"><text class="action-title">背景评估与历史结果</text><text class="action-description">整理背景，查看有依据的分析与建议</text></view><text class="arrow">›</text></button>
+      <button class="action-row" bindtap="onPlanning"><view class="action-main"><text class="action-title">我的阶段规划</text><text class="action-description">九辰学员查看规划、导入课表与接续辅导</text></view><text class="arrow">›</text></button>
+      <button class="action-row" bindtap="onNews"><view class="action-main"><text class="action-title">阅读保研文章</text><text class="action-description">查看已同步、已分类的服务号内容</text></view><text class="arrow">›</text></button>
     </view>
-  </view>
-
-  <view class="brand-intro surface" bindtap="onBrandTap">
-    <view>
-      <text class="brand-intro-eyebrow">JIUCHEN EDUCATION</text>
-      <text class="brand-intro-title">关于九辰 · 品牌与服务体系</text>
-      <text class="brand-intro-desc">了解长期陪跑理念、本科成长路径与九类服务体系</text>
+    <view class="service-section">
+      <text class="section-heading">认识九辰</text>
+      <view class="service-links"><button bindtap="onProducts">服务介绍</button><button bindtap="onBrand">关于九辰</button><button bindtap="onCustomerService">联系顾问</button></view>
+      <text class="service-note">服务方案提供介绍与咨询，课程不在线购买。</text>
     </view>
-    <text class="brand-intro-arrow">›</text>
-  </view>
-
-  <view class="quick-grid">
-    <view
-      wx:for="{{quickEntries}}"
-      wx:key="title"
-      class="quick-item surface"
-      data-key="{{item.key}}"
-      bindtap="onEntryTap"
-    >
-      <view class="quick-icon {{item.tone}}">{{item.icon}}</view>
-      <text class="quick-title">{{item.title}}</text>
-      <text class="quick-desc">{{item.desc}}</text>
-    </view>
-  </view>
-
-  <view class="section-head">
-    <view>
-      <text class="section-title">相似案例</text>
-      <text class="section-subtitle">先看与自己背景接近的人如何准备</text>
-    </view>
-    <text class="more muted">审核后开放</text>
-  </view>
-
-  <scroll-view class="case-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-    <view class="case-row">
-      <view wx:for="{{cases}}" wx:key="title" class="case-card surface">
-        <text class="case-tag">{{item.tag}}</text>
-        <text class="case-title">{{item.title}}</text>
-        <text class="case-result">{{item.result}}</text>
-        <text class="case-note">来源与年份将在正式数据接入后展示</text>
-      </view>
-    </view>
-  </scroll-view>
-
-  <view class="section-head">
-    <view>
-      <text class="section-title">九辰服务方案</text>
-      <text class="section-subtitle">依据产品手册结构化展示，仅提供介绍与咨询</text>
-    </view>
-    <text class="more" bindtap="onAllProducts">查看全部 ›</text>
-  </view>
-
-  <view class="course-list">
-    <view
-      wx:for="{{servicePlans}}"
-      wx:key="documentKey"
-      class="course-card surface"
-      data-key="{{item.documentKey}}"
-      bindtap="onProductTap"
-    >
-      <image
-        wx:if="{{item.coverAsset}}"
-        class="course-cover-image"
-        src="{{item.coverAsset}}"
-        mode="aspectFill"
-      />
-      <view wx:else class="course-cover">方案</view>
-      <view class="course-main">
-        <text class="course-title">{{item.name}}</text>
-        <text class="course-meta">{{item.meta}}</text>
-      </view>
-      <text class="arrow">›</text>
-    </view>
-
-    <view wx:if="{{servicePlans.length === 0}}" class="course-card surface">
-      <view class="course-cover">九辰</view>
-      <view class="course-main">
-        <text class="course-title">服务方案正在加载</text>
-        <text class="course-meta">已内置产品资料，稍后自动重试</text>
-      </view>
-    </view>
-  </view>
-
-  <view class="section-head">
-    <view>
-      <text class="section-title">最新录取资讯</text>
-      <text class="section-subtitle">关注近期政策、夏令营与预推免动态</text>
-    </view>
-  </view>
-
-  <view class="update-list surface">
-    <view wx:for="{{updates}}" wx:key="title" class="update-row">
-      <view class="update-dot"></view>
-      <view class="update-main">
-        <text class="update-school">{{item.school}}</text>
-        <text class="update-title">{{item.title}}</text>
-      </view>
-      <text class="update-date">{{item.date}}</text>
-    </view>
-  </view>
+  </block>
 </view>

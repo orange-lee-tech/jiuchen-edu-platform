@@ -1,0 +1,24 @@
+<view wx:if="{{phase !== 'ready'}}" class="shell-state" aria-live="polite">
+  <text class="state-title">{{phase === 'loading' ? '正在确认你的身份' : '暂时无法打开工作区'}}</text>
+  <text class="state-description">{{phase === 'loading' ? '确认后会显示与你身份对应的入口。' : message}}</text>
+  <button wx:if="{{phase === 'error'}}" class="primary" bindtap="onRetry">重新确认身份</button>
+</view>
+<view wx:elif="{{kind !== 'student' && slot !== 'mine'}}" class="workspace">
+  <view class="workspace-intro">
+    <text class="eyebrow">九辰保研 · {{roleLabel}}</text>
+    <text class="workspace-title">{{title}}</text>
+    <text class="workspace-description">{{description}}</text>
+    <button wx:if="{{actions.length}}" class="primary" loading="{{opening}}" disabled="{{opening}}" data-key="{{actions[0].key}}" bindtap="onAction">{{actions[0].title}}</button>
+  </view>
+  <view wx:if="{{actions.length > 1}}" class="secondary-list">
+    <button wx:for="{{actions}}" wx:key="key" wx:if="{{index > 0}}" class="action-row" data-key="{{item.key}}" bindtap="onAction" disabled="{{opening}}">
+      <view class="action-main"><text class="action-title">{{item.title}}</text><text class="action-description">{{item.description}}</text></view>
+      <text class="arrow">›</text>
+    </button>
+  </view>
+  <view class="workspace-note">
+    <text class="note-title">{{kind === 'teacher' ? '接续真实辅导' : '进入现有管理能力'}}</text>
+    <text class="note-description">{{kind === 'teacher' ? '规划更新与审核在学员工作页完成。页面只展示你获授权访问的内容。' : '这里提供管理入口。用户、编号、分配和资讯的状态，以管理页实际加载结果为准。'}}</text>
+    <button class="text-link" bindtap="onMine">查看我的身份与账号</button>
+  </view>
+</view>

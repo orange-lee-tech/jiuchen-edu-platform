@@ -1,6 +1,12 @@
 const API_SESSION_TOKEN_KEY = 'jiuchen-api-session-token'
 
 let memoryToken: string | null | undefined
+const invalidationListeners = new Set<() => void>()
+
+export function onSessionInvalidated(listener: () => void) {
+  invalidationListeners.add(listener)
+  return () => invalidationListeners.delete(listener)
+}
 
 export function saveApiSessionToken(token: string) {
   memoryToken = token
@@ -18,7 +24,10 @@ export function getApiSessionToken(): string | null {
   return memoryToken
 }
 
-export function clearApiSessionToken() {
+export function clearApiSessionToken(expectedToken?: string | null) {
+  // A late response from the previous account must not revoke a new session.
+  if (expectedToken !== undefined && getApiSessionToken() !== expectedToken) return
   memoryToken = null
   wx.removeStorageSync(API_SESSION_TOKEN_KEY)
+  invalidationListeners.forEach((listener) => listener())
 }

@@ -1,215 +1,27 @@
-.profile-hero {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  padding: 28rpx;
-  background: linear-gradient(145deg, #ffffff 0%, #f2f6ff 100%);
-  border-color: #e1e8f5;
-}
-
-.profile-hero:active {
-  background: #f6f9ff;
-}
-
-.avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 92rpx;
-  height: 92rpx;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #2f6fed, #6389ee);
-  box-shadow: 0 8rpx 20rpx rgba(47, 111, 237, 0.18);
-  color: #ffffff;
-  font-size: 35rpx;
-  font-weight: 800;
-}
-
-.identity {
-  flex: 1;
-  min-width: 0;
-  margin-left: 20rpx;
-}
-
-.user-name,
-.user-meta,
-.stat-value,
-.stat-label,
-.menu-title,
-.menu-desc,
-.note-title,
-.note-text {
-  display: block;
-}
-
-.user-name {
-  color: #202934;
-  font-size: 31rpx;
-  font-weight: 800;
-  line-height: 1.35;
-}
-
-.user-meta {
-  margin-top: 7rpx;
-  color: #78818d;
-  font-size: 22rpx;
-  line-height: 1.5;
-}
-
-.arrow {
-  flex-shrink: 0;
-  margin-left: 12rpx;
-  color: #a9b0bb;
-  font-size: 38rpx;
-}
-
-.stats {
-  display: flex;
-  margin-top: 16rpx;
-  padding: 22rpx 8rpx;
-}
-
-.stat-item {
-  flex: 1;
-  min-width: 0;
-  text-align: center;
-  border-right: 1rpx solid #eceef2;
-}
-
-.stat-item:last-child {
-  border-right: 0;
-}
-
-.stat-value {
-  color: #27313c;
-  font-size: 31rpx;
-  font-weight: 800;
-  line-height: 1.3;
-}
-
-.stat-label {
-  margin-top: 6rpx;
-  color: #7e8691;
-  font-size: 21rpx;
-  line-height: 1.4;
-}
-
-.section-head {
-  margin: 32rpx 4rpx 16rpx;
-}
-
-.menu-list {
-  padding: 2rpx 22rpx;
-}
-
-.menu-row {
-  display: flex;
-  align-items: center;
-  min-height: 116rpx;
-  box-sizing: border-box;
-  border-bottom: 1rpx solid #eceef2;
-}
-
-.menu-row:last-child {
-  border-bottom: 0;
-}
-
-.menu-row:active {
-  background: #f8faff;
-}
-
-.menu-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.menu-title,
-.note-title {
-  color: #2b3440;
-  font-size: 27rpx;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-.menu-desc,
-.note-text {
-  margin-top: 7rpx;
-  color: #78818d;
-  font-size: 21rpx;
-  line-height: 1.6;
-}
-
-.service-note {
-  margin-top: 22rpx;
-  padding: 24rpx;
-  background: #fcfdff;
-}
-
-.identity-line {
-  display: flex;
-  align-items: center;
-  gap: 11rpx;
-}
-
-.role-chip {
-  flex-shrink: 0;
-  padding: 6rpx 11rpx;
-  border-radius: 999rpx;
-  background: #f0edff;
-  color: #654bcf;
-  font-size: 18rpx;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.logout-button {
-  min-height: 78rpx;
-  margin-top: 22rpx;
-  border-radius: 18rpx;
-  background: #ffffff;
-  color: #646d79;
-  font-size: 23rpx;
-  font-weight: 600;
-}
-
-.logout-button:active {
-  background: #f7f8fa;
-}
-
-.logout-button::after {
-  border-color: #e2e5ea;
-}
-
-.delete-account-button {
-  min-height: 74rpx;
-  margin-top: 10rpx;
-  border-radius: 18rpx;
-  background: transparent;
-  color: #ad4f49;
-  font-size: 22rpx;
-  font-weight: 600;
-}
-
-.delete-account-button:active {
-  background: #fff7f6;
-}
-
-.delete-account-button::after {
-  border-color: #ead7d4;
-}
-
-.menu-button {
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  color: inherit;
-  line-height: normal;
-  text-align: left;
-}
-
-.menu-button::after {
-  border: 0;
-}
+.mine-page { padding: 28rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); background: #f2f4f6; color: #18202a; }
+.identity-panel { padding: 32rpx; background: #e7eef8; border-top: 6rpx solid #2f6fed; border-radius: 6rpx; }
+.identity-eyebrow, .user-name, .identity-description, .section-heading, .menu-title, .menu-description, .account-note { display: block; }
+.identity-eyebrow { font-size: 24rpx; font-weight: 600; color: #2459be; }
+.user-name { margin-top: 16rpx; font-size: 42rpx; font-weight: 800; line-height: 1.4; overflow-wrap: break-word; }
+.identity-description { margin-top: 14rpx; font-size: 26rpx; line-height: 1.75; color: #46586e; }
+.identity-code-row { display: flex; align-items: center; gap: 16rpx; margin-top: 20rpx; flex-wrap: wrap; }
+.identity-code { min-width: 0; max-width: 100%; font-size: 27rpx; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+button { border-radius: 8rpx; white-space: normal; box-sizing: border-box; }
+button::after { border: 0; }
+.copy-code { margin: 0; padding: 12rpx 18rpx; font-size: 24rpx; line-height: 1.5; color: #2459be; background: #fafbfc; }
+.identity-primary { margin: 24rpx 0 0; padding: 22rpx 24rpx; color: #fff; background: #2f6fed; font-size: 28rpx; line-height: 1.5; font-weight: 700; }
+.identity-primary:active { background: #2459be; }
+.section-heading { margin: 30rpx 0 16rpx; font-size: 31rpx; font-weight: 700; }
+.menu-list { border: 1rpx solid #d8dee6; background: #fafbfc; }
+.menu-row { display: flex; align-items: center; width: 100%; padding: 26rpx; margin: 0; border-radius: 0; border-bottom: 1rpx solid #e5e9ee; background: transparent; text-align: left; }
+.menu-row:last-child { border-bottom: 0; }
+.menu-row:active { background: #e7eef8; }
+.menu-main { flex: 1; min-width: 0; }
+.menu-title { font-size: 29rpx; font-weight: 700; line-height: 1.5; }
+.menu-description { margin-top: 8rpx; font-size: 25rpx; line-height: 1.7; color: #5f6b78; }
+.arrow { margin-left: 20rpx; font-size: 40rpx; color: #2459be; }
+.account-actions { margin-top: 32rpx; border-top: 1rpx solid #d8dee6; padding-top: 24rpx; }
+.logout-button { margin: 0; padding: 20rpx 24rpx; background: #edf2f7; color: #2459be; font-size: 27rpx; line-height: 1.5; }
+.delete-button { margin: 24rpx 0 0; padding: 18rpx; background: transparent; color: #aa3430; font-size: 25rpx; line-height: 1.5; }
+.delete-button:active { background: #fae9e7; }
+.account-note { margin-top: 12rpx; color: #5f6b78; font-size: 23rpx; line-height: 1.75; }

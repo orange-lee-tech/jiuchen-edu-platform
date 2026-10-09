@@ -1,0 +1,10 @@
+<view wx:if="{{visible}}" class="gate" catchtouchmove="onBlockedTouch" aria-live="polite">
+  <view class="gate-content">
+    <text class="gate-brand">九辰保研</text>
+    <text class="gate-title">{{title}}</text>
+    <text class="gate-message">{{message}}</text>
+    <button wx:if="{{phase === 'error'}}" class="gate-primary" bindtap="onRetry">重新确认身份</button>
+    <button wx:elif="{{needsLogin}}" class="gate-primary" bindtap="onLogin">登录并继续</button>
+    <button wx:if="{{phase !== 'loading'}}" class="gate-secondary" bindtap="onMine">返回我的</button>
+  </view>
+</view>

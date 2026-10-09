@@ -1,5 +1,5 @@
 import { runtimeConfig } from '../config/runtime'
-import { getApiSessionToken } from './session'
+import { clearApiSessionToken, getApiSessionToken } from './session'
 
 export type ResumeDocumentTarget = 'general' | 'technical' | 'academic'
 
@@ -27,6 +27,10 @@ function requestResumeBuffer(target: ResumeDocumentTarget): Promise<ArrayBuffer>
         Authorization: `Bearer ${sessionToken}`,
       },
       success(response) {
+        if (sessionToken !== getApiSessionToken()) {
+          reject(new Error('登录账号已变化，请重新打开简历'))
+          return
+        }
         if (
           response.statusCode >= 200 &&
           response.statusCode < 300 &&
@@ -37,6 +41,7 @@ function requestResumeBuffer(target: ResumeDocumentTarget): Promise<ArrayBuffer>
         }
 
         if (response.statusCode === 401) {
+          clearApiSessionToken(sessionToken)
           reject(new Error('登录已失效，请重新登录'))
           return
         }

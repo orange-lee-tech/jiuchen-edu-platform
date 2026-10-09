@@ -1,3 +1,4 @@
+<auth-gate />
 <view class="growth-page">
   <view class="hero">
     <text class="eyebrow">CANONICAL GROWTH RECORD</text>

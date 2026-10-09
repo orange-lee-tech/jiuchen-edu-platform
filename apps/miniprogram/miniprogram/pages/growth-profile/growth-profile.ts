@@ -14,6 +14,7 @@ import {
   saveGrowthProfileBootstrap,
 } from '../../utils/growth-profile-cache'
 import { openResumeDocx } from '../../utils/resume-document'
+import { authorizePage } from '../../utils/navigation'
 
 type ResumeTarget = 'general' | 'technical' | 'academic'
 
@@ -77,8 +78,8 @@ Page({
     openingDocument: false,
   },
 
-  onLoad() {
-    void this.loadBootstrap()
+  onLoad(options: Record<string, string>) {
+    authorizePage('pages/growth-profile/growth-profile', options, () => { void this.loadBootstrap() })
   },
 
   applyBootstrap(

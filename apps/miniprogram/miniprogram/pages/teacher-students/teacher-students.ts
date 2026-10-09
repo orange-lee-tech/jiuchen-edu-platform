@@ -1,3 +1,4 @@
+import { authorizePage } from '../../utils/navigation'
 import {
   approvePlanRevision,
   friendlyRequestError,
@@ -33,7 +34,7 @@ Page({
   },
 
   onShow() {
-    void this.loadData()
+    authorizePage('pages/teacher-students/teacher-students', {}, () => { void this.loadData() })
   },
 
   async loadData() {

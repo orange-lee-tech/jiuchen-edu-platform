@@ -1,67 +1,24 @@
-<view class="page-shell">
-  <view class="profile-hero surface" bindtap="onIdentityTap">
-    <view class="avatar">{{role === 'teacher' || role === 'staff' ? '师' : role === 'admin' ? '管' : '九'}}</view>
-    <view class="identity">
-      <view class="identity-line">
-        <text class="user-name">{{user.name}}</text>
-        <text class="role-chip">{{roleLabel}}</text>
-      </view>
-      <text class="user-meta">{{user.meta}}</text>
+<view class="mine-page">
+  <role-shell slot="mine" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <block wx:if="{{shellPhase === 'ready'}}">
+    <view class="identity-panel">
+      <text class="identity-eyebrow">九辰保研 · {{roleLabel}}</text>
+      <text class="user-name">{{loggedIn ? userName : '把准备记录留在这里'}}</text>
+      <text class="identity-description">{{loggedIn ? '身份、资料和可再次查看的记录，集中在“我的”。' : '登录后可保存资料、查看评估历史；已有九辰编号可以继续绑定身份。'}}</text>
+      <view wx:if="{{businessId}}" class="identity-code-row"><text class="identity-code" selectable>{{businessId}}</text><button class="copy-code" bindtap="onCopyIdentity">复制编号</button></view>
+      <button class="identity-primary" bindtap="onIdentityTap">{{loggedIn ? '编辑身份与资料' : '登录并建立档案'}}</button>
     </view>
-    <text class="arrow">›</text>
-  </view>
-
-  <view class="stats surface">
-    <view wx:for="{{stats}}" wx:key="label" class="stat-item">
-      <text class="stat-value">{{item.value}}</text>
-      <text class="stat-label">{{item.label}}</text>
+    <text class="section-heading">{{shellKind === 'student' ? '我的资料与记录' : '我的账号与工作入口'}}</text>
+    <view class="menu-list">
+      <block wx:for="{{menus}}" wx:key="key">
+        <button wx:if="{{item.key === 'service'}}" class="menu-row" bindtap="onCustomerServiceTap"><view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text></button>
+        <button wx:else class="menu-row" data-key="{{item.key}}" bindtap="onMenuTap"><view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text></button>
+      </block>
     </view>
-  </view>
-
-  <view class="section-head">
-    <text class="section-title">
-      {{role === 'teacher' || role === 'staff' ? '教学工作台' : role === 'admin' ? '管理工作台' : '我的服务'}}
-    </text>
-  </view>
-
-  <view class="menu-list surface">
-    <block wx:for="{{menus}}" wx:key="key">
-      <button
-        wx:if="{{item.key === 'service'}}"
-        class="menu-row menu-button"
-        bindtap="onCustomerServiceTap"
-      >
-        <view class="menu-main">
-          <text class="menu-title">{{item.title}}</text>
-          <text class="menu-desc">{{item.desc}}</text>
-        </view>
-        <text class="arrow">›</text>
-      </button>
-
-      <view
-        wx:else
-        class="menu-row"
-        data-key="{{item.key}}"
-        data-title="{{item.title}}"
-        bindtap="onMenuTap"
-      >
-        <view class="menu-main">
-          <text class="menu-title">{{item.title}}</text>
-          <text class="menu-desc">{{item.desc}}</text>
-        </view>
-        <text class="arrow">›</text>
-      </view>
-    </block>
-  </view>
-
-  <button wx:if="{{loggedIn}}" class="logout-button" bindtap="onLogout">退出登录</button>
-  <button wx:if="{{loggedIn}}" class="delete-account-button" bindtap="onDeleteAccount">注销账号</button>
-
-  <view class="service-note surface">
-    <text class="note-title">九辰保研</text>
-    <text class="note-text" wx:if="{{role === 'teacher' || role === 'staff'}}">老师端只能访问管理员授权的学员与辅导数据。</text>
-    <text class="note-text" wx:elif="{{role === 'admin'}}">管理员可维护内部ID、师生关系并同步官方服务号动态。</text>
-    <text class="note-text" wx:elif="{{role === 'user'}}">游客不会自动获得任何内部权限；填写九辰内部ID后由系统匹配对应界面。</text>
-    <text class="note-text" wx:else>课程模块仅用于内容展示与咨询；付费能力仅用于后续 AI 评估额度。</text>
-  </view>
+    <view wx:if="{{loggedIn}}" class="account-actions">
+      <button class="logout-button" loading="{{loggingOut}}" disabled="{{loggingOut || deleting}}" bindtap="onLogout">退出当前登录</button>
+      <button class="delete-button" loading="{{deleting}}" disabled="{{loggingOut || deleting}}" bindtap="onDeleteAccount">注销账号</button>
+      <text class="account-note">退出保留账号资料。注销会清理自填资料并解除登录绑定，操作前会再次确认。</text>
+    </view>
+  </block>
 </view>

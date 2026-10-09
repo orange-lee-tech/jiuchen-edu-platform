@@ -1,3 +1,4 @@
+<auth-gate />
 <view class="page-shell">
   <view class="teacher-head">
     <text class="page-title">我的学员</text>

@@ -499,3 +499,42 @@
 .schedule-import-button::after {
   border: 0;
 }
+
+/* Phase 1a: readable native shell, retaining the existing stage/plan workflow. */
+.classroom-page { padding: 28rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); background: #f2f4f6; }
+.surface, .stage-sidebar, .timeline-item, .current-week-nav { border-radius: 6rpx; box-shadow: none; }
+.surface { background: #fafbfc; border-color: #d8dee6; }
+.classroom-top { align-items: flex-start; flex-wrap: wrap; }
+.page-title { font-size: 42rpx; color: #18202a; }
+.page-subtitle { font-size: 25rpx; color: #5f6b78; line-height: 1.65; }
+.stage-badge, .timeline-item.active, .plan-icon { background: #e7eef8; color: #2459be; }
+.timeline-item.active .timeline-label, .plan-progress, .record-date { color: #2459be; }
+.timeline-item.active .timeline-dot { background: #2f6fed; box-shadow: 0 0 0 2rpx #2f6fed; }
+.stage-sidebar { flex-basis: 132rpx; width: 132rpx; background: #edf2f7; }
+.timeline-label, .current-week-label { font-size: 23rpx; line-height: 1.5; }
+.timeline-item, .current-week-nav { min-height: 76rpx; }
+.stage-summary-head, .section-title-row, .plan-title-row { flex-wrap: wrap; gap: 10rpx; }
+.stage-desc, .section-note, .plan-note, .pending-desc, .mentor-desc, .record-content, .record-teacher { color: #5f6b78; font-size: 24rpx; line-height: 1.75; }
+.plan-title, .pending-title, .record-title, .mentor-name { font-size: 28rpx; line-height: 1.5; }
+.plan-arrow { font-size: 25rpx; color: #2459be; }
+.revision-chip { font-size: 22rpx; line-height: 1.5; }
+.revision-chip.none { color: #5f6b78; }
+.progress-label { color: #5f6b78; font-size: 23rpx; }
+.plan-progress { font-size: 25rpx; }
+.entry-state, .student-tools { margin: 18rpx 0; padding: 28rpx; }
+.entry-state { background: #e7eef8; border-top: 6rpx solid #2f6fed; }
+.entry-desc, .tool-desc { color: #46586e; font-size: 26rpx; line-height: 1.75; }
+.entry-button { border-radius: 8rpx; padding: 22rpx 24rpx; font-size: 28rpx; line-height: 1.5; white-space: normal; }
+.entry-button:active { background: #2459be; }
+.student-tools { flex-wrap: wrap; gap: 18rpx; }
+.schedule-import-button { flex-basis: auto; width: auto; margin: 0; padding: 18rpx 22rpx; border-radius: 8rpx; background: #2f6fed; color: #fff; font-size: 26rpx; line-height: 1.5; white-space: normal; }
+.schedule-import-button:active { background: #2459be; }
+.plan-error, .plan-loading { padding: 28rpx; background: #edf2f7; font-size: 27rpx; line-height: 1.75; color: #46586e; }
+.plan-error button { margin-top: 20rpx; border-radius: 8rpx; padding: 20rpx; background: #2f6fed; color: #fff; font-size: 27rpx; line-height: 1.5; }
+@media (max-width: 400px) {
+  .plan-icon { display: none; }
+  .plan-heading { margin-left: 0; }
+  .plan-card-head { flex-wrap: wrap; gap: 14rpx; }
+  .plan-arrow { width: 100%; text-align: right; }
+  .stage-summary { padding: 20rpx; }
+}

@@ -1,4 +1,5 @@
 import { getSavedAuthResult } from '../../utils/auth'
+import { authorizePage } from '../../utils/navigation'
 import {
   getMyAssessments,
   type AssessmentRecord,
@@ -39,18 +40,18 @@ function formatDate(value: string) {
 Page({
   data: {
     loading: true,
+    canCreateAssessment: false,
     assessments: [] as AssessmentListItem[],
   },
 
   onShow() {
     pageVisible = true
     clearRefreshTimer()
-    const auth = getSavedAuthResult()
-    if (!auth) {
-      wx.redirectTo({ url: '/pages/login/login' })
-      return
-    }
-    void this.loadAssessments(false)
+    authorizePage('pages/assessment-history/assessment-history', {}, () => {
+      const role = getSavedAuthResult()?.user.role
+      this.setData({ canCreateAssessment: role === 'user' || role === 'student' })
+      if (pageVisible) void this.loadAssessments(false)
+    })
   },
 
   onHide() {
@@ -89,7 +90,7 @@ Page({
       })
       this.setData({ assessments })
       clearRefreshTimer()
-      if (pageVisible && assessments.some((item) => item.status === 'running')) {
+      if (pageVisible && getSavedAuthResult() && assessments.some((item) => item.status === 'running')) {
         refreshTimer = setTimeout(() => {
           void this.loadAssessments(true)
         }, RUNNING_POLL_MS)
@@ -98,7 +99,7 @@ Page({
       console.info('Assessment history load failed.', error)
       if (!silent) {
         wx.showToast({ title: '历史评估加载失败', icon: 'none' })
-      } else if (pageVisible) {
+      } else if (pageVisible && getSavedAuthResult()) {
         clearRefreshTimer()
         refreshTimer = setTimeout(() => {
           void this.loadAssessments(true)
@@ -139,6 +140,7 @@ Page({
   },
 
   onCreateAssessment() {
+    if (!this.data.canCreateAssessment) return
     wx.navigateTo({ url: '/pages/assessment-form/assessment-form' })
   },
 })

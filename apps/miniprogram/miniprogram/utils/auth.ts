@@ -1,6 +1,7 @@
-import { request } from './request'
+import { friendlyRequestError, request } from './request'
 import {
   clearApiSessionToken,
+  onSessionInvalidated,
   saveApiSessionToken,
 } from './session'
 
@@ -37,6 +38,33 @@ export const USER_AGREEMENT_VERSION = 'placeholder-v0'
 export const AUTH_STORAGE_KEY = 'jiuchen-auth-session'
 
 let memoryAuthResult: BootstrapResult | null | undefined
+export type AuthState = {
+  phase: 'loading' | 'ready' | 'error'
+  auth: BootstrapResult | null
+  message: string
+}
+let authState: AuthState = { phase: 'loading', auth: null, message: '' }
+let authGeneration = 0
+let authRefresh: { token: string; promise: Promise<BootstrapResult | null> } | null = null
+const authListeners = new Set<(state: AuthState) => void>()
+
+function publishAuth(state: AuthState) {
+  authState = state
+  authListeners.forEach((listener) => listener(state))
+}
+
+export function subscribeAuth(listener: (state: AuthState) => void) {
+  authListeners.add(listener)
+  listener(authState)
+  return () => { authListeners.delete(listener) }
+}
+
+onSessionInvalidated(() => {
+  authGeneration += 1
+  memoryAuthResult = null
+  wx.removeStorageSync(AUTH_STORAGE_KEY)
+  publishAuth({ phase: 'ready', auth: null, message: '登录已失效，请重新登录' })
+})
 
 const USER_ROLES = new Set<UserRole>([
   'user',
@@ -144,6 +172,8 @@ export function saveAuthResult(result: BootstrapResult) {
   try {
     wx.setStorageSync(AUTH_STORAGE_KEY, result)
     memoryAuthResult = result
+    authGeneration += 1
+    publishAuth({ phase: 'ready', auth: result, message: '' })
   } catch (error) {
     memoryAuthResult = null
     clearApiSessionToken()
@@ -169,6 +199,42 @@ export function getSavedAuthResult(): BootstrapResult | null {
   return memoryAuthResult
 }
 
+/** Validate cached presentation against the existing server authority, never bootstrap twice. */
+export function refreshAuthResult(): Promise<BootstrapResult | null> {
+  const current = getSavedAuthResult()
+  if (!current) {
+    publishAuth({ phase: 'ready', auth: null, message: authState.message })
+    return Promise.resolve(null)
+  }
+  if (Date.parse(current.session.expiresAt) <= Date.now()) {
+    clearSavedAuthResult()
+    return Promise.resolve(null)
+  }
+  if (authRefresh?.token === current.session.token) return authRefresh.promise
+  const generation = authGeneration
+  publishAuth({ phase: 'loading', auth: null, message: '' })
+  const promise = request<{ ok: true; user: BootstrapUser; businessIdentity: BusinessIdentity | null }>('/auth/me')
+    .then((result) => {
+      if (generation !== authGeneration) return getSavedAuthResult()
+      if (!result.ok || result.user.id !== current.user.id || !USER_ROLES.has(result.user.role)) {
+        throw new Error('backend_version_mismatch')
+      }
+      const updated: BootstrapResult = { ...current, user: result.user, businessIdentity: result.businessIdentity }
+      wx.setStorageSync(AUTH_STORAGE_KEY, updated)
+      memoryAuthResult = updated
+      publishAuth({ phase: 'ready', auth: updated, message: '' })
+      return updated
+    })
+    .catch((error: unknown) => {
+      if (generation !== authGeneration) return getSavedAuthResult()
+      publishAuth({ phase: 'error', auth: null, message: friendlyRequestError(error, '身份暂时无法确认，请重试') })
+      return null
+    })
+    .finally(() => { if (authRefresh?.promise === promise) authRefresh = null })
+  authRefresh = { token: current.session.token, promise }
+  return promise
+}
+
 export function updateSavedIdentity(
   role: UserRole,
   businessIdentity: BusinessIdentity,
@@ -187,6 +253,9 @@ export function updateSavedIdentity(
 
   wx.setStorageSync(AUTH_STORAGE_KEY, updated)
   memoryAuthResult = updated
+  authGeneration += 1
+  authRefresh = null
+  publishAuth({ phase: 'ready', auth: updated, message: '' })
 }
 
 export function clearSavedAuthResult() {

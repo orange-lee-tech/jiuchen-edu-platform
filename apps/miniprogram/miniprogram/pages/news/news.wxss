@@ -6,6 +6,27 @@
   padding: 12rpx 4rpx 22rpx;
 }
 
+/* Role entry remains primary; articles are real, independently retryable content. */
+.page-shell { padding: 28rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); background: #f2f4f6; }
+.news-head { flex-wrap: wrap; }
+.news-head > view { flex: 1; min-width: 240rpx; }
+.page-shell .page-desc { color: #5f6b78; font-size: 26rpx; line-height: 1.75; }
+.surface { border-radius: 6rpx; background: #fafbfc; box-shadow: none; border-color: #d8dee6; }
+.page-shell .category { font-size: 25rpx; padding: 16rpx 20rpx; border-radius: 6rpx; }
+.page-shell .category.active { background: #2f6fed; color: #fff; }
+.page-shell .featured-summary, .page-shell .article-summary { color: #5f6b78; font-size: 25rpx; line-height: 1.75; }
+.page-shell .article-meta { color: #5f6b78; font-size: 23rpx; }
+.page-shell .article-tag { font-size: 22rpx; }
+.featured:active, .article-card:active { background: #e7eef8; }
+.reference-news-button, .news-error button, .news-empty button { border-radius: 8rpx; margin: 24rpx 0; padding: 20rpx 24rpx; font-size: 27rpx; line-height: 1.5; white-space: normal; background: #e7eef8; color: #2459be; }
+.reference-news-button::after, .news-error button::after, .news-empty button::after { border: 0; }
+.news-error, .news-empty, .news-loading { padding: 28rpx; color: #46586e; background: #edf2f7; font-size: 27rpx; line-height: 1.75; }
+.news-error button { background: #2f6fed; color: #fff; }
+.empty-description { display: block; margin-top: 12rpx; color: #5f6b78; font-size: 25rpx; }
+.page-shell .pending-news-note { flex-wrap: wrap; }
+.page-shell .pending-news-text { min-width: 0; }
+.page-shell .pending-news-title, .page-shell .pending-news-desc { font-size: 25rpx; line-height: 1.7; }
+
 .page-title,
 .page-desc,
 .featured-tag,

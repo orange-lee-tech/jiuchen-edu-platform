@@ -1,4 +1,5 @@
 import { getSavedAuthResult } from '../../utils/auth'
+import { authorizePage, safeBack } from '../../utils/navigation'
 import {
   bindAdminInternalId,
   createAdminAssignment,
@@ -70,10 +71,13 @@ Page({
   },
 
   onLoad(options: Record<string, string>) {
+    authorizePage('pages/admin/admin', options, () => this.initializeAdmin(options))
+  },
+  initializeAdmin(options: Record<string, string>) {
     const auth = getSavedAuthResult()
     if (!auth || auth.user.role !== 'admin') {
       wx.showToast({ title: '仅管理员可访问', icon: 'none' })
-      wx.navigateBack()
+      safeBack()
       return
     }
 

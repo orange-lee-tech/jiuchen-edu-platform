@@ -1,4 +1,5 @@
 import { getSavedAuthResult } from '../../utils/auth'
+import { INITIAL_SHELL, observeSlot, openPage, shellView } from '../../utils/navigation'
 import { getNewsPosts, type NewsPost } from '../../utils/request'
 
 type NewsCard = {
@@ -42,7 +43,7 @@ function toCard(post: NewsPost): NewsCard {
     id: post.id,
     title: post.title,
     summary: post.summary ?? '',
-    meta: ['九辰教育服务号', formatDate(post.publishedAt)]
+    meta: [post.source === 'manual' ? '九辰编辑' : '九辰教育服务号', formatDate(post.publishedAt)]
       .filter(Boolean)
       .join(' · '),
     tags: post.tags,
@@ -74,7 +75,10 @@ function uniqueTags(cards: NewsCard[]) {
 
 Page({
   data: {
-    categories: ['推荐'],
+    ...INITIAL_SHELL,
+    categories: ['全部'],
+    loadError: '',
+    showReferenceNews: false,
     currentCategory: 0,
     loading: false,
     sourceLabel: '真实资讯',
@@ -85,20 +89,35 @@ Page({
     pendingClassificationRole: 'none' as 'none' | 'admin' | 'reviewer',
   },
 
+  stopShell: undefined as (() => void) | undefined,
+  viewGeneration: 0,
   onShow() {
-    void this.loadNews()
+    this.stopShell?.()
+    this.stopShell = observeSlot('opportunity', (state) => {
+      this.viewGeneration += 1
+      this.setData({ ...shellView(state), showReferenceNews: false, allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0 })
+      if (state.phase === 'ready' && this.data.shellKind === 'student') void this.loadNews()
+    })
+  },
+  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading' }) },
+  onUnload() { this.stopShell?.() },
+  onReferenceNews() {
+    this.setData({ showReferenceNews: !this.data.showReferenceNews })
+    if (this.data.showReferenceNews) void this.loadNews()
   },
 
   async loadNews() {
+    const generation = this.viewGeneration
     try {
-      this.setData({ loading: true })
+      this.setData({ loading: true, loadError: '' })
       const auth = getSavedAuthResult()
       const role = auth?.user.role ?? 'user'
       const canSeeUnclassified = ['teacher', 'staff', 'admin'].includes(role)
       const posts = await getNewsPosts()
+      if (generation !== this.viewGeneration) return
       if (posts.length === 0) {
         this.setData({
-          categories: ['推荐'],
+          categories: ['全部'],
           currentCategory: 0,
           featured: FALLBACK_FEATURED,
           allArticles: [],
@@ -122,7 +141,7 @@ Page({
       const cards = visiblePosts.map(toCard)
       if (cards.length === 0) {
         this.setData({
-          categories: ['推荐'],
+          categories: ['全部'],
           currentCategory: 0,
           featured: FALLBACK_FEATURED,
           allArticles: [],
@@ -134,7 +153,7 @@ Page({
       }
 
       const first = cards[0]
-      const categories = ['推荐', ...uniqueTags(cards)]
+      const categories = ['全部', ...uniqueTags(cards)]
 
       this.setData({
         sourceLabel: '九辰教育服务号',
@@ -147,8 +166,10 @@ Page({
         pendingClassificationRole,
       })
     } catch (error) {
+      if (generation !== this.viewGeneration) return
       console.info('Synchronized news is unavailable.', error)
       this.setData({
+        loadError: '文章暂时无法加载，请检查网络后重试。',
         featured: FALLBACK_FEATURED,
         allArticles: [],
         articles: [],
@@ -156,7 +177,7 @@ Page({
         pendingClassificationRole: 'none',
       })
     } finally {
-      this.setData({ loading: false })
+      if (generation === this.viewGeneration) this.setData({ loading: false })
     }
   },
 
@@ -175,7 +196,7 @@ Page({
 
   onManageNewsTags() {
     if (this.data.pendingClassificationRole !== 'admin') return
-    wx.navigateTo({ url: '/pages/admin/admin?section=admin-news' })
+    openPage('/pages/admin/admin?section=admin-news')
   },
 
   onCategoryTap(event: WechatMiniprogram.BaseEvent) {

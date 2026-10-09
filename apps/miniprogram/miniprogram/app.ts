@@ -1,9 +1,12 @@
 import { runtimeConfig } from './config/runtime'
+import { initializeNavigation } from './utils/navigation'
+import { refreshAuthResult } from './utils/auth'
 
 App({
   onLaunch() {
     if (!runtimeConfig.cloudEnvId) {
       console.error('CloudBase environment ID is empty; Storage uploads will fail')
+      initializeNavigation()
       return
     }
 
@@ -13,7 +16,10 @@ App({
       env: runtimeConfig.cloudEnvId,
       traceUser: true,
     })
+    initializeNavigation()
   },
+
+  onShow() { void refreshAuthResult() },
 
   globalData: {
     appName: '九辰保研',

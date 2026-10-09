@@ -1,3 +1,4 @@
+<auth-gate />
 <view class="result-page">
   <view wx:if="{{loading}}" class="state-card">正在加载评估报告…</view>
   <view wx:elif="{{error}}" class="state-card error-card">

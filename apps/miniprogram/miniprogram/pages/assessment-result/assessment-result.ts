@@ -1,4 +1,5 @@
 import { getSavedAuthResult } from '../../utils/auth'
+import { authorizePage } from '../../utils/navigation'
 import {
   getMyAssessment,
   type AssessmentEvidence,
@@ -195,6 +196,9 @@ Page({
   },
 
   onLoad(query: Record<string, string | undefined>) {
+    authorizePage('pages/assessment-result/assessment-result', query, () => this.initializeResult(query))
+  },
+  initializeResult(query: Record<string, string | undefined>) {
     const auth = getSavedAuthResult()
     if (!auth) {
       wx.redirectTo({ url: '/pages/login/login' })

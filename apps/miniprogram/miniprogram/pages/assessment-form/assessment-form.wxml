@@ -1,3 +1,4 @@
+<auth-gate />
 <view class="assessment-page">
   <view class="hero">
     <text class="eyebrow">AI 保研评估</text>
