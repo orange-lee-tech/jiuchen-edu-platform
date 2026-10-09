@@ -40,21 +40,15 @@
     </view>
 
     <view class="classroom-layout">
-      <scroll-view class="stage-sidebar" scroll-y enhanced show-scrollbar="{{false}}">
-        <view class="current-week-nav {{selectedView === 'week' ? 'active' : ''}}" bindtap="onCurrentWeekSchedule">
-          <view class="timeline-mark"><view class="timeline-dot schedule-dot"></view></view>
-          <view class="current-week-label"><text>本周</text><text>课表</text></view>
-        </view>
-        <view class="timeline">
-          <view
-            wx:for="{{stages}}"
-            wx:key="code"
-            class="timeline-item {{selectedView === 'stage' && currentStage === index ? 'active' : ''}}"
-            data-index="{{index}}"
-            bindtap="onStageChange"
-          >
-            <view class="timeline-mark"><view class="timeline-dot"></view></view>
-            <view class="timeline-label"><text>{{item.yearLabel}}</text><text>{{item.periodLabel}}</text></view>
+      <scroll-view class="stage-sidebar" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="stage-strip">
+          <view class="current-week-nav {{selectedView === 'week' ? 'active' : ''}}" bindtap="onCurrentWeekSchedule" hover-class="stage-pressed">
+            <text class="current-week-label">本周课表</text>
+          </view>
+          <view class="timeline">
+            <view wx:for="{{stages}}" wx:key="code" class="timeline-item {{selectedView === 'stage' && currentStage === index ? 'active' : ''}}" data-index="{{index}}" bindtap="onStageChange" hover-class="stage-pressed">
+              <text class="timeline-label">{{item.yearLabel}}{{item.periodLabel}}</text>
+            </view>
           </view>
         </view>
       </scroll-view>

@@ -1,30 +1,35 @@
-.mine-page { padding: 28rpx 28rpx calc(32rpx + env(safe-area-inset-bottom)); background: #f2f4f6; color: #18202a; }
-.identity-panel { padding: 32rpx; background: #173b73; color:#fff; border-bottom: 6rpx solid #f2b544; border-radius: 6rpx; }
-.identity-eyebrow, .user-name, .identity-description, .section-heading, .menu-title, .menu-description, .account-note { display: block; }
-.identity-eyebrow { font-size: 24rpx; font-weight: 600; color: #fff3cf; }
-.user-name { margin-top: 16rpx; font-size: 42rpx; font-weight: 800; line-height: 1.4; overflow-wrap: break-word; }
-.identity-description { margin-top: 14rpx; font-size: 26rpx; line-height: 1.75; color: #e7eef8; }
-.identity-code-row { display: flex; align-items: center; gap: 16rpx; margin-top: 20rpx; flex-wrap: wrap; }
-.identity-code { min-width: 0; max-width: 100%; font-size: 27rpx; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-button { border-radius: 8rpx; white-space: normal; box-sizing: border-box; }
-button::after { border: 0; }
-.copy-code { margin: 0; padding: 12rpx 18rpx; font-size: 24rpx; line-height: 1.5; color: #2459be; background: #fafbfc; }
-.identity-primary { margin: 24rpx 0 0; padding: 22rpx 24rpx; color: #173b73; background: #fff3cf; font-size: 28rpx; line-height: 1.5; font-weight: 700; }
-.identity-primary:active { background: #f2b544; }
-.section-heading { margin: 30rpx 0 16rpx; font-size: 31rpx; font-weight: 700; }
-.menu-list { border: 1rpx solid #d8dee6; background: #fafbfc; }
-.menu-row { display: flex; align-items: center; width: 100%; padding: 26rpx; margin: 0; border-radius: 0; border-bottom: 1rpx solid #e5e9ee; background: transparent; text-align: left; }
-.menu-row:last-child { border-bottom: 0; }
-.menu-row:active { background: #e7eef8; }
-.menu-main { flex: 1; min-width: 0; }
-.menu-title { font-size: 29rpx; font-weight: 700; line-height: 1.5; }
-.menu-description { margin-top: 8rpx; font-size: 25rpx; line-height: 1.7; color: #5f6b78; }
-.arrow { margin-left: 20rpx; font-size: 40rpx; color: #2459be; }
-.account-actions { margin-top: 32rpx; border-top: 1rpx solid #d8dee6; padding-top: 24rpx; }
-.logout-button { margin: 0; padding: 20rpx 24rpx; background: #edf2f7; color: #2459be; font-size: 27rpx; line-height: 1.5; }
-.delete-button { margin: 24rpx 0 0; padding: 18rpx; background: transparent; color: #aa3430; font-size: 25rpx; line-height: 1.5; }
-.delete-button:active { background: #fae9e7; }
-.account-note { margin-top: 12rpx; color: #5f6b78; font-size: 23rpx; line-height: 1.75; }
-.menu-icon { width:44rpx; height:44rpx; margin-right:20rpx; flex:none; }
-.website-row { display:flex; align-items:center; margin:24rpx 0 0; width:100%; padding:22rpx; background:#e7eef8; color:#2459be; font-size:26rpx; line-height:1.5; }
-.account-actions { border-top-color:#f2b544; }
+/* Profile uses full-width native view rows; no default button-centering gaps. */
+.mine-page{box-sizing:border-box;min-height:100vh;padding:24rpx 24rpx calc(36rpx + env(safe-area-inset-bottom));background:#eaf1f7;color:#122640;}
+.identity-panel{padding:28rpx;background:#163a70;border-left:8rpx solid #f3ad36;border-bottom:5rpx solid #10a49b;color:#fff;border-radius:10rpx;}
+.identity-eyebrow,.user-name,.identity-description,.section-heading,.menu-title,.menu-description,.account-note{display:block;}
+.identity-eyebrow{font-size:22rpx;font-weight:700;color:#ffd986;}
+.user-name{font-size:39rpx;line-height:1.4;font-weight:800;margin-top:12rpx;overflow-wrap:anywhere;}
+.identity-description{font-size:24rpx;line-height:1.55;color:#e5eeff;margin-top:10rpx;}
+.identity-code-row{display:flex;align-items:center;gap:12rpx;flex-wrap:wrap;margin-top:18rpx;}
+.identity-code{min-width:0;max-width:100%;font-size:26rpx;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+button{box-sizing:border-box;border-radius:8rpx;white-space:normal;}
+button::after{border:0;}
+.copy-code{margin:0;padding:9rpx 14rpx;font-size:22rpx;color:#1952b4;background:#fff;line-height:1.4;}
+.identity-primary{margin:21rpx 0 0;min-height:80rpx;padding:13rpx 20rpx;font-size:28rpx;font-weight:800;color:#113863;background:#ffce59;line-height:1.45;}
+.identity-primary:active{background:#ffe28a;}
+.section-heading{font-size:31rpx;line-height:1.45;font-weight:800;margin:25rpx 0 14rpx;}
+.menu-list{display:flex;flex-direction:column;gap:11rpx;}
+.menu-row{display:flex;box-sizing:border-box;align-items:center;gap:16rpx;min-height:112rpx;width:100%;padding:18rpx;background:#fff;border-left:6rpx solid #2164ce;border-radius:8rpx;border-top:1rpx solid #d9e5f1;border-right:1rpx solid #d9e5f1;border-bottom:1rpx solid #d9e5f1;text-align:left;}
+.menu-growth,.menu-students{border-left-color:#079d95;background:#f4fffd;}
+.menu-assessment,.menu-position{border-left-color:#4666d8;}
+.menu-service{border-left-color:#f0ad2a;background:#fffdf4;}
+.menu-pressed{background:#e5eefb;}
+.menu-symbol{display:flex;flex:0 0 56rpx;width:56rpx;height:56rpx;align-items:center;justify-content:center;background:#e5efff;border-radius:7rpx;}
+.menu-growth .menu-symbol,.menu-students .menu-symbol{background:#d8f4ef;}
+.menu-service .menu-symbol{background:#fff0c5;}
+.menu-icon{width:34rpx;height:34rpx;flex:none;}
+.menu-main{display:flex;flex:1 1 0;min-width:0;align-items:stretch;flex-direction:column;}
+.menu-title{font-size:28rpx;line-height:1.35;font-weight:800;color:#102945;white-space:normal;word-break:break-word;}
+.menu-description{font-size:23rpx;line-height:1.5;color:#4c6075;white-space:normal;word-break:break-word;margin-top:6rpx;}
+.arrow{flex:0 0 26rpx;text-align:right;font-size:40rpx;line-height:1;color:#285bc8;}
+.website-row{display:flex;box-sizing:border-box;align-items:center;gap:14rpx;margin-top:13rpx;width:100%;min-height:82rpx;padding:16rpx 19rpx;background:#e3edff;color:#1d55a1;font-size:25rpx;font-weight:700;border-radius:8rpx;}
+.website-row text:first-of-type{flex:1;min-width:0;}
+.account-actions{margin-top:27rpx;padding-top:22rpx;border-top:3rpx solid #f0b445;}
+.logout-button{margin:0;padding:16rpx 22rpx;background:#e3ebf7;color:#1c559d;font-size:25rpx;line-height:1.5;}
+.delete-button{margin:16rpx 0 0;padding:16rpx;color:#b23b36;background:#fff4f2;font-size:24rpx;}
+.account-note{margin-top:12rpx;font-size:22rpx;line-height:1.55;color:#526579;}
