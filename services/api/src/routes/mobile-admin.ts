@@ -24,6 +24,7 @@ import {
   syncOfficialAccountPosts,
 } from '../services/news.js'
 import { resolveSessionUser } from '../services/session.js'
+import { readAssessmentCommerceAnalytics, type AnalyticsPeriod } from '../services/commercial-analytics.js'
 
 const createIdSchema = z.object({
   type: z.enum(['student', 'teacher', 'admin']),
@@ -85,6 +86,24 @@ export function registerMobileAdminRoutes(
   }
 
   const configuredDatabase = database
+  app.get<{ Querystring: { period?: string } }>('/me/admin/assessment-analytics', async (request, reply) => {
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
+    const period = request.query.period ?? 'week'
+    if (!['week', 'month', 'year'].includes(period)) {
+      return reply.code(400).send({ ok: false, error: 'invalid_analytics_period' })
+    }
+    try {
+      const analytics = await readAssessmentCommerceAnalytics(configuredDatabase.pool, period as AnalyticsPeriod)
+      return { ok: true, analytics }
+    } catch (error) {
+      if (error && typeof error === 'object' &&
+        'code' in error && String(error.code) === 'ER_NO_SUCH_TABLE') {
+        return reply.code(503).send({ ok: false, error: 'commercial_analytics_schema_not_ready' })
+      }
+      throw error
+    }
+  })
+
   app.get('/me/admin/internal-ids', async (request, reply) => {
     if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
