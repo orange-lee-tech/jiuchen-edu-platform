@@ -1,5 +1,5 @@
 <view class="mine-page">
-  <role-shell slot="mine" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <role-shell view-slot="mine" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready'}}">
     <view class="identity-panel">
       <text class="identity-eyebrow">九辰保研 · {{roleLabel}}</text>
