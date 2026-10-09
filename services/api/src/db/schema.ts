@@ -34,6 +34,7 @@ export const userProfiles = mysqlTable('user_profiles', {
   university: varchar('university', { length: 160 }),
   major: varchar('major', { length: 160 }),
   currentGrade: varchar('current_grade', { length: 40 }),
+  enrollmentYear: int('enrollment_year'),
   gpaText: varchar('gpa_text', { length: 80 }),
   rankText: varchar('rank_text', { length: 80 }),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
@@ -49,11 +49,16 @@ const reviewSchema = z.object({
   note: z.string().trim().max(500).nullable().optional(),
 })
 
+export const scheduleTermStageSchema = z.enum([
+  'freshman-fall', 'freshman-spring', 'sophomore-fall', 'sophomore-spring',
+  'junior-fall', 'junior-spring', 'senior-fall', 'senior-spring',
+])
 const scheduleImportSchema = z.object({
   fileID: z.string().min(1).max(1000),
   fileName: z.string().min(1).max(255),
   sourceType: z.enum(['spreadsheet', 'image']),
-})
+  stageCode: scheduleTermStageSchema,
+}).strict()
 
 type PlanItemPayload = z.infer<typeof itemSchema>
 
@@ -761,10 +766,11 @@ export function registerClassroomWorkspaceRoutes(
         parsed.data.fileID,
         parsed.data.sourceType,
       )
-      const schedule =
+      const parsedSchedule =
         parsed.data.sourceType === 'spreadsheet'
           ? parseSpreadsheetSchedule(buffer)
           : await parseImageSchedule(buffer, parsed.data.fileName, scheduleImageAI)
+      const schedule = { ...parsedSchedule, stageCode: parsed.data.stageCode }
 
       await database.db
         .update(scheduleImports)
@@ -781,10 +787,7 @@ export function registerClassroomWorkspaceRoutes(
         code === 'schedule_ai_invalid_payload'
 
       if (recoverable) {
-        const schedule = createManualScheduleFallback(
-          parsed.data.sourceType,
-          code,
-        )
+        const schedule = { ...createManualScheduleFallback(parsed.data.sourceType, code), stageCode: parsed.data.stageCode }
         await database.db
           .update(scheduleImports)
           .set({
@@ -819,11 +822,14 @@ export function registerClassroomWorkspaceRoutes(
     }
   })
 
-  app.get('/me/classroom/schedule-imports/latest', async (request, reply) => {
+  app.get<{ Querystring: { stageCode?: string } }>('/me/classroom/schedule-imports/latest', async (request, reply) => {
     if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
     const session = await resolveSessionUser(request, database)
     if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
 
+    const stageCode = request.query.stageCode
+    if (stageCode && !scheduleTermStageSchema.safeParse(stageCode).success)
+      return reply.code(400).send({ ok: false, error: 'invalid_schedule_stage' })
     const [record] = await database.db
       .select()
       .from(scheduleImports)
@@ -831,6 +837,7 @@ export function registerClassroomWorkspaceRoutes(
         and(
           eq(scheduleImports.userId, session.userId),
           eq(scheduleImports.status, 'parsed'),
+          stageCode ? sql`JSON_UNQUOTE(JSON_EXTRACT(${scheduleImports.parsedJson}, '$.stageCode')) = ${stageCode}` : undefined,
         ),
       )
       .orderBy(desc(scheduleImports.updatedAt), desc(scheduleImports.createdAt))
@@ -891,6 +898,8 @@ export function registerClassroomWorkspaceRoutes(
       return reply.code(404).send({ ok: false, error: 'schedule_import_not_found' })
     }
 
+    if (!scheduleTermStageSchema.safeParse((request.body as Record<string, unknown> | null)?.stageCode).success)
+      return reply.code(400).send({ ok: false, error: 'schedule_stage_selection_required' })
     let schedule
     try {
       schedule = normalizeEditableSchedule({

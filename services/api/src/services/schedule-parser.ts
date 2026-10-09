@@ -20,6 +20,7 @@ export type ParsedSchedule = {
   sourceType: 'spreadsheet' | 'image'
   courses: ParsedScheduleCourse[]
   warnings: string[]
+  stageCode?: string | null
   termStartDate?: string | null
   editedAt?: string | null
 }
@@ -60,6 +61,7 @@ export const parsedScheduleCourseSchema = z
 export const editableScheduleSchema = z
   .object({
     sourceType: z.enum(['spreadsheet', 'image']),
+    stageCode: z.string().regex(/^(freshman|sophomore|junior|senior)-(fall|spring)$/).nullable().optional(),
     courses: z.array(parsedScheduleCourseSchema).max(MAX_SCHEDULE_COURSES),
     warnings: z.array(z.string().trim().min(1).max(300)).max(20).default([]),
     termStartDate: z

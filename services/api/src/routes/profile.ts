@@ -12,6 +12,7 @@ const profilePatchSchema = z
     university: z.string().trim().max(160).nullable().optional(),
     major: z.string().trim().max(160).nullable().optional(),
     currentGrade: z.string().trim().max(40).nullable().optional(),
+    enrollmentYear: z.number().int().min(1990).max(2100).nullable().optional(),
     gpaText: z.string().trim().max(80).nullable().optional(),
     rankText: z.string().trim().max(80).nullable().optional(),
   })
@@ -21,6 +22,7 @@ const EMPTY_PROFILE = {
   university: null,
   major: null,
   currentGrade: null,
+  enrollmentYear: null,
   gpaText: null,
   rankText: null,
 }
@@ -57,6 +59,7 @@ export function registerProfileRoutes(
         university: userProfiles.university,
         major: userProfiles.major,
         currentGrade: userProfiles.currentGrade,
+        enrollmentYear: userProfiles.enrollmentYear,
         gpaText: userProfiles.gpaText,
         rankText: userProfiles.rankText,
       })
@@ -126,6 +129,7 @@ export function registerProfileRoutes(
         university: userProfiles.university,
         major: userProfiles.major,
         currentGrade: userProfiles.currentGrade,
+        enrollmentYear: userProfiles.enrollmentYear,
         gpaText: userProfiles.gpaText,
         rankText: userProfiles.rankText,
       })
