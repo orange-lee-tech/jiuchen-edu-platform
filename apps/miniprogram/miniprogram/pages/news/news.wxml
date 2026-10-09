@@ -1,5 +1,5 @@
 <view class="page-shell">
-  <role-shell slot="opportunity" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <role-shell view-slot="opportunity" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <button wx:if="{{shellPhase === 'ready' && shellKind !== 'student'}}" class="reference-news-button" bindtap="onReferenceNews">{{showReferenceNews ? '收起参考文章' : '查看保研参考文章'}}</button>
   <block wx:if="{{shellPhase === 'ready' && (shellKind === 'student' || showReferenceNews)}}">
   <view class="news-head">
