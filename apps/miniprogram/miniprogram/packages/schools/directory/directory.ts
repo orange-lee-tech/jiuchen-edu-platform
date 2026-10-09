@@ -1,4 +1,4 @@
-import { SCHOOLS, SCHOOL_REGIONS, findSchools, type School } from '../data'
+import { SCHOOLS, SCHOOL_REGIONS, findSchools, type School, type SchoolTier } from '../data'
 
 type SchoolCard = School & { monogram: string; subtitle: string }
 
@@ -35,7 +35,7 @@ Page({
   onLevel(event: WechatMiniprogram.BaseEvent) {
     const level = String(event.currentTarget.dataset.level)
     if (!['all','985','211','c9','other211'].includes(level)) return
-    this.setData({ level })
+    this.setData({ level: level as SchoolTier })
     this.refreshSchools()
   },
   onOpenFilter() { this.setData({ showFilter: true }) },
