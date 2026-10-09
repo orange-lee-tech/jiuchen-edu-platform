@@ -154,8 +154,8 @@ test('native role icons exist, remain small, and admin Mine has no duplicate ope
   h.respond(0, { ok: true, user: authFixture('admin').user, businessIdentity: null }); await settle()
   assert.ok(p.data.menus.every(m => !m.key.startsWith('admin-')))
   p.onHide()
-  const c = h.component('role-shell', { kind:'admin', slot:'home', phase:'ready' })
-  c.observers['slot, kind'].call(c,'home','admin'); assert.equal(c.data.actions.length, 1)
+  const c = h.component('role-shell', { kind:'admin', viewSlot:'home', phase:'ready' })
+  c.observers['viewSlot, kind'].call(c,'home','admin'); assert.equal(c.data.actions.length, 1)
 })
 
 test('server role replaces cached role; concurrent refresh is one read; staff is not admin', async () => {
