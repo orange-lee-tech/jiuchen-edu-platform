@@ -204,7 +204,7 @@ export function buildApp(env: AppEnv) {
   registerBrandRoutes(app)
   registerClassroomWorkspaceRoutes(app, database, env)
   registerGrowthProfileRoutes(app, database)
-  registerCommercialRoutes(app, database, commercialConfig, wechatPay)
+  registerCommercialRoutes(app, database, commercialConfig, wechatPay, env)
   registerAdminRoutes(app, database, env)
 
   app.addHook('onReady', async () => {
