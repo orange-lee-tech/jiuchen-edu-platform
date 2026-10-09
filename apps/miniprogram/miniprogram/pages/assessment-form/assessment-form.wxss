@@ -271,3 +271,19 @@
 .import-button::after {
   border: 0;
 }
+
+/* Assessment must reflect, not edit, the canonical academic account profile. */
+.locked-profile-value {
+  max-width: 65%;
+  color: #263752;
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.profile-lock-note {
+  display: block;
+  padding: 0 0 12rpx;
+  color: #596980;
+  font-size: 21rpx;
+  line-height: 1.55;
+}

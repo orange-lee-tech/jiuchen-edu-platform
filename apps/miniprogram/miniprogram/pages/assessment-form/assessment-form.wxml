@@ -12,7 +12,7 @@
     <view class="card import-card">
       <view class="import-copy">
         <text class="section-title">导入已有材料</text>
-        <text class="import-desc">支持 Word、PDF 与常见图片。系统先识别并预填表单，你确认、修改后再提交 AI 评估。</text>
+        <text class="import-desc">支持 Word、PDF 与常见图片。系统提取英语、科研、竞赛及目标等可补充信息；本科院校、专业、年级、绩点和排名以“我的个人资料”为准。</text>
       </view>
       <button
         class="import-button"
@@ -24,29 +24,15 @@
 
     <view class="card">
       <view class="section-head">
-        <text class="section-title">基础背景</text>
-        <text wx:if="{{profileSaving}}" class="saving-note">保存中…</text>
+        <text class="section-title">基础背景 · 只读</text>
+        <text class="link" bindtap="onOpenProfileEdit">去编辑个人资料 ›</text>
       </view>
-      <label class="profile-row">
-        <text>本科院校</text>
-        <input class="inline-profile-input" data-field="university" value="{{profile.university}}" placeholder="待填写" bindinput="onProfileFieldInput" bindblur="onProfileFieldBlur" />
-      </label>
-      <label class="profile-row">
-        <text>专业</text>
-        <input class="inline-profile-input" data-field="major" value="{{profile.major}}" placeholder="待填写" bindinput="onProfileFieldInput" bindblur="onProfileFieldBlur" />
-      </label>
-      <label class="profile-row">
-        <text>当前年级</text>
-        <input class="inline-profile-input" data-field="currentGrade" value="{{profile.currentGrade}}" placeholder="待填写" bindinput="onProfileFieldInput" bindblur="onProfileFieldBlur" />
-      </label>
-      <label class="profile-row">
-        <text>绩点 / 均分</text>
-        <input class="inline-profile-input" data-field="gpaText" value="{{profile.gpaText}}" placeholder="待填写" bindinput="onProfileFieldInput" bindblur="onProfileFieldBlur" />
-      </label>
-      <label class="profile-row">
-        <text>排名</text>
-        <input class="inline-profile-input" data-field="rankText" value="{{profile.rankText}}" placeholder="待填写" bindinput="onProfileFieldInput" bindblur="onProfileFieldBlur" />
-      </label>
+      <text class="profile-lock-note">以下学业资料与“我的个人资料”同步，评估页不能直接修改。</text>
+      <view class="profile-row"><text>本科院校</text><text class="locked-profile-value">{{profile.university || '未填写'}}</text></view>
+      <view class="profile-row"><text>专业</text><text class="locked-profile-value">{{profile.major || '未填写'}}</text></view>
+      <view class="profile-row"><text>当前年级</text><text class="locked-profile-value">{{profile.currentGrade || '未填写'}}</text></view>
+      <view class="profile-row"><text>绩点 / 均分</text><text class="locked-profile-value">{{profile.gpaText || '未填写'}}</text></view>
+      <view class="profile-row"><text>排名</text><text class="locked-profile-value">{{profile.rankText || '未填写'}}</text></view>
       <textarea class="textarea" maxlength="1000" value="{{profile.backgroundNote}}" placeholder="其它背景说明（可选）" bindinput="onBackgroundNoteInput" />
     </view>
 

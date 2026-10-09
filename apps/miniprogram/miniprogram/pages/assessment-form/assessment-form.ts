@@ -8,18 +8,14 @@ import {
   getMyAssessment,
   importAssessmentProfileMaterial,
   runMyAssessment,
-  updateMyAcademicProfile,
   updateAssessmentDraft,
   type AssessmentCompetitionExperience,
   type AssessmentEnglishRecord,
   type AssessmentImportCandidate,
   type AssessmentResearchExperience,
   type AssessmentTarget,
-  type AcademicProfile,
 } from '../../utils/request'
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
-
-type AcademicProfileField = keyof AcademicProfile
 
 const RESEARCH_TIERS = [
   'Nature',
@@ -233,7 +229,7 @@ Page({
   data: {
     loading: true,
     saving: false,
-    profileSaving: false,
+    profileReady: false,
     importing: false,
     providerConfigured: false,
     materialImportConfigured: false,
@@ -265,6 +261,23 @@ Page({
 
   onLoad(query: Record<string, string | undefined>) {
     authorizePage('pages/assessment-form/assessment-form', query, () => { void this.initializeForm(query) })
+  },
+  onShow() {
+    // Read the canonical account profile after returning from 我的 → 编辑个人资料.
+    // Never promote resume extraction or a historical draft to the source of truth.
+    if (!this.data.profileReady || this.data.loading) return
+    void getMyAcademicProfile().then((profile) => {
+      this.setData({
+        'profile.university': profile.university || '',
+        'profile.major': profile.major || '',
+        'profile.currentGrade': profile.currentGrade || '',
+        'profile.gpaText': profile.gpaText || '',
+        'profile.rankText': profile.rankText || '',
+      })
+    }).catch(() => wx.showToast({ title: '资料同步失败，请重新打开', icon: 'none' }))
+  },
+  onOpenProfileEdit() {
+    wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
   },
   async initializeForm(query: Record<string, string | undefined>) {
     const auth = getSavedAuthResult()
@@ -304,12 +317,13 @@ Page({
         providerConfigured: meta.providerConfigured,
         materialImportConfigured: meta.materialImport.enabled,
         draftId: draft?.id || '',
+        profileReady: true,
         profile: {
-          university: draftProfile?.university || profile.university || '',
-          major: draftProfile?.major || profile.major || '',
-          currentGrade: draftProfile?.currentGrade || profile.currentGrade || '',
-          gpaText: draftProfile?.gpaText || profile.gpaText || '',
-          rankText: draftProfile?.rankText || profile.rankText || '',
+          university: profile.university || '',
+          major: profile.major || '',
+          currentGrade: profile.currentGrade || '',
+          gpaText: profile.gpaText || '',
+          rankText: profile.rankText || '',
           backgroundNote: draftProfile?.backgroundNote || '',
         },
         english: draftInput?.english ?? [],
@@ -486,13 +500,11 @@ Page({
     const currentProfile = this.data.profile
     const incomingProfile = candidate.profile
     const profile = {
-      university:
-        currentProfile.university || incomingProfile.university || '',
-      major: currentProfile.major || incomingProfile.major || '',
-      currentGrade:
-        currentProfile.currentGrade || incomingProfile.currentGrade || '',
-      gpaText: currentProfile.gpaText || incomingProfile.gpaText || '',
-      rankText: currentProfile.rankText || incomingProfile.rankText || '',
+      university: currentProfile.university,
+      major: currentProfile.major,
+      currentGrade: currentProfile.currentGrade,
+      gpaText: currentProfile.gpaText,
+      rankText: currentProfile.rankText,
       backgroundNote:
         currentProfile.backgroundNote || incomingProfile.backgroundNote || '',
     }
@@ -551,36 +563,6 @@ Page({
     })
   },
 
-  onProfileFieldInput(event: WechatMiniprogram.Input) {
-    const field = String(event.currentTarget.dataset.field) as AcademicProfileField
-    if (!['university', 'major', 'currentGrade', 'gpaText', 'rankText'].includes(field)) {
-      return
-    }
-
-    this.setData({
-      [`profile.${field}`]: event.detail.value,
-    })
-  },
-
-  async onProfileFieldBlur() {
-    if (this.data.profileSaving) return
-
-    try {
-      this.setData({ profileSaving: true })
-      const profile = this.data.profile
-      await updateMyAcademicProfile({
-        university: profile.university.trim() || null,
-        major: profile.major.trim() || null,
-        currentGrade: profile.currentGrade.trim() || null,
-        gpaText: profile.gpaText.trim() || null,
-        rankText: profile.rankText.trim() || null,
-      })
-    } catch (error) {
-      console.info('Academic profile auto-save failed on assessment form.', error)
-    } finally {
-      this.setData({ profileSaving: false })
-    }
-  },
 
   onAddEnglish() {
     if (this.data.english.length >= 6) return
