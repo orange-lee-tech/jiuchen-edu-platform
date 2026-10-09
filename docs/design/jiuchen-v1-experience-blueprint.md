@@ -1,14 +1,18 @@
-> **EXECUTION STATUS — PHASE 0 RELEASED**
+> **EXECUTION STATUS — GATE 0 COMPLETE / BOUNDED PHASE 1a RELEASED (2026-10-09)**
 >
-> Baseline reset is complete. Codex may now execute **Phase 0 mapping only** from the current integration baseline.
+> The 2026-10-04 Phase 0 mapping is complete. Codex may implement the **bounded
+> native four-slot navigation and safe role shell** under
+> `docs/handoff/phase1-codex-execution-2026-10-09.md`.
+> This replaces the outdated “Phase 0 mapping only” banner, **not** the original
+> blueprint's security, truthful-data and no-business-rewrite constraints.
 >
-> Phase 0 is documentation/analysis work. It must not modify runtime code, `app.json`, tabBar, page structure, backend contracts, AI, payment, or visual styles.
+> Full lifecycle Home Phase 1b requires separately reviewed, authenticated,
+> read-only `HomeExperienceSnapshot` contract. Until that contract is approved,
+> no fabricated teacher updates, assessment success, credit count, deadlines,
+> cases or progress statistics to make a page appear finished.
 >
-> Required output: route/navigation/deep-link inventory, role-shell constraints, keep/rename/merge/demote decisions, backend-contract needs, conflict map, and Phase 1 prerequisites.
->
-> Broad implementation remains blocked until main control reviews and approves the Phase 0 map.
->
-> Current orchestration source of truth: `docs/handoff/main-control-status-2026-10-04.md`.
+> Current implementation reality: `docs/handoff/CURRENT.md`. The 2026-10-04
+> Phase 0 route map is historical; refresh affected routes against current HEAD.
 
 # Jiuchen V1 Experience Blueprint
 
