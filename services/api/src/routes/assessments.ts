@@ -3,7 +3,7 @@ import { and, desc, eq } from 'drizzle-orm'
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import type { DatabaseContext } from '../db/client.js'
-import { assessments } from '../db/schema.js'
+import { assessments, userProfiles } from '../db/schema.js'
 import {
   ASSESSMENT_AGENT_VERSION,
   ASSESSMENT_INPUT_SCHEMA_VERSION,
@@ -37,6 +37,40 @@ const createAssessmentSchema = z
     input: assessmentInputSchema,
   })
   .strict()
+
+/**
+ * Recheck against account-owned academic fields on EACH draft write and run.
+ * Read-only WXML alone would not prevent a modified client from forging them.
+ */
+export function isAcademicProfileCurrent(
+  received: z.infer<typeof assessmentInputSchema>['profile'],
+  canonical: { university: string | null; major: string | null; currentGrade: string | null; gpaText: string | null; rankText: string | null } | null,
+): boolean {
+  if (!canonical) return false
+  const normalize = (value: string | null | undefined) => (value ?? '').trim()
+  return (['university', 'major', 'currentGrade', 'gpaText', 'rankText'] as const)
+    .every((field) => normalize(received[field]) === normalize(canonical[field]))
+}
+
+async function matchesAccountAcademicProfile(
+  database: Extract<DatabaseContext, { configured: true }>,
+  userId: string,
+  received: z.infer<typeof assessmentInputSchema>['profile'],
+) {
+  const [canonical] = await database.db
+    .select({
+      university: userProfiles.university,
+      major: userProfiles.major,
+      currentGrade: userProfiles.currentGrade,
+      gpaText: userProfiles.gpaText,
+      rankText: userProfiles.rankText,
+    })
+    .from(userProfiles)
+    .where(eq(userProfiles.userId, userId))
+    .limit(1)
+  return isAcademicProfileCurrent(received, canonical ?? null)
+}
+
 
 const assessmentImportRequestSchema = z
   .object({
@@ -362,6 +396,10 @@ export function registerAssessmentRoutes(
       })
     }
 
+    if (!(await matchesAccountAcademicProfile(database, user.userId, parsed.data.input.profile))) {
+      return reply.code(409).send({ ok: false, error: 'assessment_academic_profile_outdated' })
+    }
+
     const id = randomUUID()
 
     try {
@@ -442,6 +480,10 @@ export function registerAssessmentRoutes(
           message: issue.message,
         })),
       })
+    }
+
+    if (!(await matchesAccountAcademicProfile(database, user.userId, parsed.data.input.profile))) {
+      return reply.code(409).send({ ok: false, error: 'assessment_academic_profile_outdated' })
     }
 
     try {
@@ -687,6 +729,14 @@ export function registerAssessmentRoutes(
           ok: false,
           error: 'assessment_already_succeeded',
         })
+      }
+
+      const draftInput = assessmentInputSchema.safeParse(row.inputJson)
+      if (!draftInput.success) {
+        return reply.code(422).send({ ok: false, error: 'assessment_input_invalid' })
+      }
+      if (!(await matchesAccountAcademicProfile(database, user.userId, draftInput.data.profile))) {
+        return reply.code(409).send({ ok: false, error: 'assessment_academic_profile_outdated' })
       }
 
       if (!runtime.provider.isConfigured()) {

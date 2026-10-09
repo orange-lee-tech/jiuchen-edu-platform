@@ -175,6 +175,7 @@ export function friendlyRequestError(
     database_not_configured: '测试数据库尚未配置完成',
     schema_missing: '测试数据库正在升级，请稍后重试',
     assessment_schema_not_ready: 'AI评估服务正在准备中，请稍后重试',
+    assessment_academic_profile_outdated: '评估学业资料已变化，请前往“我的→编辑个人资料”核对，再重新打开草稿',
     growth_profile_schema_not_ready: '成长履历服务正在准备中，请稍后重试',
     assessment_or_growth_schema_not_ready: '成长履历与评估数据正在准备中，请稍后重试',
     assessment_provider_not_configured: 'AI模型尚未接入，暂时不能运行评估',
