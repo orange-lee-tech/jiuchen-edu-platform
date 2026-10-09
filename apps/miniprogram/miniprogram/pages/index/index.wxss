@@ -4,11 +4,16 @@
 .eyebrow { font-size: 24rpx; font-weight: 600; color: #fff3cf; line-height: 1.6; }
 .home-title { margin-top: 18rpx; font-size: 44rpx; line-height: 1.4; font-weight: 800; }
 .home-description { margin-top: 16rpx; font-size: 27rpx; line-height: 1.8; color: #e7eef8; }
-button { border-radius: 8rpx; white-space: normal; }
+button { box-sizing: border-box; border-radius: 8rpx; white-space: normal; margin-left: 0; margin-right: 0; }
+.home-primary { display: flex; align-items: center; justify-content: center; width: 100%; }
+.action-row { justify-content: flex-start; }
+.service-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.service-links button { display: flex; justify-content: center; align-items: center; min-width: 0; }
+@media (max-width: 340px) { .service-links { grid-template-columns: 1fr; } }
 button::after { border: 0; }
 .home-primary { margin: 28rpx 0 0; padding: 22rpx 24rpx; background: #fff3cf; color: #173b73; font-size: 28rpx; font-weight: 700; line-height: 1.5; }
 .home-primary:active { background: #f2b544; }
-.home-caption { margin-top: 16rpx; font-size: 23rpx; color: #46586e; line-height: 1.6; }
+.home-caption { margin-top: 16rpx; font-size: 23rpx; color: #cfe0f8; line-height: 1.6; }
 .section-heading { margin: 30rpx 0 16rpx; font-size: 31rpx; font-weight: 700; }
 .action-list { background: #fafbfc; border: 1rpx solid #d8dee6; }
 .action-row { display: flex; align-items: center; width: 100%; box-sizing: border-box; margin: 0; padding: 26rpx; background: transparent; border-radius: 0; border-bottom: 1rpx solid #e5e9ee; text-align: left; }
