@@ -1,0 +1,34 @@
+<view wx:if="{{school}}" class="detail-page">
+  <view class="detail-hero">
+    <view class="hero-top"><text>九辰 · 院校档案</text><text class="hero-mark">985 / EDU</text></view>
+    <view class="hero-main"><text class="hero-monogram">{{heroLabel}}</text><view class="hero-identity"><text class="hero-name">{{school.name}}</text><text class="hero-city">{{cityLabel}}</text></view></view>
+    <view class="hero-tags"><text>985 工程</text><text wx:if="{{school.isC9}}">C9 联盟</text><text>官方名单已核对</text></view>
+  </view>
+  <view class="detail-overview">
+    <view class="fact-cell"><text class="fact-key">所在城市</text><text class="fact-value">{{school.city}}</text></view>
+    <view class="fact-cell"><text class="fact-key">985 建设名单</text><text class="fact-value">已核验</text></view>
+    <view class="fact-cell"><text class="fact-key">C9 联盟</text><text class="fact-value">{{school.isC9 ? '是' : '否'}}</text></view>
+  </view>
+  <view class="detail-card">
+    <view class="detail-heading"><text>学校简介</text><text class="detail-hint">官方来源优先</text></view>
+    <text class="intro-text">{{hasIntro ? school.intro : '已核验该校位于教育部公布的985工程建设高校名单中。学校历史介绍及最新情况尚未完成逐校官网核验，不使用未经核实的介绍或统计数字。'}}</text>
+    <view wx:if="{{school.founded}}" class="founded-line">建校历史参考年份：{{school.founded}} · 请以学校官方历史为准</view>
+    <view wx:if="{{school.introSource}}" class="detail-source" data-key="intro" bindtap="copyUrl"><text>学校官方介绍</text><text>复制来源链接 ›</text></view>
+    <view class="detail-source" data-key="moe" bindtap="copyUrl"><text>教育部 985 工程原始名单</text><text>复制来源链接 ›</text></view>
+    <view wx:if="{{school.isC9}}" class="detail-source" data-key="c9" bindtap="copyUrl"><text>C9 成员名录</text><text>复制来源链接 ›</text></view>
+  </view>
+  <view class="detail-card">
+    <view class="detail-heading"><text>官网与校区</text></view>
+    <view wx:if="{{school.website}}" class="contact-line" data-key="website" bindtap="copyUrl"><view><text class="contact-key">学校官网</text><text class="contact-value">{{school.website}}</text></view><text class="contact-go">复制 ›</text></view>
+    <view wx:else class="contact-muted">学校独立官方网站还未逐校核对，暂不提供猜测链接。</view>
+    <view wx:if="{{school.address}}" class="contact-line" bindtap="onCopyAddress"><view><text class="contact-key">已核实公开地址</text><text class="contact-value">{{school.address}}</text></view><text class="contact-go">复制 ›</text></view>
+    <view wx:else class="contact-muted">校区地址仍需核验，以学校网站公示为准。</view>
+  </view>
+  <view class="detail-card project-card">
+    <view class="detail-heading"><text>学院与招生项目</text><text class="detail-hint">按当年文件核实</text></view>
+    <view class="project-guide"><text class="project-number">01</text><view><text class="project-title">核对学院与方向</text><text class="project-note">先确认学院、专业代码和研究方向，不能以学校层次替代项目要求。</text></view></view>
+    <view class="project-guide"><text class="project-number">02</text><view><text class="project-title">获取最新招生原文</text><text class="project-note">以目标学校研究生院及具体院系的当年推免通知和专业目录为准。</text></view></view>
+    <view class="project-guide"><text class="project-number">03</text><view><text class="project-title">联系九辰辅导老师</text><text class="project-note">结合本科背景和可核验案例分析，不承诺录取结果。</text></view></view>
+    <view class="project-warning">学校动态学院数、项目数、关注数等尚未取得经授权的数据源，因此不展示参考应用中的未经核实数字。正式项目目录需独立数据接入。</view>
+  </view>
+</view>

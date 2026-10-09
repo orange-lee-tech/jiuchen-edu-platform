@@ -1,0 +1,41 @@
+<view class="school-page">
+  <view class="school-header">
+    <text class="school-kicker">九辰 · 院校资料</text>
+    <text class="school-title">认识目标院校</text>
+    <text class="school-desc">先核对学校，再深入项目。首批已核实教育部 985 工程名单 {{totalCount}} 所，其中 C9 {{c9Count}} 所。</text>
+  </view>
+  <view class="search-row">
+    <view class="search-field"><text class="search-icon">⌕</text><input value="{{query}}" placeholder="校名 / 拼音 / 地区" bindinput="onQuery" confirm-type="search" /></view>
+    <view class="filter-button" bindtap="onOpenFilter" hover-class="tap-pressed">筛选 ▾</view>
+  </view>
+  <view class="level-tabs">
+    <view class="level-tab {{level === 'all' ? 'selected' : ''}}" data-level="all" bindtap="onLevel">全部 39</view>
+    <view class="level-tab {{level === 'c9' ? 'selected' : ''}}" data-level="c9" bindtap="onLevel">C9 · 9</view>
+    <view class="level-tab {{level === 'other985' ? 'selected' : ''}}" data-level="other985" bindtap="onLevel">其他 985 · 30</view>
+  </view>
+  <view class="school-count"><text>已核验院校 {{schools.length}} 所</text><text wx:if="{{region !== '全部地区'}}">{{region}} · 已筛选</text></view>
+  <view wx:if="{{schools.length === 0}}" class="empty-state"><text>没有匹配的已核验院校</text><text>可以调整筛选；其他学校尚未录入，并不表示该校不存在。</text></view>
+  <view class="school-list">
+    <view wx:for="{{schools}}" wx:key="id" class="school-card" data-id="{{item.id}}" bindtap="onSchool" hover-class="tap-pressed" aria-role="button">
+      <view class="school-emblem"><text>{{item.monogram}}</text></view>
+      <view class="school-copy">
+        <text class="card-name">{{item.name}}</text>
+        <text class="card-location">{{item.subtitle}}</text>
+        <view class="school-tags"><text class="school-tag">985</text><text wx:if="{{item.isC9}}" class="school-tag c9">C9 联盟</text><text class="school-tag source">教育部名单</text></view>
+      </view>
+      <text class="school-arrow">›</text>
+    </view>
+  </view>
+  <view class="catalog-source">资料范围：教育部 985 工程建设高校 39 所。其他 211、双一流及全国本科院校正在独立核验，尚未混入列表或计算排名。</view>
+</view>
+<view wx:if="{{showFilter}}" class="filter-overlay" bindtap="onCloseFilter">
+  <view class="filter-panel" catchtap="onOpenFilter">
+    <view class="filter-head"><text>选择地区</text><text class="filter-close" bindtap="onCloseFilter">✕</text></view>
+    <scroll-view scroll-y class="filter-scroll">
+      <view class="filter-region-list">
+        <view wx:for="{{regions}}" wx:key="*this" class="filter-region {{region === item ? 'selected' : ''}}" data-region="{{item}}" bindtap="onRegion">{{item}}</view>
+      </view>
+    </scroll-view>
+    <view class="filter-actions"><button bindtap="onReset">重置</button><button class="confirm" bindtap="onCloseFilter">完成</button></view>
+  </view>
+</view>
