@@ -3,21 +3,19 @@ import { friendlyRequestError } from '../../utils/request'
 import { openWechatCustomerService } from '../../utils/customer-service'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 
+// Identity editing already lives in the blue hero. Never repeat the same
+// action in a long menu or create parallel assessment entry routes.
 const PERSONAL_MENUS = [
-  { key: 'profile', title: '身份与个人资料', desc: '查看九辰编号，编辑学业背景' },
-  { key: 'growth', title: '成长档案与简历', desc: '查看成长记录，生成简历与申请资料' },
-  { key: 'assessment', title: '评估历史', desc: '继续草稿或重新查看已保存的结果' },
-  { key: 'position', title: '背景评估', desc: '整理背景，明确下一步准备方向' },
-  { key: 'service', title: '联系顾问', desc: '咨询服务与保研准备' },
+  { key: 'growth', title: '成长档案与简历', desc: '整理长期成长记录，生成真实申请材料' },
+  { key: 'assessment', title: 'AI 评估历史与草稿', desc: '接续未完成评估，查看既有报告' },
+  { key: 'service', title: '联系顾问', desc: '向九辰咨询具体院校与服务方案' },
 ]
 const TEACHER_MENUS = [
-  { key: 'profile', title: '身份与个人资料', desc: '查看当前内部身份和编号' },
-  { key: 'students', title: '学员规划与审核', desc: '进入获授权学员的规划和版本审核' },
-  { key: 'service', title: '联系运营', desc: '咨询账号、学员分配与数据问题' },
+  { key: 'students', title: '学员规划与审核', desc: '进入已分配学员的辅导与版本审核' },
+  { key: 'service', title: '联系运营', desc: '咨询账号、学员分配与业务支持' },
 ]
 const ADMIN_MENUS = [
-  { key: 'profile', title: '身份与个人资料', desc: '查看本人的管理员身份和编号' },
-  { key: 'service', title: '联系运营', desc: '咨询账号与服务问题' },
+  { key: 'service', title: '联系运营', desc: '咨询账号与服务支持' },
 ]
 Page({
   data: {
