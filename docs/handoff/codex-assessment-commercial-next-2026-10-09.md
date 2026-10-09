@@ -18,3 +18,7 @@ Never merge main, force push, discard local working files, write production sche
 ## Reporting format
 
 HEAD; changed files; relevant local checks/Push/PR CI; DevTools/device PASS/FAIL/NOT RUN; schema/ECS changes (should be NONE); rollback commit(s); open blockers and human operations. Do not say 'production enabled' because an API route exists.
+
+## Safety correction: payment adapter is BLOCKED
+
+After reviewing WeChat's 2026 virtual-payment requirements, virtual assessment credits cannot be sold through the repository's pre-existing JSAPI order/callback implementation. Do **not** remove the intentional 503 safety guard in `routes/commercial.ts` or present `wx.requestPayment` as live checkout. To launch, require official console approval and a new provider adapter using the correct `wx.requestVirtualPayment` scheme, order signing, delivery and refund/reconciliation flow with its own security tests and explicit product signoff. Source: https://www.mpaypass.com.cn/news/202603/02164733.html

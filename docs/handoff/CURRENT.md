@@ -92,3 +92,5 @@ AI 改进：仅修改 `services/api/src/services/assessment-runtime.ts` 的最�
 GitHub 代码已提交但**未生产发布**：`5e432c1a` 评估学业字段只读；`2ff2e175` 额度赠送/套餐和下单安全门；`f98c40a8` 后台 SQL 聚合；`f5e4b7d5` 原生周/月/年与折线/柱状图和排行榜；`f8dafdc2` 服务端防伪学业资料；`7e48272a` 删除旧 Position 页面隐性自动修改；`386d89f8` 经授权的微信支付客户端入口（开关默认关闭，成交只信回调）。
 
 生产保留原 release，`CREDIT_ENFORCEMENT_ENABLED=false` 不改变，**不得**把新图表/新充值声明为真机已上线。审批与测试门槛：生产 read-only schema、微信商户与证书、退款/消费申诉、iOS 规则、订单回调去重、全角色窄屏机型、后台 SQL 时区与索引。上轮角色只读查看和校方官网真实性检索仍待独立后端安全评审。
+
+**2026-10-09 紧急虚拟支付合规拦截：**根据微信 2026 年 2 月虚拟支付新规，AI Token 充值属于虚拟商品，不能仅使用旧 JSAPI `wx.requestPayment` 视为合规上线。已进一步禁止普通 `POST /me/payment-orders` 下单，`/commercial/meta.payment.checkoutEnabled=false`，不随 `CREDIT_ENFORCEMENT_ENABLED` 被解除。官方虚拟支付通道、资格、虚拟商品/道具、签名、发货和退款协议需要独立研发与人工平台开通。服务端免费次数和统计可先独立验证。

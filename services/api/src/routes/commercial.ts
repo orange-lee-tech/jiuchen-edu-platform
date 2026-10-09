@@ -84,7 +84,10 @@ export function registerCommercialRoutes(
     payment: {
       provider: 'wechat_pay',
       providerConfigured: wechatPay.isConfigured(),
-      checkoutEnabled: config.creditEnforcementEnabled && wechatPay.isConfigured(),
+      // AI assessment credits are virtual goods under the 2026 WeChat policy.
+      // Legacy JSAPI MUST NEVER be enabled as the credit checkout transport.
+      checkoutEnabled: false,
+      checkoutReason: 'wechat_virtual_payment_adapter_required',
       catalog: APPROVED_ASSESSMENT_SKUS,
       skus: config.paymentSkus,
     },
@@ -161,6 +164,12 @@ export function registerCommercialRoutes(
   })
 
   app.post<{ Body: unknown }>('/me/payment-orders', async (request, reply) => {
+    // Compliance hard gate: ordinary JSAPI is not a virtual-goods checkout.
+    // If a virtual adapter is implemented, replace this whole legacy handler
+    // with a separate explicit gateway/route and a verifiable release gate.
+    if (true) {
+      return reply.code(503).send({ ok: false, error: 'wechat_virtual_payment_adapter_required' })
+    }
     if (!config.creditEnforcementEnabled) {
       return reply.code(503).send({ ok: false, error: 'commercial_checkout_not_enabled' })
     }
