@@ -89,6 +89,7 @@ export type AcademicProfile = {
   university: string | null
   major: string | null
   currentGrade: string | null
+  enrollmentYear: number | null
   gpaText: string | null
   rankText: string | null
 }
@@ -469,6 +470,7 @@ export type ParsedSchedule = {
   courses: ParsedScheduleCourse[]
   warnings: string[]
   termStartDate?: string | null
+  stageCode?: string | null
   editedAt?: string | null
 }
 
@@ -486,6 +488,7 @@ export async function createScheduleImport(payload: {
   fileID: string
   fileName: string
   sourceType: 'spreadsheet' | 'image'
+  stageCode: string
 }): Promise<{ importId: string; schedule: ParsedSchedule; fallbackReason?: string }> {
   const result = await request<{
     ok: true
@@ -504,9 +507,9 @@ export async function createScheduleImport(payload: {
   }
 }
 
-export async function getLatestScheduleImport(): Promise<ScheduleImportView | null> {
+export async function getLatestScheduleImport(stageCode?: string): Promise<ScheduleImportView | null> {
   const result = await request<{ ok: true; import: ScheduleImportView | null }>(
-    '/me/classroom/schedule-imports/latest',
+    '/me/classroom/schedule-imports/latest' + (stageCode ? '?stageCode=' + encodeURIComponent(stageCode) : ''),
   )
   return result.import
 }
@@ -526,6 +529,7 @@ export async function updateScheduleImport(
       courses: schedule.courses,
       warnings: schedule.warnings,
       termStartDate: schedule.termStartDate ?? null,
+      stageCode: schedule.stageCode ?? null,
     } as unknown as WechatMiniprogram.IAnyObject,
   )
   return result.schedule

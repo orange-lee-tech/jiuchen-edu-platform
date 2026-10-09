@@ -19,12 +19,13 @@ import {
 import { clearGrowthProfileBootstrapCache } from '../../utils/growth-profile-cache'
 import { authorizePage, openSlot, ROLE_LABELS } from '../../utils/navigation'
 
-type ProfileField = keyof AcademicProfile
+type ProfileField = Exclude<keyof AcademicProfile, 'enrollmentYear'>
 
 const EMPTY_FORM = {
   university: '',
   major: '',
   currentGrade: '',
+  enrollmentYear: '',
   gpaText: '',
   rankText: '',
 }
@@ -53,6 +54,7 @@ Page({
     identity: null as InternalIdentity | null,
     identityLocked: false,
     form: { ...EMPTY_FORM },
+    enrollmentYears: Array.from({ length: 24 }, (_, i) => String(new Date().getFullYear() + 1 - i)),
   },
 
   onLoad(options: Record<string, string>) {
@@ -96,6 +98,7 @@ Page({
         university: profile.university ?? '',
         major: profile.major ?? '',
         currentGrade: profile.currentGrade ?? '',
+        enrollmentYear: profile.enrollmentYear ? String(profile.enrollmentYear) : '',
         gpaText: profile.gpaText ?? '',
         rankText: profile.rankText ?? '',
       },
@@ -122,6 +125,8 @@ Page({
             university: profile.university ?? '',
             major: profile.major ?? '',
             currentGrade: profile.currentGrade ?? '',
+            enrollmentYear: profile.enrollmentYear ? String(profile.enrollmentYear) : '',
+        enrollmentYear: profile.enrollmentYear ? String(profile.enrollmentYear) : '',
             gpaText: profile.gpaText ?? '',
             rankText: profile.rankText ?? '',
           },
@@ -185,6 +190,11 @@ Page({
     })
   },
 
+  onEnrollmentYearChange(event: WechatMiniprogram.CustomEvent<{value: string}>) {
+    const index = Number(event.detail.value)
+    const year = this.data.enrollmentYears[index]
+    if (year) this.setData({ 'form.enrollmentYear': year })
+  },
   async onSave() {
     if (!this.data.canEditAcademic) return
 
@@ -195,6 +205,7 @@ Page({
         university: form.university.trim() || null,
         major: form.major.trim() || null,
         currentGrade: form.currentGrade.trim() || null,
+        enrollmentYear: form.enrollmentYear ? Number(form.enrollmentYear) : null,
         gpaText: form.gpaText.trim() || null,
         rankText: form.rankText.trim() || null,
       })
@@ -204,6 +215,7 @@ Page({
           university: saved.university ?? '',
           major: saved.major ?? '',
           currentGrade: saved.currentGrade ?? '',
+          enrollmentYear: saved.enrollmentYear ? String(saved.enrollmentYear) : '',
           gpaText: saved.gpaText ?? '',
           rankText: saved.rankText ?? '',
         },

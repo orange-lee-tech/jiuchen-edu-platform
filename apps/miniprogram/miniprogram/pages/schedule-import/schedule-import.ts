@@ -5,6 +5,7 @@ import {
   updateScheduleImport,
   type ParsedSchedule,
   type ParsedScheduleCourse,
+  getMyAcademicProfile,
 } from '../../utils/request'
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
 import { authorizePage } from '../../utils/navigation'
@@ -13,6 +14,22 @@ import { currentWeekFromStart, weekMatches } from '../../utils/schedule-view'
 const MAX_SPREADSHEET_BYTES = 5 * 1024 * 1024
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const DAY_OPTIONS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+const TERM_OPTIONS = [
+  { code: 'freshman-fall', label: '大一上' }, { code: 'freshman-spring', label: '大一下' },
+  { code: 'sophomore-fall', label: '大二上' }, { code: 'sophomore-spring', label: '大二下' },
+  { code: 'junior-fall', label: '大三上' }, { code: 'junior-spring', label: '大三下' },
+  { code: 'senior-fall', label: '大四上' }, { code: 'senior-spring', label: '大四下' },
+]
+function hintTerm(enrollmentYear: number | null): string {
+  if (!enrollmentYear) return '未填写入学年份，可前往「我的」补充。请自行选择课表归属学期。'
+  const china = new Date(Date.now() + 8 * 3600000)
+  const year = china.getUTCFullYear(), month = china.getUTCMonth() + 1
+  const academicYear = month >= 9 ? year : year - 1
+  const level = academicYear - enrollmentYear
+  if (level < 0 || level > 3) return '当前日期与入学年份无法形成在读学期，请自行核对。'
+  const label = ['大一','大二','大三','大四'][level] + (month >= 9 || month <= 1 ? '上' : '下')
+  return '按入学年份粗略推算现在约处于「' + label + '」，但导入课表须由本人确认，系统不会代选。'
+}
 
 function sectionRange(value: string) {
   const nums = value.match(/\d+/g)?.map(Number) ?? []
@@ -40,6 +57,12 @@ Page({
   data: {
     parsing: false,
     saving: false,
+    showStagePicker: false,
+    stageOptions: TERM_OPTIONS,
+    stageChoice: '',
+    stageChoiceLabel: '',
+    sourceForStage: '' as '' | 'spreadsheet' | 'image',
+    stageHint: '正在读取入学年份…',
     fileName: '',
     importId: '',
     schedule: null as ParsedSchedule | null,
@@ -61,6 +84,9 @@ Page({
     const requested = options.view === 'manage' ? 'manage' : 'current'
     this.setData({ viewMode: requested })
     void this.loadLatestSchedule()
+    void getMyAcademicProfile()
+      .then(profile => this.setData({ stageHint: hintTerm(profile.enrollmentYear) }))
+      .catch(() => this.setData({ stageHint: '入学年份尚未读取；导入前仍须本人确认归属学期。' }))
   },
 
   async loadLatestSchedule() {
@@ -74,6 +100,8 @@ Page({
         fileName: latest.fileName,
         schedule,
         termStartDate: schedule.termStartDate || '',
+        stageChoice: schedule.stageCode || '',
+        stageChoiceLabel: TERM_OPTIONS.find(stage => stage.code === schedule.stageCode)?.label || '未归档的旧课表',
       })
       this.refreshVisibleCourses()
     } catch (error) {
@@ -120,7 +148,30 @@ Page({
     this.setData({ viewMode: mode }, () => this.refreshVisibleCourses())
   },
 
-  onChooseSpreadsheet() {
+  onChooseSpreadsheet() { this.openStageSelection('spreadsheet') },
+  onChooseImage() { this.openStageSelection('image') },
+  openStageSelection(source: 'spreadsheet' | 'image') {
+    this.setData({ showStagePicker: true, sourceForStage: source, stageChoice: '', stageChoiceLabel: '' })
+  },
+  onSelectStage(event: WechatMiniprogram.BaseEvent) {
+    const code = String(event.currentTarget.dataset.code)
+    const found = TERM_OPTIONS.find(stage => stage.code === code)
+    if (found) this.setData({ stageChoice: found.code, stageChoiceLabel: found.label })
+  },
+  onDismissStage() {
+    this.setData({ showStagePicker: false, sourceForStage: '', stageChoice: '' })
+  },
+  onConfirmStage() {
+    if (!this.data.stageChoice) {
+      wx.showToast({ title: '请先选择课表归属学期', icon: 'none' })
+      return
+    }
+    const source = this.data.sourceForStage
+    this.setData({ showStagePicker: false })
+    if (source === 'spreadsheet') this.chooseSpreadsheetFile()
+    else if (source === 'image') this.chooseImageFile()
+  },
+  chooseSpreadsheetFile() {
     wx.chooseMessageFile({
       count: 1,
       type: 'file',
@@ -138,7 +189,7 @@ Page({
     })
   },
 
-  onChooseImage() {
+  chooseImageFile() {
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
@@ -164,6 +215,9 @@ Page({
     fileSize = 0,
   ) {
     try {
+      const selectedStage = this.data.stageChoice
+      if (!TERM_OPTIONS.some(stage => stage.code === selectedStage))
+        throw new Error('请先确认课表归属学期')
       const maxBytes = sourceType === 'image' ? MAX_IMAGE_BYTES : MAX_SPREADSHEET_BYTES
       if (fileSize > maxBytes) {
         throw new Error(sourceType === 'image' ? '图片不能超过 5MB' : '课表文件不能超过 5MB')
@@ -177,7 +231,7 @@ Page({
       })
 
       const fileID = await uploadAuthenticatedCloudFile({ namespace: 'schedule-imports', filePath, fileName })
-      const result = await createScheduleImport({ fileID, fileName, sourceType })
+      const result = await createScheduleImport({ fileID, fileName, sourceType, stageCode: selectedStage })
       const schedule = result.schedule
 
       this.setData({
@@ -185,6 +239,8 @@ Page({
         schedule,
         termStartDate: schedule.termStartDate || '',
         viewMode: 'manage',
+        stageChoice: selectedStage,
+        stageChoiceLabel: TERM_OPTIONS.find(stage => stage.code === selectedStage)?.label || '',
       })
       this.refreshVisibleCourses()
 
@@ -214,6 +270,11 @@ Page({
   async persistSchedule(schedule: ParsedSchedule) {
     if (!this.data.importId) {
       wx.showToast({ title: '请先导入一个课表', icon: 'none' })
+      return false
+    }
+    if (!TERM_OPTIONS.some(stage => stage.code === schedule.stageCode)) {
+      this.openStageSelection('spreadsheet')
+      wx.showToast({ title: '旧课表需重新确认归属学期', icon: 'none' })
       return false
     }
 

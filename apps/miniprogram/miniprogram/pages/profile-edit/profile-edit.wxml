@@ -48,6 +48,13 @@
         <text class="field-label">专业方向</text>
         <input class="field-input" data-field="major" value="{{form.major}}" placeholder="例如：人工智能" bindinput="onFieldInput" />
       </label>
+      <view class="field">
+        <text class="field-label">入学年份（用于推算大学阶段）</text>
+        <picker range="{{enrollmentYears}}" bindchange="onEnrollmentYearChange">
+          <view class="field-input enrollment-picker">{{form.enrollmentYear ? form.enrollmentYear + ' 年入学' : '请选择入学年份 ›'}}</view>
+        </picker>
+        <text class="enrollment-help">以你正式入读本科的年份为准。课表归属学期仍由你导入时确认。</text>
+      </view>
       <label class="field">
         <text class="field-label">当前年级</text>
         <input class="field-input" data-field="currentGrade" value="{{form.currentGrade}}" placeholder="例如：大二" bindinput="onFieldInput" />
