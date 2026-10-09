@@ -6,7 +6,7 @@
       <text class="page-title">我的规划</text>
       <text class="page-subtitle">{{mode === 'student' ? '真实计划、版本审核与辅导进度' : '大学阶段规划与辅导工作台'}}</text>
     </view>
-    <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge">{{currentStageLabel}}</view>
+    <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge">{{selectedView === 'week' ? '本周课表' : currentStageLabel}}</view>
   </view>
 
   <view wx:if="{{mode === 'guest'}}" class="entry-state surface">
