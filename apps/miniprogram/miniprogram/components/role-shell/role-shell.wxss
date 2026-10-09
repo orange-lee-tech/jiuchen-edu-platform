@@ -9,7 +9,16 @@
 .workspace-description, .state-description { margin-top: 14rpx; font-size: 26rpx; line-height: 1.75; }
 .workspace-description { color:#e7eef8; }
 .state-description { color:#46586e; }
-button { box-sizing: border-box; border-radius: 8rpx; white-space: normal; }
+button { box-sizing: border-box; border-radius: 8rpx; white-space: normal; margin-left: 0; margin-right: 0; }
+.workspace-compact { background: #e7eef8; color: #173b73; border-left: 6rpx solid #2f6fed; border-bottom: 1rpx solid #b6c8df; padding: 26rpx; }
+.workspace-compact .eyebrow { color: #2459be; }
+.workspace-compact .workspace-title { font-size: 34rpx; margin-top: 8rpx; }
+.workspace-compact .workspace-description { color: #46586e; margin-top: 8rpx; font-size: 25rpx; }
+.workspace-compact .primary { background: #173b73; color: #fff; width: 100%; }
+.workspace-compact .primary:active { background: #2459be; }
+.workspace-home .primary { width: 100%; }
+.action-row { justify-content: flex-start; }
+
 button::after { border: 0; }
 .primary { margin: 28rpx 0 0; padding: 22rpx 24rpx; background: #2f6fed; color: #fff; font-size: 28rpx; font-weight: 700; line-height: 1.5; }
 .primary:active { background: #2459be; }
