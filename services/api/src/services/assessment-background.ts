@@ -26,6 +26,10 @@ export type AssessmentCommercialOptions = {
     version: string
     amount: number
   } | null
+  studentBonusGrant?: {
+    version: string
+    amount: number
+  } | null
 }
 
 export type AssessmentBackgroundJob = {

@@ -42,6 +42,7 @@ export function buildApp(env: AppEnv) {
   const assessmentCommercial = {
     creditEnforcementEnabled: commercialConfig.creditEnforcementEnabled,
     freeGrant: commercialConfig.freeGrant,
+    studentBonusGrant: commercialConfig.studentBonusGrant,
   }
   const assessmentNotification = createAssessmentNotificationAdapter()
   const assessmentWorker = createAssessmentBackgroundWorker({

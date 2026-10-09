@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
+import type { UserRole } from '../domain/auth-policy.js'
 
 const skuSchema = z.object({
   key: z.string().trim().regex(/^[a-z0-9][a-z0-9_-]{1,63}$/),
@@ -10,12 +11,19 @@ const skuSchema = z.object({
 
 export type CreditSku = z.infer<typeof skuSchema>
 
+// Only AI evaluations may be sold; canonical WeChat payment description.
+export const APPROVED_ASSESSMENT_SKUS: readonly CreditSku[] = Object.freeze([
+  { key: 'assessment-1', description: '小程序AI评估费用', amountFen: 190, creditAmount: 1 },
+  { key: 'assessment-10', description: '小程序AI评估费用', amountFen: 1690, creditAmount: 10 },
+])
+export const GUEST_FREE_COUNT = 1
+export const STUDENT_TOTAL_FREE_COUNT = 5
+export type FreeGrant = { version: string; amount: number }
+
 export type CommercialConfig = {
   creditEnforcementEnabled: boolean
-  freeGrant: {
-    version: string
-    amount: number
-  } | null
+  freeGrant: FreeGrant | null
+  studentBonusGrant: FreeGrant | null
   paymentSkus: readonly CreditSku[]
 }
 
@@ -51,16 +59,37 @@ export function createCommercialConfig(env: AppEnv): CommercialConfig {
     throw new Error('incomplete_credit_free_grant_config')
   }
 
+  const enabled = env.CREDIT_ENFORCEMENT_ENABLED ?? false
+  const freeGrant = env.CREDIT_FREE_GRANT_VERSION && env.CREDIT_FREE_GRANT_AMOUNT
+    ? { version: env.CREDIT_FREE_GRANT_VERSION, amount: env.CREDIT_FREE_GRANT_AMOUNT }
+    : null
+  const configuredSkus = parsePaymentSkus(env.CREDIT_PAYMENT_SKUS_JSON)
+
+  // Fail closed, before payment initiation, on an unapproved fee/quota.
+  if (enabled) {
+    if (!freeGrant || freeGrant.amount !== GUEST_FREE_COUNT) {
+      throw new Error('approved_guest_free_grant_required')
+    }
+    if (configuredSkus.length > 0 && (
+      configuredSkus.length !== APPROVED_ASSESSMENT_SKUS.length ||
+      APPROVED_ASSESSMENT_SKUS.some((sku) => !configuredSkus.some((item) =>
+        item.key === sku.key &&
+        item.description === sku.description &&
+        item.amountFen === sku.amountFen &&
+        item.creditAmount === sku.creditAmount
+      ))
+    )) throw new Error('unapproved_assessment_payment_sku')
+  }
+
   return {
-    creditEnforcementEnabled: env.CREDIT_ENFORCEMENT_ENABLED ?? false,
-    freeGrant:
-      env.CREDIT_FREE_GRANT_VERSION && env.CREDIT_FREE_GRANT_AMOUNT
-        ? {
-            version: env.CREDIT_FREE_GRANT_VERSION,
-            amount: env.CREDIT_FREE_GRANT_AMOUNT,
-          }
-        : null,
-    paymentSkus: parsePaymentSkus(env.CREDIT_PAYMENT_SKUS_JSON),
+    creditEnforcementEnabled: enabled,
+    freeGrant,
+    // Grant one to everyone; upgrading an account to student adds four.
+    // Distinct stable versions prevent student upgrades from yielding six credits.
+    studentBonusGrant: freeGrant?.amount === GUEST_FREE_COUNT
+      ? { version: `${freeGrant.version}:student-bonus`, amount: STUDENT_TOTAL_FREE_COUNT - GUEST_FREE_COUNT }
+      : null,
+    paymentSkus: enabled ? APPROVED_ASSESSMENT_SKUS : [],
   }
 }
 
@@ -69,4 +98,10 @@ export function findCreditSku(
   key: string,
 ): CreditSku | null {
   return config.paymentSkus.find((sku) => sku.key === key) ?? null
+}
+
+export function freeGrantsForRole(config: Pick<CommercialConfig, 'freeGrant' | 'studentBonusGrant'>, role: UserRole): FreeGrant[] {
+  if (role !== 'user' && role !== 'student') return []
+  return [config.freeGrant, role === 'student' ? config.studentBonusGrant : null]
+    .filter((grant): grant is FreeGrant => grant !== null)
 }

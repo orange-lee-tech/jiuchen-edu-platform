@@ -49,6 +49,7 @@ const assessmentImportRequestSchema = z
 const DEFAULT_COMMERCIAL_OPTIONS: AssessmentCommercialOptions = {
   creditEnforcementEnabled: false,
   freeGrant: null,
+  studentBonusGrant: null,
 }
 
 const DEFAULT_RUN_DISPATCHER: Pick<
@@ -699,12 +700,8 @@ export function registerAssessmentRoutes(
 
       if (commercial.creditEnforcementEnabled) {
         try {
-          if (commercial.freeGrant) {
-            await grantFreeCredits({
-              database,
-              userId: user.userId,
-              grant: commercial.freeGrant,
-            })
+          for (const grant of [commercial.freeGrant, user.role === 'student' ? commercial.studentBonusGrant : null]) {
+            if (grant) await grantFreeCredits({ database, userId: user.userId, grant })
           }
           await beginAssessmentRunWithCredit({
             database,

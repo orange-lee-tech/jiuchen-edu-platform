@@ -13,7 +13,11 @@ import {
   readCreditAccount,
 } from '../services/credit-ledger.js'
 import {
+  APPROVED_ASSESSMENT_SKUS,
+  GUEST_FREE_COUNT,
+  STUDENT_TOTAL_FREE_COUNT,
   findCreditSku,
+  freeGrantsForRole,
   type CommercialConfig,
 } from '../services/commercial-config.js'
 import {
@@ -76,9 +80,12 @@ export function registerCommercialRoutes(
       : {
           configured: false,
         },
+    rolePolicy: { guestFree: GUEST_FREE_COUNT, studentTotalFree: STUDENT_TOTAL_FREE_COUNT },
     payment: {
       provider: 'wechat_pay',
       providerConfigured: wechatPay.isConfigured(),
+      checkoutEnabled: config.creditEnforcementEnabled && wechatPay.isConfigured(),
+      catalog: APPROVED_ASSESSMENT_SKUS,
       skus: config.paymentSkus,
     },
   }))
@@ -133,15 +140,16 @@ export function registerCommercialRoutes(
     }
 
     try {
-      const grant = await grantFreeCredits({
-        database,
-        userId: user.userId,
-        grant: config.freeGrant,
-      })
+      const grants = []
+      for (const grantPolicy of freeGrantsForRole(config, user.role)) {
+        grants.push(await grantFreeCredits({ database, userId: user.userId, grant: grantPolicy }))
+      }
+      const grant = grants[0] ?? null
       const account = await readCreditAccount(database, user.userId)
       return {
         ok: true,
         grant,
+        grants,
         account,
       }
     } catch (error) {
@@ -153,6 +161,9 @@ export function registerCommercialRoutes(
   })
 
   app.post<{ Body: unknown }>('/me/payment-orders', async (request, reply) => {
+    if (!config.creditEnforcementEnabled) {
+      return reply.code(503).send({ ok: false, error: 'commercial_checkout_not_enabled' })
+    }
     if (!database.configured) {
       return reply.code(503).send({
         ok: false,
