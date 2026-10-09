@@ -378,3 +378,35 @@ test('current-week plan badge follows the selected view', () => {
   const html = fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxml'), 'utf8')
   assert.match(html, /selectedView === 'week' \? '本周课表' : currentStageLabel/)
 })
+
+test('new user and each claimed business role receive a separate, dismissible 4-step guide', () => {
+  const h = harness()
+  const first = h.component('first-use-guide')
+  first.lifetimes.attached.call(first)
+  h.auth.saveAuthResult(authFixture('user'))
+  assert.equal(first.data.active, true)
+  assert.equal(first.data.count, 4)
+  assert.match(first.data.title, /欢迎/)
+  first.onNext()
+  assert.equal(first.data.current, 1)
+  first.onSkip()
+  assert.equal(first.data.active, false)
+
+  h.auth.saveAuthResult(authFixture('student'))
+  assert.equal(first.data.active, true, 'new claimed role gets fresh guide')
+  assert.match(first.data.title, /学员/)
+  first.onSkip()
+
+  h.auth.saveAuthResult(authFixture('admin'))
+  assert.equal(first.data.active, true)
+  assert.match(first.data.title, /管理员/)
+  first.onSkip()
+
+  h.auth.saveAuthResult(authFixture('admin'))
+  assert.equal(first.data.active, false, 'same account/role not repeatedly shown')
+  first.lifetimes.detached.call(first)
+  for (const page of ['index', 'classroom', 'news', 'profile']) {
+    const wxml = fs.readFileSync(path.join(root, `pages/${page}/${page}.wxml`), 'utf8')
+    assert.match(wxml, /<first-use-guide \/>/)
+  }
+})
