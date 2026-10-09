@@ -1,5 +1,5 @@
 <view class="home-page">
-  <role-shell slot="home" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <role-shell view-slot="home" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready' && shellKind === 'student'}}">
     <view class="home-intro">
       <text class="eyebrow">九辰保研 · 陪你走清楚每一步</text>
