@@ -37,8 +37,28 @@ Deep-link compatibility to preserve and test: assessment form `id`, `section` (e
 - **No API, database migration, ECS, NPM, Nginx, production release, environment, payment/credit, Assessment model/runtime or CloudBase adapter change** in Phase 1a.
 - Phase 1b lifecycle Home requires separately reviewed **read-only** `HomeExperienceSnapshot` (latest-success/draft, role, stage, assignments, plan, source revision/readiness) and must not be fabricated from first 50 assessment records, hidden mentors, dates or other misleading proxies. Phase 1a does not create this API or make multiple heavy bootstrap requests to simulate it.
 - No fictional ranked university database, deadlines, grade trends, service hours, cases, teacher records, AI credit balance or labels. Real OA articles are not yet a structured opportunity catalog.
-- No broad color/skin sweep or full admin ID table redesign in Phase 1a; existing narrow-screen admin ID cards are known Phase 4 UX debt. Do not change identity lifecycle write semantics to fix visual overflow.
+- No indiscriminate color/skin sweep or full admin ID table redesign in Phase 1a. **Within every page/shell touched in Phase 1a, deliberate visual hierarchy, legible accent color and usable tap/feedback states are mandatory.** Existing narrow-screen admin ID cards are known Phase 4 UX debt; leave a concrete defect entry and route into it safely rather than claiming that UX is accepted. Do not change identity lifecycle write semantics to fix visual overflow.
 - Commercial merchant/SKU/free grant/refund/Pay and News systemd timer checks remain separate non-blocking release/operations gates. WeChat subscription template not configured; do not claim a push notification is working.
+
+## C1. Human-first visual communication & interaction contract (product emphasis 2026-10-09)
+
+**A passing typecheck is not a passing screen.** Before editing WXML/WXSS or action handlers, write a compact per-role, per-slot screen contract in a short local note / final handoff: 
+**用户是谁 → 来做什么 → 首屏必须看到什么 → 主操作是什么 → 点击后反馈什么 → 失败如何恢复 → 返回哪里**.
+Do this for guest/student, teacher/staff, admin at all four physical slots. Implement the approved Phase 1a scope—not pretend to build Phase 1b lifecycle facts or Phase 4 full admin workspace.
+
+**Visual communication is an engineering requirement:**
+
+1. **Attention path**: establish a clear focal point, informative title, active state and one obvious next action within ~5 seconds. Put the task above secondary marketing, secondary lists, background and ornamental cards. Do not use a wall of identical cards, all-gray emptiness or oversized blank areas to simulate "high-end minimalist".
+2. **Color with a job**: the approved action blue (`#2F6FED`) and blue-gray tones guide selected navigation, primary actions and current stage. Quiet green=confirmed, amber=needs attention, red=destructive/error, warm neutral=human guidance **only when the state is real**. A monochrome interface is **not** the goal; balanced purposeful color is required. Avoid arbitrarily painting unrelated GPA/English/research/competition widgets with separate bright hues. Text/icons must explain states without relying on color alone.
+3. **Ordinary-language, predictable affordance**: replace machine-speak (`claimed`, `disabled`, role enum names, generic “操作/确定”) in user-visible areas with Chinese status and consequence-focused button text. Don't assume users know the backend. One visually dominant positive next action at a time; risky secondary actions are separated/confirmed. Clickable-looking elements must genuinely work; static information must not impersonate an enabled button.
+4. **Feedback and repair**: pressed/loading/disabled, server-confirmed success, error with retry and saved input, cancel/back path. Do not silently discard unsaved fields on tab switch, identity change, failed navigation or 401. For a permission-restricted surface say what is available and how to recover, not a blank view.
+5. **Real phone geometry**: check compact narrow screen, ordinary screen and font scaling in WeChat DevTools. No horizontal scroll for normal forms/lists, no ID/code split every few glyphs, no "two huge buttons beside 20px text" layout, no primary CTA under keyboard/native tabBar. Don't invent screen dimensions: use actual preview measurements, `rpx`, safe area and responsive layout. Test keyboard focus and list density.
+6. **Navigation as human mental model**: "规划/机会/我的" must lead to content fitting those labels; for teacher/admin, "学员/辅导/用户/业务" must not be just renamed student news feeds. When existing backend cannot serve expected view, show an honest entry/unsupported state with an actually working next step rather than fake workbench counts.
+7. **Before/after evidence**: for each changed shell provide screenshot or explicitly NOT RUN, plus 3-sentence critique of hierarchy/color/actions. Use user's admin narrow-screen screenshot as a **counterexample** (ID fragments, action controls colliding, raw statuses, scrolling) not a style template.
+
+**Pre-commit human task walkthrough**: (a) never-logged-in visitor finds login or public useful action; (b) student opens Plan and finds their current stage without decoding the old "classroom" internal name; (c) teacher uses authorized student/coaching entry; (d) administrator finds authorized workbench without seeing student-only data; (e) switching role after successful ID claim does not cause double login; (f) user can navigate back and recover from 401. Each needs *where to tap, expected feedback, available safe fallback*.
+
+Authoritative visuals: `docs/design/jiuchen-v1-design-system.md`, especially **§6 meaningful chroma** and **§9 human-first interaction**. Design references are guidance, not permission to add inaccessible graphical effects or ungrounded statistics.
 
 ## D. Acceptance gate — ordinary humans on real phones
 
