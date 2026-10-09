@@ -55,7 +55,8 @@
   "style": "v2",
   "usingComponents": {
     "role-shell": "/components/role-shell/role-shell",
-    "auth-gate": "/components/auth-gate/auth-gate"
+    "auth-gate": "/components/auth-gate/auth-gate",
+    "first-use-guide": "/components/first-use-guide/first-use-guide"
   },
   "sitemapLocation": "sitemap.json"
 }
