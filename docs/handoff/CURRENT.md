@@ -1,6 +1,6 @@
 # CURRENT — 九辰保研小程序唯一活跃交接入口
 
-**更新：2026-10-09 · Phase 1a-R UI Closeout 本地代码与 23 项回归完成；CI 和手机验收状态见本文件末尾。** 本文件管理当前任务与验收状态；历史日期交接仅记录当时事实，不覆盖本文件。
+**更新：2026-10-09 · 用户真实手机反馈后的 UI 故障修复已在集成分支施工；GitHub CI 与真机状态分开记录。** 本文件管理当前任务与验收状态；历史日期交接仅记录当时事实，不覆盖本文件。
 
 ## 权威读取顺序
 
@@ -46,7 +46,7 @@
 
 **Phase 1b 及后续：**经独立审批的只读 Home snapshot → 生命周期首页 → 高频事实更新/规划/机会 → 教师和管理员工作台移动 UX → 全站视觉统一 → 真机全链路回归。各批不得使用占位数据伪装完整功能。
 
-**禁止：**`main` 合并、force push、覆盖本地工作、生产 promote/写 Schema、AI 提示词/运行时和商业账本改动、虚构案例/截止日/排名/未读、将老交接当现行施工命令。
+**禁止：**`main` 合并、force push、覆盖本地工作、生产 promote/写 Schema、重构已冻结 AI provider/输出结构/商业账本、虚构案例/截止日/排名/未读、将老交接当现行施工命令。2026-10-09 新的人类指令**单独批准**给现有 AI system prompt 补充“未知目标学校/官方证据缺失/无录取承诺”的最小措辞；不意味着批准新检索器、正式部署或广泛 Prompt 改写。
 
 ## Phase 1a 本轮实际证据
 
@@ -71,3 +71,16 @@
 - 代码提交 `0c5378cb8c419309176dc93bdf9bfc2f9211f2e2` 已推送。本地小程序 typecheck PASS；原 16 项 + 7 项专项测试，23 PASS；[Push CI #37938435444](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/37938435444) / [PR CI #37938437942](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/37938437942) 均 SUCCESS，小程序检查、Admin typecheck/build、API typecheck/test/build 成功。无小程序 npm build 脚本，未声称原生编译 PASS。
 - computer-use 再试 Node 内核退出；开发者工具、窄屏/字体/键盘与真机截图全部 **NOT RUN**。不宣称移动 UX 已验收。
 - 逐页整改对照、具体 Gate、独立业务待办及整体回滚边界见 `docs/handoff/phase1a-r-closeout.md`。Group / 定制资讯授权 / 评估客服分享均未实现；Phase 1b 未开始。
+
+
+## 2026-10-09 补充 UI 回归与首次使用引导（在 Phase 1a-R 之后）
+
+**新一轮用户真机截图证实旧 UI 缺陷仍存在，不能以此前 CI GREEN 代表 UX 通过。** 具体见 `docs/handoff/ux-device-recovery-2026-10-09.md`。其中四个管理员 Tab 完全重复深蓝主页的根因是自定义 `role-shell` 把微信保留的 WXML `slot` 当作组件属性；已改名 `view-slot`，并加入新回归。管理员的“我的”不再展示重复工作台页，用户/业务入口改为紧凑、分工明确的内容；本周课表右上徽章与右侧课表视图联动；首页默认 button 横向边距、主动作宽度和深蓝下方低对比小字已修正。
+
+新组件：`first-use-guide`，首次登录游客（user）及首次认领 student/teacher/staff/admin 分别提供四步可跳过引导，本地记录分账户/分角色，不篡改身份；`official-website-dialog` 提供带官网地址的中文欢迎与复制入口。**微信小程序不能从任意点击强制唤起手机默认外部浏览器**，官网业务域名校验完成前不伪装能直接跳转，用户仍可复制后在浏览器中打开。
+
+AI 改进：仅修改 `services/api/src/services/assessment-runtime.ts` 的最小系统提示词：未知学校与没有官方当年来源需降级 `insufficient_data`、承认证据缺口、给出老师/客服核实建议；现有 JSON Schema、模型、服务端数据、六章节报告不变。**这只是 GitHub 源代码，未发布到 ECS，线上仍为 `ea8c9710` 的旧行为。** 人工训练包的 8 组 silver-label 配对、14 条合成对抗样本与依赖设计见 `docs/design/assessment-human-method-integration-2026-10-09.md`，未声称已跑 14 条实际 live 模型测试。
+
+明确未实现的新业务：老师查看**获分配学员**和管理员查看任意允许范围的学员/老师“只读界面”，要求独立服务端授权、审计和不改变真实登录用户；现有客户端不能直接做账户冒充。详见 `docs/product/readonly-role-preview-contract-2026-10-09.md`。师生分组、组别资讯服务器端可见性、AI 评估分享到微信人工客服，也都保留为独立后续工作包。
+
+**后续 Codex 唯一操作入口：`docs/handoff/codex-next-gates-2026-10-09.md`。** 不得把该文件描述的未完成工作视作已上线。下一轮先用真实微信工具和窄屏真机复核，补充视觉截图；其他新增业务每条独立 API/Schema 安全和生产 Gate。
