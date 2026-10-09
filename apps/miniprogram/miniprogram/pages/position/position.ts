@@ -1,20 +1,6 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import { INITIAL_SHELL, loginFor, observeShell, openSlot, shellView } from '../../utils/navigation'
-import {
-  getCachedAcademicProfile,
-  saveCachedAcademicProfile,
-} from '../../utils/profile-cache'
-import { clearGrowthProfileBootstrapCache } from '../../utils/growth-profile-cache'
-import {
-  friendlyRequestError,
-  getMyAcademicProfile,
-  updateMyAcademicProfile,
-  type AcademicProfile,
-} from '../../utils/request'
-
-type ProfileField = keyof AcademicProfile
-
-let profileSaveTimer: ReturnType<typeof setTimeout> | null = null
+import { getMyAcademicProfile } from '../../utils/request'
 
 const EMPTY_PROFILE = {
   university: '',
@@ -28,7 +14,6 @@ Page({
   data: {
     ...INITIAL_SHELL,
     canEditProfile: false,
-    profileSaving: false,
     profileForm: { ...EMPTY_PROFILE },
     dimensions: [
       { key: 'profile', title: '学业基础', desc: '绩点、排名与核心课程', status: '填写 ›' },
@@ -40,7 +25,6 @@ Page({
 
   stopAuth: undefined as (() => void) | undefined,
   profileOwner: null as string | null,
-  profileDirty: false,
   onShow() {
     this.stopAuth?.()
     this.stopAuth = observeShell((state) => {
@@ -59,45 +43,17 @@ Page({
     const sameOwner = this.profileOwner === auth?.user.id
     if (canEditProfile && !sameOwner) {
       this.profileOwner = auth!.user.id
-      this.profileDirty = false
       this.setData({ profileForm: { ...EMPTY_PROFILE } })
     }
     this.setData({ canEditProfile })
-
-    if (canEditProfile && !(sameOwner && this.profileDirty)) {
-      void this.hydrateThenLoadProfile()
-    }
-  },
-
-  async hydrateThenLoadProfile() {
-    const owner = this.profileOwner
-    await this.hydrateCachedProfile()
-    if (owner !== this.profileOwner || owner !== getSavedAuthResult()?.user.id) return
-    await this.loadAcademicProfile()
-  },
-
-  async hydrateCachedProfile() {
-    const owner = this.profileOwner
-    const cached = await getCachedAcademicProfile()
-    if (!cached || !this.data.canEditProfile || this.profileDirty ||
-      owner !== this.profileOwner || owner !== getSavedAuthResult()?.user.id) return
-
-    this.setData({
-      profileForm: {
-        university: cached.university || '',
-        major: cached.major || '',
-        currentGrade: cached.currentGrade || '',
-        gpaText: cached.gpaText || '',
-        rankText: cached.rankText || '',
-      },
-    })
+    if (canEditProfile) void this.loadAcademicProfile()
   },
 
   async loadAcademicProfile() {
     const owner = this.profileOwner
     try {
       const profile = await getMyAcademicProfile()
-      if (!this.data.canEditProfile || this.profileDirty ||
+      if (!this.data.canEditProfile ||
         owner !== this.profileOwner || owner !== getSavedAuthResult()?.user.id) return
       const normalized = {
         university: profile.university || '',
@@ -107,86 +63,12 @@ Page({
         rankText: profile.rankText || '',
       }
       this.setData({ profileForm: normalized })
-      void saveCachedAcademicProfile(normalized)
     } catch (error) {
       console.info('Academic profile is unavailable on position page.', error)
     }
   },
 
-  onProfileInput(event: WechatMiniprogram.Input) {
-    this.profileDirty = true
-    const field = String(event.currentTarget.dataset.field) as ProfileField
-    if (!(field in this.data.profileForm)) return
-
-    this.setData({
-      [`profileForm.${field}`]: event.detail.value,
-    })
-
-    const form = {
-      ...this.data.profileForm,
-      [field]: event.detail.value,
-    }
-    void saveCachedAcademicProfile(form)
-
-    if (profileSaveTimer) clearTimeout(profileSaveTimer)
-    profileSaveTimer = setTimeout(() => {
-      void this.persistProfile()
-    }, 650)
-  },
-
-  async persistProfile() {
-    if (!this.data.canEditProfile || this.data.profileSaving) return
-
-    try {
-      this.setData({ profileSaving: true })
-      const form = this.data.profileForm
-      const saved = await updateMyAcademicProfile({
-        university: form.university.trim() || null,
-        major: form.major.trim() || null,
-        currentGrade: form.currentGrade.trim() || null,
-        gpaText: form.gpaText.trim() || null,
-        rankText: form.rankText.trim() || null,
-      })
-      const normalized = {
-        university: saved.university || '',
-        major: saved.major || '',
-        currentGrade: saved.currentGrade || '',
-        gpaText: saved.gpaText || '',
-        rankText: saved.rankText || '',
-      }
-      this.setData({ profileForm: normalized })
-      this.profileDirty = false
-      await Promise.all([
-        saveCachedAcademicProfile(normalized),
-        clearGrowthProfileBootstrapCache(),
-      ])
-    } catch (error) {
-      wx.showToast({
-        title: friendlyRequestError(error, '资料自动保存失败'),
-        icon: 'none',
-        duration: 2200,
-      })
-    } finally {
-      this.setData({ profileSaving: false })
-    }
-  },
-
-  onProfileBlur() {
-    if (profileSaveTimer) {
-      clearTimeout(profileSaveTimer)
-      profileSaveTimer = null
-    }
-    void this.persistProfile()
-  },
-
-  onUnload() {
-    this.stopAuth?.()
-    if (profileSaveTimer) {
-      clearTimeout(profileSaveTimer)
-      profileSaveTimer = null
-    }
-    if (this.data.canEditProfile) void this.persistProfile()
-  },
+  onUnload() { this.stopAuth?.() },
 
   onStartAssessment() {
     const auth = getSavedAuthResult()
@@ -214,8 +96,8 @@ Page({
   },
 
   onProfileCardTap() {
-    if (this.data.canEditProfile) return
-    if (getSavedAuthResult()) openSlot('mine')
+    if (this.data.canEditProfile) wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
+    else if (getSavedAuthResult()) openSlot('mine')
     else loginFor('pages/position/position', {}, true)
   },
 
