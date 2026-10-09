@@ -53,7 +53,7 @@ test('catalog preserves source evidence and does not pretend to have fake analyt
   assert.match(school, /www\.moe\.gov\.cn\/srcsite\/A22/)
   assert.match(school, /cge\.bit\.edu\.cn/)
   const detail = fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
-  assert.match(detail, /教育部 985 工程原始名单/)
+  assert.match(detail, /教育部 \{\{school.is985 \? '985' : '211'\}\} 工程原始名单/)
   assert.match(detail, /项目数、关注数/)
   assert.doesNotMatch(detail, /<image\b/)
 })
