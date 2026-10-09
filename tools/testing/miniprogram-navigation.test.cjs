@@ -360,9 +360,9 @@ test('role-shell uses an ordinary view-slot property instead of reserved WXML sl
   assert.match(component, /'viewSlot, kind'/)
   assert.doesNotMatch(template, /\bslot\s*!==\s*'mine'/)
   for (const [page, slot] of Object.entries(expected)) {
-    const html = fs.readFileSync(path.join(root, \`pages/\${page}/\${page}.wxml\`), 'utf8')
-    assert.ok(html.includes(\`<role-shell view-slot="\${slot}"\`), \`\${page} binds the explicit view-slot value\`)
-    assert.ok(!html.includes('<role-shell slot='), \`\${page} must not use native slot attribute\`)
+    const html = fs.readFileSync(path.join(root, `pages/${page}/${page}.wxml`), 'utf8')
+    assert.ok(html.includes(`<role-shell view-slot="${slot}"`), `${page} binds the explicit view-slot value`)
+    assert.ok(!html.includes('<role-shell slot='), `${page} must not use native slot attribute`)
   }
   for (const kind of ['admin', 'teacher']) {
     const h = harness(), cmp = h.component('role-shell', { phase:'ready', kind, viewSlot:'mine' })
