@@ -126,7 +126,6 @@ Page({
             major: profile.major ?? '',
             currentGrade: profile.currentGrade ?? '',
             enrollmentYear: profile.enrollmentYear ? String(profile.enrollmentYear) : '',
-        enrollmentYear: profile.enrollmentYear ? String(profile.enrollmentYear) : '',
             gpaText: profile.gpaText ?? '',
             rankText: profile.rankText ?? '',
           },
