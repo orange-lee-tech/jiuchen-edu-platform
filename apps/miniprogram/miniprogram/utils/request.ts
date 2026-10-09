@@ -181,6 +181,10 @@ export function friendlyRequestError(
     credit_payment_schema_not_ready: '充值系统正在准备中，请稍后再试',
     wechat_pay_not_configured: '微信支付尚未开通，请联系九辰客服',
     commercial_checkout_not_enabled: '充值尚未开放，请稍后再试',
+    wechat_virtual_payment_not_ready: '虚拟支付尚未开通，请联系九辰客服',
+    wechat_virtual_code_expired: '微信登录凭据已失效，请重新发起支付',
+    wechat_identity_mismatch: '当前微信与登录账号不一致',
+    virtual_payment_query_unavailable: '支付结果尚未核实，请稍后重试',
     growth_profile_schema_not_ready: '成长履历服务正在准备中，请稍后重试',
     assessment_or_growth_schema_not_ready: '成长履历与评估数据正在准备中，请稍后重试',
     assessment_provider_not_configured: 'AI模型尚未接入，暂时不能运行评估',
@@ -768,6 +772,13 @@ export async function grantMyFreeCredits(): Promise<CreditAccount> {
 export async function getMyCreditAccount(): Promise<CreditAccount> {
   const result = await request<{ ok: true; account: CreditAccount }>('/me/credits')
   return result.account
+}
+export type VirtualPaymentArgs = {mode:'goods';signData:string;paySig:string;signature:string}
+export async function createVirtualAssessmentOrder(skuKey:string,wechatCode:string):Promise<{order:{id:string;status:'pending';amountFen:number;creditAmount:number};payment:VirtualPaymentArgs}> {
+  return request('/me/virtual-payment-orders','POST',{skuKey,wechatCode})
+}
+export async function reconcileVirtualAssessmentOrder(id:string):Promise<{ok:boolean;state:'paid'|'pending'|'refunded'|'closed';credited:boolean;deliveryPending?:boolean}> {
+  return request('/me/virtual-payment-orders/'+encodeURIComponent(id)+'/reconcile','POST',{})
 }
 export async function createAssessmentPaymentOrder(skuKey: string): Promise<{ order: AssessmentPaymentOrder; payment: AssessmentPaymentParams }> {
   const result = await request<{ ok: true; order: AssessmentPaymentOrder; payment: AssessmentPaymentParams }>(

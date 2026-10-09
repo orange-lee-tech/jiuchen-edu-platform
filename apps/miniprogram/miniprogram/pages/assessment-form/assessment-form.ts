@@ -7,7 +7,8 @@ import {
   getCommercialMeta,
   grantMyFreeCredits,
   getMyCreditAccount,
-  createAssessmentPaymentOrder,
+  createVirtualAssessmentOrder,
+  reconcileVirtualAssessmentOrder,
   getAssessmentPaymentOrder,
   getMyAcademicProfile,
   getMyAssessment,
@@ -22,6 +23,7 @@ import {
 } from '../../utils/request'
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
 
+const virtualOrderKey = () => 'jiuchen:virtual-order:' + (getSavedAuthResult()?.user.id || 'none')
 const RESEARCH_TIERS = [
   'Nature',
   'Science',
@@ -276,6 +278,12 @@ Page({
     authorizePage('pages/assessment-form/assessment-form', query, () => { void this.initializeForm(query) })
   },
   onShow() {
+    const auth=getSavedAuthResult()
+    if(auth) {
+      const id=wx.getStorageSync(virtualOrderKey())
+      if(typeof id==='string' && id && !this.data.pendingPaymentOrderId)
+        this.setData({pendingPaymentOrderId:id})
+    }
     // Read the canonical account profile after returning from 我的 → 编辑个人资料.
     // Never promote resume extraction or a historical draft to the source of truth.
     if (!this.data.profileReady || this.data.loading) return
@@ -332,56 +340,60 @@ Page({
   },
   async beginCreditPurchase(skuKey: string) {
     if (this.data.purchasing || !this.data.checkoutEnabled) return
-    this.setData({ purchasing: true })
+    this.setData({purchasing:true})
     try {
-      const { order, payment } = await createAssessmentPaymentOrder(skuKey)
-      this.setData({ pendingPaymentOrderId: order.id })
-      await new Promise<void>((resolve, reject) => {
-        wx.requestPayment({
-          ...payment,
-          success: () => resolve(),
-          fail: error => reject(error),
-        })
+      const code=await new Promise<string>((resolve,reject)=>{
+        wx.login({success:result=>result.code?resolve(result.code):reject(new Error('wechat_login_missing')),fail:reject})
       })
-      // wx.requestPayment success is not settlement. Only the verified server
-      // callback can mark the order paid and append the credit ledger entry.
+      const {order,payment}=await createVirtualAssessmentOrder(skuKey,code)
+      this.setData({pendingPaymentOrderId:order.id})
+      wx.setStorageSync(virtualOrderKey(),order.id)
+      const api=wx as unknown as {requestVirtualPayment?: (arg:{
+        mode:'goods';signData:string;paySig:string;signature:string;
+        success:()=>void;fail:(err:{errMsg?:string})=>void;
+      })=>void}
+      if(!api.requestVirtualPayment) throw new Error('当前微信版本不支持虚拟支付，请升级微信')
+      await new Promise<void>((resolve,reject)=>
+        api.requestVirtualPayment!({...payment,success:resolve,fail:reject}))
+      // Device success is NOT proof of payment; only verified WeChat server query
+      // may settle an order and idempotently grant evaluation credits.
       await this.verifyCreditPayment()
-    } catch (error) {
-      const err = error as { errMsg?: string }
-      if (String(err?.errMsg ?? '').includes('cancel')) {
-        wx.showToast({ title: '已取消支付，未增加次数', icon: 'none' })
-      } else {
-        wx.showModal({
-          title: '支付状态待确认',
-          content: '如果你已经完成微信支付，额度可能需要等待后台通知。请使用“核实订单”刷新，不要重复购买。',
-          showCancel: false,
-        })
-      }
+    } catch(error) {
+      const err=error as {errMsg?:string}
+      if(String(err?.errMsg||'').includes('cancel'))
+        wx.showToast({title:'已取消支付，额度未增加',icon:'none'})
+      else wx.showModal({
+        title:'支付状态待确认',
+        content:'如果已经完成支付，请通过“核实上一笔充值订单”查询微信官方订单状态。勿重复购买。',
+        showCancel:false,
+      })
     } finally {
-      this.setData({ purchasing: false })
+      this.setData({purchasing:false})
       void this.loadCredits()
     }
   },
   async verifyCreditPayment() {
-    const id = this.data.pendingPaymentOrderId
-    if (!id) return
-    const order = await getAssessmentPaymentOrder(id)
-    if (order.status === 'paid') {
-      this.setData({ pendingPaymentOrderId: '' })
-      wx.showToast({ title: '充值已到账', icon: 'success' })
+    const id=this.data.pendingPaymentOrderId
+    if(!id)return
+    const result=await reconcileVirtualAssessmentOrder(id)
+    if(result.state==='paid' && result.credited) {
+      this.setData({pendingPaymentOrderId:''})
+      wx.removeStorageSync(virtualOrderKey())
+      wx.showToast({title:'评估次数已到账',icon:'success'})
     } else {
       wx.showModal({
-        title: '正在核实充值订单',
-        content: '当前订单尚未被服务器确认支付成功。请稍后点击“核实订单”，无需重复付款。',
-        showCancel: false,
+        title:'支付状态核实',
+        content:result.state==='refunded' || result.state==='closed'
+          ? '订单已退款或关闭，未增加评估次数。'
+          : '微信暂未确认付款，请稍后点击“核实上一笔充值订单”。',
+        showCancel:false,
       })
     }
   },
   onVerifyCreditPayment() {
-    if (this.data.purchasing) return
-    void this.verifyCreditPayment().then(() => this.loadCredits()).catch(() => {
-      wx.showToast({ title: '订单暂时无法核实，请稍后重试', icon: 'none' })
-    })
+    if(this.data.purchasing)return
+    void this.verifyCreditPayment().then(()=>this.loadCredits())
+      .catch(()=>wx.showToast({title:'订单尚无法核实，请稍后重试',icon:'none'}))
   },
   async initializeForm(query: Record<string, string | undefined>) {
     const auth = getSavedAuthResult()
