@@ -11,6 +11,7 @@ import {
   restoreAdminInternalId,
   friendlyRequestError,
   getAdminAssignments,
+  getAdminAnalytics,
   getAdminInternalIds,
   getAdminNews,
   getAdminStudents,
@@ -20,6 +21,8 @@ import {
   unbindAdminInternalId,
   updateAdminNewsTags,
   type AdminAssignment,
+  type AdminAnalytics,
+  type AdminAnalyticsPeriod,
   type AdminInternalId,
   type AdminNewsPost,
   type AdminTeacher,
@@ -27,7 +30,20 @@ import {
   type StudentSummary,
 } from '../../utils/request'
 
-type Section = 'admin-users' | 'admin-assignments' | 'admin-news'
+type Section = 'admin-users' | 'admin-assignments' | 'admin-news' | 'admin-analytics'
+type Point = { key:string;label:string;count:number;x:number;barX:number;height:number;bottom:number;labelBottom:number;prevX:number;prevBottom:number;length:number;angle:number;hasPrev:boolean }
+type Plot = { key:string;title:string;width:number;max:number;points:Point[] }
+function makePlot(key:'assessmentCount'|'rechargeCount',title:string,rows:AdminAnalytics['buckets']):Plot {
+  const max=Math.max(1,...rows.map(row=>row[key]))
+  const points=rows.map((row,i)=>{
+    const x=48+i*90, height=Math.round(row[key]/max*155)
+    const prevHeight=i>0?Math.round(rows[i-1][key]/max*155):0
+    const delta=height-prevHeight
+    return {key:row.key,label:row.label,count:row[key],x,barX:x-24,height,bottom:36+height,labelBottom:50+height,
+      prevX:x-90,prevBottom:36+prevHeight,length:Math.sqrt(90*90+delta*delta),angle:-Math.atan2(delta,90)*180/Math.PI,hasPrev:i>0}
+  })
+  return {key,title,width:rows.length*90+40,max,points}
+}
 
 function newsReviewState(posts: AdminNewsPost[]) {
   // Review queue is derived from existing canonical tags; no secondary state store.
@@ -49,6 +65,10 @@ const ID_TYPES = [
 Page({
   data: {
     section: 'admin-users' as Section,
+    analyticsPeriod: 'week' as AdminAnalyticsPeriod,
+    chartMode: 'line' as 'line' | 'bar',
+    analytics: null as (AdminAnalytics & { payers: Array<AdminAnalytics['payers'][number] & { amountYuan: string }> }) | null,
+    analyticsPlots: [] as Plot[],
     loading: true,
     actionLoading: false,
     internalIds: [] as AdminInternalId[],
@@ -87,7 +107,7 @@ Page({
     }
 
     const section = String(options.section || 'admin-users') as Section
-    if (['admin-users', 'admin-assignments', 'admin-news'].includes(section)) {
+    if (['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics'].includes(section)) {
       this.setData({ section })
     }
 
@@ -95,6 +115,10 @@ Page({
   },
 
   async loadData() {
+    if (this.data.section === 'admin-analytics') {
+      await this.loadAnalytics()
+      return
+    }
     try {
       this.setData({ loading: true, loadError: '' })
       const [internalIds, users, students, teachers, assignments, posts] = await Promise.all([
@@ -132,6 +156,33 @@ Page({
       this.setData({ loading: false })
     }
   },
+  async loadAnalytics() {
+    try {
+      this.setData({ loading: true, loadError: '' })
+      const analytics = await getAdminAnalytics(this.data.analyticsPeriod)
+      this.setData({
+        analytics: { ...analytics, payers: analytics.payers.map(row => ({ ...row, amountYuan: (row.amountFen/100).toFixed(2) })) },
+        analyticsPlots: [
+          makePlot('assessmentCount', 'AI 评估使用次数', analytics.buckets),
+          makePlot('rechargeCount', 'AI 评估充值次数', analytics.buckets),
+        ],
+      })
+    } catch (error) {
+      this.setData({ analytics: null, analyticsPlots: [], loadError: friendlyRequestError(error, '统计暂时不可用') })
+    } finally {
+      this.setData({ loading: false })
+    }
+  },
+  onAnalyticsPeriod(event: WechatMiniprogram.BaseEvent) {
+    const period = String(event.currentTarget.dataset.period)
+    if (!['week','month','year'].includes(period) || period === this.data.analyticsPeriod) return
+    this.setData({ analyticsPeriod: period as AdminAnalyticsPeriod })
+    void this.loadAnalytics()
+  },
+  onChartMode(event: WechatMiniprogram.BaseEvent) {
+    const mode = String(event.currentTarget.dataset.mode)
+    if (mode === 'line' || mode === 'bar') this.setData({ chartMode: mode })
+  },
   refreshLists() {
     const q = this.data.userQuery.trim().toLowerCase()
     this.setData({ visibleIds: filterInternalIds(this.data.internalIds, this.data.idQuery, this.data.idFilter, getSavedAuthResult()?.user.id), visibleUsers: this.data.users.filter(u => !q || [u.displayName, u.id].some(v => v?.toLowerCase().includes(q))).map(u => ({ ...u, roleLabel: { user: '普通用户', student: '学员', teacher: '老师', staff: '内部员工', admin: '管理员' }[u.role], statusLabel: u.status === 'active' ? '正常' : '已停用' })) })
@@ -168,8 +219,9 @@ Page({
 
   onSectionChange(event: WechatMiniprogram.BaseEvent) {
     const section = String(event.currentTarget.dataset.section) as Section
-    if (!['admin-users', 'admin-assignments', 'admin-news'].includes(section)) return
+    if (!['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics'].includes(section)) return
     this.setData({ section })
+    if (section === 'admin-analytics') void this.loadAnalytics()
   },
 
   onIdTypeChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {

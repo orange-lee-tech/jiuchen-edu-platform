@@ -1,7 +1,7 @@
 <auth-gate />
 <view class="admin-page">
   <view class="admin-head">
-    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : '资讯运营'}}</text>
+    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : section === 'admin-analytics' ? 'AI 评估与充值统计' : '资讯运营'}}</text>
     <text class="admin-desc">仅处理高频移动操作；完整课堂编辑仍保留在电脑后台。</text>
   </view>
 
@@ -9,6 +9,7 @@
     <view class="tab {{section === 'admin-users' ? 'active' : ''}}" data-section="admin-users" bindtap="onSectionChange">用户与编号</view>
     <view class="tab {{section === 'admin-assignments' ? 'active' : ''}}" data-section="admin-assignments" bindtap="onSectionChange">师生分配</view>
     <view class="tab {{section === 'admin-news' ? 'active' : ''}}" data-section="admin-news" bindtap="onSectionChange">动态同步{{pendingClassificationCount > 0 ? ' · 待分类 ' + pendingClassificationCount : ''}}</view>
+    <view class="tab {{section === 'admin-analytics' ? 'active' : ''}}" data-section="admin-analytics" bindtap="onSectionChange">数据统计</view>
   </view>
 
   <view wx:if="{{loading}}" class="card">正在读取最新管理数据…</view>
@@ -72,6 +73,54 @@
           <text class="row-desc">{{item.relationship === 'primary' ? '主辅导' : '协助'}}</text>
         </view>
         <button class="mini danger" data-id="{{item.id}}" bindtap="onDeleteAssignment">移除</button>
+      </view>
+    </view>
+  </block>
+
+  <block wx:elif="{{section === 'admin-analytics'}}">
+    <view class="card">
+      <view class="analytics-switch">
+        <button class="mini {{analyticsPeriod === 'week' ? 'selected' : ''}}" data-period="week" bindtap="onAnalyticsPeriod">周</button>
+        <button class="mini {{analyticsPeriod === 'month' ? 'selected' : ''}}" data-period="month" bindtap="onAnalyticsPeriod">月</button>
+        <button class="mini {{analyticsPeriod === 'year' ? 'selected' : ''}}" data-period="year" bindtap="onAnalyticsPeriod">年</button>
+        <button class="mini" bindtap="loadAnalytics">刷新</button>
+      </view>
+      <view class="analytics-switch">
+        <button class="mini {{chartMode === 'line' ? 'selected' : ''}}" data-mode="line" bindtap="onChartMode">折线图</button>
+        <button class="mini {{chartMode === 'bar' ? 'selected' : ''}}" data-mode="bar" bindtap="onChartMode">柱状图</button>
+      </view>
+      <view wx:if="{{analytics}}" class="analytics-summary">
+        <view class="analytics-stat"><text>成功评估</text><text class="analytics-stat-number">{{analytics.summary.assessmentCount}}</text></view>
+        <view class="analytics-stat amber"><text>充值成功订单</text><text class="analytics-stat-number">{{analytics.summary.rechargeCount}}</text></view>
+      </view>
+      <text class="card-note">周为近7天、月为近12个月、年为近5年。计数以服务器真实成功记录为准，零值也显示。</text>
+    </view>
+    <view wx:for="{{analyticsPlots}}" wx:for-item="plot" wx:key="key" class="card">
+      <text class="card-title">{{plot.title}}</text>
+      <text class="card-note">当前区间最大值：{{plot.max}} 次，左右滑动可查看完整数据</text>
+      <scroll-view scroll-x class="analytics-scroll">
+        <view class="analytics-plot" style="width:{{plot.width}}rpx">
+          <view class="analytics-axis"></view>
+          <block wx:for="{{plot.points}}" wx:for-item="point" wx:key="key">
+            <view wx:if="{{chartMode === 'bar'}}" class="analytics-bar {{plot.key === 'rechargeCount' ? 'amber' : ''}}" style="left:{{point.barX}}rpx;bottom:36rpx;height:{{point.height}}rpx"></view>
+            <block wx:else>
+              <view wx:if="{{point.hasPrev}}" class="analytics-line {{plot.key === 'rechargeCount' ? 'amber' : ''}}" style="left:{{point.prevX}}rpx;bottom:{{point.prevBottom}}rpx;width:{{point.length}}rpx;transform:rotate({{point.angle}}deg)"></view>
+              <view class="analytics-dot {{plot.key === 'rechargeCount' ? 'amber' : ''}}" style="left:{{point.x}}rpx;bottom:{{point.bottom}}rpx"></view>
+            </block>
+            <text class="analytics-value" style="left:{{point.x}}rpx;bottom:{{point.labelBottom}}rpx">{{point.count}}</text>
+            <text class="analytics-label" style="left:{{point.x}}rpx">{{point.label}}</text>
+          </block>
+        </view>
+      </scroll-view>
+    </view>
+    <view class="card">
+      <text class="card-title">用户累计充值金额排行榜</text>
+      <text class="card-note">统计历年支付成功订单，按实际支付金额降序排列，不含赠送次数。</text>
+      <text wx:if="{{analytics && !analytics.payers.length}}" class="card-note">目前尚无充值订单。</text>
+      <view wx:for="{{analytics ? analytics.payers : []}}" wx:key="userIdSuffix" class="analytics-rank-row">
+        <text class="analytics-order">{{index + 1}}</text>
+        <view class="analytics-rank-user"><text class="row-title">{{item.displayName}}</text><text class="row-desc">账号尾号 {{item.userIdSuffix}} · {{item.rechargeCount}} 单</text></view>
+        <text class="analytics-rank-fee">¥{{item.amountYuan}}</text>
       </view>
     </view>
   </block>

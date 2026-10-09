@@ -737,6 +737,18 @@ export type AdminUser = {
   createdAt: string
 }
 
+export type AdminAnalyticsPeriod = 'week' | 'month' | 'year'
+export type AdminAnalytics = {
+  period: AdminAnalyticsPeriod
+  buckets: Array<{ key: string; label: string; assessmentCount: number; rechargeCount: number }>
+  summary: { assessmentCount: number; rechargeCount: number }
+  payers: Array<{ userIdSuffix: string; displayName: string; rechargeCount: number; amountFen: number }>
+}
+export async function getAdminAnalytics(period: AdminAnalyticsPeriod): Promise<AdminAnalytics> {
+  const result = await request<{ ok: true; analytics: AdminAnalytics }>('/me/admin/assessment-analytics?period=' + period)
+  return result.analytics
+}
+
 export async function getAdminUsers(): Promise<AdminUser[]> {
   const result = await request<{ ok: true; users: AdminUser[] }>(
     '/me/admin/users',
