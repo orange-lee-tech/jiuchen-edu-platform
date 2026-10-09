@@ -2,6 +2,14 @@
 
 This file applies to Codex and other coding agents working in this repository.
 
+## Active Phase 1 code entry (2026-10-09 Gate 0)
+
+Before changing UI/navigation read, in this order: `CONSTITUTION.md` → `docs/product/v1-baseline.md` → `docs/handoff/CURRENT.md` → `docs/design/jiuchen-v1-experience-blueprint.md` → **`docs/handoff/phase1-codex-execution-2026-10-09.md`** → `docs/design/jiuchen-v1-design-system.md` → dated Phase 0 map for historical route inventory.
+
+The older "only Phase 0" execution header and 2026-09-22 construction map are **historical**, not active stop signs. Phase 1a is approved as a **separate, bounded code batch**; Gate 0 itself is docs-only. Do not treat this as approval to touch AI providers, payment, ECS production, database migrations or to fake missing read models.
+
+For Phase 1a, verify current Git SHA and `git status --short` before editing; preserve all local files. Client currently has five tabs and must atomically migrate to four native static paths with compatible legacy navigation. `staff` keeps existing teacher-workspace capability without admin elevation. Apply mobile layout/interaction quality gates in each batch, not only at final visual polish.
+
 ## Authority and scope
 
 1. Read `CONSTITUTION.md` before changing code.
