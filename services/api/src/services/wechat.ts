@@ -92,7 +92,7 @@ export async function exchangeWechatLoginCode(
   }
 }
 
-async function getWechatStableAccessToken(env: AppEnv): Promise<string> {
+export async function getWechatStableAccessToken(env: AppEnv): Promise<string> {
   const now = Date.now()
   if (stableTokenCache && stableTokenCache.expiresAt > now) {
     return stableTokenCache.token
@@ -161,4 +161,21 @@ export async function exchangeWechatPhoneCode(
     purePhoneNumber: result.phone_info.purePhoneNumber,
     countryCode: result.phone_info.countryCode,
   }
+}
+
+/** Only for creating one virtual-payment purchase. The session key is never
+ * persisted or exposed; require the OpenID to match the authenticated account. */
+export async function exchangeWechatVirtualPaymentCode(code: string, env: AppEnv) {
+  const { appId, appSecret } = assertWechatConfigured(env)
+  const url = new URL('https://api.weixin.qq.com/sns/jscode2session')
+  url.searchParams.set('appid',appId)
+  url.searchParams.set('secret',appSecret)
+  url.searchParams.set('js_code',code)
+  url.searchParams.set('grant_type','authorization_code')
+  const response=await fetch(url,{signal:AbortSignal.timeout(10000)})
+  if(!response.ok) throw new Error('wechat_virtual_login_http_failure')
+  const payload: unknown=await response.json()
+  throwWechatApiError(payload,'wechat_virtual_login')
+  const result=loginSuccessSchema.parse(payload)
+  return {openId:result.openid,sessionKey:result.session_key}
 }
