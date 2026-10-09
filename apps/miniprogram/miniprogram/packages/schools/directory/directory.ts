@@ -1,4 +1,4 @@
-import { SCHOOLS, SCHOOL_REGIONS, findSchools, type School } from '../../data'
+import { SCHOOLS, SCHOOL_REGIONS, findSchools, type School } from '../data'
 
 type SchoolCard = School & { monogram: string; subtitle: string }
 

@@ -1,4 +1,4 @@
-import { getSchoolById, MOE_985_SOURCE, C9_SOURCE, type School } from '../../data'
+import { getSchoolById, MOE_985_SOURCE, C9_SOURCE, type School } from '../data'
 Page({
   data: {
     school: null as School | null,
