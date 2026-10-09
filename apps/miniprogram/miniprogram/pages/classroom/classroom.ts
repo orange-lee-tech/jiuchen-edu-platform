@@ -162,11 +162,15 @@ Page({
 
     this.setData({ mode: 'student', loading: true, loadError: '', plans: [], mentors: [], records: [] })
     try {
-      const [stages, initial, latestSchedule] = await Promise.all([
+      const [stages, initial] = await Promise.all([
         getClassroomStages().catch(() => FALLBACK_STAGES),
         getMyClassroom(sameOwner ? this.data.currentStageCode : undefined),
-        getLatestScheduleImport().catch(() => null),
       ])
+      if (generation !== this.viewGeneration) return
+      const matchingTerm = /^(freshman|sophomore|junior|senior)-(fall|spring)$/.test(initial.stage.code)
+      const latestSchedule = matchingTerm
+        ? await getLatestScheduleImport(initial.stage.code).catch(() => null)
+        : null
       if (generation !== this.viewGeneration) return
       const index = Math.max(
         0,
@@ -248,7 +252,10 @@ Page({
     const generation = this.viewGeneration, request = ++this.weekRequest
     this.setData({ weekLoading: true, weekError: '', weekCourses: [] })
     try {
-      const latest = await getLatestScheduleImport()
+      const stageCode=this.data.currentStageCode
+      const latest = /^(freshman|sophomore|junior|senior)-(fall|spring)$/.test(stageCode)
+        ? await getLatestScheduleImport(stageCode)
+        : null
       if (generation !== this.viewGeneration || request !== this.weekRequest) return
       const view = weeklyScheduleView(latest?.schedule || null)
       this.setData({ weekState: view.state, weekLabel: view.currentWeekLabel, weekCourses: view.visibleCourses.map(c => ({ ...c, slot: courseTimeLabel(c) })) })

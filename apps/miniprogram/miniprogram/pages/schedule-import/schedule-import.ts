@@ -61,7 +61,7 @@ Page({
     stageOptions: TERM_OPTIONS,
     stageChoice: '',
     stageChoiceLabel: '',
-    sourceForStage: '' as '' | 'spreadsheet' | 'image',
+    sourceForStage: '' as '' | 'spreadsheet' | 'image' | 'reassign',
     stageHint: '正在读取入学年份…',
     fileName: '',
     importId: '',
@@ -153,6 +153,10 @@ Page({
   openStageSelection(source: 'spreadsheet' | 'image') {
     this.setData({ showStagePicker: true, sourceForStage: source, stageChoice: '', stageChoiceLabel: '' })
   },
+  onReassignStage() {
+    if (!this.data.schedule || !this.data.importId || this.data.parsing || this.data.saving) return
+    this.setData({showStagePicker:true,sourceForStage:'reassign',stageChoice:'',stageChoiceLabel:''})
+  },
   onSelectStage(event: WechatMiniprogram.BaseEvent) {
     const code = String(event.currentTarget.dataset.code)
     const found = TERM_OPTIONS.find(stage => stage.code === code)
@@ -168,6 +172,11 @@ Page({
     }
     const source = this.data.sourceForStage
     this.setData({ showStagePicker: false })
+    if(source==='reassign') {
+      const schedule=this.data.schedule
+      if(schedule) void this.persistSchedule({...schedule,stageCode:this.data.stageChoice})
+      return
+    }
     if (source === 'spreadsheet') this.chooseSpreadsheetFile()
     else if (source === 'image') this.chooseImageFile()
   },
@@ -273,8 +282,8 @@ Page({
       return false
     }
     if (!TERM_OPTIONS.some(stage => stage.code === schedule.stageCode)) {
-      this.openStageSelection('spreadsheet')
-      wx.showToast({ title: '旧课表需重新确认归属学期', icon: 'none' })
+      this.onReassignStage()
+      wx.showToast({ title: '旧课表需先选定学期', icon: 'none' })
       return false
     }
 
@@ -284,6 +293,8 @@ Page({
       this.setData({
         schedule: persisted,
         termStartDate: persisted.termStartDate || '',
+        stageChoice: persisted.stageCode || '',
+        stageChoiceLabel: TERM_OPTIONS.find(item => item.code === persisted.stageCode)?.label || '',
       })
       this.refreshVisibleCourses()
       return true

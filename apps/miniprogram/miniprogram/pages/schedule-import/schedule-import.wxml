@@ -12,7 +12,7 @@
   </view>
 
   <view wx:if="{{schedule}}" class="term-card surface">
-    <text class="term-affiliation">归属：{{stageChoiceLabel || '待人工确认归属学期'}}</text>
+    <text class="term-affiliation" bindtap="onReassignStage">归属：{{stageChoiceLabel || '待人工确认归属学期'}} · 点击修改 ›</text>
     <view>
       <text class="term-title">{{currentWeekLabel}}</text>
       <text class="term-desc">本周筛选依据课程的“周次”字段；未写周次的课程默认每周显示。</text>
@@ -91,13 +91,13 @@
   <view wx:if="{{showStagePicker}}" class="term-overlay">
     <view class="term-sheet">
       <text class="term-sheet-title">这份课表属于哪个学期？</text>
-      <text class="term-sheet-desc">{{stageHint}} 请点击准确的学期后继续选择文件。</text>
+      <text class="term-sheet-desc">{{stageHint}} {{sourceForStage === 'reassign' ? '选择后将更新当前已导入课表的归属，不需要重新上传文件。' : '请点击准确的学期后继续选择文件。'}}</text>
       <view class="term-option-grid">
         <view wx:for="{{stageOptions}}" wx:key="code" class="term-option {{stageChoice === item.code ? 'selected' : ''}}" data-code="{{item.code}}" bindtap="onSelectStage">{{item.label}}</view>
       </view>
       <view class="term-sheet-footer">
         <button bindtap="onDismissStage" class="term-cancel">取消</button>
-        <button bindtap="onConfirmStage" class="term-confirm" disabled="{{!stageChoice}}">确认 {{stageChoiceLabel || '学期' }}，继续上传</button>
+        <button bindtap="onConfirmStage" class="term-confirm" disabled="{{!stageChoice}}">{{sourceForStage === 'reassign' ? '确认归档至' : '确认并继续上传'}} {{stageChoiceLabel || '学期'}}</button>
       </view>
     </view>
   </view>
