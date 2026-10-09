@@ -27,7 +27,9 @@
 
 ## 批次与逐页整改对照
 
-Batch 1 代码完成：管理员去重、编号结构/搜索/筛选/菜单；本周课表同页状态与共享筛选；原生阅读安全节点。Batch 2 代码完成：原生角色图标、功能图标、深浅蓝与暖黄层级、官网明确复制降级。Batch 3 本地检查通过；CI 提交后查询；平台与真人视觉验收 NOT RUN。
+代码提交：`0c5378cb8c419309176dc93bdf9bfc2f9211f2e2`，已推送 `p1/foundation`。其 [Push CI #37938435444](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/37938435444) 与 [PR CI #37938437942](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/37938437942) 均 SUCCESS：小程序 typecheck/23 回归、Admin typecheck/build、API typecheck/test/build。后续提交只回填 CI 文档，最终 HEAD 见最终交接。
+
+Batch 1 代码完成：管理员去重、编号结构/搜索/筛选/菜单；本周课表同页状态与共享筛选；原生阅读安全节点。Batch 2 代码完成：原生角色图标、功能图标、深浅蓝与暖黄层级、官网明确复制降级。Batch 3 本地检查与代码提交 Push/PR CI 通过；平台与真人视觉验收 NOT RUN。
 
 | 页面/组件 | 原缺陷 → 本轮整改 | 实际验收 |
 | --- | --- | --- |

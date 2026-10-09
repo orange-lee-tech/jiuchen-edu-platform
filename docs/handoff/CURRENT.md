@@ -68,6 +68,6 @@
 - 公开 OA 文章读查确认图片重复 style（固定 530×707px 与自适应并存）、正文前重复封面与隐藏段。客户端安全节点修复布局；保留真实文字/图片/表格；后端未变。
 - 原生四槽角色图标与功能图标、深浅蓝/暖黄层级；21 个原创 PNG 约 10KB，无 UI 依赖或字体包。
 - 官网提供“复制地址”降级，**OPERATOR ACTION REQUIRED**：公众平台 → 开发管理 → 开发设置 → 业务域名，完成官网域名核验与真机 web-view 测试后才能批准直接打开。
-- 本地小程序 typecheck PASS；原 16 项 + 7 项专项测试，23 PASS；新提交 CI 待推送后查验。无小程序 npm build 脚本，未声称原生编译 PASS。
+- 代码提交 `0c5378cb8c419309176dc93bdf9bfc2f9211f2e2` 已推送。本地小程序 typecheck PASS；原 16 项 + 7 项专项测试，23 PASS；[Push CI #37938435444](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/37938435444) / [PR CI #37938437942](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/37938437942) 均 SUCCESS，小程序检查、Admin typecheck/build、API typecheck/test/build 成功。无小程序 npm build 脚本，未声称原生编译 PASS。
 - computer-use 再试 Node 内核退出；开发者工具、窄屏/字体/键盘与真机截图全部 **NOT RUN**。不宣称移动 UX 已验收。
 - 逐页整改对照、具体 Gate、独立业务待办及整体回滚边界见 `docs/handoff/phase1a-r-closeout.md`。Group / 定制资讯授权 / 评估客服分享均未实现；Phase 1b 未开始。
