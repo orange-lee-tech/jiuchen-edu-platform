@@ -8,7 +8,7 @@ const mini = path.join(root, 'apps/miniprogram/miniprogram')
 const school = fs.readFileSync(path.join(mini, 'packages/schools/data.ts'), 'utf8')
 const app = JSON.parse(fs.readFileSync(path.join(mini, 'app.json'), 'utf8'))
 
-const rowSource = school.match(/const tuples: ReadonlyArray<readonly \[string,string,string,string\]> = (\[[\s\S]*?\])\nconst c9Schools/)
+const rowSource = school.match(/const tuples: ReadonlyArray<readonly \[string,string,string,string\]> = (\[[\s\S]*?\])\n\/\/ 77 non-985/)
 const c9Source = school.match(/const c9Schools = new Set\((\[[\s\S]*?\])\)/)
 assert.ok(rowSource, 'source data must be a compact literal list of Ministry-verified entries')
 assert.ok(c9Source, 'C9 subset must have an explicit named source')
