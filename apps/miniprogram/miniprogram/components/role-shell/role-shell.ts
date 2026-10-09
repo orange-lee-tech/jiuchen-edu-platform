@@ -18,7 +18,7 @@ const content: Record<string, { title: string; description: string; actions: Act
 
 Component({
   properties: {
-    slot: { type: String, value: 'home' },
+    viewSlot: { type: String, value: 'home' },
     phase: { type: String, value: 'loading' },
     kind: { type: String, value: 'student' },
     roleLabel: { type: String, value: '' },
@@ -26,8 +26,8 @@ Component({
   },
   data: { title: '', description: '', actions: [] as Action[], opening: false },
   observers: {
-    'slot, kind': function (slot: string, kind: string) {
-      this.setData(content[`${kind}-${slot}`] || { title: '', description: '', actions: [] })
+    'viewSlot, kind': function (viewSlot: string, kind: string) {
+      this.setData(content[`${kind}-${viewSlot}`] || { title: '', description: '', actions: [] })
     },
   },
   methods: {
