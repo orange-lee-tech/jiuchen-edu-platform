@@ -1,7 +1,6 @@
 import { deleteCurrentAccount, getSavedAuthResult, logoutWechatUser, type UserRole } from '../../utils/auth'
 import { friendlyRequestError } from '../../utils/request'
 import { openWechatCustomerService } from '../../utils/customer-service'
-import { copyOfficialWebsite } from '../../utils/website'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 
 const PERSONAL_MENUS = [
@@ -42,7 +41,7 @@ Page({
   onHide() { this.stopShell?.(); this.setData({ shellPhase: 'loading' }) },
   onUnload() { this.stopShell?.() },
   onCustomerServiceTap() { openWechatCustomerService() },
-  onWebsite() { copyOfficialWebsite() },
+  onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },
   onIdentityTap() {
     if (this.data.loggedIn) openPage('/pages/profile-edit/profile-edit')
     else loginFor('pages/profile-edit/profile-edit')
