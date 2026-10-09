@@ -93,7 +93,7 @@ export function registerMobileAdminRoutes(
       return reply.code(400).send({ ok: false, error: 'invalid_analytics_period' })
     }
     try {
-      const analytics = await readAssessmentCommerceAnalytics(configuredDatabase.pool, period as AnalyticsPeriod)
+      const analytics = await readAssessmentCommerceAnalytics(configuredDatabase.pool, period as AnalyticsPeriod, new Date(), env)
       return { ok: true, analytics }
     } catch (error) {
       if (error && typeof error === 'object' &&

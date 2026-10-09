@@ -89,9 +89,18 @@
         <button class="mini {{chartMode === 'line' ? 'selected' : ''}}" data-mode="line" bindtap="onChartMode">折线图</button>
         <button class="mini {{chartMode === 'bar' ? 'selected' : ''}}" data-mode="bar" bindtap="onChartMode">柱状图</button>
       </view>
+      <view wx:if="{{analytics}}" class="supplier-monitor {{analytics.supplier.status}}">
+        <view class="supplier-monitor-head"><text>AI 供应商余额预警</text><text class="supplier-status">{{analytics.supplier.status === 'normal' ? '常规监测' : analytics.supplier.status === 'critical' ? '紧急补充' : analytics.supplier.status === 'warning' ? '提前预警' : analytics.supplier.status === 'early_stage' ? '样本不足' : '需要核实'}}</text></view>
+        <text class="supplier-message">{{analytics.supplier.message}}</text>
+        <view wx:if="{{analytics.supplier.availableFen !== null}}" class="supplier-metrics">
+          <text>参考可用余额 ¥{{(analytics.supplier.availableFen / 100)}}</text>
+          <text wx:if="{{analytics.supplier.estimatedRunwayDays !== null}}">预计可支撑 {{analytics.supplier.estimatedRunwayDays}} 天</text>
+        </view>
+        <text class="supplier-tip">公司运营管理 API 服务商余额；这里不是用户充值余额。读数尚未自动同步时，不可将展示视为实时保障。</text>
+      </view>
       <view wx:if="{{analytics}}" class="analytics-summary">
         <view class="analytics-stat"><text>成功评估</text><text class="analytics-stat-number">{{analytics.summary.assessmentCount}}</text></view>
-        <view class="analytics-stat amber"><text>充值成功订单</text><text class="analytics-stat-number">{{analytics.summary.rechargeCount}}</text></view>
+        <view class="analytics-stat amber"><text>成功充值订单</text><text class="analytics-stat-number">{{analytics.summary.rechargeCount}}</text><text>购入 {{analytics.summary.rechargeCreditCount}} 次</text></view>
       </view>
       <text class="card-note">周为近7天、月为近12个月、年为近5年。计数以服务器真实成功记录为准，零值也显示。</text>
     </view>

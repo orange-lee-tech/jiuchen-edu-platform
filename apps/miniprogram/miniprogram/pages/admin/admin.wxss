@@ -59,3 +59,13 @@ button::after { border:0; }
 .analytics-order{background:#e8efff;color:#2f6fed;font-weight:800;width:44rpx;line-height:44rpx;text-align:center;}
 .analytics-rank-user{flex:1;min-width:0;}
 .analytics-rank-fee{font-size:28rpx;font-weight:800;color:#173b73;white-space:nowrap;}
+
+.supplier-monitor{border:2rpx solid #e8b15a;background:#fff4d9;padding:22rpx;margin:0 0 16rpx;border-radius:10rpx;}
+.supplier-monitor.critical,.supplier-monitor.missing,.supplier-monitor.stale{background:#fff1ed;border-color:#ce594a;}
+.supplier-monitor.normal{background:#e0f8ef;border-color:#1a9f82;}
+.supplier-monitor-head{display:flex;justify-content:space-between;gap:12rpx;align-items:center;color:#163d4c;font-size:28rpx;font-weight:800;}
+.supplier-status{font-size:22rpx;color:#a33c2d;}
+.supplier-monitor.normal .supplier-status{color:#107657;}
+.supplier-message{display:block;margin-top:11rpx;font-size:24rpx;line-height:1.55;color:#3d5052;}
+.supplier-metrics{display:flex;gap:15rpx;flex-wrap:wrap;margin-top:12rpx;font-size:23rpx;font-weight:700;color:#174e62;}
+.supplier-tip{display:block;margin-top:13rpx;color:#6b6c61;font-size:20rpx;line-height:1.5;}

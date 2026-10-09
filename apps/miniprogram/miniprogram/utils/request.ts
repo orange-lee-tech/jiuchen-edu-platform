@@ -781,8 +781,18 @@ export async function getAssessmentPaymentOrder(id: string): Promise<AssessmentP
 export type AdminAnalyticsPeriod = 'week' | 'month' | 'year'
 export type AdminAnalytics = {
   period: AdminAnalyticsPeriod
-  buckets: Array<{ key: string; label: string; assessmentCount: number; rechargeCount: number }>
-  summary: { assessmentCount: number; rechargeCount: number }
+  buckets: Array<{ key: string; label: string; assessmentCount: number; rechargeCount: number; rechargeCreditCount: number }>
+  summary: { assessmentCount: number; rechargeCount: number; rechargeCreditCount: number }
+  supplier: {
+    status: 'missing' | 'stale' | 'critical' | 'warning' | 'normal' | 'early_stage'
+    message: string
+    availableFen: number | null
+    observedAt: string | null
+    estimatedDailyFen: number | null
+    estimatedRunwayDays: number | null
+    sampleRuns7Days: number
+    forecastBasedOn: 'manual_estimate' | 'unavailable'
+  }
   payers: Array<{ userIdSuffix: string; displayName: string; rechargeCount: number; amountFen: number }>
 }
 export async function getAdminAnalytics(period: AdminAnalyticsPeriod): Promise<AdminAnalytics> {
