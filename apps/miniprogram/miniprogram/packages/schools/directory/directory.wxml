@@ -2,17 +2,20 @@
   <view class="school-header">
     <text class="school-kicker">九辰 · 院校资料</text>
     <text class="school-title">认识目标院校</text>
-    <text class="school-desc">先核对学校，再深入项目。首批已核实教育部 985 工程名单 {{totalCount}} 所，其中 C9 {{c9Count}} 所。</text>
+    <text class="school-desc">先核对学校，再深入项目。教育部 985 / 211 建设名录已合并 {{totalCount}} 条院校及校区记录，含 985 {{n985}} 所、C9 {{c9Count}} 所。</text>
   </view>
   <view class="search-row">
     <view class="search-field"><text class="search-icon">⌕</text><input value="{{query}}" placeholder="校名 / 拼音 / 地区" bindinput="onQuery" confirm-type="search" /></view>
     <view class="filter-button" bindtap="onOpenFilter" hover-class="tap-pressed">筛选 ▾</view>
   </view>
-  <view class="level-tabs">
-    <view class="level-tab {{level === 'all' ? 'selected' : ''}}" data-level="all" bindtap="onLevel">全部 39</view>
-    <view class="level-tab {{level === 'c9' ? 'selected' : ''}}" data-level="c9" bindtap="onLevel">C9 · 9</view>
-    <view class="level-tab {{level === 'other985' ? 'selected' : ''}}" data-level="other985" bindtap="onLevel">其他 985 · 30</view>
-  </view>
+  <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="tier-scroll">
+    <view class="level-tabs">
+      <view class="level-tab {{level === 'all' ? 'selected' : ''}}" data-level="all" bindtap="onLevel">全部 {{totalCount}}</view>
+      <view class="level-tab {{level === '985' ? 'selected' : ''}}" data-level="985" bindtap="onLevel">985 · {{n985}}</view>
+      <view class="level-tab {{level === 'other211' ? 'selected' : ''}}" data-level="other211" bindtap="onLevel">非985的211 · {{nOther211}}</view>
+      <view class="level-tab {{level === 'c9' ? 'selected' : ''}}" data-level="c9" bindtap="onLevel">C9 · {{c9Count}}</view>
+    </view>
+  </scroll-view>
   <view class="school-count"><text>已核验院校 {{schools.length}} 所</text><text wx:if="{{region !== '全部地区'}}">{{region}} · 已筛选</text></view>
   <view wx:if="{{schools.length === 0}}" class="empty-state"><text>没有匹配的已核验院校</text><text>可以调整筛选；其他学校尚未录入，并不表示该校不存在。</text></view>
   <view class="school-list">
@@ -21,12 +24,12 @@
       <view class="school-copy">
         <text class="card-name">{{item.name}}</text>
         <text class="card-location">{{item.subtitle}}</text>
-        <view class="school-tags"><text class="school-tag">985</text><text wx:if="{{item.isC9}}" class="school-tag c9">C9 联盟</text><text class="school-tag source">教育部名单</text></view>
+        <view class="school-tags"><text class="school-tag">{{item.is985 ? '985 / 211' : '211'}}</text><text wx:if="{{item.isC9}}" class="school-tag c9">C9 联盟</text><text class="school-tag source">官方历史名录</text></view>
       </view>
       <text class="school-arrow">›</text>
     </view>
   </view>
-  <view class="catalog-source">资料范围：教育部 985 工程建设高校 39 所。其他 211、双一流及全国本科院校正在独立核验，尚未混入列表或计算排名。</view>
+  <view class="catalog-source">收录 985 / 211 历史建设名录。116 条包括华北电力大学北京与保定两个校区条目，不等于 116 个独立法人高校。名单中的军医大学显示现用名称。双一流及全国普通高校另行维护。</view>
 </view>
 <view wx:if="{{showFilter}}" class="filter-overlay" bindtap="onCloseFilter">
   <view class="filter-panel" catchtap="onOpenFilter">

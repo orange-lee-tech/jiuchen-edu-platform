@@ -40,3 +40,7 @@ page{background:#eaf5f1;}
 .filter-actions{display:flex;gap:14rpx;padding:19rpx 0 8rpx;}
 .filter-actions button{flex:1;margin:0;border-radius:9rpx;background:#edf5f3;color:#385f5a;font-size:25rpx;}
 .filter-actions button.confirm{background:#0da99a;color:#fff;}
+
+.tier-scroll{width:100%;white-space:nowrap;margin-bottom:14rpx;}
+.tier-scroll .level-tabs{width:max-content;min-width:100%;gap:9rpx;display:flex;flex-wrap:nowrap;margin-bottom:0;}
+.tier-scroll .level-tab{flex:none;padding:14rpx 21rpx;font-size:23rpx;}

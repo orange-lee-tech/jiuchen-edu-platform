@@ -1,4 +1,4 @@
-import { getSchoolById, MOE_985_SOURCE, C9_SOURCE, type School } from '../data'
+import { getSchoolById, MOE_985_SOURCE, MOE_211_SOURCE, C9_SOURCE, type School } from '../data'
 Page({
   data: {
     school: null as School | null,
@@ -26,7 +26,7 @@ Page({
       admissions: school?.admissions?.url || '',
       catalogs: school?.admissions?.catalogsUrl || '',
       summer: school?.admissions?.summerUrl || '',
-      moe: MOE_985_SOURCE, c9: C9_SOURCE,
+      moe: MOE_985_SOURCE, moe211: MOE_211_SOURCE, c9: C9_SOURCE,
     }
     const url = urls[key]
     if (!url || !/^https:\/\//.test(url)) return

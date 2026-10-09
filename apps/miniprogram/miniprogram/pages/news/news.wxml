@@ -12,7 +12,7 @@
 
   <view class="school-entry" bindtap="onSchools" hover-class="school-entry-hover" aria-role="button">
     <view class="school-entry-icon"><text>校</text></view>
-    <view class="school-entry-copy"><text class="school-entry-title">院校库 · 已核验 39 所</text><text class="school-entry-desc">按 C9、985 与地区查询，打开院校档案及官方来源</text></view>
+    <view class="school-entry-copy"><text class="school-entry-title">院校库 · 985 / 211 全名录</text><text class="school-entry-desc">116 条院校/校区记录，按 985、211、C9 与地区筛选</text></view>
     <text class="school-entry-arrow">›</text>
   </view>
 

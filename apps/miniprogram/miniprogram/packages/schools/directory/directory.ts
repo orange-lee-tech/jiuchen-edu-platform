@@ -12,12 +12,14 @@ function cards(schools: School[]): SchoolCard[] {
 Page({
   data: {
     query: '',
-    level: 'all' as 'all' | 'c9' | 'other985',
+    level: 'all' as 'all' | '985' | '211' | 'c9' | 'other211',
     region: '全部地区',
     regions: SCHOOL_REGIONS,
     showFilter: false,
     totalCount: SCHOOLS.length,
     c9Count: SCHOOLS.filter(s => s.isC9).length,
+    n985: SCHOOLS.filter(s => s.is985).length,
+    nOther211: SCHOOLS.filter(s => !s.is985).length,
     schools: cards([...SCHOOLS]),
   },
   onLoad() {
@@ -32,7 +34,7 @@ Page({
   },
   onLevel(event: WechatMiniprogram.BaseEvent) {
     const level = String(event.currentTarget.dataset.level)
-    if (level !== 'all' && level !== 'c9' && level !== 'other985') return
+    if (!['all','985','211','c9','other211'].includes(level)) return
     this.setData({ level })
     this.refreshSchools()
   },

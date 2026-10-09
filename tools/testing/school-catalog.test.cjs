@@ -14,11 +14,17 @@ assert.ok(rowSource, 'source data must be a compact literal list of Ministry-ver
 assert.ok(c9Source, 'C9 subset must have an explicit named source')
 const rows = JSON.parse(rowSource[1])
 const c9Names = JSON.parse(c9Source[1])
+const extraSource = school.match(/const other211: ReadonlyArray<readonly \[string,string,string\]> = (\[[^;]+?\])\nconst historicalAliases/)
+assert.ok(extraSource, 'missing complete 211 extra list')
+const extras = JSON.parse(extraSource[1])
 
-test('985 seed has all 39 unique schools, C9 is precisely nine within it', () => {
+test('original 985 source has 39 unique schools, C9 exactly nine, extra 211 has 77', () => {
   assert.equal(rows.length, 39)
   const names = rows.map(row => row[0])
   assert.equal(new Set(names).size, 39)
+  assert.equal(extras.length,77)
+  assert.equal(new Set([...names,...extras.map(row=>row[0])]).size,116)
+  assert.ok(extras.some(row=>row[0]==='华北电力大学（保定）'))
   assert.equal(c9Names.length, 9)
   assert.equal(new Set(c9Names).size, 9)
   for (const name of c9Names) assert.ok(names.includes(name), name)

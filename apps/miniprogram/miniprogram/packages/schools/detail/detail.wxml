@@ -2,7 +2,7 @@
   <view class="detail-hero">
     <view class="hero-top"><text>九辰 · 院校档案</text><text class="hero-mark">985 / EDU</text></view>
     <view class="hero-main"><text class="hero-monogram">{{heroLabel}}</text><view class="hero-identity"><text class="hero-name">{{school.name}}</text><text class="hero-city">{{cityLabel}}</text></view></view>
-    <view class="hero-tags"><text>985 工程</text><text wx:if="{{school.isC9}}">C9 联盟</text><text>官方名单已核对</text></view>
+    <view class="hero-tags"><text>{{school.is985 ? '985 / 211' : '211 工程'}}</text><text wx:if="{{school.isC9}}">C9 联盟</text><text>官方名单已核对</text></view>
   </view>
   <view class="detail-overview">
     <block wx:if="{{school.verifiedStats}}">
@@ -12,7 +12,7 @@
     </block>
     <block wx:else>
       <view class="fact-cell"><text class="fact-key">所在城市</text><text class="fact-value">{{school.city}}</text></view>
-      <view class="fact-cell"><text class="fact-key">985 建设名单</text><text class="fact-value">已核验</text></view>
+      <view class="fact-cell"><text class="fact-key">历史建设层次</text><text class="fact-value">{{school.is985 ? '985' : '211'}}</text></view>
       <view class="fact-cell"><text class="fact-key">C9 联盟</text><text class="fact-value">{{school.isC9 ? '是' : '否'}}</text></view>
     </block>
   </view>
@@ -22,7 +22,7 @@
     <text class="intro-text">{{hasIntro ? school.intro : '已核验该校位于教育部公布的985工程建设高校名单中。学校历史介绍及最新情况尚未完成逐校官网核验，不使用未经核实的介绍或统计数字。'}}</text>
     <view wx:if="{{school.founded}}" class="founded-line">建校历史参考年份：{{school.founded}} · 请以学校官方历史为准</view>
     <view wx:if="{{school.introSource}}" class="detail-source" data-key="intro" bindtap="copyUrl"><text>学校官方介绍</text><text>复制来源链接 ›</text></view>
-    <view class="detail-source" data-key="moe" bindtap="copyUrl"><text>教育部 985 工程原始名单</text><text>复制来源链接 ›</text></view>
+    <view class="detail-source" data-key="{{school.is985 ? 'moe' : 'moe211'}}" bindtap="copyUrl"><text>教育部 {{school.is985 ? '985' : '211'}} 工程原始名单</text><text>复制来源链接 ›</text></view>
     <view wx:if="{{school.isC9}}" class="detail-source" data-key="c9" bindtap="copyUrl"><text>C9 成员名录</text><text>复制来源链接 ›</text></view>
   </view>
   <view class="detail-card">
