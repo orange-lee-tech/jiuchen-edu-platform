@@ -324,7 +324,9 @@ test('hidden classroom cannot apply a late response from a previous identity', a
   const scheduleRequest = h.requests.findIndex((item) => item.url.includes('/schedule-imports/latest'))
   h.respond(stagesRequest, { stages: [{ code: 'junior-fall', label: '大三上', planTypes: [] }] })
   h.respond(classroomRequest, { student: { name: '旧账号测试数据' }, stage: { code: 'junior-fall' }, plans: [], mentors: [], records: [] })
-  h.respond(scheduleRequest, { scheduleImport: null })
+  // Schedule fetch is now stage-scoped and deferred until the first requests
+  // settle. A hidden page must not even issue it, nor apply stale results.
+  if (scheduleRequest >= 0) h.respond(scheduleRequest, { scheduleImport: null })
   await settle()
   assert.equal(page.data.studentName, '')
 })
