@@ -648,11 +648,13 @@ Brand Deep         #2459BE
 Brand Soft         #E7EEF8
 ```
 
-Ratio guideline:
+Ratio guideline (**starting balance, not an automatic pass/fail percentage**):
 
-- 70–80% neutral canvas / text / lines;
-- 15–25% secondary blue-gray surfaces;
-- <10% strong brand / semantic color.
+- roughly 70–80% neutral canvas / text / lines overall;
+- roughly 15–25% secondary blue-gray or other approved **purposeful** tinted surfaces;
+- strong brand / semantic color concentrated on focal actions and real states (often <10%, with screen-specific justified exceptions).
+
+A “calm” interface is not an all-gray interface: visible brand-blue action and selected states, honest green/amber/red status cues and sparse human-guidance warmth should create intentional focal rhythm where needed. No gratuitous rainbow; no color-free card wall. Semantic content must remain legible without color. Refer to the updated `jiuchen-v1-design-system.md` §§6 and 9 for interaction-level tests.
 
 ### 10.3 Secondary tonal hierarchy
 
@@ -716,6 +718,8 @@ Priority order:
 5. container decoration.
 
 Users should notice the **information** before the box around it.
+
+**2026-10-09 human-first execution clarification:** the hierarchy should lead a novice from *recognition* to *decision* to *action* to *result*. Meaningful color and whitespace explain priority; neither an austere gray list nor oversized colorful buttons substitute for discoverable controls. In changed Phase 1a pages, demand a real-phone walkthrough: visible current state, one immediately comprehensible primary action, understandable Chinese labels, useful pressed/loading/success/error feedback, safe exit/back and no sideways overflow. The administrator ID screen's broken identifiers, large colliding buttons and raw English statuses are documented anti-patterns; its full restructuring belongs to Phase 4 rather than Phase 1a navigation.
 
 ### 10.7 Jiuchen memory element: growth trajectory
 
