@@ -7,6 +7,8 @@
  */
 export const MOE_985_SOURCE = "https://www.moe.gov.cn/srcsite/A22/s7065/200612/t20061206_128833.html"
 export const C9_SOURCE = "https://cge.bit.edu.cn/sjxx/yjsjyjcpt/ynxx/b150573.htm"
+export const MOE_211_SOURCE = "https://www.moe.gov.cn/srcsite/A22/s7065/200512/t20051223_82762.html"
+export const REGIONAL_211_CROSSCHECK = "https://www.gk100.com/read_75189251.htm"
 export type School = {
   id: string
   name: string
@@ -14,6 +16,9 @@ export type School = {
   city: string
   keywords: string
   isC9: boolean
+  is985: boolean
+  is211: boolean
+  campusRecord: boolean
   sourceUrl: string
   website: string
   intro: string
@@ -274,6 +279,22 @@ const tuples: ReadonlyArray<readonly [string,string,string,string]> = [
     "lanzhoudaxue lzu"
   ]
 ]
+// 77 non-985 211 entries, including 华北电力大学保定 as a distinct campus entry.
+// Original MoE 211 source is authoritative for project membership; 116 is the
+// common school/campus listing convention, not 116 distinct legal entities.
+// Army medical schools have modern display names (historical aliases below).
+const other211: ReadonlyArray<readonly [string,string,string]> = [["北京科技大学","北京","北京"],["北京交通大学","北京","北京"],["中央财经大学","北京","北京"],["北京邮电大学","北京","北京"],["中国政法大学","北京","北京"],["北京化工大学","北京","北京"],["对外经济贸易大学","北京","北京"],["中国石油大学（北京）","北京","北京"],["北京中医药大学","北京","北京"],["北京工业大学","北京","北京"],["中国地质大学（北京）","北京","北京"],["中国矿业大学（北京）","北京","北京"],["北京外国语大学","北京","北京"],["中国传媒大学","北京","北京"],["北京林业大学","北京","北京"],["华北电力大学","北京","北京"],["北京体育大学","北京","北京"],["中央音乐学院","北京","北京"],["天津医科大学","天津","天津"],["河北工业大学","河北","天津"],["华北电力大学（保定）","河北","保定"],["太原理工大学","山西","太原"],["内蒙古大学","内蒙古","呼和浩特"],["大连海事大学","辽宁","大连"],["辽宁大学","辽宁","沈阳"],["东北师范大学","吉林","长春"],["延边大学","吉林","延吉"],["哈尔滨工程大学","黑龙江","哈尔滨"],["东北林业大学","黑龙江","哈尔滨"],["东北农业大学","黑龙江","哈尔滨"],["上海财经大学","上海","上海"],["华东理工大学","上海","上海"],["上海大学","上海","上海"],["东华大学","上海","上海"],["上海外国语大学","上海","上海"],["海军军医大学","上海","上海"],["南京理工大学","江苏","南京"],["南京航空航天大学","江苏","南京"],["苏州大学","江苏","苏州"],["江南大学","江苏","无锡"],["南京农业大学","江苏","南京"],["南京师范大学","江苏","南京"],["河海大学","江苏","南京"],["中国矿业大学","江苏","徐州"],["中国药科大学","江苏","南京"],["合肥工业大学","安徽","合肥"],["安徽大学","安徽","合肥"],["福州大学","福建","福州"],["南昌大学","江西","南昌"],["中国石油大学（华东）","山东","青岛"],["郑州大学","河南","郑州"],["华中农业大学","湖北","武汉"],["华中师范大学","湖北","武汉"],["武汉理工大学","湖北","武汉"],["中国地质大学（武汉）","湖北","武汉"],["中南财经政法大学","湖北","武汉"],["湖南师范大学","湖南","长沙"],["暨南大学","广东","广州"],["华南师范大学","广东","广州"],["广西大学","广西","南宁"],["海南大学","海南","海口"],["西南大学","重庆","重庆"],["西南交通大学","四川","成都"],["西南财经大学","四川","成都"],["四川农业大学","四川","雅安"],["贵州大学","贵州","贵阳"],["云南大学","云南","昆明"],["西藏大学","西藏","拉萨"],["西安电子科技大学","陕西","西安"],["陕西师范大学","陕西","西安"],["西北大学","陕西","西安"],["长安大学","陕西","西安"],["空军军医大学","陕西","西安"],["青海大学","青海","西宁"],["宁夏大学","宁夏","银川"],["新疆大学","新疆","乌鲁木齐"],["石河子大学","新疆","石河子"]]
+const historicalAliases: Readonly<Record<string,string>> = {
+  '海军军医大学': '第二军医大学',
+  '空军军医大学': '第四军医大学',
+  '华北电力大学（保定）': '华北电力大学 保定校区',
+}
+const allTuples = [
+  ...tuples.map(([name,province,city,keywords]) => ({name,province,city,keywords,is985:true})),
+  ...other211.map(([name,province,city]) => ({
+    name,province,city,keywords: name + ' ' + (historicalAliases[name] || ''),is985:false,
+  })),
+]
 const c9Schools = new Set(["北京大学","清华大学","复旦大学","上海交通大学","南京大学","浙江大学","中国科学技术大学","西安交通大学","哈尔滨工业大学"])
 const verifiedExtras: Record<string, Partial<School>> = {
   "南京大学": {
@@ -325,11 +346,12 @@ const verifiedExtras: Record<string, Partial<School>> = {
   }
 }
 
-export const SCHOOLS: readonly School[] = tuples.map(([name, province, city, keywords], index) => ({
-  id: 's' + String(index + 1).padStart(2, '0'),
+export const SCHOOLS: readonly School[] = allTuples.map(({name,province,city,keywords,is985}, index) => ({
+  id: 's' + String(index + 1).padStart(3, '0'),
   name, province, city, keywords,
-  isC9: c9Schools.has(name),
-  sourceUrl: MOE_985_SOURCE,
+  isC9: c9Schools.has(name), is985, is211: true,
+  campusRecord: name === '华北电力大学（保定）',
+  sourceUrl: is985 ? MOE_985_SOURCE : MOE_211_SOURCE,
   website: '', intro: '', introSource: '', address: '', addressSource: '', founded: '',
   ...verifiedExtras[name],
 }))
@@ -338,10 +360,12 @@ export function getSchoolById(id: string): School | undefined {
   return SCHOOLS.find(school => school.id === id)
 }
 
-export function findSchools(query: string, tier: 'all' | 'c9' | 'other985', province: string): School[] {
+export type SchoolTier = 'all' | 'c9' | '985' | '211' | 'other211'
+export function findSchools(query: string, tier: SchoolTier, province: string): School[] {
   const needle = query.trim().toLowerCase().replace(/\s+/g, '')
   return SCHOOLS.filter((school) => (
-    (tier === 'all' || (tier === 'c9' ? school.isC9 : !school.isC9)) &&
+    (tier === 'all' || tier === '211' || tier === 'c9' && school.isC9 ||
+      tier === '985' && school.is985 || tier === 'other211' && !school.is985) &&
     (province === '全部地区' || school.province === province) &&
     (!needle || [school.name,school.province,school.city,school.keywords]
       .some(text => text.toLowerCase().replace(/\s+/g, '').includes(needle)))
