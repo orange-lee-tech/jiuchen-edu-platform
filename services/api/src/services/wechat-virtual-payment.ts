@@ -76,7 +76,7 @@ export function verifyVirtualQuery(payload:unknown, orderNo:string, expectedFen:
     throw new Error('virtual_paid_evidence_incomplete')
   const evidence='virtual:'+orderNo+':'+transactionId+':'+expectedFen
   return {state:'paid',transactionId,notificationId:createHash('sha256').update(evidence).digest('hex'),
-    payloadHash:createHash('sha256').update(JSON.stringify(result.order)).digest('hex')}
+    payloadHash:createHash('sha256').update(evidence).digest('hex')}
 }
 async function postSignedXpay(config:VirtualPayConfig,env:AppEnv,path:string,body:string):Promise<unknown> {
   const token=await getWechatStableAccessToken(env)
