@@ -662,13 +662,59 @@ test('student homepage prioritizes plan and renders a four-card action grid',()=
  assert.match(css,/\.action-row\{[^}]*width:49%/)
  assert.match(css,/\.service-link\{[^}]*width:49%/)
 })
-test('school service consultation provides target school on both branches, without forced personal API',()=>{
- const detail=fs.readFileSync(path.join(root,'packages/schools/detail/detail.ts'),'utf8')
- assert.match(detail,/目标学校：/)
- assert.match(detail,/openWechatCustomerService\(this\.data\.school/)
- assert.match(detail,/\.catch\(\(\)=>null\)/)
- const svc=fs.readFileSync(path.join(root,'utils/customer-service.ts'),'utf8')
- assert.match(svc,/showMessageCard:true/)
+test('school consultation sends server-verified role + school in one consent modal',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('admin'))
+ h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
+ let copied='',opened=null
+ h.wx.setClipboardData=opts=>{copied=opts.data;opts.success?.()}
+ h.wx.openCustomerServiceChat=opts=>{opened=opts}
+ const p=h.page('packages/schools/detail/detail');p.onLoad({id:'s015'})
+ assert.equal(p.data.school.name,'复旦大学')
+ const flow=p.onConsultSchool()
+ assert.equal(h.requests.length,1)
+ assert.match(h.requests[0].url,/\/auth\/me/)
+ h.respond(0,{ok:true,user:authFixture('admin').user,
+   businessIdentity:{businessId:'JCA-TEST-0001',type:'admin',status:'claimed'}})
+ await flow
+ assert.equal(h.modals.length,1)
+ assert.match(h.modals[0].content,/当前身份：管理员/)
+ assert.match(h.modals[0].content,/目标学校：复旦大学/)
+ assert.equal(opened,null)
+ h.modals[0].success({confirm:true})
+ assert.match(copied,/当前身份：管理员/)
+ assert.match(copied,/目标学校：复旦大学/)
+ assert.match(opened.sendMessageTitle,/管理员/)
+ assert.match(opened.sendMessagePath,/packages\/schools\/detail\/detail\?id=s015/)
+ assert.equal(h.sheets.length,0)
+})
+test('school inquiry never trusts stale role when revalidation fails',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('teacher'))
+ h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
+ let opened=false;h.wx.openCustomerServiceChat=()=>{opened=true}
+ const p=h.page('packages/schools/detail/detail');p.onLoad({id:'s015'})
+ const flow=p.onConsultSchool()
+ h.respond(0,{error:'unauthorized'},401)
+ await flow
+ assert.equal(opened,false)
+ assert.equal(h.modals.length,1)
+ assert.match(h.modals[0].content,/本地缓存/)
+})
+test('school map updates preview and navigation while honoring primary campus',()=>{
+ const h=harness(),p=h.page('packages/schools/detail/detail')
+ p.onLoad({id:'s015'})
+ assert.match(p.data.activeCampus.campus,/邯郸/)
+ const old=p.data.activeCampus.longitude
+ const z=p.data.campusOptions.findIndex(x=>x.campus==='张江校区')
+ assert.ok(z>=0)
+ p.onSelectCampus({currentTarget:{dataset:{index:z}}})
+ assert.equal(p.data.activeCampus.campus,'张江校区')
+ assert.notEqual(p.data.activeCampus.longitude,old)
+ assert.equal(p.data.mapMarkers[0].longitude,p.data.activeCampus.longitude)
+ let location=null;h.wx.openLocation=o=>{location=o}
+ p.onOpenMap()
+ assert.equal(location.longitude,p.data.activeCampus.longitude)
+ p.onLoad({id:'s009'})
+ assert.match(p.data.activeCampus.campus,/八里台/)
 })
 
 test('administrator browse bottom tab queries roster immediately without nested management page',async()=>{
