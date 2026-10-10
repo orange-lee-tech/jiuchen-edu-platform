@@ -87,7 +87,7 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
         database.db.select({id:assessments.id,status:assessments.status,
           outputJson:assessments.outputJson,
           createdAt:assessments.createdAt,completedAt:assessments.completedAt,
-        }).from(assessments).where(eq(assessments.userId,student.userId))
+        }).from(assessments).where(eq(assessments.userId,linkedUserId))
           .orderBy(desc(assessments.createdAt)),
       ]):[[],[]]
       // Do not return auth tokens, payment instruments, internal IDs or other students.
