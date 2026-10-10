@@ -224,7 +224,7 @@ GitHub 代码已提交但**未生产发布**：`5e432c1a` 评估学业字段只�
 
 截图 5 南开院校咨询层叠两次弹窗：直接准备院校、姓名、年级、专业摘要后仅一次 `wx.showModal`，确认就复制数据并打开微信客服；用户在客服中主动粘贴发送或点击小程序卡片发送。不能由小程序自动代用户发送消息。小程序真机/运营客服端接收尚待核对。
 
-截图 6 复旦实景照片 & 所有院校多校区地图：`packages/schools/campus-points.ts` 有 172/172 条院校、314 个参考地理点、94 条院校包含多校区；来自 MIT 源参考坐标 https://github.com/Magicdover/China-Universities-2026 以及百度地图 POI历史采样 https://github.com/pg7go/The-Location-Data-of-Schools-in-China ，经坐标系换算。独立已核对地点始终置顶；标注经过核验/第三方参考，历史数据不宣称精确校门位置。详情页支持各校区切换地图、微信地图打开/导航、显示数据出处。复旦/南开补 Wikimedia CC BY-SA 4.0 实景照片和作者许可；国内微信外链图片加载成功与否**仍需真实合法域名/云存储处理**。对没有授权源图片的学校，仍不编造实景；“全部大学实景图片”尚未完成。
+截图 6 复旦实景照片 & 所有院校多校区地图：`packages/schools/campus-points.ts` 有 172/172 条院校、315 个参考地理点、95 条院校包含多校区；来自 MIT 源参考坐标 https://github.com/Magicdover/China-Universities-2026 以及百度地图 POI历史采样 https://github.com/pg7go/The-Location-Data-of-Schools-in-China ，经坐标系换算。独立已核对地点始终置顶；标注经过核验/第三方参考，历史数据不宣称精确校门位置。详情页支持各校区切换地图、微信地图打开/导航、显示数据出处。复旦/南开补 Wikimedia CC BY-SA 4.0 实景照片和作者许可；国内微信外链图片加载成功与否**仍需真实合法域名/云存储处理**。对没有授权源图片的学校，仍不编造实景；“全部大学实景图片”尚未完成。
 
 **集成分支** `p1/foundation` 代码 `279da9361c4a9147b5e21352bd49302b5e50f2aa` Push CI PASS <https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38034270014>，但不代表真机 PASS。
 
