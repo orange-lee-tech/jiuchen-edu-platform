@@ -1,6 +1,7 @@
 import { getSavedAuthResult } from '../../../utils/auth'
 import {
   getReadOnlyStudent, getReadOnlyStudentStage, getReadOnlyTeacher, friendlyRequestError,
+  ApiRequestError,
   type ReadOnlyStudentResponse, type ReadOnlyTeacherResponse,
 } from '../../../utils/request'
 
@@ -46,7 +47,8 @@ function scheduleCourses(raw:unknown):Course[] {
 Page({
   data:{
     kind:'student' as 'student'|'teacher',id:'',
-    loading:true,stageLoading:false,error:'',section:'profile' as Section,viewerRole:'',
+    loading:true,stageLoading:false,error:'',backendPending:false,
+    section:'profile' as Section,viewerRole:'',
     readOnly:true,
     student:null as ReadOnlyStudentResponse | null,
     teacher:null as ReadOnlyTeacherResponse | null,
@@ -91,7 +93,7 @@ Page({
   async loadData(stage?:string){
     const serial=++this.generation
     try{
-      this.setData({loading:true,error:''})
+      this.setData({loading:true,error:'',backendPending:false})
       if(this.data.kind==='teacher'){
         const teacher=await getReadOnlyTeacher(this.data.id)
         if(serial!==this.generation)return
@@ -118,8 +120,11 @@ Page({
       })
     }catch(error){
       if(serial!==this.generation)return
-      this.setData({loading:false,student:null,teacher:null,
-        error:friendlyRequestError(error,'身份查看失败，请检查查看权限或服务器版本')})
+      const backendPending=error instanceof ApiRequestError && error.code==='backend_version_mismatch'
+      this.setData({loading:false,student:null,teacher:null,backendPending,
+        error:backendPending
+          ? '小程序已更新，但测试 API 尚未部署跨身份查阅接口。反复重试不能解决，请先完成受控服务端发布。'
+          : friendlyRequestError(error,'身份查看失败，请检查查看权限或服务器版本')})
     }
   },
   onScheduleSelect(event:WechatMiniprogram.BaseEvent){
