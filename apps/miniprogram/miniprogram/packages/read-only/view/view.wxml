@@ -21,6 +21,14 @@
       </view>
       <text wx:if="{{!teacher.assigned.length}}" class="empty">暂无关联学员</text>
     </view>
+    <view class="mirror-card">
+      <text class="section-title">待审核的学员规划 · 只读</text>
+      <view wx:for="{{teacher.pending}}" wx:key="id" class="record-row">
+        <view class="item-header"><text class="item-title">{{item.title}}</text><text class="status">待审核</text></view>
+        <text class="meta">{{item.stageCode}} · {{item.type}}</text>
+      </view>
+      <text wx:if="{{!teacher.pending.length}}" class="empty">目前没有待审规划，镜像模式也不会执行审核。</text>
+    </view>
   </block>
   <block wx:elif="{{student}}">
     <view class="student-identity">

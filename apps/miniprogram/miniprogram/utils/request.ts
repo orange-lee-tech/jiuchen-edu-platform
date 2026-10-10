@@ -1484,6 +1484,8 @@ export type ReadOnlyTeacherResponse = {
   teacher:{id:string;name:string;title:string|null;bio:string|null;status:string}
   assigned:Array<{studentId:string;studentName:string;university:string|null;major:string|null;
     relationship:string;stageCode:string|null}>
+  pending:Array<{id:string;studentId:string;stageCode:string;type:string;
+    title:string;itemsJson:unknown;createdAt:string}>
 }
 export function getReadOnlyStudent(id:string,stage?:string):Promise<ReadOnlyStudentResponse>{
   return request<ReadOnlyStudentResponse>(

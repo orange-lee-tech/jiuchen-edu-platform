@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
 import {
@@ -54,7 +54,7 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
 
       const schedule=await database.db.select({
         id:scheduleImports.id,fileName:scheduleImports.fileName,status:scheduleImports.status,
-        parsedJson:scheduleImports.parsedJson,stageCode:scheduleImports.studentId,
+        parsedJson:scheduleImports.parsedJson,
         updatedAt:scheduleImports.updatedAt,
       }).from(scheduleImports).where(and(
         eq(scheduleImports.studentId,student.id),eq(scheduleImports.status,'parsed')))
@@ -113,7 +113,18 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
         .innerJoin(students,eq(studentTeacherAssignments.studentId,students.id))
         .where(eq(studentTeacherAssignments.teacherId,teacher.id))
         .orderBy(asc(students.name))
-      return {ok:true,readOnly:true,targetType:'teacher' as const,teacher,assigned}
+      const pending=assigned.length
+        ? await database.db.select({
+            id:planRevisions.id,studentId:planRevisions.studentId,
+            stageCode:planRevisions.stageCode,type:planRevisions.type,
+            title:planRevisions.title,itemsJson:planRevisions.itemsJson,
+            createdAt:planRevisions.createdAt,
+          }).from(planRevisions).where(and(
+            inArray(planRevisions.studentId,assigned.map(item=>item.studentId)),
+            eq(planRevisions.status,'pending'),
+          )).orderBy(desc(planRevisions.createdAt))
+        : []
+      return {ok:true,readOnly:true,targetType:'teacher' as const,teacher,assigned,pending}
     },
   )
 }
