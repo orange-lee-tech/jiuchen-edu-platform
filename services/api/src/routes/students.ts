@@ -10,6 +10,8 @@ import {
   teachers,
 } from '../db/schema.js'
 import { DEFAULT_PLAN_TITLES, STAGE_DEFINITIONS, getStageDefinition, isGuidanceAllowed } from '../domain/classroom.js'
+import { resolveSessionUser } from '../services/session.js'
+import { authorizedStudent } from './read-only-workspace.js'
 
 export function registerStudentRoutes(app: FastifyInstance, database: DatabaseContext) {
   app.get('/classroom/stages', async () => ({
@@ -25,6 +27,9 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
       })
     }
 
+    const session=await resolveSessionUser(request,database)
+    if(!session)return reply.code(401).send({ok:false,error:'unauthorized'})
+
     const [student] = await database.db
       .select({
         id: students.id,
@@ -32,21 +37,25 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
         university: students.university,
         major: students.major,
         currentStage: students.currentStage,
+        userId: students.userId,
       })
       .from(students)
       .where(eq(students.id, request.params.id))
       .limit(1)
 
     if (!student) {
-      return reply.code(404).send({
-        ok: false,
-        error: 'student_not_found',
-      })
+      return reply.code(404).send({ok:false,error:'student_not_found'})
     }
+    // Legacy GET previously exposed any student's private classroom via ID.
+    // Resolve actor from the actual token; never authorize on a client role param.
+    const allowed=student.userId===session.userId ||
+      await authorizedStudent(database,session.role,session.userId,student.id)
+    if(!allowed)return reply.code(403).send({ok:false,error:'student_read_forbidden'})
 
     return {
       ok: true,
-      student,
+      student: {id:student.id,name:student.name,university:student.university,
+        major:student.major,currentStage:student.currentStage},
     }
   })
 
@@ -61,6 +70,9 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
       })
     }
 
+    const session=await resolveSessionUser(request,database)
+    if(!session)return reply.code(401).send({ok:false,error:'unauthorized'})
+
     const [student] = await database.db
       .select({
         id: students.id,
@@ -68,17 +80,20 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
         university: students.university,
         major: students.major,
         currentStage: students.currentStage,
+        userId: students.userId,
       })
       .from(students)
       .where(eq(students.id, request.params.id))
       .limit(1)
 
     if (!student) {
-      return reply.code(404).send({
-        ok: false,
-        error: 'student_not_found',
-      })
+      return reply.code(404).send({ok:false,error:'student_not_found'})
     }
+    // Legacy GET previously exposed any student's private classroom via ID.
+    // Resolve actor from the actual token; never authorize on a client role param.
+    const allowed=student.userId===session.userId ||
+      await authorizedStudent(database,session.role,session.userId,student.id)
+    if(!allowed)return reply.code(403).send({ok:false,error:'student_read_forbidden'})
 
     const stageCode = request.query.stage ?? student.currentStage
     const stage = getStageDefinition(stageCode)
@@ -210,7 +225,8 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
 
     return {
       ok: true,
-      student,
+      student: {id:student.id,name:student.name,university:student.university,
+        major:student.major,currentStage:student.currentStage},
       stage,
       showGuidance,
       mentors,
