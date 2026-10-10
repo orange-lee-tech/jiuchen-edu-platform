@@ -210,3 +210,23 @@ GitHub 代码已提交但**未生产发布**：`5e432c1a` 评估学业字段只�
 - `openVerifiedWechatCustomerService` 由当前账户触发前重新请求 `/auth/me`；用服务器返回的 `user.role`、账户显示名与 `businessIdentity.status=claimed` 的内部编号构造身份摘要：用户确认后复制摘要、打开企业微信客服并显示包含角色及ID的待发小程序名片。禁止由被查阅的“学员镜像”冒用他人身份；不使用客户端传入 role，也不传session token/openid/手机号。无登录/校验失败则停止宣称已核验角色。所有联系客服入口（首页顾问 + 我的联系运营）使用此校验路径。身份名片由客户本人手动点击发送、文本由本人手动粘贴发送，小程序API无法强制自动发送到客服。**如果运营要求客服在不经用户发送卡片/文本的情况下自动读取可信业务身份，还需要未来独立服务端 WeCom 客服事件回调、身份映射/审核/隐私门槛；本轮不得声称已经自动到达运营工作台。**
 - 增加 native event 回归覆盖管理员身份重新核验、客服卡片需用户确认才可触发、校验失败拒绝伪角色和 WXML 全宽布局；小程序 TypeScript / Node harness / admin build / API typecheck+tests+build 仍由 GitHub Actions CI 单独验证，不能用自动化 PASS 冒充微信真机样式 PASS。
 - 上线范围仅代码集成分支，保留生产 release 不变；不改 API schema、ECS、Nginx Proxy Manager、收费、模型和已运行官网。真机检查：管理员身份卡窄屏等宽按钮、工作台/运营行贴合两侧、联系客服点击后角色显示/核验失败分支、用户**主动发送**卡片后企业微信后台实际展示是否含角色与编号。
+
+
+## 2026-10-10 15:07 六张截图全项整改 / 实际上线 Gate
+
+截图 1 管理员跨身份镜像显示服务器缺接口：前端此前实现的是安全 GET-only 业务镜像，不是原小程序 TabBar 完全复刻，后端旧 production 未上线对应新路由。**本轮修复未在 ECS 生效**。从此前最近记录的正式生产基线 `b751287ce64b18c869aed59434654464b13e21ff` 隔离构建了 `p1/release-readonly-schedule-2026-10-10` 最小 API 补丁候选，必须核对 ECS 实际当前 SHA、schema，单独完成授权负例及批准流程后才可部署。独立热修复 CI：<https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38034752604> PASS。独立候选提交 `2919aeb62b430d19569e726d2109aa7c3aa40021`。无ECS变更、无生产验收。**旧代码不支持此只读查询的体验问题仍 OPEN。**
+
+截图 2 规划学期菜单横向排列：`pages/classroom/classroom.wxml` scroll-x 改为 scroll-y；`classroom.wxss` 使用明确垂直左侧学期导航，学期阶段和本周课表均纵向滚动，右边完整任务卡。模拟WXML/TS检查 PASS，真机样式待验收。
+
+截图 3 首页太寡淡：`pages/index/index.wxss` 改为四色高饱和行动卡、大尺寸功能图标、渐变hero、压缩底部认识九辰区域；仍以“进入我的规划”为主CTA，评估功能不可代替规划。微信真机未重新检查。
+
+截图 4 第一周周一保存 `HTTP400/invalid_schedule_edit_payload`：来自旧 ECS API 缺少新日期-only路由，前端曾 fallback 到旧全课表 PUT。已删除此 fallback，绝不在日期修改时把OCR课程整包重发；新的独立后端路由仅JSON_SET 保存 `termStartDate`，强制有效星期一、核对真实登录用户、读回确认。未部署到 ECS 前只给出明确失败，原课表和日期不变；**生产真实保存仍 OPEN**。
+
+截图 5 南开院校咨询层叠两次弹窗：直接准备院校、姓名、年级、专业摘要后仅一次 `wx.showModal`，确认就复制数据并打开微信客服；用户在客服中主动粘贴发送或点击小程序卡片发送。不能由小程序自动代用户发送消息。小程序真机/运营客服端接收尚待核对。
+
+截图 6 复旦实景照片 & 所有院校多校区地图：`packages/schools/campus-points.ts` 有 172/172 条院校、314 个参考地理点、94 条院校包含多校区；来自 MIT 源参考坐标 https://github.com/Magicdover/China-Universities-2026 以及百度地图 POI历史采样 https://github.com/pg7go/The-Location-Data-of-Schools-in-China ，经坐标系换算。独立已核对地点始终置顶；标注经过核验/第三方参考，历史数据不宣称精确校门位置。详情页支持各校区切换地图、微信地图打开/导航、显示数据出处。复旦/南开补 Wikimedia CC BY-SA 4.0 实景照片和作者许可；国内微信外链图片加载成功与否**仍需真实合法域名/云存储处理**。对没有授权源图片的学校，仍不编造实景；“全部大学实景图片”尚未完成。
+
+**集成分支** `p1/foundation` 代码 `279da9361c4a9147b5e21352bd49302b5e50f2aa` Push CI PASS <https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38034270014>，但不代表真机 PASS。
+
+**生产隔离**：测试/UI 与 readonly/date backend 最小候选为两条不同分支，绝不直接将整个含未授权支付与AI变更的 `p1/foundation` 整体推送生产。任何发布仅由具备权限的人工按 `ops/ecs/AGENTS.md` 和 `docs/handoff/readonly-monday-minimal-hotfix-2026-10-10.md` 执行。
+
