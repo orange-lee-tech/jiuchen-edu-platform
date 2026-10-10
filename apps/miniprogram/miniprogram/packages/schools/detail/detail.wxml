@@ -20,7 +20,8 @@
   <view wx:if="{{school.verifiedStats}}" class="stats-source" data-key="stats" bindtap="copyUrl">上述数据来自学校招生网（核对日期 {{school.verifiedStats.sourceChecked}}）· 复制来源 ›</view>
   <view class="detail-card">
     <view class="detail-heading"><text>学校简介</text><text class="detail-hint">官方来源优先</text></view>
-    <text class="intro-text">{{hasIntro ? school.intro : '已核验该校位于教育部公布的{{school.is985 ? '985' : '211'}}工程建设高校名单中。学校历史介绍及最新情况尚未完成逐校官网核验，不使用未经核实的介绍或统计数字。'}}</text>
+    <text wx:if="{{hasIntro}}" class="intro-text">{{school.intro}}</text>
+    <text wx:else class="intro-text">已核验该校位于教育部公布的{{school.is985 ? '985' : '211'}}工程建设高校名单中。学校历史介绍及最新情况尚未完成逐校官网核验，不使用未经核实的介绍或统计数字。</text>
     <view wx:if="{{school.founded}}" class="founded-line">建校历史参考年份：{{school.founded}} · 请以学校官方历史为准</view>
     <view wx:if="{{school.introSource}}" class="detail-source" data-key="intro" bindtap="copyUrl"><text>学校官方介绍</text><text>复制来源链接 ›</text></view>
     <view class="detail-source" data-key="{{school.is985 ? 'moe' : 'moe211'}}" bindtap="copyUrl"><text>教育部 {{school.is985 ? '985' : '211'}} 工程原始名单</text><text>复制来源链接 ›</text></view>
