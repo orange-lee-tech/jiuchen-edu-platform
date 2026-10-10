@@ -902,6 +902,15 @@ export function registerClassroomWorkspaceRoutes(
         eq(scheduleImports.userId, session.userId),
         eq(scheduleImports.status, 'parsed'),
       ))
+      const [confirmed] = await database.db.select({ parsedJson: scheduleImports.parsedJson })
+        .from(scheduleImports).where(and(
+          eq(scheduleImports.id, owned.id), eq(scheduleImports.userId, session.userId),
+        )).limit(1)
+      const savedDate = confirmed?.parsedJson && typeof confirmed.parsedJson === 'object' &&
+        !Array.isArray(confirmed.parsedJson)
+        ? (confirmed.parsedJson as Record<string, unknown>).termStartDate : null
+      if (savedDate !== parsed.data.termStartDate)
+        return reply.code(409).send({ok:false,error:'schedule_date_readback_mismatch'})
       return { ok: true, termStartDate: parsed.data.termStartDate }
     },
   )

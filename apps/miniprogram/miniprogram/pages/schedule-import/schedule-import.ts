@@ -338,7 +338,19 @@ Page({
     const id = this.data.importId
     try {
       this.setData({ saving: true, saveError: '' })
-      const confirmed = await updateScheduleFirstMonday(id, date)
+      let confirmed: string
+      try {
+        confirmed = await updateScheduleFirstMonday(id, date)
+      } catch (error) {
+        if (!(error instanceof ApiRequestError) || error.code !== 'backend_version_mismatch')
+          throw error
+        // Transitional compatibility only: the old production API might not
+        // have a date-only route. Never retry on a real 4xx/5xx application error.
+        const current = this.data.schedule
+        if (!current || this.data.importId !== id) return
+        const legacy = await updateScheduleImport(id, { ...current, termStartDate: date })
+        confirmed = legacy.termStartDate || ''
+      }
       // An older pending response cannot rewrite a newly imported timetable.
       if (this.data.importId !== id || !this.data.schedule) return
       if (confirmed !== date) throw new Error('schedule_date_readback_mismatch')
@@ -359,7 +371,7 @@ Page({
       })
       wx.showModal({
         title: '第一周日期未保存',
-        content: message + '。课表课程仍然保留，原日期未被更改。\\n错误码：' + code,
+        content: message + '。课表课程仍然保留，原日期未被更改。\n错误码：' + code,
         showCancel: false,
       })
     } finally {

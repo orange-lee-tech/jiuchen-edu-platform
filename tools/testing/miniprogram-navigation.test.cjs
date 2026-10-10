@@ -457,3 +457,24 @@ test('schedule start-date edit sends only metadata and commits after server ackn
   assert.equal(page.data.termStartDate,'2026-09-07')
   assert.equal(page.data.schedule.termStartDate,'2026-09-07')
 })
+
+test('old backend missing date-only route falls back once to the existing owned PUT', async()=>{
+  const h=harness();h.auth.saveAuthResult(authFixture('student'))
+  const page=h.page('pages/schedule-import/schedule-import')
+  const course={name:'物理',day:'周一',dayIndex:1,slot:'第1-2节',startSection:1,
+    endSection:2,time:null,location:null,teacher:null,weeks:null,raw:'物理'}
+  page.setData({importId:'schedule-1',schedule:{sourceType:'image',stageCode:'senior-fall',
+    courses:[course],warnings:[],termStartDate:null},termStartDate:''})
+  page.onTermStartChange({detail:{value:'2026-09-07'}})
+  assert.equal(h.requests.length,1)
+  h.respond(0,{statusCode:404,error:'Not Found',
+    message:'Route PUT:/me/classroom/schedule-imports/schedule-1/term-start-date not found'},404)
+  await settle()
+  assert.equal(h.requests.length,2)
+  assert.ok(h.requests[1].url.endsWith('/schedule'))
+  assert.equal(h.requests[1].data.termStartDate,'2026-09-07')
+  h.respond(1,{ok:true,schedule:{...page.data.schedule,termStartDate:'2026-09-07'}})
+  await settle()
+  assert.equal(page.data.termStartDate,'2026-09-07')
+  assert.equal(page.data.saveError,'')
+})
