@@ -64,12 +64,12 @@ test('schools are isolated in a lazy mini-program subpackage and reachable throu
   assert.match(news, /packages\/schools\/directory\/directory/)
 })
 
-test('catalog preserves source evidence and does not pretend to have fake analytics, campus photography or map', () => {
+test('catalog preserves source evidence and excludes fabricated analytics', () => {
   assert.match(school, /www\.moe\.gov\.cn\/srcsite\/A22/)
   assert.match(school, /cge\.bit\.edu\.cn/)
   const detail = fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
   assert.match(detail, /教育部 \{\{school.is985 \? '985' : '211'\}\} 工程原始名单/)
-  assert.match(detail, /项目数、关注数/)
+  assert.match(detail, /项目数量和关注数/)
   assert.match(detail, /教育部|已核验|学院/)
 })
 
@@ -94,5 +94,5 @@ test('school WXML does not nest mustache expressions inside other expressions', 
   assert.match(detail,/bindtap="onConsultSchool"/)
   assert.match(detail,/<map class="campus-map"/)
   assert.match(detail,/heroPhoto\.url/)
-  assert.match(detail, /<text wx:else class="intro-text">已核验该校位于教育部公布的/)
+  assert.match(detail, /<text wx:else class="intro-text">已收录/)
 })
