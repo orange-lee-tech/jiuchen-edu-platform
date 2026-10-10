@@ -250,7 +250,9 @@ test('professional slots expose existing matching actions and no staff admin des
         assert.ok(kind === 'admin' ? action.url.startsWith('/pages/admin/admin?section=admin-') : action.url === '/pages/teacher-students/teacher-students')
       }
       component.onAction({ currentTarget: { dataset: { key: component.data.actions[0].key } } })
-      assert.equal(h.navigations[0].url, component.data.actions[0].url)
+      assert.equal(h.navigations[0].url,
+        kind === 'admin' && component.data.actions[0].key === 'mirror'
+          ? '/pages/classroom/classroom' : component.data.actions[0].url)
     }
   }
 })

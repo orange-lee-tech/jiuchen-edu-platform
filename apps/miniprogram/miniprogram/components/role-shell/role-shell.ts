@@ -90,7 +90,8 @@ Component({
       const action = this.data.actions.find((item) => item.key === key)
       if (!action) return
       this.setData({ opening: true })
-      openPage(action.url)
+      if(key==='mirror' && this.properties.kind==='admin')openSlot('plan')
+      else openPage(action.url)
       setTimeout(() => this.setData({ opening: false }), 500)
     },
   },
