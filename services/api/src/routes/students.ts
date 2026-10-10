@@ -27,6 +27,9 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
       })
     }
 
+    const session=await resolveSessionUser(request,database)
+    if(!session)return reply.code(401).send({ok:false,error:'unauthorized'})
+
     const [student] = await database.db
       .select({
         id: students.id,
@@ -45,15 +48,14 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
     }
     // Legacy GET previously exposed any student's private classroom via ID.
     // Resolve actor from the actual token; never authorize on a client role param.
-    const session=await resolveSessionUser(request,database)
-    if(!session)return reply.code(401).send({ok:false,error:'unauthorized'})
     const allowed=student.userId===session.userId ||
       await authorizedStudent(database,session.role,session.userId,student.id)
     if(!allowed)return reply.code(403).send({ok:false,error:'student_read_forbidden'})
 
     return {
       ok: true,
-      student,
+      student: {id:student.id,name:student.name,university:student.university,
+        major:student.major,currentStage:student.currentStage},
     }
   })
 
@@ -68,6 +70,9 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
       })
     }
 
+    const session=await resolveSessionUser(request,database)
+    if(!session)return reply.code(401).send({ok:false,error:'unauthorized'})
+
     const [student] = await database.db
       .select({
         id: students.id,
@@ -86,8 +91,6 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
     }
     // Legacy GET previously exposed any student's private classroom via ID.
     // Resolve actor from the actual token; never authorize on a client role param.
-    const session=await resolveSessionUser(request,database)
-    if(!session)return reply.code(401).send({ok:false,error:'unauthorized'})
     const allowed=student.userId===session.userId ||
       await authorizedStudent(database,session.role,session.userId,student.id)
     if(!allowed)return reply.code(403).send({ok:false,error:'student_read_forbidden'})
@@ -222,7 +225,8 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
 
     return {
       ok: true,
-      student,
+      student: {id:student.id,name:student.name,university:student.university,
+        major:student.major,currentStage:student.currentStage},
       stage,
       showGuidance,
       mentors,
