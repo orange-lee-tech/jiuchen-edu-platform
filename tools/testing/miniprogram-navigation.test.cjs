@@ -660,7 +660,7 @@ test('student homepage prioritizes plan and renders a four-card action grid',()=
  assert.match(ts,/onPrimary\(\) \{[\s\S]*?openSlot\('plan'\)/)
  const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
  assert.match(css,/\.action-row\{[^}]*width:49%/)
- assert.match(css,/\.service-link\{[^}]*width:49%/)
+ assert.match(css,/\.service-link\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)
 })
 test('school consultation sends server-verified role + school in one consent modal',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('admin'))
