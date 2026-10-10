@@ -4,7 +4,7 @@ STATE: frozen CODE snapshot; NOT real-device acceptance or public release.
 
 ## Paired candidate SHAs
 - WeChat: this branch starts from p1/foundation 18bfab53ba5c11372355a768ad56591fa0035095 with only this docs-only release note added.
-- API: p1/rc-api-ea8c-readonly-date-2026-10-10 at 0bcca876edd6e0dda575274777661c1c0be07adb, based on active production ea8c971008a9efd042ec43fdc62398e136262259, preserving five production fixes. API RC CI PASS at https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38038569787. This SHA includes the nested classroom.student userId privacy fix, new route/date regression tests, and graceful missing-growth_records handling; the current CI must be independently checked before any release.
+- API: p1/rc-api-ea8c-readonly-date-2026-10-10 at 5b048de30d3592d0d61fcd4a9af8fee5f37f09e3, based on active production ea8c971008a9efd042ec43fdc62398e136262259, preserving five production fixes. API RC CI PASS at https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38038569787. This SHA includes the nested classroom.student userId privacy fix, new route/date regression tests, and graceful missing-growth_records handling; the current CI must be independently checked before any release.
 - Actual ECS remains on ea8c971008a9efd042ec43fdc62398e136262259. No ECS rollout has been executed.
 - Train label: 2026.10.10-rc1 (not official WeChat version number).
 
@@ -29,4 +29,4 @@ STATE: frozen CODE snapshot; NOT real-device acceptance or public release.
 ## Parallel school media pack
 - Independently gather legal-source campus photos, correct coordinate system GCJ-02, per-campus source URLs/quality and deterministic catalog IDs. Hand to local Codex as a separately audited batch import, not a prerequisite for critical API bugs.
 
-- The API RC growth fallback initially failed typecheck due to closure nullability; repaired in 0bcca876edd6e0dda575274777661c1c0be07adb. Its exact commit CI is the acceptance gate, not previous CI runs.
+- The API RC growth fallback initially failed typecheck due to closure nullability; repaired in 5b048de30d3592d0d61fcd4a9af8fee5f37f09e3. Its exact commit CI is the acceptance gate, not previous CI runs.
