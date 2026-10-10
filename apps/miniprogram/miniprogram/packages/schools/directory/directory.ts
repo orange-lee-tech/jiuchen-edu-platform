@@ -15,16 +15,13 @@ Page({
     level: 'all' as 'all' | '985' | '211' | 'c9' | 'other211',
     region: '全部地区',
     group: 'all' as SchoolGroupKey | 'all',
-    groups: SCHOOL_GROUPS.map(item => ({
-      ...item,
-      count: SCHOOLS.filter(school => school.groupTags.some(tag => tag.key === item.key)).length,
-    })),
+    groups: SCHOOL_GROUPS.map(item => ({ key: item.key, label: item.label })),
     regions: SCHOOL_REGIONS,
     showFilter: false,
     totalCount: SCHOOLS.length,
     c9Count: SCHOOLS.filter(s => s.isC9).length,
     n985: SCHOOLS.filter(s => s.is985).length,
-    nOther211: SCHOOLS.filter(s => !s.is985).length,
+    nOther211: SCHOOLS.filter(s => s.is211 && !s.is985).length,
     schools: cards([...SCHOOLS]),
   },
   onLoad() {
@@ -40,13 +37,15 @@ Page({
   onLevel(event: WechatMiniprogram.BaseEvent) {
     const level = String(event.currentTarget.dataset.level)
     if (!['all','985','211','c9','other211'].includes(level)) return
-    this.setData({ level: level as SchoolTier })
+    // Explicit tier choice clears a previous circle choice; never silently
+    // display only an intersection of 国防七子 or 五院四系.
+    this.setData({ level: level as SchoolTier, group: 'all' })
     this.refreshSchools()
   },
   onGroup(event: WechatMiniprogram.BaseEvent) {
     const value = String(event.currentTarget.dataset.group)
     if (value !== 'all' && !SCHOOL_GROUPS.some(item => item.key === value)) return
-    this.setData({ group: value as SchoolGroupKey | 'all' })
+    this.setData({ group: value as SchoolGroupKey | 'all', level: 'all' })
     this.refreshSchools()
   },
   onOpenFilter() { this.setData({ showFilter: true }) },

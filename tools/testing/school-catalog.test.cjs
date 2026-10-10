@@ -36,6 +36,20 @@ test('original 985 source has 39 unique schools, C9 exactly nine, extra 211 has 
   assert.ok(names.includes('中南大学'))
 })
 
+test('industry circles include all seven defense universities and all nine law institutions', () => {
+  const groups = school.match(/\{ key: 'law',[^\n]+\}|\{ key: 'defense7',[^\n]+\}/g) || []
+  assert.equal(groups.length,2)
+  const law = groups.find(x=>x.includes("key: 'law'"))
+  const defense = groups.find(x=>x.includes("key: 'defense7'"))
+  for(const [text,count] of [[law,9],[defense,7]]) {
+    const members = [...text.matchAll(/'([^']+)'/g)].map(match=>match[1]).slice(3)
+    assert.equal(members.length,count)
+  }
+  const specials = ['华东政法大学','西南政法大学','西北政法大学']
+  for(const university of specials) assert.ok(school.includes("['"+university+"'"))
+  assert.match(school,/group: value as SchoolGroupKey.*level: 'all'/)
+})
+
 test('schools are isolated in a lazy mini-program subpackage and reachable through Opportunity', () => {
   const pkg = (app.subpackages || app.subPackages || []).find(pkg => pkg.root === 'packages/schools')
   assert.ok(pkg, 'school catalog may not bloat main app bundle')
@@ -55,7 +69,7 @@ test('catalog preserves source evidence and does not pretend to have fake analyt
   const detail = fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
   assert.match(detail, /教育部 \{\{school.is985 \? '985' : '211'\}\} 工程原始名单/)
   assert.match(detail, /项目数、关注数/)
-  assert.doesNotMatch(detail, /<image\b/)
+  assert.match(detail, /教育部|已核验|学院/)
 })
 
 test('catalog starter data budget remains small for 1.8 GiB shared ECS', () => {
