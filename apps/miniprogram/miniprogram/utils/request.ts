@@ -1475,7 +1475,7 @@ export type ReadOnlyStudentResponse = {
   classroom:ClassroomView
   latestSchedule:{id:string;fileName:string;status:string;parsedJson:unknown} | null
   schedules:Array<{id:string;fileName:string;status:string;parsedJson:unknown}>
-  revisions:Array<{id:string;title:string;stageCode:string;type:string;status:string}>
+  revisions:Array<{id:string;title:string;stageCode:string;type:string;status:string;itemsJson:unknown}>
   growth:Array<{id:string;type:string;title:string;organization:string|null;role:string|null;
     startDate:string|null;endDate:string|null;description:string|null;result:string|null;
     standardExpression:string|null}>
