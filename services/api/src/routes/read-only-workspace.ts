@@ -72,7 +72,8 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
       }).from(planRevisions).where(eq(planRevisions.studentId,student.id))
         .orderBy(desc(planRevisions.createdAt))
 
-      const [growth,history]=student.userId?await Promise.all([
+      const linkedUserId=student.userId
+      const [growth,history]=linkedUserId?await Promise.all([
         missingOptionalTableAsEmpty(() => database.db.select({
           id:growthRecords.id,type:growthRecords.type,title:growthRecords.title,
           organization:growthRecords.organization,role:growthRecords.role,
@@ -81,7 +82,7 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
           standardExpression:growthRecords.standardExpression,
           userConfirmed:growthRecords.userConfirmed,
           teacherConfirmed:growthRecords.teacherConfirmed,status:growthRecords.status,
-        }).from(growthRecords).where(eq(growthRecords.userId,student.userId))
+        }).from(growthRecords).where(eq(growthRecords.userId,linkedUserId))
           .orderBy(desc(growthRecords.createdAt))),
         database.db.select({id:assessments.id,status:assessments.status,
           outputJson:assessments.outputJson,
