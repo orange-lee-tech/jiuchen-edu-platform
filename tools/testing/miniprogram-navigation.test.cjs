@@ -616,3 +616,22 @@ test('read-only stage navigation never retransmits private history or uses POST'
   assert.equal(page.data.stageIndex,1)
   assert.equal(page.data.student.classroom.stage.code,'junior-spring')
 })
+
+test('read-only views are in a lazy package and do not expose editing or AI action buttons',()=>{
+ const app=JSON.parse(fs.readFileSync(path.join(root,'app.json'),'utf8'))
+ const pack=app.subpackages.find(p=>p.root==='packages/read-only')
+ assert.deepEqual(Array.from(pack.pages),['view/view'])
+ const view=fs.readFileSync(path.join(root,'packages/read-only/view/view.wxml'),'utf8')
+ const source=fs.readFileSync(path.join(root,'packages/read-only/view/view.ts'),'utf8')
+ const teacher=fs.readFileSync(path.join(root,'pages/teacher-students/teacher-students.ts'),'utf8')
+ const admin=fs.readFileSync(path.join(root,'pages/admin/admin.wxml'),'utf8')
+ assert.match(view,/READ ONLY/)
+ assert.match(view,/我的规划/)
+ assert.match(view,/AI评估历史/)
+ assert.match(teacher,/packages\/read-only\/view\/view/)
+ assert.match(admin,/只读切换/)
+ assert.doesNotMatch(view, /bindtap="on(?:Save|RunAssessment|Pay|Upload|Approve|Reject)/)
+ assert.doesNotMatch(source,/saveAuthResult\(|setApiSessionToken\(|request\([^)]*,\s*'POST'/)
+ // WXML must never contain double-nested braces; these break real preview uploads.
+ assert.doesNotMatch(view,/\{\{(?:(?!\}\})[\s\S])*\{\{/)
+})

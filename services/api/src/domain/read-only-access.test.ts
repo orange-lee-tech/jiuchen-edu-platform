@@ -14,3 +14,10 @@ test('only admin views teachers and mirror is GET-only',()=>{
   for(const method of ['PUT','POST','PATCH','DELETE'])assert.equal(readOnlyMethodAllowed(method),false)
   assert.equal(readOnlyMethodAllowed('get'),true)
 })
+
+test('removed teacher assignment always invalidates permission without session swapping',()=>{
+  assert.equal(mayViewStudent('teacher',true),true)
+  assert.equal(mayViewStudent('teacher',false),false)
+  assert.equal(mayViewStudent('admin',false),true)
+  assert.equal(mayViewStudent('user',true),false)
+})
