@@ -91,5 +91,8 @@ test('school WXML does not nest mustache expressions inside other expressions', 
   }
   const detail = fs.readFileSync(path.join(mini, 'packages/schools/detail/detail.wxml'), 'utf8')
   assert.match(detail, /<text wx:if="\{\{hasIntro\}\}" class="intro-text">\{\{school\.intro\}\}<\/text>/)
+  assert.match(detail,/bindtap="onConsultSchool"/)
+  assert.match(detail,/<map class="campus-map"/)
+  assert.match(detail,/heroPhoto\.url/)
   assert.match(detail, /<text wx:else class="intro-text">已核验该校位于教育部公布的/)
 })

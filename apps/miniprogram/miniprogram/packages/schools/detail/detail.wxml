@@ -1,39 +1,53 @@
 <view wx:if="{{school}}" class="detail-page">
-  <view class="detail-hero">
-    <view class="hero-top"><text>九辰 · 院校档案</text><text class="hero-mark">{{school.is985 ? '985 / 211' : '211 · EDU'}}</text></view>
-    <view class="hero-main"><text class="hero-monogram">{{heroLabel}}</text><view class="hero-identity"><text class="hero-name">{{school.name}}</text><text class="hero-city">{{cityLabel}}</text></view></view>
-    <view class="hero-tags"><text>{{school.is985 ? '985 / 211' : '211 工程'}}</text><text wx:if="{{school.isC9}}">C9 联盟</text><text wx:for="{{school.groupTags}}" wx:for-item="tag" wx:key="key">{{tag.label}} · 行业称谓</text></view>
+  <view class="detail-hero {{photoVisible ? 'has-photo' : ''}}">
+    <image wx:if="{{photoVisible && school.heroPhoto}}" class="hero-photo" src="{{school.heroPhoto.url}}" mode="aspectFill" binderror="onPhotoError" />
+    <view class="hero-shade"></view>
+    <view class="hero-content">
+      <view class="hero-top"><text>九辰 · 目标院校</text><text class="hero-mark">{{school.is985 ? '985 / 211' : (school.is211 ? '211 工程' : '行业特色院校')}}</text></view>
+      <view class="hero-main"><view class="hero-identity"><text class="hero-name">{{school.name}}</text><text class="hero-city">{{cityLabel}}</text></view></view>
+      <view class="hero-tags"><text wx:if="{{school.isC9}}">C9 联盟</text><text wx:for="{{school.groupTags}}" wx:for-item="tag" wx:key="key">{{tag.label}}</text><text wx:if="{{!school.is211}}">非985/211</text></view>
+    </view>
   </view>
-  <view wx:if="{{school.groupTags.length}}" class="stats-source">圈层标签为业内习惯称谓，仅便于检索，不代表官方排名或推免录取资格。</view>
+  <view wx:if="{{school.heroPhoto && photoVisible}}" class="photo-credit" data-key="photo" bindtap="copyUrl">
+    {{school.heroPhoto.caption}} · {{school.heroPhoto.author}} · {{school.heroPhoto.license}} · 复制图片出处 ›
+  </view>
+  <view wx:elif="{{school.heroPhoto && !photoVisible}}" class="photo-credit">校园照片暂未加载；已自动恢复文字背景，图片可在授权网络环境中启用。</view>
+
   <view class="detail-overview">
-    <block wx:if="{{school.verifiedStats}}">
-      <view class="fact-cell"><text class="fact-key">校区</text><text class="fact-value">{{school.verifiedStats.campusCount}}</text></view>
-      <view class="fact-cell"><text class="fact-key">学院</text><text class="fact-value">{{school.verifiedStats.collegeCount}}</text></view>
-      <view class="fact-cell"><text class="fact-key">双一流建设学科</text><text class="fact-value">{{school.verifiedStats.doubleFirstSubjects}}</text></view>
-    </block>
-    <block wx:else>
-      <view class="fact-cell"><text class="fact-key">所在城市</text><text class="fact-value">{{school.city}}</text></view>
-      <view class="fact-cell"><text class="fact-key">历史建设层次</text><text class="fact-value">{{school.is985 ? '985' : '211'}}</text></view>
-      <view class="fact-cell"><text class="fact-key">C9 联盟</text><text class="fact-value">{{school.isC9 ? '是' : '否'}}</text></view>
-    </block>
+    <view class="fact-cell"><text class="fact-key">城市</text><text class="fact-value">{{school.city}}</text></view>
+    <view class="fact-cell"><text class="fact-key">院校属性</text><text class="fact-value">{{school.is985 ? '985 / 211' : (school.is211 ? '211' : '特色高校')}}</text></view>
+    <view class="fact-cell"><text class="fact-key">行业分类</text><text class="fact-value">{{school.groupTags.length ? school.groupTags[0].label : (school.isC9 ? 'C9' : '未分类')}}</text></view>
   </view>
-  <view wx:if="{{school.verifiedStats}}" class="stats-source" data-key="stats" bindtap="copyUrl">上述数据来自学校招生网（核对日期 {{school.verifiedStats.sourceChecked}}）· 复制来源 ›</view>
   <view class="detail-card">
-    <view class="detail-heading"><text>学校简介</text><text class="detail-hint">官方来源优先</text></view>
+    <view class="detail-heading"><text>学校简介</text><text class="detail-hint">公开资料 · 逐校核验</text></view>
     <text wx:if="{{hasIntro}}" class="intro-text">{{school.intro}}</text>
-    <text wx:else class="intro-text">已核验该校位于教育部公布的{{school.is985 ? '985' : '211'}}工程建设高校名单中。学校历史介绍及最新情况尚未完成逐校官网核验，不使用未经核实的介绍或统计数字。</text>
-    <view wx:if="{{school.founded}}" class="founded-line">建校历史参考年份：{{school.founded}} · 请以学校官方历史为准</view>
-    <view wx:if="{{school.introSource}}" class="detail-source" data-key="intro" bindtap="copyUrl"><text>学校官方介绍</text><text>复制来源链接 ›</text></view>
-    <view class="detail-source" data-key="{{school.is985 ? 'moe' : 'moe211'}}" bindtap="copyUrl"><text>教育部 {{school.is985 ? '985' : '211'}} 工程原始名单</text><text>复制来源链接 ›</text></view>
-    <view wx:if="{{school.isC9}}" class="detail-source" data-key="c9" bindtap="copyUrl"><text>C9 成员名录</text><text>复制来源链接 ›</text></view>
+    <text wx:else class="intro-text">已收录{{school.name}}的基础信息。历史名单及院校位置应以学校官方资料为准；具体招生资格和项目要求需以当年通知为准。</text>
+    <view wx:if="{{school.founded}}" class="founded-line">历史起始年份 {{school.founded}} · 以学校校史为准</view>
+    <view class="source-links">
+      <view wx:if="{{school.introSource}}" class="detail-source" data-key="intro" bindtap="copyUrl"><text>学校官方介绍</text><text>复制链接 ›</text></view>
+      <view wx:if="{{school.is211}}" class="detail-source" data-key="{{school.is985 ? 'moe' : 'moe211'}}" bindtap="copyUrl"><text>教育部 {{school.is985 ? '985' : '211'}} 工程原始名单</text><text>复制链接 ›</text></view>
+      <view wx:if="{{school.isC9}}" class="detail-source" data-key="c9" bindtap="copyUrl"><text>C9 联盟参考</text><text>复制链接 ›</text></view>
+    </view>
   </view>
-  <view class="detail-card">
-    <view class="detail-heading"><text>官网与校区</text></view>
+
+  <view class="detail-card geo-card">
+    <view class="detail-heading"><text>学校位置</text><text class="detail-hint">腾讯地图 · 实际校区</text></view>
+    <block wx:if="{{school.mapLocation}}">
+      <text class="map-name">{{school.mapLocation.campus}} · {{school.city}}</text>
+      <map class="campus-map" latitude="{{school.mapLocation.latitude}}" longitude="{{school.mapLocation.longitude}}" scale="15" markers="{{mapMarkers}}" show-location="{{false}}" />
+      <view class="geo-actions">
+        <button bindtap="onOpenMap" class="map-button">微信地图查看与导航 ›</button>
+        <text class="geo-source" data-key="map" bindtap="copyUrl">复制校区坐标来源 ›</text>
+      </view>
+    </block>
+    <view wx:else class="geo-pending">
+      <text>校区坐标尚待实地地图数据核验</text>
+      <text>暂不显示城市中心点或编造校园定位。后续录入经过核对的具体校区坐标后自动开放原生地图。</text>
+    </view>
+    <view wx:if="{{school.address}}" class="contact-line" bindtap="onCopyAddress"><view><text class="contact-key">公开校区地址</text><text class="contact-value">{{school.address}}</text></view><text class="contact-go">复制 ›</text></view>
     <view wx:if="{{school.website}}" class="contact-line" data-key="website" bindtap="copyUrl"><view><text class="contact-key">学校官网</text><text class="contact-value">{{school.website}}</text></view><text class="contact-go">复制 ›</text></view>
-    <view wx:else class="contact-muted">学校独立官方网站还未逐校核对，暂不提供猜测链接。</view>
-    <view wx:if="{{school.address}}" class="contact-line" bindtap="onCopyAddress"><view><text class="contact-key">已核实公开地址</text><text class="contact-value">{{school.address}}</text></view><text class="contact-go">复制 ›</text></view>
-    <view wx:else class="contact-muted">校区地址仍需核验，以学校网站公示为准。</view>
   </view>
+
   <view class="detail-card project-card">
     <view class="detail-heading"><text>学院与招生项目</text><text class="detail-hint">按当年文件核实</text></view>
     <view wx:if="{{school.admissions}}" class="official-admissions">
@@ -42,9 +56,14 @@
       <view class="official-admissions-link" data-key="catalogs" bindtap="copyUrl"><text>{{school.admissions.catalogsTitle}}</text><text>复制链接 ›</text></view>
       <view class="official-admissions-link" data-key="summer" bindtap="copyUrl"><text>{{school.admissions.summerTitle}}</text><text>复制链接 ›</text></view>
     </view>
-    <view class="project-guide"><text class="project-number">01</text><view><text class="project-title">核对学院与方向</text><text class="project-note">先确认学院、专业代码和研究方向，不能以学校层次替代项目要求。</text></view></view>
-    <view class="project-guide"><text class="project-number">02</text><view><text class="project-title">获取最新招生原文</text><text class="project-note">以目标学校研究生院及具体院系的当年推免通知和专业目录为准。</text></view></view>
-    <view class="project-guide"><text class="project-number">03</text><view><text class="project-title">联系九辰辅导老师</text><text class="project-note">结合本科背景和可核验案例分析，不承诺录取结果。</text></view></view>
-    <view class="project-warning">学校动态学院数、项目数、关注数等尚未取得经授权的数据源，因此不展示参考应用中的未经核实数字。正式项目目录需独立数据接入。</view>
+    <view class="project-guide"><text class="project-number">01</text><view><text class="project-title">确定目标学院与方向</text><text class="project-note">先确认学院、专业代码与研究方向，再评估匹配程度。</text></view></view>
+    <view class="project-guide"><text class="project-number">02</text><view><text class="project-title">查当年招生原文</text><text class="project-note">最新推免通知、专业目录及时间节点，以学校研究生院和院系原文为准。</text></view></view>
+    <view class="project-guide"><text class="project-number">03</text><view><text class="project-title">结合个人背景沟通</text><text class="project-note">将目标院校与本人年级、专业发给老师，形成下一步行动方案。</text></view></view>
+    <text class="project-warning">无可核验来源的学院数量、项目数量和关注数不展示为事实。院校标签也不构成推免录取资格。</text>
+  </view>
+  <view class="detail-card consult-card">
+    <view class="detail-heading"><text>咨询九辰老师</text><text class="detail-hint">一对一需求沟通</text></view>
+    <text class="consult-desc">可只咨询这所学校，也可在核对后携带姓名、年级、专业，帮助老师更快定位问题。资料不会自动发送。</text>
+    <button class="consult-button" bindtap="onConsultSchool">咨询 {{school.name}} ›</button>
   </view>
 </view>

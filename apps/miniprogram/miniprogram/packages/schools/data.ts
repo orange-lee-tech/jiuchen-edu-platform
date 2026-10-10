@@ -27,6 +27,22 @@ export type School = {
   address: string
   addressSource: string
   founded: string
+  /** Licensed real campus photo; leave undefined unless source + rights reviewed. */
+  heroPhoto?: {
+    url: string
+    caption: string
+    author: string
+    license: string
+    licenseUrl: string
+    sourceUrl: string
+  }
+  /** A verified GCJ-02 campus point, not a fabricated city-center marker. */
+  mapLocation?: {
+    campus: string
+    latitude: number
+    longitude: number
+    sourceUrl: string
+  }
   verifiedStats?: {
     campusCount: number
     collegeCount: number
@@ -329,7 +345,39 @@ const groupMembership = SCHOOL_GROUPS.map(group => ({
   members: new Set(group.members),
 }))
 const verifiedExtras: Record<string, Partial<School>> = {
+  "吉林大学": {
+    "address": "吉林省长春市前进大街2699号（前卫南区）",
+    "addressSource": "https://www.jlu.edu.cn/info/1238/36174.htm",
+    "heroPhoto": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Jilin_University_Nanling_Campus.jpg/960px-Jilin_University_Nanling_Campus.jpg",
+      "caption": "吉林大学南岭校区校门（非地图所示前卫南区）",
+      "author": "Air7538",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Jilin_University_Nanling_Campus.jpg"
+    },
+    "mapLocation": {
+      "campus": "前卫南区",
+      "latitude": 43.823761,
+      "longitude": 125.277063,
+      "sourceUrl": "https://ditu.amap.com/place/B01AF0C7AM"
+    }
+  },
   "南京大学": {
+    "heroPhoto": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Nanjing_University%2C_Gulou_Campus.jpg/500px-Nanjing_University%2C_Gulou_Campus.jpg",
+      "caption": "南京大学鼓楼校区秋景（非地图所示仙林校区）",
+      "author": "FukaiNashi",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Nanjing_University,_Gulou_Campus.jpg"
+    },
+    "mapLocation": {
+      "campus": "仙林校区",
+      "latitude": 32.119560,
+      "longitude": 118.958406,
+      "sourceUrl": "https://amap.com/place/B00190CVRT"
+    },
     "website": "https://www.nju.edu.cn/",
     "intro": "南京大学前身为1902年创办的三江师范学堂，1950年更名为南京大学。学校位于江苏南京，历史沿革和办学情况以南京大学官网公开介绍为准。",
     "introSource": "https://www.nju.edu.cn/ndgk/ndjj.htm",
@@ -351,6 +399,20 @@ const verifiedExtras: Record<string, Partial<School>> = {
       "summerTitle": "夏令营与推免通知",
       "summerUrl": "https://yzb.nju.edu.cn/"
     }
+  },
+  "西南政法大学": {
+    "website": "https://www.swupl.edu.cn/",
+    "intro": "1950年创办前身西南人民革命大学，1953年成立西南政法学院，1995年升格为西南政法大学；是传统法学五院之一。",
+    "introSource": "https://eedfx.swupl.edu.cn/zcfw/xxjs/63ec9340aecb47838faf368afa1f18a2.htm",
+    "founded": "1950"
+  },
+  "西北政法大学": {
+    "website": "https://www.nwupl.edu.cn/",
+    "intro": "学校前身可追溯至1937年在延安创办的陕北公学，是传统法学五院之一。学校现设长安与雁塔校区。",
+    "introSource": "https://www.nwupl.edu.cn/hjgk/hjjg/66293.htm",
+    "address": "陕西省西安市西长安街558号（长安校区）",
+    "addressSource": "https://zjc.nwupl.edu.cn/gzzd/150600.htm",
+    "founded": "1937"
   },
   "北京大学": {
     "website": "https://www.pku.edu.cn/",
