@@ -3,6 +3,33 @@
   <text class="state-description">{{phase === 'loading' ? '确认后会显示与你身份对应的入口。' : message}}</text>
   <button wx:if="{{phase === 'error'}}" class="primary" bindtap="onRetry">重新确认身份</button>
 </view>
+<view wx:elif="{{kind === 'admin' && viewSlot === 'plan'}}" class="admin-browse">
+  <view class="browse-hero">
+    <text class="browse-eyebrow">管理员 · 只读权限</text>
+    <text class="browse-title">身份查阅</text>
+    <text class="browse-subtitle">直接选择学员或老师，查阅其业务资料。不改变当前管理员身份，也不能代替目标用户执行操作。</text>
+  </view>
+  <view class="browse-controls">
+    <input value="{{browseQuery}}" bindinput="onBrowseQuery" placeholder="搜索学员 / 老师 / 学校 / 专业" class="browse-search" />
+    <text class="browse-count">学员 {{displayedStudents.length}} · 老师 {{displayedTeachers.length}}</text>
+  </view>
+  <view wx:if="{{browseLoading}}" class="browse-state">正在加载授权名单…</view>
+  <view wx:elif="{{browseError}}" class="browse-state"><text>{{browseError}}</text><button bindtap="loadReadOnlyPeople">重新读取</button></view>
+  <block wx:else>
+    <view class="browse-heading">学员</view>
+    <view wx:for="{{displayedStudents}}" wx:key="id" data-id="{{item.id}}" bindtap="onBrowseStudent" class="browse-person">
+      <view><text class="browse-person-name">{{item.name}}</text><text class="browse-person-note">{{item.university || '学校待补充'}} · {{item.major || '专业待补充'}}</text></view>
+      <text class="browse-arrow">只读查看 ›</text>
+    </view>
+    <text wx:if="{{!displayedStudents.length}}" class="browse-empty">没有匹配学员</text>
+    <view class="browse-heading">老师</view>
+    <view wx:for="{{displayedTeachers}}" wx:key="id" data-id="{{item.id}}" bindtap="onBrowseTeacher" class="browse-person">
+      <view><text class="browse-person-name">{{item.name}}</text><text class="browse-person-note">{{item.title || '职务待补充'}}</text></view>
+      <text class="browse-arrow">只读查看 ›</text>
+    </view>
+    <text wx:if="{{!displayedTeachers.length}}" class="browse-empty">没有匹配老师</text>
+  </block>
+</view>
 <view wx:elif="{{kind !== 'student' && viewSlot !== 'mine'}}" class="workspace">
   <view class="workspace-intro {{viewSlot === 'home' ? 'workspace-home' : 'workspace-compact'}}">
     <text class="eyebrow">九辰保研 · {{roleLabel}}</text>

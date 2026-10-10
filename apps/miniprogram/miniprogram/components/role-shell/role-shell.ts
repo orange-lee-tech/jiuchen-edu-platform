@@ -1,5 +1,6 @@
 import { refreshAuthResult } from '../../utils/auth'
 import { openPage, openSlot } from '../../utils/navigation'
+import { getAdminStudents, getAdminTeachers, friendlyRequestError, type StudentSummary, type AdminTeacher } from '../../utils/request'
 
 type Action = { key: string; title: string; description: string; url: string }
 const students: Action = { key: 'students', title: '查看我的学员', description: '查看获授权的学员，进入对应阶段规划。', url: '/pages/teacher-students/teacher-students' }
@@ -26,13 +27,61 @@ Component({
     roleLabel: { type: String, value: '' },
     message: { type: String, value: '' },
   },
-  data: { title: '', description: '', actions: [] as Action[], opening: false },
+  data: {
+    title: '', description: '', actions: [] as Action[], opening: false,
+    browseLoading:false,browseError:'',browseQuery:'',
+    students:[] as StudentSummary[],teachers:[] as AdminTeacher[],
+    displayedStudents:[] as StudentSummary[],displayedTeachers:[] as AdminTeacher[],
+  },
+  loadSequence:0,
   observers: {
     'viewSlot, kind': function (viewSlot: string, kind: string) {
       this.setData(content[`${kind}-${viewSlot}`] || { title: '', description: '', actions: [] })
     },
+    'viewSlot, kind, phase': function(viewSlot:string,kind:string,phase:string){
+      if(phase==='ready'&&kind==='admin'&&viewSlot==='plan')void this.loadReadOnlyPeople()
+      else this.loadSequence++
+    },
   },
   methods: {
+    async loadReadOnlyPeople(){
+      const serial=++this.loadSequence
+      this.setData({browseLoading:true,browseError:''})
+      try{
+        const [students,teachers]=await Promise.all([getAdminStudents(),getAdminTeachers()])
+        if(serial!==this.loadSequence)return
+        this.setData({students,teachers})
+        this.filterReadOnlyPeople()
+      }catch(error){
+        if(serial!==this.loadSequence)return
+        this.setData({browseError:friendlyRequestError(error,'名单加载失败，请重试')})
+      }finally{
+        if(serial===this.loadSequence)this.setData({browseLoading:false})
+      }
+    },
+    filterReadOnlyPeople(){
+      const q=this.data.browseQuery.trim().toLowerCase()
+      this.setData({
+        displayedStudents:this.data.students.filter(s=>
+          !q||[s.name,s.university||'',s.major||''].some(v=>v.toLowerCase().includes(q))),
+        displayedTeachers:this.data.teachers.filter(t=>
+          !q||[t.name,t.title||''].some(v=>v.toLowerCase().includes(q))),
+      })
+    },
+    onBrowseQuery(event:WechatMiniprogram.Input){
+      this.setData({browseQuery:event.detail.value})
+      this.filterReadOnlyPeople()
+    },
+    onBrowseStudent(event:WechatMiniprogram.BaseEvent){
+      const id=String(event.currentTarget.dataset.id||'')
+      if(!this.data.students.some(item=>item.id===id))return
+      openPage('/packages/read-only/view/view?kind=student&id='+encodeURIComponent(id))
+    },
+    onBrowseTeacher(event:WechatMiniprogram.BaseEvent){
+      const id=String(event.currentTarget.dataset.id||'')
+      if(!this.data.teachers.some(item=>item.id===id))return
+      openPage('/packages/read-only/view/view?kind=teacher&id='+encodeURIComponent(id))
+    },
     onRetry() { void refreshAuthResult() },
     onMine() { openSlot('mine') },
     onAction(event: WechatMiniprogram.BaseEvent) {
