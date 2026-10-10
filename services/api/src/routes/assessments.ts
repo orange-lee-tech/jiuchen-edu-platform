@@ -347,7 +347,10 @@ export function registerAssessmentRoutes(
         ...result,
       }
     } catch (error) {
-      app.log.warn({ err: error }, 'Assessment material import failed')
+      const validationIssues = error && typeof error === 'object' && 'validationIssues' in error
+        ? error.validationIssues
+        : undefined
+      app.log.warn({ err: error, validationIssues }, 'Assessment material import failed')
       return assessmentImportErrorReply(reply, error)
     } finally {
       try {
@@ -386,6 +389,12 @@ export function registerAssessmentRoutes(
 
     const parsed = createAssessmentSchema.safeParse(request.body)
     if (!parsed.success) {
+      request.log.warn({
+        issuePaths: parsed.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          code: issue.code,
+        })),
+      }, 'Assessment input validation failed')
       return reply.code(400).send({
         ok: false,
         error: 'invalid_assessment_input',
@@ -472,6 +481,12 @@ export function registerAssessmentRoutes(
 
     const parsed = createAssessmentSchema.safeParse(request.body)
     if (!parsed.success) {
+      request.log.warn({
+        issuePaths: parsed.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          code: issue.code,
+        })),
+      }, 'Assessment input validation failed')
       return reply.code(400).send({
         ok: false,
         error: 'invalid_assessment_input',
