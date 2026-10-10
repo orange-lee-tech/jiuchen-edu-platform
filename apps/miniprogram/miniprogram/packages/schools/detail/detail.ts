@@ -61,6 +61,10 @@ Page({
   onPhotoError() {
     this.setData({photoVisible:false})
   },
+  onRetryPhoto(){
+    if(!this.data.school?.heroPhoto)return
+    this.setData({photoVisible:true})
+  },
   onPreviewPhoto(){
     const photo=this.data.school?.heroPhoto
     if(!photo?.url || !this.data.photoVisible)return

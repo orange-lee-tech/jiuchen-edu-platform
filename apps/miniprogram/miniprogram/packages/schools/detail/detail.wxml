@@ -14,7 +14,11 @@
     <text class="photo-actions" data-key="photo" bindtap="copyUrl">图片出处 ›</text>
     <text class="photo-actions" data-key="photoLicense" bindtap="copyUrl">许可 ›</text>
   </view>
-  <view wx:elif="{{school.heroPhoto && !photoVisible}}" class="photo-credit">校园照片暂未加载。请检查微信图片域名或网络，不能用渐变色假装已补齐照片。</view>
+  <view wx:elif="{{school.heroPhoto && !photoVisible}}" class="photo-credit">
+    <text>校园照片暂时未能加载；已保留可核验的原图来源。</text>
+    <text class="photo-actions" bindtap="onRetryPhoto">重新加载 ›</text>
+    <text class="photo-actions" data-key="photo" bindtap="copyUrl">查看出处 ›</text>
+  </view>
 
   <view class="detail-overview">
     <view class="fact-cell"><text class="fact-key">城市</text><text class="fact-value">{{school.city}}</text></view>
