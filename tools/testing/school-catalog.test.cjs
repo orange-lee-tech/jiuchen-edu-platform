@@ -183,7 +183,7 @@ test('all 172 schools have usable campus references with audited quality and cam
      unique.add(location.campus)
    }
  }
- assert.ok(all['复旦大学'].length>=3,'Fudan requires switchable campuses')
+ assert.equal(all['复旦大学'].length,4,'Fudan campus roster must be complete')
  assert.ok(all['南开大学'].length>=2,'Nankai requires switchable campuses')
  const w=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
  assert.match(w,/wx:for="\{\{campusOptions\}\}"/)
@@ -192,10 +192,16 @@ test('all 172 schools have usable campus references with audited quality and cam
  const ts=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.ts'),'utf8')
  assert.match(ts,/SCHOOL_CAMPUS_POINTS\[school\.name\]/)
 })
-test('consultation has only one confirmation and never opens a stacked action sheet',()=>{
+test('school consultation follows server verification and a single consent modal',()=>{
  const ts=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.ts'),'utf8')
- assert.doesNotMatch(ts,/wx\.showActionSheet/)
- assert.match(ts,/void this\.prepareConsultSummary\(school\.name\)/)
- assert.match(ts,/this\.confirmConsultSummary\(summary\)/)
+ const wxml=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
+ const svc=fs.readFileSync(path.join(mini,'utils/customer-service.ts'),'utf8')
+ assert.doesNotMatch(ts,/wx\.showActionSheet|wx\.showModal/)
+ assert.match(ts,/openVerifiedWechatCustomerService\('目标院校咨询'/)
+ assert.match(svc,/目标学校：/)
+ assert.match(svc,/当前身份：/)
+ assert.match(svc,/refreshAuthResult\(\)/)
+ assert.match(wxml,/一次确认即可联系九辰客服/)
+ assert.doesNotMatch(wxml,/两种方式/)
  for(const name of ['复旦大学','南开大学'])assert.ok(school.includes('"'+name+'": {'),name)
 })
