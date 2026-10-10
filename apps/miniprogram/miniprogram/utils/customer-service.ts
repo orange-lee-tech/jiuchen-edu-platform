@@ -4,7 +4,8 @@ export function supportsWechatCustomerService(): boolean {
   return typeof wx.openCustomerServiceChat === 'function'
 }
 
-export function openWechatCustomerService(): void {
+export type CustomerServiceCard = { title:string; path:string }
+export function openWechatCustomerService(card?:CustomerServiceCard): void {
   const { corpId, url } = runtimeConfig.wechatCustomerService
 
   if (!corpId || !url) {
@@ -26,6 +27,11 @@ export function openWechatCustomerService(): void {
   wx.openCustomerServiceChat({
     corpId,
     extInfo: { url },
+    ...(card ? {
+      showMessageCard:true,
+      sendMessageTitle:card.title,
+      sendMessagePath:card.path,
+    } : {}),
     success() {
       console.info('Opened WeChat customer service.', { corpId, url })
     },

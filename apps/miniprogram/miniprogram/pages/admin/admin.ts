@@ -111,10 +111,28 @@ Page({
       this.setData({ section })
     }
 
-    void this.loadData()
+    if(this.data.section==='admin-readonly')void this.loadReadOnlyRoster()
+    else void this.loadData()
+  },
+
+  async loadReadOnlyRoster(){
+    try{
+      this.setData({loading:true,loadError:''})
+      // Read-only identity entry should never depend on payment analytics or news sync.
+      const [students,teachers]=await Promise.all([getAdminStudents(),getAdminTeachers()])
+      this.setData({students,teachers})
+    }catch(error){
+      this.setData({loadError:friendlyRequestError(error,'身份列表未能读取，请重试')})
+    }finally{
+      this.setData({loading:false})
+    }
   },
 
   async loadData() {
+    if (this.data.section === 'admin-readonly') {
+      await this.loadReadOnlyRoster()
+      return
+    }
     if (this.data.section === 'admin-analytics') {
       await this.loadAnalytics()
       return
@@ -222,7 +240,7 @@ Page({
     if (!['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics', 'admin-readonly'].includes(section)) return
     this.setData({ section })
     if (section === 'admin-analytics') void this.loadAnalytics()
-    else if (section === 'admin-readonly') void this.loadData()
+    else if (section === 'admin-readonly') void this.loadReadOnlyRoster()
   },
 
   onIdTypeChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {

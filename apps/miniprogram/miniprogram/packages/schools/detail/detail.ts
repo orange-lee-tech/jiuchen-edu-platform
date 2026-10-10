@@ -100,7 +100,10 @@ Page({
         if(!result.confirm)return
         wx.setClipboardData({
           data:summary,
-          success:()=>openWechatCustomerService(),
+          success:()=>openWechatCustomerService(this.data.school ? {
+            title:'九辰院校咨询 · '+this.data.school.name,
+            path:'/packages/schools/detail/detail?id='+encodeURIComponent(this.data.school.id),
+          }:undefined),
           fail:()=>wx.showToast({title:'复制未成功，请重试',icon:'none'}),
         })
       },

@@ -155,7 +155,8 @@ test('native role icons exist, remain small, and admin Mine has no duplicate ope
   assert.ok(p.data.menus.every(m => !m.key.startsWith('admin-')))
   p.onHide()
   const c = h.component('role-shell', { kind:'admin', viewSlot:'home', phase:'ready' })
-  c.observers['viewSlot, kind'].call(c,'home','admin'); assert.equal(c.data.actions.length, 1)
+  c.observers['viewSlot, kind'].call(c,'home','admin'); assert.equal(c.data.actions.length, 4)
+  assert.equal(c.data.actions[0].key,'mirror')
 })
 
 test('server role replaces cached role; concurrent refresh is one read; staff is not admin', async () => {
@@ -213,7 +214,7 @@ test('all six role presentations select the expected stable native labels', asyn
     if (role) h.auth.saveAuthResult(authFixture(role))
     const home = h.page(`pages/${slot}/${slot}`); home.onShow()
     if (role) { h.respond(0, { ok: true, user: authFixture(role).user, businessIdentity: null }); await settle() }
-    const expected = role === 'admin' ? '工作台|用户|业务|我的' : role === 'teacher' || role === 'staff' ? '工作台|学员|辅导|我的' : '首页|规划|机会|我的'
+    const expected = role === 'admin' ? '工作台|查阅|运营|我的' : role === 'teacher' || role === 'staff' ? '工作台|学员|辅导|我的' : '首页|规划|机会|我的'
     assert.equal(h.tabs.slice(-4).map((item) => item.text).join('|'), expected)
     assert.equal(home.data.shellPhase, 'ready')
     home.onHide()
@@ -634,4 +635,33 @@ test('read-only views are in a lazy package and do not expose editing or AI acti
  assert.doesNotMatch(source,/saveAuthResult\(|setApiSessionToken\(|request\([^)]*,\s*'POST'/)
  // WXML must never contain double-nested braces; these break real preview uploads.
  assert.doesNotMatch(view,/\{\{(?:(?!\}\})[\s\S])*\{\{/)
+})
+
+test('admin identity mirror is promoted without requiring unrelated news/analytics APIs',async()=>{
+ const h=harness()
+ h.auth.saveAuthResult(authFixture('admin'))
+ const admin=h.page('pages/admin/admin')
+ admin.initializeAdmin({section:'admin-readonly'})
+ assert.equal(h.requests.length,2)
+ assert.ok(h.requests.some(r=>r.url.includes('/me/admin/students')))
+ assert.ok(h.requests.some(r=>r.url.includes('/me/admin/teachers')))
+ assert.ok(h.requests.every(r=>!r.url.includes('/me/admin/news')))
+})
+test('student homepage prioritizes plan and renders a four-card action grid',()=>{
+ const home=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+ const ts=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
+ assert.match(home,/进入我的规划/)
+ for(const name of ['我的规划','保研资讯','AI 评估','联系顾问'])assert.ok(home.includes(name))
+ assert.match(ts,/onPrimary\(\) \{[\s\S]*?openSlot\('plan'\)/)
+ const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
+ assert.match(css,/\.action-row\{[^}]*width:49%/)
+ assert.match(css,/\.service-link\{[^}]*width:49%/)
+})
+test('school service consultation provides target school on both branches, without forced personal API',()=>{
+ const detail=fs.readFileSync(path.join(root,'packages/schools/detail/detail.ts'),'utf8')
+ assert.match(detail,/目标学校：/)
+ assert.match(detail,/openWechatCustomerService\(this\.data\.school/)
+ assert.match(detail,/\.catch\(\(\)=>null\)/)
+ const svc=fs.readFileSync(path.join(root,'utils/customer-service.ts'),'utf8')
+ assert.match(svc,/showMessageCard:true/)
 })

@@ -15,9 +15,6 @@ const TEACHER_MENUS = [
   { key: 'service', title: '联系运营', desc: '咨询账号、学员分配与业务支持' },
 ]
 const ADMIN_MENUS = [
-  { key:'admin-readonly',title:'跨身份只读查阅',desc:'直接进入全部学员与老师的只读档案' },
-  { key:'admin-users',title:'账号与内部编号',desc:'绑定、查看与维护业务账号' },
-  { key:'admin-assignments',title:'师生关系管理',desc:'直接查看分配关系与授权' },
   { key: 'service', title: '联系运营', desc: '咨询账号与服务支持' },
 ]
 Page({
