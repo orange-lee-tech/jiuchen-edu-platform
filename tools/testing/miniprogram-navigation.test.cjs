@@ -461,27 +461,30 @@ test('schedule start-date edit sends only metadata and commits after server ackn
   assert.equal(page.data.schedule.termStartDate,'2026-09-07')
 })
 
-test('old backend missing date-only route falls back once to the existing owned PUT', async()=>{
-  const h=harness();h.auth.saveAuthResult(authFixture('student'))
-  const page=h.page('pages/schedule-import/schedule-import')
-  const course={name:'物理',day:'周一',dayIndex:1,slot:'第1-2节',startSection:1,
-    endSection:2,time:null,location:null,teacher:null,weeks:null,raw:'物理'}
-  page.setData({importId:'schedule-1',schedule:{sourceType:'image',stageCode:'senior-fall',
-    courses:[course],warnings:[],termStartDate:null},termStartDate:''})
-  page.onTermStartChange({detail:{value:'2026-09-07'}})
-  assert.equal(h.requests.length,1)
-  h.respond(0,{statusCode:404,error:'Not Found',
-    message:'Route PUT:/me/classroom/schedule-imports/schedule-1/term-start-date not found'},404)
-  await settle()
-  assert.equal(h.requests.length,2)
-  assert.ok(h.requests[1].url.endsWith('/schedule'))
-  assert.equal(h.requests[1].data.termStartDate,'2026-09-07')
-  h.respond(1,{ok:true,schedule:{...page.data.schedule,termStartDate:'2026-09-07'}})
-  await settle()
-  assert.equal(page.data.termStartDate,'2026-09-07')
-  assert.equal(page.data.saveError,'')
+test('old backend missing date-only route NEVER resubmits the entire timetable', async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/schedule-import/schedule-import')
+ const course={name:'物理',day:'周一',dayIndex:1,slot:'第1-2节',startSection:1,
+  endSection:2,time:null,location:null,teacher:null,weeks:null,raw:'物理'}
+ page.setData({importId:'schedule-1',schedule:{sourceType:'image',stageCode:'senior-fall',
+  courses:[course],warnings:[],termStartDate:null},termStartDate:''})
+ page.onTermStartChange({detail:{value:'2026-09-07'}})
+ assert.equal(h.requests.length,1)
+ h.respond(0,{statusCode:404,error:'Not Found',
+   message:'Route PUT:/me/classroom/schedule-imports/schedule-1/term-start-date not found'},404)
+ await settle()
+ assert.equal(h.requests.length,1,'no unsafe legacy PUT fallback')
+ assert.equal(page.data.termStartDate,'')
+ assert.equal(page.data.schedule.courses.length,1)
+ assert.match(page.data.saveError,/服务端尚未部署/)
 })
-
+test('vertical planning navigation scrolls the stage rail instead of clipping a horizontal strip',()=>{
+ const wxml=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8')
+ const css=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxss'),'utf8')
+ assert.match(wxml,/class="stage-sidebar" scroll-y/)
+ assert.match(css,/\.stage-strip\{[^}]*flex-direction:column/)
+ assert.match(css,/\.timeline\{[^}]*flex-direction:column/)
+})
 test('Monday-only selector exposes exactly the Mondays of a selected month', () => {
   const h=harness()
   const page=h.page('pages/schedule-import/schedule-import')

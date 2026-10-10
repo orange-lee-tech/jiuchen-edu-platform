@@ -163,3 +163,39 @@ test('audited Ministry of Education and ethnic-affairs university rosters stay c
  for(const u of ['中央民族大学','中南民族大学','西南民族大学','西北民族大学','北方民族大学','大连民族大学'])
    assert.ok(school.includes(u),u)
 })
+
+test('all 172 schools have usable campus references with audited quality and campus switching',()=>{
+ const points=fs.readFileSync(path.join(mini,'packages/schools/campus-points.ts'),'utf8')
+ const match=points.match(/export const SCHOOL_CAMPUS_POINTS: Readonly<Record<string,readonly SchoolCampusPoint\[\]>> = (\{[^\n]+\})/)
+ assert.ok(match,'generated campus entries missing')
+ const all=JSON.parse(match[1])
+ assert.equal(Object.keys(all).length,172)
+ assert.ok(Object.values(all).every(x=>Array.isArray(x)&&x.length>0))
+ for(const [name,locations] of Object.entries(all)){
+   const unique=new Set()
+   for(const location of locations){
+     assert.ok(location.latitude>16&&location.latitude<54,name)
+     assert.ok(location.longitude>73&&location.longitude<136,name)
+     assert.ok(['verified','third-party','approximate'].includes(location.quality),name)
+     assert.match(location.sourceUrl,/^https:\/\//)
+     assert.ok(location.campus.length>0)
+     assert.ok(!unique.has(location.campus),name+' duplicate campus')
+     unique.add(location.campus)
+   }
+ }
+ assert.ok(all['复旦大学'].length>=3,'Fudan requires switchable campuses')
+ assert.ok(all['南开大学'].length>=2,'Nankai requires switchable campuses')
+ const w=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
+ assert.match(w,/wx:for="\{\{campusOptions\}\}"/)
+ assert.match(w,/bindtap="onSelectCampus"/)
+ assert.match(w,/activeCampus\.latitude/)
+ const ts=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.ts'),'utf8')
+ assert.match(ts,/SCHOOL_CAMPUS_POINTS\[school\.name\]/)
+})
+test('consultation has only one confirmation and never opens a stacked action sheet',()=>{
+ const ts=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.ts'),'utf8')
+ assert.doesNotMatch(ts,/wx\.showActionSheet/)
+ assert.match(ts,/void this\.prepareConsultSummary\(school\.name\)/)
+ assert.match(ts,/this\.confirmConsultSummary\(summary\)/)
+ for(const name of ['复旦大学','南开大学'])assert.ok(school.includes('"'+name+'": {'),name)
+})
