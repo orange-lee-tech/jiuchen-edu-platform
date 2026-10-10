@@ -345,6 +345,27 @@ const groupMembership = SCHOOL_GROUPS.map(group => ({
   members: new Set(group.members),
 }))
 const verifiedExtras: Record<string, Partial<School>> = {
+  "北京航空航天大学": {
+    "mapLocation": { "campus": "学院路校区", "latitude": 39.982212, "longitude": 116.347225, "sourceUrl": "https://ditu.amap.com/place/B000A830XU" }
+  },
+  "北京理工大学": {
+    "mapLocation": { "campus": "中关村校区", "latitude": 39.959984, "longitude": 116.315469, "sourceUrl": "https://ditu.amap.com/place/B000A83H2R" }
+  },
+  "哈尔滨工业大学": {
+    "mapLocation": { "campus": "一校区", "latitude": 45.743265, "longitude": 126.632923, "sourceUrl": "https://amap.com/place/B01C304VUW" }
+  },
+  "哈尔滨工程大学": {
+    "mapLocation": { "campus": "主校区北2门", "latitude": 45.777967, "longitude": 126.680920, "sourceUrl": "https://www.amap.com/place/B01C30LDRK" }
+  },
+  "西北工业大学": {
+    "mapLocation": { "campus": "友谊校区", "latitude": 34.243675, "longitude": 108.915417, "sourceUrl": "https://www.amap.com/place/B001D07SN2" }
+  },
+  "南京航空航天大学": {
+    "mapLocation": { "campus": "明故宫校区", "latitude": 32.035022, "longitude": 118.820282, "sourceUrl": "https://www.amap.com/place/B001912IUJ" }
+  },
+  "南京理工大学": {
+    "mapLocation": { "campus": "孝陵卫校区一号门", "latitude": 32.032914, "longitude": 118.859527, "sourceUrl": "https://www.amap.com/place/B00190ADQE" }
+  },
   "吉林大学": {
     "website": "https://www.jlu.edu.cn/",
     "intro": "吉林大学位于吉林省长春市，始建于1946年，现为教育部直属全国重点综合性大学。学校发展和招生以学校官网发布的信息为准。",
