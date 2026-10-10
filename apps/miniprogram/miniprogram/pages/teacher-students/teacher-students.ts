@@ -56,6 +56,14 @@ Page({
     const index = Number(event.currentTarget.dataset.index)
     const student = this.data.students[index]
     if (!student) return
+    wx.navigateTo({
+      url: '/packages/read-only/view/view?kind=student&id=' + encodeURIComponent(student.studentId),
+    })
+  },
+  onEditStudentPlan(event: WechatMiniprogram.BaseEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    const student = this.data.students[index]
+    if (!student) return
     const stage = student.assignedStageCode || student.currentStage || 'freshman-fall'
     const types = planTypesForStage(stage)
     if (types.length === 0) {

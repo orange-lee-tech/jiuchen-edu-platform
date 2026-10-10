@@ -1,7 +1,7 @@
 <auth-gate />
 <view class="admin-page">
   <view class="admin-head">
-    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : section === 'admin-analytics' ? 'AI 评估与充值统计' : '资讯运营'}}</text>
+    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : section === 'admin-readonly' ? '只读切换身份' : section === 'admin-analytics' ? 'AI 评估与充值统计' : '资讯运营'}}</text>
     <text class="admin-desc">仅处理高频移动操作；完整课堂编辑仍保留在电脑后台。</text>
   </view>
 
@@ -9,6 +9,7 @@
     <view class="tab {{section === 'admin-users' ? 'active' : ''}}" data-section="admin-users" bindtap="onSectionChange">用户与编号</view>
     <view class="tab {{section === 'admin-assignments' ? 'active' : ''}}" data-section="admin-assignments" bindtap="onSectionChange">师生分配</view>
     <view class="tab {{section === 'admin-news' ? 'active' : ''}}" data-section="admin-news" bindtap="onSectionChange">动态同步{{pendingClassificationCount > 0 ? ' · 待分类 ' + pendingClassificationCount : ''}}</view>
+    <view class="tab {{section === 'admin-readonly' ? 'active' : ''}}" data-section="admin-readonly" bindtap="onSectionChange">只读切换</view>
     <view class="tab {{section === 'admin-analytics' ? 'active' : ''}}" data-section="admin-analytics" bindtap="onSectionChange">数据统计</view>
   </view>
 
@@ -48,6 +49,29 @@
       </view>
     </view>
     <view class="card"><text class="card-title">账号列表</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayName || '未设置显示名'}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
+  </block>
+
+  <block wx:elif="{{section === 'admin-readonly'}}">
+    <view class="card readonly-notice">
+      <text class="card-title">管理员 · 只读身份切换</text>
+      <text class="card-note">可查看任何已建档学员与老师的专属信息。点击后仍使用自己的管理员登录身份，不会获得目标账号的修改、付款、上传或AI评估执行权限。</text>
+    </view>
+    <view class="card">
+      <text class="card-title">全部学员</text>
+      <view wx:for="{{students}}" wx:key="id" class="readonly-row" data-id="{{item.id}}" bindtap="onReadOnlyStudent">
+        <view class="row-main"><text class="row-title">{{item.name}}</text><text class="row-desc">{{item.university || '院校待补充'}} · {{item.major || '专业待补充'}}</text></view>
+        <text class="readonly-go">查看 ›</text>
+      </view>
+      <text wx:if="{{!students.length}}" class="card-note">暂无学员档案</text>
+    </view>
+    <view class="card">
+      <text class="card-title">全部老师</text>
+      <view wx:for="{{teachers}}" wx:key="id" class="readonly-row" data-id="{{item.id}}" bindtap="onReadOnlyTeacher">
+        <view class="row-main"><text class="row-title">{{item.name}}</text><text class="row-desc">{{item.title || '职务待补充'}} · {{item.status}}</text></view>
+        <text class="readonly-go">查看 ›</text>
+      </view>
+      <text wx:if="{{!teachers.length}}" class="card-note">暂无老师档案</text>
+    </view>
   </block>
 
   <block wx:elif="{{section === 'admin-assignments'}}">

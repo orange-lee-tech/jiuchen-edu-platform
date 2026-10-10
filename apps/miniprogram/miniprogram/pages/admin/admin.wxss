@@ -69,3 +69,8 @@ button::after { border:0; }
 .supplier-message{display:block;margin-top:11rpx;font-size:24rpx;line-height:1.55;color:#3d5052;}
 .supplier-metrics{display:flex;gap:15rpx;flex-wrap:wrap;margin-top:12rpx;font-size:23rpx;font-weight:700;color:#174e62;}
 .supplier-tip{display:block;margin-top:13rpx;color:#6b6c61;font-size:20rpx;line-height:1.5;}
+
+.readonly-notice{border-left:5rpx solid #008979;background:#f0faf6;}
+.readonly-row{display:flex;align-items:center;justify-content:space-between;gap:12rpx;border-bottom:1rpx solid #e2ece8;padding:17rpx 0;}
+.readonly-row .row-main{flex:1;min-width:0;}
+.readonly-go{flex:none;color:#087e75;font-size:21rpx;font-weight:750;}

@@ -30,7 +30,7 @@ import {
   type StudentSummary,
 } from '../../utils/request'
 
-type Section = 'admin-users' | 'admin-assignments' | 'admin-news' | 'admin-analytics'
+type Section = 'admin-users' | 'admin-assignments' | 'admin-news' | 'admin-analytics' | 'admin-readonly'
 type Point = { key:string;label:string;count:number;x:number;barX:number;height:number;bottom:number;labelBottom:number;prevX:number;prevBottom:number;length:number;angle:number;hasPrev:boolean }
 type Plot = { key:string;title:string;width:number;max:number;points:Point[] }
 function makePlot(key:'assessmentCount'|'rechargeCount',title:string,rows:AdminAnalytics['buckets']):Plot {
@@ -107,7 +107,7 @@ Page({
     }
 
     const section = String(options.section || 'admin-users') as Section
-    if (['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics'].includes(section)) {
+    if (['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics', 'admin-readonly'].includes(section)) {
       this.setData({ section })
     }
 
@@ -219,7 +219,7 @@ Page({
 
   onSectionChange(event: WechatMiniprogram.BaseEvent) {
     const section = String(event.currentTarget.dataset.section) as Section
-    if (!['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics'].includes(section)) return
+    if (!['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics', 'admin-readonly'].includes(section)) return
     this.setData({ section })
     if (section === 'admin-analytics') void this.loadAnalytics()
   },
@@ -316,6 +316,17 @@ Page({
       },
       fail: () => { this.confirmingId = false },
     })
+  },
+
+  onReadOnlyStudent(event: WechatMiniprogram.BaseEvent) {
+    const id=String(event.currentTarget.dataset.id||'')
+    if(!this.data.students.some(x=>x.id===id))return
+    wx.navigateTo({url:'/packages/read-only/view/view?kind=student&id='+encodeURIComponent(id)})
+  },
+  onReadOnlyTeacher(event: WechatMiniprogram.BaseEvent) {
+    const id=String(event.currentTarget.dataset.id||'')
+    if(!this.data.teachers.some(x=>x.id===id))return
+    wx.navigateTo({url:'/packages/read-only/view/view?kind=teacher&id='+encodeURIComponent(id)})
   },
 
   onStudentChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
