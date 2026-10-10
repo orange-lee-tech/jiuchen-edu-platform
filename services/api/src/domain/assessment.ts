@@ -74,6 +74,10 @@ export const assessmentInputSchema = z
     research: z.array(researchExperienceSchema).max(12).default([]),
     competitions: z.array(competitionExperienceSchema).max(12).default([]),
     targets: z.array(targetProgramSchema).min(1).max(5),
+    contextOptions: z.object({
+      includePlanning: z.boolean().optional(),
+      includeRecentAssessments: z.boolean().optional(),
+    }).strict().optional(),
     preferences: z
       .object({
         preferredRegions: z.array(z.string().trim().min(1).max(80)).max(10).default([]),

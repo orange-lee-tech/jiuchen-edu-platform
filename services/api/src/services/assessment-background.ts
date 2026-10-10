@@ -2,6 +2,8 @@ import { and, asc, eq } from 'drizzle-orm'
 import type { FastifyBaseLogger } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
 import { assessments } from '../db/schema.js'
+import { createAssessmentAccountContextLoader } from './assessment-account-context.js'
+import type { AssessmentEvidenceItem } from '../domain/assessment.js'
 import {
   ASSESSMENT_AGENT_VERSION,
   normalizeAssessmentInput,
@@ -99,6 +101,9 @@ export async function processAssessmentBackgroundJob(input: {
   runtime: AssessmentRuntime
   notification: AssessmentNotificationAdapter
   logger: WorkerLogger
+  accountContextLoader?: (input: {
+    userId: string; assessmentId: string; includePlanning: boolean; includeRecentAssessments: boolean
+  }) => Promise<AssessmentEvidenceItem[]>
 }): Promise<'succeeded' | 'failed'> {
   const { job, store, runtime, notification, logger } = input
 
@@ -128,7 +133,13 @@ export async function processAssessmentBackgroundJob(input: {
 
   let result: Awaited<ReturnType<typeof executeAssessment>>
   try {
-    result = await executeAssessment(runtime, normalizedInput)
+    const accountEvidence = input.accountContextLoader ? await input.accountContextLoader({
+      userId: job.userId,
+      assessmentId: job.id,
+      includePlanning: normalizedInput.contextOptions?.includePlanning !== false,
+      includeRecentAssessments: normalizedInput.contextOptions?.includeRecentAssessments !== false,
+    }) : []
+    result = await executeAssessment(runtime, normalizedInput, accountEvidence)
   } catch (error) {
     const completedAt = new Date()
     const failureCode =
@@ -280,6 +291,7 @@ export function createAssessmentBackgroundWorker(input: {
   }
 
   const store = createConfiguredStore(input.database, input.commercial)
+  const accountContextLoader = createAssessmentAccountContextLoader(input.database)
   const pollIntervalMs = Math.max(input.pollIntervalMs ?? 3000, 500)
   let active = false
   let draining = false
@@ -297,6 +309,7 @@ export function createAssessmentBackgroundWorker(input: {
             job,
             store,
             runtime: input.runtime,
+            accountContextLoader,
             notification: input.notification,
             logger: input.logger,
           })

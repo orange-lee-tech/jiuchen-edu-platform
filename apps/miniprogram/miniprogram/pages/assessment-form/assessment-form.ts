@@ -237,6 +237,8 @@ Page({
     loading: true,
     saving: false,
     profileReady: false,
+    includePlanning: true,
+    includeRecentAssessments: true,
     importing: false,
     providerConfigured: false,
     billingEnabled: false,
@@ -434,6 +436,8 @@ Page({
         materialImportConfigured: meta.materialImport.enabled,
         draftId: draft?.id || '',
         profileReady: true,
+        includePlanning: draftInput?.contextOptions?.includePlanning !== false,
+        includeRecentAssessments: draftInput?.contextOptions?.includeRecentAssessments !== false,
         profile: {
           university: profile.university || '',
           major: profile.major || '',
@@ -885,6 +889,12 @@ Page({
     this.setData({ targets })
   },
 
+  onIncludePlanning(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    this.setData({ includePlanning: Boolean(event.detail.value) })
+  },
+  onIncludeHistory(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    this.setData({ includeRecentAssessments: Boolean(event.detail.value) })
+  },
   buildInput() {
     const profile = this.data.profile
 
@@ -947,6 +957,10 @@ Page({
       research,
       competitions,
       targets,
+      contextOptions: {
+        includePlanning: this.data.includePlanning,
+        includeRecentAssessments: this.data.includeRecentAssessments,
+      },
     }
   },
 

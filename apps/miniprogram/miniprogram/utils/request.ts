@@ -911,6 +911,10 @@ export type AssessmentInput = {
   research?: AssessmentResearchExperience[]
   competitions?: AssessmentCompetitionExperience[]
   targets: AssessmentTarget[]
+  contextOptions?: {
+    includePlanning?: boolean
+    includeRecentAssessments?: boolean
+  }
   preferences?: {
     preferredRegions?: string[]
     researchDirection?: string | null

@@ -143,3 +143,43 @@ test('background assessment persists failed state instead of surfacing model err
   assert.equal(failureCode, 'assessment_execution_failed')
   assert.deepEqual(events, ['assessment-2:failed'])
 })
+
+test('background context includes only server loader result with default-on toggles', async () => {
+  const records: Array<{userId:string;assessmentId:string;includePlanning:boolean;includeRecentAssessments:boolean}> = []
+  const runtime=createSuccessRuntime()
+  runtime.provider.analyze = async ({knowledge}) => {
+    assert.ok(knowledge.evidence.some(x=>x.ref==='account:planning'))
+    return {profileSummary:'有规划',strengths:[],risks:[],targetAssessments:[{
+      schoolName:'目标大学',tier:'insufficient_data',rationale:'缺少官方依据',
+      gapItems:[],actions:[],evidenceRefs:['account:planning'],
+    }],recommendedActions:[],similarCases:[],uncertainties:[],disclaimer:'仅供参考'}
+  }
+  const notifications:AssessmentNotificationAdapter={channel:'none',isConfigured:()=>false,
+    async notify(){return {delivered:false,channel:'none',reason:'not_configured'}}}
+  const result=await processAssessmentBackgroundJob({
+    job:{id:'new-run',userId:'owner',inputJson:{...assessmentInput}},
+    store:{async nextRunning(){return null},async persistSuccess(){},async persistFailure(){assert.fail('unexpected failure')}},
+    runtime,notification:notifications,logger:silentLogger,
+    accountContextLoader:async args=>{
+      records.push(args)
+      return [{ref:'account:planning',kind:'other',sourceType:'internal',sourceId:null,
+        title:'本人规划',sourceLabel:'本人资料',sourceUrl:null,excerpt:'有进度'}]
+    },
+  })
+  assert.equal(result,'succeeded')
+  assert.deepEqual(records,[{userId:'owner',assessmentId:'new-run',includePlanning:true,includeRecentAssessments:true}])
+})
+test('background account-context preferences can disable both sources', async () => {
+  const calls:unknown[]=[]
+  const notification:AssessmentNotificationAdapter={channel:'none',isConfigured:()=>false,
+    async notify(){return {delivered:false,channel:'none',reason:'not_configured'}}}
+  const result=await processAssessmentBackgroundJob({
+    job:{id:'skip',userId:'owner',inputJson:{...assessmentInput,
+      contextOptions:{includePlanning:false,includeRecentAssessments:false}}},
+    store:{async nextRunning(){return null},async persistSuccess(){},async persistFailure(){assert.fail('unexpected failure')}},
+    runtime:createSuccessRuntime(),notification,logger:silentLogger,
+    accountContextLoader:async args=>{calls.push(args);return []},
+  })
+  assert.equal(result,'succeeded')
+  assert.deepEqual(calls,[{userId:'owner',assessmentId:'skip',includePlanning:false,includeRecentAssessments:false}])
+})

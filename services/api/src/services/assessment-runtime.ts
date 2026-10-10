@@ -407,6 +407,7 @@ function validateAssessmentResult(
 export async function executeAssessment(
   runtime: AssessmentRuntime,
   input: AssessmentInput,
+  accountEvidence: AssessmentEvidenceItem[] = [],
 ): Promise<{
   output: AssessmentOutput
   evidence: AssessmentEvidenceItem[]
@@ -418,7 +419,21 @@ export async function executeAssessment(
     throw new AssessmentProviderUnavailableError()
   }
 
-  const knowledge = await runtime.retriever.retrieve(input)
+  const retrieved = await runtime.retriever.retrieve(input)
+  // These are trusted server-owned evidence items, never client-supplied input.
+  // Persisting the bounded excerpts with the report preserves its evidence snapshot.
+  const extra = accountEvidence.map(item => assessmentEvidenceItemSchema.parse(item))
+  const refs = new Set(retrieved.evidence.map(item => item.ref))
+  if (extra.some(item => refs.has(item.ref) ||
+      item.sourceType !== 'internal' || item.kind !== 'other')) {
+    throw new AssessmentEvidenceConflictError('account-context')
+  }
+  const knowledge: AssessmentKnowledgeContext = extra.length ? {
+    version: 'account-context-' + createHash('sha256')
+      .update(JSON.stringify({ base: retrieved.version, evidence: extra }))
+      .digest('hex').slice(0, 24),
+    evidence: [...retrieved.evidence, ...extra],
+  } : retrieved
   let rawOutput: unknown
   let repairUsed = false
 
