@@ -212,6 +212,7 @@ export function friendlyRequestError(
     invalid_schedule_edit_payload: '课表数据未通过服务器校验，请不要重新上传；请记录错误码并联系管理员核对数据格式',
     schedule_stage_selection_required: '请先确认课表的归属学期再保存',
     schedule_import_not_found: '当前课表记录已不存在或账号已变更，请重新进入课表页核对',
+    schedule_not_parsed: '课表尚未完成解析，请重新进入课表页核对',
     service_unavailable: '服务暂不可用，请稍后重试',
     invalid_internal_id: '内部ID不正确，请核对后重试',
     internal_id_locked: '内部ID已绑定，如需变更请联系管理员',
@@ -543,6 +544,15 @@ export async function updateScheduleImport(
   return result.schedule
 }
 
+
+/** Change one schedule date without roundtripping an entire AI-extracted timetable. */
+export async function updateScheduleFirstMonday(id: string, termStartDate: string): Promise<string> {
+  const result = await request<{ok:true;termStartDate:string}>(
+    `/me/classroom/schedule-imports/${encodeURIComponent(id)}/term-start-date`,
+    'PUT', {termStartDate},
+  )
+  return result.termStartDate
+}
 
 export async function getMyAcademicProfile(): Promise<AcademicProfile> {
   const result = await request<{ ok: true; profile: AcademicProfile }>('/me/profile')

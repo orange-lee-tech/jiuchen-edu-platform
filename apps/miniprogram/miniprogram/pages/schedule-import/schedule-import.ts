@@ -3,6 +3,7 @@ import {
   friendlyRequestError,
   getLatestScheduleImport,
   updateScheduleImport,
+  updateScheduleFirstMonday,
   ApiRequestError,
   type ParsedSchedule,
   type ParsedScheduleCourse,
@@ -332,6 +333,40 @@ Page({
     }
   },
 
+  async saveTermStartDate(date: string) {
+    if (this.data.saving || !this.data.importId || !this.data.schedule) return
+    const id = this.data.importId
+    try {
+      this.setData({ saving: true, saveError: '' })
+      const confirmed = await updateScheduleFirstMonday(id, date)
+      // An older pending response cannot rewrite a newly imported timetable.
+      if (this.data.importId !== id || !this.data.schedule) return
+      if (confirmed !== date) throw new Error('schedule_date_readback_mismatch')
+      this.setData({
+        schedule: { ...this.data.schedule, termStartDate: confirmed },
+        termStartDate: confirmed,
+      })
+      this.refreshVisibleCourses()
+    } catch (error) {
+      if (this.data.importId !== id) return
+      const message = friendlyRequestError(error, '本学期起始日期保存失败，请稍后再试')
+      const code = error instanceof ApiRequestError
+        ? 'HTTP ' + error.statusCode + ' / ' + error.code
+        : error instanceof Error ? error.message : 'unknown'
+      this.setData({ saveError: message + '（' + code + '）' })
+      console.warn('schedule_date_save_failed', {
+        code, detail: error instanceof ApiRequestError ? error.detail.slice(0, 320) : '',
+      })
+      wx.showModal({
+        title: '第一周日期未保存',
+        content: message + '。课表课程仍然保留，原日期未被更改。\\n错误码：' + code,
+        showCancel: false,
+      })
+    } finally {
+      this.setData({ saving: false })
+    }
+  },
+
   onTermStartChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     if (this.data.saving) return
     const termStartDate = event.detail.value
@@ -345,8 +380,8 @@ Page({
       })
       return
     }
-    // Update the visible date only after the backend acknowledges persistence.
-    void this.persistSchedule({ ...schedule, termStartDate })
+    // Update one metadata field, not the entire recognized course array.
+    void this.saveTermStartDate(termStartDate)
   },
 
   onAddCourse() {

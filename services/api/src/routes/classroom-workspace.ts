@@ -872,6 +872,40 @@ export function registerClassroomWorkspaceRoutes(
     }
   })
 
+  // Save date metadata independently: one date change must not revalidate the
+  // entire OCR/AI timetable nor overwrite concurrently edited course details.
+  app.put<{ Params: { id: string }; Body: unknown }>(
+    '/me/classroom/schedule-imports/:id/term-start-date', async (request, reply) => {
+      if (!database.configured)
+        return reply.code(503).send({ ok: false, error: 'database_not_configured' })
+      const session = await resolveSessionUser(request, database)
+      if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
+      const parsed = z.object({ termStartDate: z.string() }).strict().safeParse(request.body)
+      if (!parsed.success || !isScheduleFirstMonday(parsed.data.termStartDate))
+        return reply.code(400).send({ ok: false, error: 'schedule_first_monday_required' })
+
+      const [owned] = await database.db.select({
+        id: scheduleImports.id, status: scheduleImports.status, parsedJson: scheduleImports.parsedJson,
+      }).from(scheduleImports).where(and(
+        eq(scheduleImports.id, request.params.id),
+        eq(scheduleImports.userId, session.userId),
+      )).limit(1)
+      if (!owned) return reply.code(404).send({ ok: false, error: 'schedule_import_not_found' })
+      if (owned.status !== 'parsed' || !owned.parsedJson ||
+        typeof owned.parsedJson !== 'object' || Array.isArray(owned.parsedJson))
+        return reply.code(409).send({ ok: false, error: 'schedule_not_parsed' })
+
+      await database.db.update(scheduleImports).set({
+        parsedJson: sql`JSON_SET(${scheduleImports.parsedJson}, '$.termStartDate', ${parsed.data.termStartDate})`,
+      }).where(and(
+        eq(scheduleImports.id, owned.id),
+        eq(scheduleImports.userId, session.userId),
+        eq(scheduleImports.status, 'parsed'),
+      ))
+      return { ok: true, termStartDate: parsed.data.termStartDate }
+    },
+  )
+
   app.put<{
     Params: { id: string }
     Body: unknown
