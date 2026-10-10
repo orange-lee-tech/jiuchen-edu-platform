@@ -4,6 +4,7 @@ import {
 } from '../data'
 
 type SchoolCard = School & { monogram: string; subtitle: string; cardTags: School['groupTags'] }
+const PAGE_SIZE = 36
 const LEVELS: ReadonlyArray<{value:SchoolTier;label:string}> = [
  {value:'all',label:'全部层次'},{value:'985',label:'985'},{value:'other211',label:'非985的211'},
  {value:'doubleFirst',label:'双一流（2022）'},{value:'nonDouble',label:'非985/211/双一流'},
@@ -34,15 +35,24 @@ Page({
     draftExactSchool:'',
     candidateSchools:[] as Array<{name:string;id:string}>,
     previewCount:SCHOOLS.length,
-    schools:cards([...SCHOOLS]),
+    resultCount:SCHOOLS.length,
+    schools:cards(SCHOOLS.slice(0,PAGE_SIZE)),
   },
   onLoad(){wx.setNavigationBarTitle({title:'九辰院校库'})},
-  refreshSchools(){
-    this.setData({schools:cards(findSchools(
-      this.data.query,this.data.level,this.data.region,this.data.group,
-      this.data.affiliation,this.data.exactSchool,
-    ))})
+  currentMatches(){
+    return findSchools(this.data.query,this.data.level,this.data.region,
+      this.data.group,this.data.affiliation,this.data.exactSchool)
   },
+  refreshSchools(){
+    const results=this.currentMatches()
+    this.setData({resultCount:results.length,schools:cards(results.slice(0,PAGE_SIZE))})
+  },
+  onLoadMore(){
+    if(this.data.schools.length>=this.data.resultCount)return
+    const count=this.data.schools.length+PAGE_SIZE
+    this.setData({schools:cards(this.currentMatches().slice(0,count))})
+  },
+  onReachBottom(){this.onLoadMore()},
   onQuery(event:WechatMiniprogram.Input){
     this.setData({query:event.detail.value,exactSchool:''})
     this.refreshSchools()

@@ -66,3 +66,5 @@ page{background:#eaf5f1;}
 .school-tag.dept{background:#eff0fa;color:#57518a;}
 .filter-summary{color:#09887e;white-space:nowrap;}
 .empty-reset{margin:9rpx 0 0;color:white;background:#0b9e94;font-size:22rpx;width:100%;line-height:65rpx;}
+
+.load-more{width:100%;margin:20rpx 0 10rpx;border:1rpx solid #bfddd6;border-radius:7rpx;background:#f8fcfa;color:#16796e;font-size:23rpx;line-height:68rpx;}

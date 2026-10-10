@@ -21,10 +21,10 @@
     </view>
   </scroll-view>
   <view class="school-count">
-    <text>匹配 {{schools.length}} 条院校／校区记录</text>
+    <text>匹配 {{resultCount}} 条院校／校区记录</text>
     <text class="filter-summary" bindtap="onOpenFilter">筛选条件 ›</text>
   </view>
-  <view wx:if="{{schools.length === 0}}" class="empty-state">
+  <view wx:if="{{resultCount === 0}}" class="empty-state">
     <text>当前组合条件没有匹配学校</text>
     <text>地区、层次、圈层、主管单位会同时生效。可以修改条件或清空组合；不代表院校不存在。</text>
     <button bindtap="onReset" class="empty-reset">清空筛选条件</button>
@@ -46,6 +46,7 @@
       <text class="school-arrow">›</text>
     </view>
   </view>
+  <button wx:if="{{schools.length < resultCount}}" class="load-more" bindtap="onLoadMore">再显示更多院校 · 已显示 {{schools.length}} / {{resultCount}}</button>
   <view class="catalog-source">2022 年第二轮双一流建设名单覆盖 147 所高校；原 985/211 保留历史口径和校区重复条目。行业圈层不是官方排名，主管单位也不等于历史原隶属。请以当年学院及招生原文确定推免要求。</view>
 </view>
 <view wx:if="{{showFilter}}" class="filter-overlay" bindtap="onCloseFilter">
