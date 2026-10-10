@@ -6,6 +6,7 @@ import {
   studentTeacherAssignments, students, teachers, userProfiles,
 } from '../db/schema.js'
 import { STAGE_DEFINITIONS, getStageDefinition } from '../domain/classroom.js'
+import { missingOptionalTableAsEmpty } from '../domain/optional-table.js'
 import { mayViewStudent, mayViewTeacher, pickClassroomStudent } from '../domain/read-only-access.js'
 import { resolveSessionUser } from '../services/session.js'
 import { loadClassroom } from './classroom-workspace.js'
@@ -72,7 +73,8 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
         .orderBy(desc(planRevisions.createdAt))
 
       const [growth,history]=student.userId?await Promise.all([
-        database.db.select({id:growthRecords.id,type:growthRecords.type,title:growthRecords.title,
+        missingOptionalTableAsEmpty(() => database.db.select({
+          id:growthRecords.id,type:growthRecords.type,title:growthRecords.title,
           organization:growthRecords.organization,role:growthRecords.role,
           description:growthRecords.description,result:growthRecords.result,
           startDate:growthRecords.startDate,endDate:growthRecords.endDate,
@@ -80,7 +82,7 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
           userConfirmed:growthRecords.userConfirmed,
           teacherConfirmed:growthRecords.teacherConfirmed,status:growthRecords.status,
         }).from(growthRecords).where(eq(growthRecords.userId,student.userId))
-          .orderBy(desc(growthRecords.createdAt)),
+          .orderBy(desc(growthRecords.createdAt))),
         database.db.select({id:assessments.id,status:assessments.status,
           outputJson:assessments.outputJson,
           createdAt:assessments.createdAt,completedAt:assessments.completedAt,

@@ -37,3 +37,10 @@ STATUS: CODE CANDIDATE ONLY. NO ECS DEPLOYMENT. STAGING, SCHEMA, AND MOBILE GATE
 - Monday validator extracted unchanged into pure domain module with date/leap/invalid-date tests.
 - Fastify inject tests assert date-only and read-only GET routes exist and fail closed on missing DB, while mirror URLs do not accept write verbs.
 - These deterministic checks do NOT replace the separate DB-backed authorization/revocation + real 13-course persistence staging acceptance.
+
+# Missing schema findings (operator read-only output 2026-10-10)
+
+- 12/14 referenced tables present. Missing: coaching_records (7 fields), growth_records (15 fields). No SQL migration authorized or executed.
+- Corresponding official migrations exist: db:upgrade:classroom-guidance and db:upgrade:growth-profile; they contain DDL, so **DO NOT RUN IN PRODUCTION** without separate reviewed change approval.
+- Existing classroom code already degrades when coaching_records is absent. RC GET-only student mirror now degrades *only* missing growth_records to an empty list; other SQL errors still fail visibly. This is a compatibility mitigation, not a database migration.
+- Field-existence audit does not prove live role matrix, link token scopes, revocation, schedule data preservation or performance. Staging negative tests remain blocking gates.
