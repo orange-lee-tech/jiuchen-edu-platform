@@ -260,3 +260,8 @@
 .school-entry-title{font-size:29rpx;font-weight:800;color:#fff;line-height:1.4;}
 .school-entry-desc{font-size:21rpx;line-height:1.5;color:#e5faf5;margin-top:5rpx;}
 .school-entry-arrow{font-size:38rpx;line-height:1;color:#ffe5a1;}
+
+/* Optional reference reading uses full-row aligned affordance, not a centered native button. */
+.reference-news-link{box-sizing:border-box;width:100%;min-height:76rpx;margin:15rpx 0;display:flex;align-items:center;justify-content:space-between;gap:12rpx;padding:15rpx 22rpx;background:#e7eef8;border:1rpx solid #d2dfe9;border-radius:6rpx;color:#215a9f;font-size:23rpx;font-weight:800;}
+.reference-news-pressed{background:#d8e6f8;}
+.reference-news-arrow{flex:none;color:#2459be;font-size:34rpx;line-height:1;}

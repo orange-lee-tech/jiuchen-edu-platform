@@ -29,7 +29,15 @@ export async function openVerifiedWechatCustomerService(purpose='联系九辰运
     })
     return
   }
-  if(!auth || auth.user.id!==before.user.id || auth.session.token!==before.session.token){
+  if(!auth){
+    wx.showModal({
+      title:'身份未通过验证',
+      content:'本次没有从服务器确认登录身份，不能依赖本地缓存向客服宣称自己是老师或管理员。请稍后重试。',
+      showCancel:false,
+    })
+    return
+  }
+  if(auth.user.id!==before.user.id || auth.session.token!==before.session.token){
     wx.showToast({title:'登录身份已变化，请重试',icon:'none'})
     return
   }

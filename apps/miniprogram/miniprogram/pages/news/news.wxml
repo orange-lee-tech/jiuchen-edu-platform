@@ -1,6 +1,9 @@
 <view class="page-shell">
   <role-shell view-slot="opportunity" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
-  <button wx:if="{{shellPhase === 'ready' && shellKind !== 'student'}}" class="reference-news-button" bindtap="onReferenceNews">{{showReferenceNews ? '收起参考文章' : '查看保研参考文章'}}</button>
+  <view wx:if="{{shellPhase === 'ready' && shellKind !== 'student'}}" class="reference-news-link" bindtap="onReferenceNews" hover-class="reference-news-pressed" aria-role="button">
+    <text>{{showReferenceNews ? '收起保研参考文章' : '查看保研参考文章'}}</text>
+    <text class="reference-news-arrow">{{showReferenceNews ? '⌃' : '›'}}</text>
+  </view>
   <block wx:if="{{shellPhase === 'ready' && (shellKind === 'student' || showReferenceNews)}}">
   <view class="news-head">
     <view>
@@ -12,7 +15,7 @@
 
   <view class="school-entry" bindtap="onSchools" hover-class="school-entry-hover" aria-role="button">
     <view class="school-entry-icon"><text>校</text></view>
-    <view class="school-entry-copy"><text class="school-entry-title">院校库 · 985 / 211 全名录</text><text class="school-entry-desc">116 条院校/校区记录，按 985、211、C9 与地区筛选</text></view>
+    <view class="school-entry-copy"><text class="school-entry-title">院校库 · 双一流与特色高校</text><text class="school-entry-desc">可组合筛选院校层次、地区、行业圈层与主管单位</text></view>
     <text class="school-entry-arrow">›</text>
   </view>
 
