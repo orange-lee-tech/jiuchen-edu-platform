@@ -1,5 +1,5 @@
 import { getSchoolById, MOE_985_SOURCE, MOE_211_SOURCE, C9_SOURCE, type School } from '../data'
-import { getMyAcademicProfile } from '../../../utils/request'
+import { getMyAcademicProfile, getMyClassroom } from '../../../utils/request'
 import { getSavedAuthResult } from '../../../utils/auth'
 import { openWechatCustomerService } from '../../../utils/customer-service'
 Page({
@@ -90,8 +90,14 @@ Page({
       return
     }
     let profile
+    let studentName = ''
     try {
-      profile=await getMyAcademicProfile()
+      const [academic, classroom] = await Promise.all([
+        getMyAcademicProfile(),
+        getMyClassroom().catch(() => null),
+      ])
+      profile = academic
+      studentName = classroom?.student.name?.trim() || ''
     } catch {
       wx.showModal({title:'学业资料暂不可用',
         content:'没有读取成功，本次不会附加姓名、年级或专业。可重新选择“仅咨询这所学校”。',
@@ -102,7 +108,7 @@ Page({
     // cannot prefill or auto-send a customer-service message.
     const summary=[
       '【九辰院校咨询】','目标学校：'+targetSchool,
-      '用户姓名：'+(session.user.displayName?.trim()||'未填写'),
+      '用户姓名（发送前核对）：'+(studentName || session.user.displayName?.trim() || '未填写'),
       '就读年级：'+(profile.currentGrade?.trim()||'未填写'),
       '用户专业：'+(profile.major?.trim()||'未填写'),
     ].join('\n')
