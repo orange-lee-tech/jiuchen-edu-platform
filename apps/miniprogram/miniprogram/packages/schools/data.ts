@@ -359,6 +359,7 @@ const notablePublic: ReadonlyArray<readonly [string,string,string,string]> = [
  ['昆明理工大学','云南','昆明','https://www.kmust.edu.cn/'],
  ['华侨大学','福建','泉州','https://www.hqu.edu.cn/'],
  ['中国社会科学院大学','北京','北京','https://www.ucass.edu.cn/'],
+ ['北京语言大学','北京','北京','https://www.blcu.edu.cn/'],
  ['南方医科大学','广东','广州','https://www.smu.edu.cn/'],
  // Six Minzu Commission schools: the remaining five complement existing 中央民族大学.
  ['中南民族大学','湖北','武汉','https://www.scuec.edu.cn/'],
