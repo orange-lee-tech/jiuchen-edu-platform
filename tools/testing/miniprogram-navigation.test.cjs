@@ -699,6 +699,33 @@ test('school inquiry never trusts stale role when revalidation fails',async()=>{
  assert.equal(h.modals.length,1)
  assert.match(h.modals[0].content,/本地缓存/)
 })
+test('student school consultation includes server-confirmed student role and known academic context',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
+ let copied='',opened=null
+ h.wx.setClipboardData=opts=>{copied=opts.data;opts.success?.()}
+ h.wx.openCustomerServiceChat=opts=>{opened=opts}
+ const p=h.page('packages/schools/detail/detail');p.onLoad({id:'s009'})
+ const flow=p.onConsultSchool()
+ assert.equal(h.requests.length,2,'student context comes from read-only profile and classroom requests')
+ h.respond(0,{ok:true,profile:{university:'中南大学',major:'能源与动力工程',
+   currentGrade:'大四',enrollmentYear:2023,gpaText:null,rankText:null}})
+ h.respond(1,{ok:true,student:{id,name:'学员甲',major:'能源与动力工程'},
+   stage:{code:'senior-fall',label:'大四上'},plans:[],mentors:[],records:[]})
+ await settle()
+ assert.equal(h.requests.length,3,'recheck actual server identity after reading profile context')
+ h.respond(2,{ok:true,user:{...authFixture('student').user,displayName:'学员甲'},
+   businessIdentity:{businessId:'JCS-0001',status:'claimed',type:'student'}})
+ await flow
+ assert.equal(h.modals.length,1)
+ assert.match(h.modals[0].content,/当前身份：学员/)
+ assert.match(h.modals[0].content,/目标学校：南开大学/)
+ h.modals[0].success({confirm:true})
+ assert.match(copied,/就读年级：大四/)
+ assert.match(copied,/就读专业：能源与动力工程/)
+ assert.match(opened.sendMessageTitle,/学员/)
+})
+
 test('school map updates preview and navigation while honoring primary campus',()=>{
  const h=harness(),p=h.page('packages/schools/detail/detail')
  p.onLoad({id:'s015'})
