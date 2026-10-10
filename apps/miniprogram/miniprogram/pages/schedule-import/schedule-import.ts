@@ -3,6 +3,7 @@ import {
   friendlyRequestError,
   getLatestScheduleImport,
   updateScheduleImport,
+  ApiRequestError,
   type ParsedSchedule,
   type ParsedScheduleCourse,
   getMyAcademicProfile,
@@ -10,6 +11,16 @@ import {
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
 import { authorizePage } from '../../utils/navigation'
 import { currentWeekFromStart, weekMatches } from '../../utils/schedule-view'
+
+// Date-only checks use UTC to avoid shifting the school week on a user's device.
+function isMondayDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) return false
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day && date.getUTCDay() === 1
+}
 
 const MAX_SPREADSHEET_BYTES = 5 * 1024 * 1024
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -57,6 +68,7 @@ Page({
   data: {
     parsing: false,
     saving: false,
+    saveError: '',
     showStagePicker: false,
     stageOptions: TERM_OPTIONS,
     stageChoice: '',
@@ -277,6 +289,7 @@ Page({
   },
 
   async persistSchedule(schedule: ParsedSchedule) {
+    if (this.data.saving) return false
     if (!this.data.importId) {
       wx.showToast({ title: '请先导入一个课表', icon: 'none' })
       return false
@@ -288,7 +301,7 @@ Page({
     }
 
     try {
-      this.setData({ saving: true })
+      this.setData({ saving: true, saveError: '' })
       const persisted = await updateScheduleImport(this.data.importId, schedule)
       this.setData({
         schedule: persisted,
@@ -299,9 +312,19 @@ Page({
       this.refreshVisibleCourses()
       return true
     } catch (error) {
-      wx.showToast({
-        title: friendlyRequestError(error, '课表保存失败'),
-        icon: 'none',
+      const message = friendlyRequestError(error, '课表暂时未能保存，请稍后再试')
+      const code = error instanceof ApiRequestError
+        ? 'HTTP ' + error.statusCode + ' / ' + error.code
+        : error instanceof Error ? error.message : 'unknown'
+      // Keep the imported courses visible. Never present an unsaved date as saved.
+      this.setData({ saveError: message + '（' + code + '）' })
+      console.warn('schedule_save_failed', {
+        code, detail: error instanceof ApiRequestError ? error.detail.slice(0, 320) : '',
+      })
+      wx.showModal({
+        title: '课表没有保存成功',
+        content: message + '。识别出的课程仍在当前页面，未被清空。\n错误码：' + code,
+        showCancel: false,
       })
       return false
     } finally {
@@ -310,16 +333,20 @@ Page({
   },
 
   onTermStartChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (this.data.saving) return
     const termStartDate = event.detail.value
     const schedule = this.data.schedule
     if (!schedule) return
-
-    const next: ParsedSchedule = {
-      ...schedule,
-      termStartDate,
+    if (!isMondayDate(termStartDate)) {
+      wx.showModal({
+        title: '请选择第一周的周一',
+        content: '所选日期不是星期一。请对照学校教务日历，选择该学期第一周实际的周一；不会自动猜测或更改日期。',
+        showCancel: false,
+      })
+      return
     }
-    this.setData({ termStartDate })
-    void this.persistSchedule(next)
+    // Update the visible date only after the backend acknowledges persistence.
+    void this.persistSchedule({ ...schedule, termStartDate })
   },
 
   onAddCourse() {

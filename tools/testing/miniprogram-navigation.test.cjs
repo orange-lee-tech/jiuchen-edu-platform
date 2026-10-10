@@ -412,3 +412,30 @@ test('new user and each claimed business role receive a separate, dismissible 4-
     assert.match(wxml, /<first-use-guide \/>/)
   }
 })
+
+test('schedule picker accepts Monday only and keeps last saved date on a failed PUT', async () => {
+  const h=harness();h.auth.saveAuthResult(authFixture('student'))
+  const page=h.page('pages/schedule-import/schedule-import')
+  const course={name:'分布式能源',day:'周一',dayIndex:1,slot:'第1-2节',
+    startSection:1,endSection:2,time:null,location:null,teacher:null,
+    weeks:'1-16周',raw:'分布式能源'}
+  page.setData({importId:'schedule-1',stageChoice:'senior-fall',
+    schedule:{sourceType:'image',stageCode:'senior-fall',courses:[course],warnings:[],
+      termStartDate:null,editedAt:null},termStartDate:''})
+  page.onTermStartChange({detail:{value:'2026-09-06'}})
+  assert.equal(h.requests.length,0)
+  assert.equal(page.data.termStartDate,'')
+  assert.match(h.modals.at(-1).content,/不是星期一/)
+
+  page.onTermStartChange({detail:{value:'2026-09-07'}})
+  assert.equal(h.requests.length,1)
+  assert.equal(h.requests[0].method,'PUT')
+  assert.equal(h.requests[0].data.termStartDate,'2026-09-07')
+  assert.equal(page.data.termStartDate,'')
+  h.respond(0,{ok:false,error:'invalid_schedule_edit_payload'},400)
+  await settle()
+  assert.equal(page.data.termStartDate,'')
+  assert.equal(page.data.schedule.courses.length,1)
+  assert.match(page.data.saveError,/HTTP 400/)
+  assert.match(h.modals.at(-1).content,/错误码/)
+})

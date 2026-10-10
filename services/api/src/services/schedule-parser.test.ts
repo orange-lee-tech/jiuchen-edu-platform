@@ -7,6 +7,7 @@ import {
   isOwnedScheduleImportFile,
   isSupportedScheduleFileName,
   normalizeEditableSchedule,
+  isScheduleFirstMonday,
   parseImageSchedule,
   parseSpreadsheetSchedule,
 } from './schedule-parser.js'
@@ -273,4 +274,20 @@ test('parseSpreadsheetSchedule supports CSU WPS timetable layout with clock slot
   assert.ok(ideology)
   assert.equal(ideology.weeks, '2-4,8-20[双周]')
   assert.equal(ideology.location, 'C座502')
+})
+
+test('image import fields roundtrip into a strict schedule edit payload with a real Monday', async () => {
+  const imageCourse = {
+    name: '分布式能源',day: '周一',dayIndex:1,slot:'第1-2节',
+    startSection:1,endSection:2,time:null,location:'A201',teacher:null,
+    weeks:'1-16周',raw:'分布式能源 1-16周',
+  }
+  const schedule=normalizeEditableSchedule({
+    sourceType:'image',stageCode:'senior-fall',
+    courses:Array.from({length:13},(_,i)=>({...imageCourse,name:'课程'+i})),
+    warnings:[],termStartDate:'2026-09-07',editedAt:new Date().toISOString(),
+  })
+  assert.equal(schedule.courses.length,13)
+  assert.equal(schedule.termStartDate,'2026-09-07')
+  assert.equal(isScheduleFirstMonday(schedule.termStartDate),true)
 })

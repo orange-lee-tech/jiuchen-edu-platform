@@ -28,6 +28,7 @@ import {
   isOwnedScheduleImportFile,
   isSupportedScheduleFileName,
   normalizeEditableSchedule,
+  isScheduleFirstMonday,
   parseImageSchedule,
   parseSpreadsheetSchedule,
 } from '../services/schedule-parser.js'
@@ -900,17 +901,28 @@ export function registerClassroomWorkspaceRoutes(
 
     if (!scheduleTermStageSchema.safeParse((request.body as Record<string, unknown> | null)?.stageCode).success)
       return reply.code(400).send({ ok: false, error: 'schedule_stage_selection_required' })
+    const draft = request.body && typeof request.body === 'object' && !Array.isArray(request.body)
+      ? request.body as Record<string, unknown> : {}
+    if (draft.termStartDate !== null && draft.termStartDate !== undefined &&
+      !isScheduleFirstMonday(draft.termStartDate)) {
+      return reply.code(400).send({ ok: false, error: 'schedule_first_monday_required' })
+    }
     let schedule
     try {
       schedule = normalizeEditableSchedule({
-        ...(request.body as Record<string, unknown>),
+        ...draft,
         sourceType: record.sourceType,
         editedAt: new Date().toISOString(),
       })
-    } catch {
+    } catch (error) {
+      // Only field paths are exposed: never echo student timetable content.
+      const fields = error instanceof z.ZodError
+        ? [...new Set(error.issues.map(issue => issue.path.join('.')))].slice(0, 8)
+        : []
       return reply.code(400).send({
         ok: false,
         error: 'invalid_schedule_edit_payload',
+        fields,
       })
     }
 

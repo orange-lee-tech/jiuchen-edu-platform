@@ -11,13 +11,14 @@
     <view class="mode-tab {{viewMode === 'manage' ? 'active' : ''}}" data-mode="manage" bindtap="onViewModeTap">导入 / 编辑</view>
   </view>
 
+  <view wx:if="{{saveError}}" class="schedule-save-error">{{saveError}}。修改尚未写入服务器，请核对后重试。</view>
   <view wx:if="{{schedule}}" class="term-card surface">
     <text class="term-affiliation" bindtap="onReassignStage">归属：{{stageChoiceLabel || '待人工确认归属学期'}} · 点击修改 ›</text>
     <view>
       <text class="term-title">{{currentWeekLabel}}</text>
       <text class="term-desc">本周筛选依据课程的“周次”字段；未写周次的课程默认每周显示。</text>
     </view>
-    <picker mode="date" value="{{termStartDate}}" bindchange="onTermStartChange">
+    <picker mode="date" value="{{termStartDate}}" disabled="{{saving}}" bindchange="onTermStartChange">
       <view class="date-picker">{{termStartDate ? '第一周周一：' + termStartDate : '设置第一周周一'}} ›</view>
     </picker>
   </view>
