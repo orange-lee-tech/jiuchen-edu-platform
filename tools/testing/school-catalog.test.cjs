@@ -205,3 +205,46 @@ test('school consultation follows server verification and a single consent modal
  assert.doesNotMatch(wxml,/两种方式/)
  for(const name of ['复旦大学','南开大学'])assert.ok(school.includes('"'+name+'": {'),name)
 })
+
+test('all school-map keys exactly match the 172 catalog entries, never a fabricated city center',()=>{
+ const source=school
+ const first=rows.map(x=>x[0])
+ const other=extras.map(x=>x[0])
+ const special=source.split('const specialtySchools:')[1].split('\n]')[0]
+ const doubles=source.split('const newDoubleFirst:')[1].split('\n]')[0]
+ const publicRows=source.split('const notablePublic:')[1].split('\n]')[0]
+ const extra=[special,doubles,publicRows].flatMap(part=>
+   [...part.matchAll(/\[\s*'([^']+)'\s*,\s*'[^']+'\s*,\s*'[^']+'/g)].map(x=>x[1]))
+ const expected=[...first,...other,...extra]
+ assert.equal(expected.length,172)
+ assert.equal(new Set(expected).size,172)
+ const media=fs.readFileSync(path.join(mini,'packages/schools/campus-points.ts'),'utf8')
+ const points=JSON.parse(media.match(/export const SCHOOL_CAMPUS_POINTS: Readonly<Record<string,readonly SchoolCampusPoint\[\]>> = (\{[^\n]+\})/)[1])
+ assert.deepEqual(Object.keys(points).sort(),expected.sort())
+ assert.equal(Object.values(points).reduce((sum,v)=>sum+v.length,0),316)
+ assert.equal(points['复旦大学'].length,4)
+ assert.equal(points['南开大学'].length,3)
+ assert.equal(points['南开大学'].some(x=>x.campus==='紫金山路校区'),false,
+   'historical campus POI cannot override official 2026 campus roster')
+ for(const name of ['复旦大学','南开大学']){
+   const locations=points[name]
+   assert.ok(locations.some(x=>x.quality==='verified'),name)
+ }
+})
+test('actual campus hero photos have traceable authors, licenses, and fallbacks',()=>{
+ const detail=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
+ const ts=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.ts'),'utf8')
+ for(const name of ['复旦大学','南开大学','北京大学','吉林大学','南京大学']){
+  const key='"'+name+'": {',from=school.indexOf(key)
+  assert.ok(from>=0,name+' absent from audited media metadata')
+  const rest=school.slice(from,from+1500)
+  assert.match(rest,/"heroPhoto"/,name)
+  for(const k of ['"author"','"license"','"licenseUrl"','"sourceUrl"'])
+    assert.ok(rest.includes(k),name+' missing '+k)
+ }
+ assert.match(detail,/binderror="onPhotoError"/)
+ assert.match(detail,/hero-photo-indicator/)
+ assert.match(detail,/实拍/)
+ assert.match(ts,/onRetryPhoto/)
+ assert.match(detail,/wx:else class="hero-photo-indicator hero-illustrated"/)
+})
