@@ -14,6 +14,7 @@ import { registerProductRoutes } from './routes/products.js'
 import { registerBrandRoutes } from './routes/brand.js'
 import { registerClassroomWorkspaceRoutes } from './routes/classroom-workspace.js'
 import { registerGrowthProfileRoutes } from './routes/growth-profile.js'
+import { registerReadOnlyWorkspaceRoutes } from './routes/read-only-workspace.js'
 import { registerCommercialRoutes } from './routes/commercial.js'
 import {
   createCustomerServiceAIProvider,
@@ -204,6 +205,7 @@ export function buildApp(env: AppEnv) {
   registerBrandRoutes(app)
   registerClassroomWorkspaceRoutes(app, database, env)
   registerGrowthProfileRoutes(app, database)
+  registerReadOnlyWorkspaceRoutes(app, database)
   registerCommercialRoutes(app, database, commercialConfig, wechatPay, env)
   registerAdminRoutes(app, database, env)
 

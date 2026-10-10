@@ -229,7 +229,7 @@ async function applyApprovedPlan(
   return planId
 }
 
-async function loadClassroom(
+export async function loadClassroom(
   database: DatabaseContext & { configured: true },
   student: {
     id: string
