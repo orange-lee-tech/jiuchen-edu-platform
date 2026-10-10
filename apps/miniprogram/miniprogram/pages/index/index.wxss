@@ -28,3 +28,18 @@ button::after{border:0;}
 .service-website{width:100%;min-height:157rpx;}
 .service-website .service-symbol{width:66rpx;height:66rpx;}
 .service-website .service-icon{width:42rpx;height:42rpx;}
+
+/* Product contract: cards immediately inside first-level menus use saturated blue,
+   never white, gray or pale fills. Yellow is an accent, not a competing tile color. */
+.action-row,.service-link{
+ background:#175b86;
+ border:1rpx solid #194f74;
+ border-top:5rpx solid #eac263;
+ box-shadow:0 5rpx 12rpx rgba(9,53,83,.13);
+}
+.action-row:nth-child(even),.service-link:nth-child(even){background:#1b668f;}
+.action-row:active,.service-link:active,.action-pressed,.service-pressed{background:#10496d;}
+.action-symbol,.service-symbol{background:#eac263;}
+.action-title,.service-title{color:#fff;}
+.action-description,.service-description{color:#e3eef5;}
+.action-more{color:#f3cf74;}
