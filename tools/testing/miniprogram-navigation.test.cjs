@@ -740,7 +740,7 @@ test('customer-service identity never claims server verification when revalidati
  h.respond(0,{error:'unauthorized'},401)
  await settle()
  assert.equal(opened,false)
- assert.match(h.modals[0].content,/缓存身份/)
+ assert.match(h.modals[0].content,/本地缓存/)
 })
 test('administrator mine keeps two equally sized actions, and workbench uses full-width view rows',()=>{
  const p=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
