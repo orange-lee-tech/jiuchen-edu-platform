@@ -30,6 +30,21 @@
     <text wx:if="{{!displayedTeachers.length}}" class="browse-empty">没有匹配老师</text>
   </block>
 </view>
+<view wx:elif="{{kind === 'admin' && (viewSlot === 'home' || viewSlot === 'opportunity')}}" class="admin-actions-page">
+  <view class="admin-actions-intro">
+    <text class="admin-actions-eyebrow">九辰保研 · 管理员</text>
+    <text class="admin-actions-title">{{viewSlot === 'home' ? '管理工作台' : '业务与数据运营'}}</text>
+    <text class="admin-actions-desc">{{viewSlot === 'home' ? '常用管理功能直接处理。身份查阅、账号与人员关系均可一步进入。' : '师生分配、资讯编辑与数据统计独立进入，不再经过重复的二级菜单。'}}</text>
+  </view>
+  <view class="admin-actions-stack">
+    <view wx:for="{{actions}}" wx:key="key" class="admin-action {{item.key === 'mirror' ? 'admin-action-highlight' : ''}}" data-key="{{item.key}}" bindtap="onAction" hover-class="admin-action-pressed" aria-role="button">
+      <view class="admin-action-symbol"><image class="admin-action-icon" src="/assets/icons/{{item.key === 'assignments' ? 'assignments' : item.key === 'articles' ? 'opportunity' : item.key === 'analytics' ? 'assessment' : 'users'}}-active.png" mode="aspectFit" /></view>
+      <view class="admin-action-main"><text class="admin-action-title">{{item.title}}</text><text class="admin-action-description">{{item.description}}</text></view>
+      <text class="admin-action-arrow">›</text>
+    </view>
+  </view>
+  <text class="admin-actions-footnote">操作结果与访问权限以服务器实际校验为准。</text>
+</view>
 <view wx:elif="{{kind !== 'student' && viewSlot !== 'mine'}}" class="workspace">
   <view class="workspace-intro {{viewSlot === 'home' ? 'workspace-home' : 'workspace-compact'}}">
     <text class="eyebrow">九辰保研 · {{roleLabel}}</text>
