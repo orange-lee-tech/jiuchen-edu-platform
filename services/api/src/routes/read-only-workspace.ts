@@ -3,10 +3,10 @@ import type { FastifyInstance } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
 import {
   assessments, growthRecords, planRevisions, scheduleImports,
-  studentTeacherAssignments, students, teachers, userProfiles, users,
+  studentTeacherAssignments, students, teachers, userProfiles,
 } from '../db/schema.js'
 import { STAGE_DEFINITIONS, getStageDefinition } from '../domain/classroom.js'
-import { mayViewStudent, mayViewTeacher } from '../domain/read-only-access.js'
+import { mayViewStudent, mayViewTeacher, pickClassroomStudent } from '../domain/read-only-access.js'
 import { resolveSessionUser } from '../services/session.js'
 import { loadClassroom } from './classroom-workspace.js'
 
@@ -45,7 +45,8 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
       const stageCode=request.query.stage || student.currentStage || 'freshman-fall'
       if(!getStageDefinition(stageCode))return reply.code(400).send({ok:false,error:'invalid_stage'})
       // Keep stage plans loaded by the canonical classroom logic (incl. pending revisions).
-      const classroom=await loadClassroom(database,student,stageCode,true)
+      const publicStudent=pickClassroomStudent(student)
+      const classroom=await loadClassroom(database,publicStudent,stageCode,true)
       if(request.query.only==='classroom'){
         return {ok:true,readOnly:true,classroom}
       }
@@ -89,7 +90,7 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
       // Do not return auth tokens, payment instruments, internal IDs or other students.
       return {
         ok:true,readOnly:true,targetType:'student' as const,
-        student:{...student,userId:undefined},profile:profile||null,
+        student:publicStudent,profile:profile||null,
         stages:STAGE_DEFINITIONS,classroom,
         latestSchedule:schedules[0]||null,schedules,
         revisions,growth,assessments:history,

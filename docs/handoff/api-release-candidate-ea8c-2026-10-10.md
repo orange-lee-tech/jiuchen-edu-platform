@@ -29,3 +29,11 @@ STATUS: CODE CANDIDATE ONLY. NO ECS DEPLOYMENT. STAGING, SCHEMA, AND MOBILE GATE
 - Do not print secrets, run production DB migrations, or alter current symlink manually.
 - WeChat UX release and this API release form a paired release train, not a single unverified branch.
 - 172 universities and 316 geographic reference points are in the client source; many are third-party/approximate; only 5 schools have traced licensed photos. Separate batch media gate.
+
+## Post-interruption security/route regression addition
+
+- Security audit found `loadClassroom()` serializes the `student` argument, so passing a DB object containing `userId` exposed it inside `classroom.student`. Both full and `only=classroom` GET now use a strict public student allowlist.
+- `pickClassroomStudent` regression asserts private user ID and unknown fields are absent.
+- Monday validator extracted unchanged into pure domain module with date/leap/invalid-date tests.
+- Fastify inject tests assert date-only and read-only GET routes exist and fail closed on missing DB, while mirror URLs do not accept write verbs.
+- These deterministic checks do NOT replace the separate DB-backed authorization/revocation + real 13-course persistence staging acceptance.
