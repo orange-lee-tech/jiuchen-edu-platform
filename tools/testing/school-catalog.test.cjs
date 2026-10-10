@@ -47,7 +47,8 @@ test('industry circles include all seven defense universities and all nine law i
   }
   const specials = ['华东政法大学','西南政法大学','西北政法大学']
   for(const university of specials) assert.ok(school.includes("['"+university+"'"))
-  assert.match(school,/group: value as SchoolGroupKey.*level: 'all'/)
+  const directory = fs.readFileSync(path.join(mini,'packages/schools/directory/directory.ts'),'utf8')
+  assert.match(directory,/group: value as SchoolGroupKey.*level: 'all'/)
 })
 
 test('schools are isolated in a lazy mini-program subpackage and reachable through Opportunity', () => {
