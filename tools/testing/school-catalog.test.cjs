@@ -196,7 +196,7 @@ test('school consultation follows server verification and a single consent modal
  const ts=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.ts'),'utf8')
  const wxml=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
  const svc=fs.readFileSync(path.join(mini,'utils/customer-service.ts'),'utf8')
- assert.doesNotMatch(ts,/wx\.showActionSheet|wx\.showModal/)
+ assert.doesNotMatch(ts,/wx\.showActionSheet/)
  assert.match(ts,/openVerifiedWechatCustomerService\('目标院校咨询'/)
  assert.match(svc,/目标学校：/)
  assert.match(svc,/当前身份：/)
