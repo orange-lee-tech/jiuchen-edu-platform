@@ -75,6 +75,7 @@ export function registerStudentRoutes(app: FastifyInstance, database: DatabaseCo
         university: students.university,
         major: students.major,
         currentStage: students.currentStage,
+        userId: students.userId,
       })
       .from(students)
       .where(eq(students.id, request.params.id))
