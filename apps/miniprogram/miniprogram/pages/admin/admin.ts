@@ -222,6 +222,7 @@ Page({
     if (!['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics', 'admin-readonly'].includes(section)) return
     this.setData({ section })
     if (section === 'admin-analytics') void this.loadAnalytics()
+    else if (section === 'admin-readonly') void this.loadData()
   },
 
   onIdTypeChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
