@@ -369,7 +369,19 @@ async function parseCandidateWithProvider(
     }
   }
 
-  throw new Error('assessment_import_invalid_payload')
+  // Only field paths and Zod issue codes are logged by the route; never source text or values.
+  const finalIssues = importCandidateSchema.safeParse(raw)
+  const diagnostic = finalIssues.success
+    ? []
+    : finalIssues.error.issues.map((issue) => ({
+        path: issue.path.join('.'),
+        code: issue.code,
+      }))
+  const error = new Error('assessment_import_invalid_payload') as Error & {
+    validationIssues?: Array<{ path: string; code: string }>
+  }
+  error.validationIssues = diagnostic
+  throw error
 }
 
 function candidateSummary(candidate: AssessmentImportCandidate) {
