@@ -1,4 +1,7 @@
 import Fastify from 'fastify'
+import { createReadStream } from 'node:fs'
+import { stat } from 'node:fs/promises'
+import { join } from 'node:path'
 import type { AppEnv } from './config/env.js'
 import { createDatabaseContext } from './db/client.js'
 import { registerAuthRoutes } from './routes/auth.js'
@@ -184,6 +187,25 @@ export function buildApp(env: AppEnv) {
         },
       })
     }
+  })
+
+  // Public, immutable campus photos. Only canonical IDs are allowed; never accept file paths.
+  app.get<{ Params: { schoolId: string } }>('/school-media/v1/:schoolId.webp', async (request, reply) => {
+    const { schoolId } = request.params
+    if (!/^s(?:0[0-9]{2}|1[0-6][0-9]|17[0-2])$/.test(schoolId) || schoolId === 's000') {
+      return reply.code(404).send({ ok: false, error: 'school_media_not_found' })
+    }
+    const filePath = join('/opt/jiuchen-media/schools/v1', schoolId + '.webp')
+    try {
+      const info = await stat(filePath)
+      if (!info.isFile()) throw new Error('not_file')
+    } catch {
+      return reply.code(404).send({ ok: false, error: 'school_media_not_found' })
+    }
+    return reply.type('image/webp')
+      .header('Cache-Control', 'public, max-age=86400')
+      .header('X-Content-Type-Options', 'nosniff')
+      .send(createReadStream(filePath))
   })
 
   registerAuthRoutes(app, database, env)
