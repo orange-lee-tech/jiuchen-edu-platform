@@ -488,6 +488,12 @@ const verifiedExtras: Record<string, Partial<School>> = {
     }
   },
   "复旦大学": {
+    "website":"https://www.fudan.edu.cn/",
+    "intro":"复旦大学始创于1905年，原名复旦公学，1917年定名为复旦大学。学校涵盖人文社科、理工、医学等多个学科门类，现有邯郸、江湾、枫林和张江四个校区。院系招生与推免要求以当年学校、学院官方文件为准。",
+    "introSource":"https://www.fudan.edu.cn/fdjj/",
+    "address":"上海市杨浦区邯郸路220号（邯郸校区）",
+    "addressSource":"https://www.fudan.edu.cn/453/list.htm",
+    "founded":"1905",
     "heroPhoto":{
       "url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/201704_Gate_of_Fudan_University_Jiangwan_Campus.jpg/960px-201704_Gate_of_Fudan_University_Jiangwan_Campus.jpg",
       "caption":"复旦大学江湾校区校门实景 · 2017年",
@@ -498,6 +504,12 @@ const verifiedExtras: Record<string, Partial<School>> = {
     }
   },
   "南开大学": {
+    "website":"https://www.nankai.edu.cn/",
+    "intro":"南开大学肇始于1904年的南开学校教育体系，1919年正式成立，是教育部直属重点综合性大学。按2026年本科招生章程，学校设八里台、津南、滨海校区，学校法定住所地为卫津路94号。推免和招生要求以当年学校及学院官方文件为准。",
+    "introSource":"https://www.nankai.edu.cn/_s264/162/list.psp",
+    "address":"天津市南开区卫津路94号（八里台校区）",
+    "addressSource":"https://zsb.nankai.edu.cn/2026-05-27/1813.html",
+    "founded":"1919",
     "heroPhoto":{
       "url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Library_of_Nankai_University_New_Campus.jpg/960px-Library_of_Nankai_University_New_Campus.jpg",
       "caption":"南开大学津南校区图书馆实景 · 2015年",
