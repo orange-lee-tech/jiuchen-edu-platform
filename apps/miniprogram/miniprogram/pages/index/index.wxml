@@ -5,8 +5,8 @@
       <text class="eyebrow">九辰保研 · 陪你走清楚每一步</text>
       <text class="home-title">{{loggedIn ? '从真实背景，找到下一步' : '让保研准备更有方向'}}</text>
       <text class="home-description">整理学业背景，查看评估建议，接续阶段规划。你的资料和历史结果都能再次查看。</text>
-      <button class="home-primary" bindtap="onPrimary">{{loggedIn ? '完善我的资料' : '建立我的保研档案'}}</button>
-      <text class="home-caption">{{loggedIn ? '已登录 · 可在“我的”查看或绑定九辰身份' : '使用微信登录，已有资料可继续完善'}}</text>
+      <button class="home-primary" bindtap="onPrimary">{{assessmentReady ? '开始 AI 评估' : (loggedIn ? '完善我的资料' : '建立我的保研档案')}}</button>
+      <text class="home-caption">{{assessmentReady ? '已绑定学员 · 学业资料就绪，可以开始评估' : (loggedIn ? '学业资料在“我的”统一管理' : '使用微信登录，已有资料可继续完善')}}</text>
     </view>
     <text class="section-heading">准备与行动</text>
     <view class="action-list">

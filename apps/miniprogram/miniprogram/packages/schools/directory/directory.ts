@@ -1,4 +1,4 @@
-import { SCHOOLS, SCHOOL_REGIONS, findSchools, type School, type SchoolTier } from '../data'
+import { SCHOOLS, SCHOOL_GROUPS, SCHOOL_REGIONS, findSchools, type School, type SchoolTier, type SchoolGroupKey } from '../data'
 
 type SchoolCard = School & { monogram: string; subtitle: string }
 
@@ -14,6 +14,11 @@ Page({
     query: '',
     level: 'all' as 'all' | '985' | '211' | 'c9' | 'other211',
     region: '全部地区',
+    group: 'all' as SchoolGroupKey | 'all',
+    groups: SCHOOL_GROUPS.map(item => ({
+      ...item,
+      count: SCHOOLS.filter(school => school.groupTags.some(tag => tag.key === item.key)).length,
+    })),
     regions: SCHOOL_REGIONS,
     showFilter: false,
     totalCount: SCHOOLS.length,
@@ -26,7 +31,7 @@ Page({
     wx.setNavigationBarTitle({ title: '九辰院校库' })
   },
   refreshSchools() {
-    this.setData({ schools: cards(findSchools(this.data.query,this.data.level,this.data.region)) })
+    this.setData({ schools: cards(findSchools(this.data.query,this.data.level,this.data.region,this.data.group)) })
   },
   onQuery(event: WechatMiniprogram.Input) {
     this.setData({ query: event.detail.value })
@@ -38,6 +43,12 @@ Page({
     this.setData({ level: level as SchoolTier })
     this.refreshSchools()
   },
+  onGroup(event: WechatMiniprogram.BaseEvent) {
+    const value = String(event.currentTarget.dataset.group)
+    if (value !== 'all' && !SCHOOL_GROUPS.some(item => item.key === value)) return
+    this.setData({ group: value as SchoolGroupKey | 'all' })
+    this.refreshSchools()
+  },
   onOpenFilter() { this.setData({ showFilter: true }) },
   onCloseFilter() { this.setData({ showFilter: false }) },
   onRegion(event: WechatMiniprogram.BaseEvent) {
@@ -47,7 +58,7 @@ Page({
     this.refreshSchools()
   },
   onReset() {
-    this.setData({ region: '全部地区', level: 'all', query: '' })
+    this.setData({ region: '全部地区', level: 'all', group: 'all', query: '' })
     this.refreshSchools()
   },
   onSchool(event: WechatMiniprogram.BaseEvent) {

@@ -44,3 +44,11 @@ page{background:#eaf5f1;}
 .tier-scroll{width:100%;white-space:nowrap;margin-bottom:14rpx;}
 .tier-scroll .level-tabs{width:max-content;min-width:100%;gap:9rpx;display:flex;flex-wrap:nowrap;margin-bottom:0;}
 .tier-scroll .level-tab{flex:none;padding:14rpx 21rpx;font-size:23rpx;}
+
+.group-label{display:flex;align-items:center;justify-content:space-between;font-size:25rpx;font-weight:800;color:#104a4b;margin:10rpx 0 13rpx;gap:10rpx;}
+.group-label text{font-size:20rpx;color:#537d76;font-weight:500;}
+.group-scroll{width:100%;white-space:nowrap;margin-bottom:13rpx;}
+.group-tabs{display:flex;gap:10rpx;min-width:100%;width:max-content;}
+.group-tab{white-space:nowrap;font-size:22rpx;padding:13rpx 20rpx;background:#f5fbf9;border:1rpx solid #a9d9d2;border-radius:7rpx;color:#245e59;}
+.group-tab.selected{background:#164d64;color:#fff;border-color:#164d64;font-weight:800;}
+.school-tag.circle{background:#fef0da;color:#8b581e;}

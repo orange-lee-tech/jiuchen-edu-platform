@@ -16,7 +16,14 @@
       <view class="level-tab {{level === 'c9' ? 'selected' : ''}}" data-level="c9" bindtap="onLevel">C9 · {{c9Count}}</view>
     </view>
   </scroll-view>
-  <view class="school-count"><text>已核验院校 {{schools.length}} 所</text><text wx:if="{{region !== '全部地区'}}">{{region}} · 已筛选</text></view>
+  <view class="group-label">行业认可圈层 <text>非官方排名 · 可叠加筛选</text></view>
+  <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="group-scroll">
+    <view class="group-tabs">
+      <view class="group-tab {{group === 'all' ? 'selected' : ''}}" data-group="all" bindtap="onGroup">全部圈层</view>
+      <view wx:for="{{groups}}" wx:key="key" class="group-tab {{group === item.key ? 'selected' : ''}}" data-group="{{item.key}}" bindtap="onGroup">{{item.label}} · {{item.count}}</view>
+    </view>
+  </scroll-view>
+  <view class="school-count"><text>匹配 {{schools.length}} 条院校记录</text><text wx:if="{{region !== '全部地区'}}">{{region}} · 已筛选</text></view>
   <view wx:if="{{schools.length === 0}}" class="empty-state"><text>没有匹配的已核验院校</text><text>可以调整筛选；其他学校尚未录入，并不表示该校不存在。</text></view>
   <view class="school-list">
     <view wx:for="{{schools}}" wx:key="id" class="school-card" data-id="{{item.id}}" bindtap="onSchool" hover-class="tap-pressed" aria-role="button">
@@ -24,12 +31,12 @@
       <view class="school-copy">
         <text class="card-name">{{item.name}}</text>
         <text class="card-location">{{item.subtitle}}</text>
-        <view class="school-tags"><text class="school-tag">{{item.is985 ? '985 / 211' : '211'}}</text><text wx:if="{{item.isC9}}" class="school-tag c9">C9 联盟</text><text class="school-tag source">官方历史名录</text></view>
+        <view class="school-tags"><text class="school-tag">{{item.is985 ? '985 / 211' : '211'}}</text><text wx:if="{{item.isC9}}" class="school-tag c9">C9 联盟</text><text wx:for="{{item.groupTags}}" wx:for-item="tag" wx:key="key" class="school-tag circle">{{tag.label}}</text></view>
       </view>
       <text class="school-arrow">›</text>
     </view>
   </view>
-  <view class="catalog-source">收录 985 / 211 历史建设名录。116 条包括华北电力大学北京与保定两个校区条目，不等于 116 个独立法人高校。名单中的军医大学显示现用名称。双一流及全国普通高校另行维护。</view>
+  <view class="catalog-source">华五、五院四系、国防七子、两财一贸、两电一邮是行业习惯称谓，不是官方评级；“五院四系”只展示本库已收录成员，不代表完整成员。收录 985 / 211 历史建设名录。116 条包括华北电力大学北京与保定两个校区条目，不等于 116 个独立法人高校。名单中的军医大学显示现用名称。双一流及全国普通高校另行维护。</view>
 </view>
 <view wx:if="{{showFilter}}" class="filter-overlay" bindtap="onCloseFilter">
   <view class="filter-panel" catchtap="onOpenFilter">

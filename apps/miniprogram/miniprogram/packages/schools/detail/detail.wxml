@@ -2,8 +2,9 @@
   <view class="detail-hero">
     <view class="hero-top"><text>九辰 · 院校档案</text><text class="hero-mark">{{school.is985 ? '985 / 211' : '211 · EDU'}}</text></view>
     <view class="hero-main"><text class="hero-monogram">{{heroLabel}}</text><view class="hero-identity"><text class="hero-name">{{school.name}}</text><text class="hero-city">{{cityLabel}}</text></view></view>
-    <view class="hero-tags"><text>{{school.is985 ? '985 / 211' : '211 工程'}}</text><text wx:if="{{school.isC9}}">C9 联盟</text><text>官方名单已核对</text></view>
+    <view class="hero-tags"><text>{{school.is985 ? '985 / 211' : '211 工程'}}</text><text wx:if="{{school.isC9}}">C9 联盟</text><text wx:for="{{school.groupTags}}" wx:for-item="tag" wx:key="key">{{tag.label}} · 行业称谓</text></view>
   </view>
+  <view wx:if="{{school.groupTags.length}}" class="stats-source">圈层标签为业内习惯称谓，仅便于检索，不代表官方排名或推免录取资格。</view>
   <view class="detail-overview">
     <block wx:if="{{school.verifiedStats}}">
       <view class="fact-cell"><text class="fact-key">校区</text><text class="fact-value">{{school.verifiedStats.campusCount}}</text></view>

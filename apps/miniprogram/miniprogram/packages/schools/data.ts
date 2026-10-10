@@ -18,6 +18,7 @@ export type School = {
   isC9: boolean
   is985: boolean
   is211: boolean
+  groupTags: Array<{ key: SchoolGroupKey; label: string }>
   campusRecord: boolean
   sourceUrl: string
   website: string
@@ -296,6 +297,29 @@ const allTuples = [
   })),
 ]
 const c9Schools = new Set(["北京大学","清华大学","复旦大学","上海交通大学","南京大学","浙江大学","中国科学技术大学","西安交通大学","哈尔滨工业大学"])
+/**
+ * Industry-recognized informal groupings, NOT Ministry labels or admissions ranks.
+ * Memberships refer only to institutions already included in this catalog.
+ * In particular the current 985/211 slice omits several non-211 members of 五院四系.
+ */
+export type SchoolGroupKey = 'huawu' | 'law' | 'defense7' | 'finance3' | 'electronics3'
+export const SCHOOL_GROUPS: ReadonlyArray<{
+  key: SchoolGroupKey
+  label: string
+  description: string
+  members: readonly string[]
+}> = [
+  { key: 'huawu', label: '华五', description: '民间常用的华东五校合称，非教育部院校等级', members: ['复旦大学','上海交通大学','南京大学','浙江大学','中国科学技术大学'] },
+  { key: 'law', label: '五院四系', description: '传统法学教育圈层；当前库仅展示已收录成员，不能据此推断完整名单', members: ['中国政法大学','中南财经政法大学','北京大学','中国人民大学','武汉大学','吉林大学'] },
+  { key: 'defense7', label: '国防七子', description: '行业常用的七所工信特色高校合称，不代表招生资格', members: ['北京航空航天大学','北京理工大学','哈尔滨工业大学','哈尔滨工程大学','西北工业大学','南京航空航天大学','南京理工大学'] },
+  { key: 'finance3', label: '两财一贸', description: '中央财经、上海财经、对外经贸的民间合称', members: ['中央财经大学','上海财经大学','对外经济贸易大学'] },
+  { key: 'electronics3', label: '两电一邮', description: '电子科技、西安电子科技、北京邮电的民间合称', members: ['电子科技大学','西安电子科技大学','北京邮电大学'] },
+]
+const groupMembership = SCHOOL_GROUPS.map(group => ({
+  key: group.key,
+  label: group.label,
+  members: new Set(group.members),
+}))
 const verifiedExtras: Record<string, Partial<School>> = {
   "南京大学": {
     "website": "https://www.nju.edu.cn/",
@@ -350,6 +374,7 @@ export const SCHOOLS: readonly School[] = allTuples.map(({name,province,city,key
   id: 's' + String(index + 1).padStart(3, '0'),
   name, province, city, keywords,
   isC9: c9Schools.has(name), is985, is211: true,
+  groupTags: groupMembership.filter(group => group.members.has(name)).map(({key,label}) => ({key,label})),
   campusRecord: name === '华北电力大学（保定）',
   sourceUrl: is985 ? MOE_985_SOURCE : MOE_211_SOURCE,
   website: '', intro: '', introSource: '', address: '', addressSource: '', founded: '',
@@ -361,12 +386,13 @@ export function getSchoolById(id: string): School | undefined {
 }
 
 export type SchoolTier = 'all' | 'c9' | '985' | '211' | 'other211'
-export function findSchools(query: string, tier: SchoolTier, province: string): School[] {
+export function findSchools(query: string, tier: SchoolTier, province: string, group: SchoolGroupKey | 'all' = 'all'): School[] {
   const needle = query.trim().toLowerCase().replace(/\s+/g, '')
   return SCHOOLS.filter((school) => (
     (tier === 'all' || tier === '211' || tier === 'c9' && school.isC9 ||
       tier === '985' && school.is985 || tier === 'other211' && !school.is985) &&
     (province === '全部地区' || school.province === province) &&
+    (group === 'all' || school.groupTags.some(tag => tag.key === group)) &&
     (!needle || [school.name,school.province,school.city,school.keywords]
       .some(text => text.toLowerCase().replace(/\s+/g, '').includes(needle)))
   ))
