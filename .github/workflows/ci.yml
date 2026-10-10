@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - 'p1/**'
+      - 'hotfix/read-only-schedule-2026-10-10'
   pull_request:
 
 jobs:
