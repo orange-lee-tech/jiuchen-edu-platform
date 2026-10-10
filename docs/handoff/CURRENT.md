@@ -187,3 +187,14 @@ GitHub 代码已提交但**未生产发布**：`5e432c1a` 评估学业字段只�
 5. 本轮未触碰 ECS/生产DB/已在线官网/支付、模型及后端 Schema。课表第一周周一保存HTTP400独立 blocker 仍在。
 
 技术合同：`docs/product/read-only-identity-mirror-contract-2026-10-10.md`。
+
+
+## 2026-10-10 11:36 用户四张真机截图：信息架构 / 实景 / 客服 / API 不匹配
+
+- 用户明确日常最高频应为【我的规划】，不是 AI 评估。已将首页 hero 主CTA改为规划，补资料作为缺失时次级入口，准备与行动四宫格：规划、保研资讯、AI评估、联系顾问；官网、服务、品牌收在紧凑“认识九辰”，布局固定双列+末行官网跨两列，不再出现四个卡片全挤在左半列。手机真机排版仍待验收。
+- 管理员旧 UI 4 原生Tab + 管理内部5 Tab + 业务操作=重复嵌套。现在原生 Admin Tab 改为【工作台／查阅／运营／我的】；【查阅】底部页就能搜索和展示完整学员/老师名单并直接进入只读镜像，工作台直连高频功能。管理业务专页移除其内部同质化tabs，统一返回工作台；“我的”不复制管理动作。
+- 北大此前无照片和地图坐标：以 Wikimedia Commons「Weiming Lake of Peking University in spring 03.jpg」的真实校园照片、CC BY-SA 4.0/摄影作者星外之神/原图许可为权威来源，补充北京大学照片卡片与可点击预览。北京大学燕园校区东侧门 POI 坐标高德 39.993070,116.315282（GCJ-02）；启用原生小程序 map 与微信定位查看。原图 https://commons.wikimedia.org/wiki/File:Weiming_Lake_of_Peking_University_in_spring_03.jpg ；地理 https://ditu.amap.com/place/B0FFFDC2VL 。**照片仍是 Wikimedia 缩略图 HTTPS 直链，真机域名与稳定访问待验收**；尚未落到已授权 CloudBase 静态资源。不把其余未采集的170所学校说成全部有图、有校门坐标。
+- 院校咨询原先“仅咨询”直接打开微信客服，不携带学校；“携带资料”误强依赖 student-only GET，使管理员账号无法使用。现两条路径都带目标学校复制文本，同时客服开启可由**用户点击发送**的小程序卡片，标题含目标学校、路径指向院校详情；选择资料版时姓名/年级/专业能自动读则读，读不到以“请填写”提示，不会阻塞客服。不能自动替用户点击发送微信客服消息。真人交接仍需 Android 真机实测是否显示可发送卡片，以及企业微信接收信息。
+- 身份查阅截图显示【测试服务尚未更新到当前版本】即后端尚未部署 `GET /me/read-only/students/:studentId` 与 teacher 同类路由；前端已修改为版本不匹配明确提示、停止无效重试。**不可直接将当前整个 p1/foundation promotion 到ECS：集成分支仍含支付、Schema、AI调整等未独立批准生产的内容。** 应按受控的最小后端发布 Gate 基于当前已证据确认正式 release 选择性移植 read-only APIs，独立进行生产 schema read-only readiness、鉴权负测试、release build、锁定回滚候选、人工批准 promote，再真机测试。未授权做任何ECS部署/数据库写入。
+
+此轮新增微信开发者工具实际WXML与官方消息卡片运行仍 NOT RUN；小程序静态 TypeScript / harness / API test CI 只证明代码层。截图体验问题应以新的手机测试复核关闭。

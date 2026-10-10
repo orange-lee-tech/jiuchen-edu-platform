@@ -36,6 +36,10 @@ Page({
     // Public visitor still enters the planning shell and can bind an account there.
     openSlot('plan')
   },
+  onCompleteProfile() {
+    if(this.data.loggedIn)openPage('/pages/profile-edit/profile-edit')
+    else loginFor('pages/profile-edit/profile-edit')
+  },
   onAssessment() { openPage('/pages/position/position') },
   onPlanning() { openSlot('plan') },
   onNews() { openSlot('opportunity') },

@@ -681,3 +681,23 @@ test('administrator browse bottom tab queries roster immediately without nested 
  c.onBrowseTeacher({currentTarget:{dataset:{id:secondId}}})
  assert.match(h.navigations[1].url,/kind=teacher/)
 })
+
+test('home keeps profile completion accessible without displacing the plan CTA',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+ const page=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
+ assert.match(source,/wx:if="\{\{!assessmentReady\}\}".*bindtap="onCompleteProfile"/)
+ assert.match(page,/onCompleteProfile\(\)/)
+})
+test('PKU media/map are real sourced assets and customer-service card points to school',()=>{
+ const data=fs.readFileSync(path.join(root,'packages/schools/data.ts'),'utf8')
+ const wxml=fs.readFileSync(path.join(root,'packages/schools/detail/detail.wxml'),'utf8')
+ const service=fs.readFileSync(path.join(root,'utils/customer-service.ts'),'utf8')
+ assert.match(data,/"北京大学": \{/)
+ assert.match(data,/Weiming_Lake_of_Peking_University_in_spring_03\.jpg/)
+ assert.match(data,/39\.99307/)
+ assert.match(data,/116\.315282/)
+ assert.match(data,/CC BY-SA 4\.0/)
+ assert.match(wxml,/onPreviewPhoto/)
+ assert.match(wxml,/mapMarkers/)
+ assert.match(service,/sendMessagePath:card\.path/)
+})

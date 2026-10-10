@@ -32,3 +32,5 @@ button::after{border:0;}
 .service-website{background:#e5eeff;width:100%;}
 .service-pressed{opacity:.78;}
 .service-note{font-size:20rpx;line-height:1.5;color:#4f6173;margin-top:12rpx;}
+
+.home-minor-link{display:block;margin-top:12rpx;color:#ffe29b;font-size:22rpx;font-weight:750;text-decoration:underline;}

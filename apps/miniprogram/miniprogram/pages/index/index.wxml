@@ -6,7 +6,8 @@
       <text class="home-title">你的保研规划，从今天开始</text>
       <text class="home-description">查看本学期任务、课表与辅导进度，推进下一件该完成的事。需要调整方向时，再结合背景做 AI 评估。</text>
       <button class="home-primary" bindtap="onPrimary">进入我的规划 ›</button>
-      <text class="home-caption">{{assessmentReady ? '学业资料就绪 · 可随时查看或重新运行 AI 评估' : (loggedIn ? '在“我的”补全学业资料后可使用 AI 评估' : '登录并绑定身份后，可保存自己的阶段规划')}}</text>
+      <text class="home-caption">{{assessmentReady ? '学业资料就绪 · 可随时查看或重新运行 AI 评估' : (loggedIn ? '补全学业资料后可使用 AI 评估' : '登录并绑定身份后，可保存自己的阶段规划')}}</text>
+      <text wx:if="{{!assessmentReady}}" class="home-minor-link" bindtap="onCompleteProfile">{{loggedIn ? '补全学业资料 ›' : '登录并建立档案 ›'}}</text>
     </view>
     <view class="home-section-bar"><text class="section-heading">准备与行动</text><text class="section-supplement">日常入口 · 按使用频率排列</text></view>
     <view class="action-list">
