@@ -375,7 +375,11 @@ const allTuples = [
     name,province,city,keywords: name + ' ' + (historicalAliases[name] || ''),is985:false,is211:true,
   })),
   ...specialtySchools.map(([name,province,city,keywords])=>({name,province,city,keywords,is985:false,is211:false})),
-  ...newDoubleFirst.map(([name,province,city])=>({name,province,city,keywords:name,is985:false,is211:false})),
+  ...newDoubleFirst.map(([name,province,city])=>({
+    name,province,city,
+    keywords:name+(name==='上海体育大学'?' 上海体育学院':''),
+    is985:false,is211:false,
+  })),
   ...notablePublic.map(([name,province,city])=>({name,province,city,keywords:name,is985:false,is211:false})),
 ]
 const c9Schools = new Set(["北京大学","清华大学","复旦大学","上海交通大学","南京大学","浙江大学","中国科学技术大学","西安交通大学","哈尔滨工业大学"])
