@@ -5,6 +5,8 @@
     <view class="hero-content">
       <view class="hero-top"><text>九辰 · 目标院校</text><text class="hero-mark">{{tierLabel}}</text></view>
       <view class="hero-main"><view class="hero-identity"><text class="hero-name">{{school.name}}</text><text class="hero-city">{{cityLabel}}</text></view></view>
+      <view wx:if="{{school.heroPhoto && photoVisible}}" class="hero-photo-indicator">校园实拍 · {{school.heroPhoto.caption}}</view>
+      <view wx:else class="hero-photo-indicator hero-illustrated">九辰院校档案 · {{school.name}}</view>
       <view class="hero-tags"><text wx:if="{{school.isDoubleFirst}}">双一流 · 2022名单</text><text wx:if="{{school.affiliationLabel}}">{{school.affiliationLabel}}</text><text wx:if="{{school.isC9}}">C9 联盟</text><text wx:for="{{school.groupTags}}" wx:for-item="tag" wx:key="key">{{tag.label}}</text><text wx:if="{{!school.is211}}">非985/211</text></view>
     </view>
   </view>
@@ -76,7 +78,7 @@
   </view>
   <view class="detail-card consult-card">
     <view class="detail-heading"><text>咨询九辰老师</text><text class="detail-hint">一对一需求沟通</text></view>
-    <text class="consult-desc">两种方式都会附上目标学校。可选择再携带姓名、年级、专业；缺失信息可在粘贴后补全。微信客服需要用户自行粘贴、发送。</text>
-    <button class="consult-button" bindtap="onConsultSchool">带上 {{school.name}} 信息咨询 ›</button>
+    <text class="consult-desc">一次确认即可联系九辰客服：先向服务器核验登录身份，再附上目标院校和可读取的年级、专业。确认后复制信息、打开客服；仍需你亲自粘贴发送。</text>
+    <button class="consult-button" bindtap="onConsultSchool" loading="{{consultBusy}}" disabled="{{consultBusy}}">携带 {{school.name}} 信息联系九辰 ›</button>
   </view>
 </view>

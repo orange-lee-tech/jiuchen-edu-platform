@@ -3,7 +3,7 @@ import { getSchoolById, MOE_985_SOURCE, MOE_211_SOURCE, C9_SOURCE,
 import { getMyAcademicProfile, getMyClassroom } from '../../../utils/request'
 import { getSavedAuthResult } from '../../../utils/auth'
 import { SCHOOL_CAMPUS_POINTS, type SchoolCampusPoint } from '../campus-points'
-import { openWechatCustomerService } from '../../../utils/customer-service'
+import { openVerifiedWechatCustomerService } from '../../../utils/customer-service'
 Page({
   data: {
     school: null as School | null,
@@ -17,6 +17,7 @@ Page({
     campusOptions: [] as SchoolCampusPoint[],
     activeCampus: null as SchoolCampusPoint | null,
     campusIndex:0,
+    consultBusy:false,
   },
   onLoad(options: Record<string,string|undefined>) {
     const school = getSchoolById(String(options.id || ''))
@@ -35,7 +36,18 @@ Page({
     // never replace a known campus with a city center or an uncertain POI.
     const campuses = [...audited,...points.filter(p=>
       !audited.some(v=>Math.abs(v.latitude-p.latitude)<.001&&Math.abs(v.longitude-p.longitude)<.001))]
-    const activeCampus=campuses[0] || null
+    // Prefer the institution's established/traditional main campus when its
+    // official location is known. Do not equate an unreviewed first POI with
+    // 'main campus'. The photograph may depict another, clearly credited campus.
+    const primaryCampus:Record<string,string>={
+      '复旦大学':'邯郸',
+      '南开大学':'八里台',
+    }
+    const preferred=primaryCampus[school.name]
+    const campusIndex=preferred
+      ? Math.max(0,campuses.findIndex(p=>p.campus.includes(preferred)))
+      : Math.max(0,campuses.findIndex(p=>p.campus.includes('校本部')))
+    const activeCampus=campuses[campusIndex] || null
     this.setData({
       school, heroLabel: school.name.slice(0,2),
       cityLabel: school.province === school.city ? school.city : school.province + ' · ' + school.city,
@@ -44,7 +56,7 @@ Page({
       circleLabel: school.groupTags[0]?.label || (school.isC9 ? 'C9' : '未分类'),
       hasIntro: Boolean(school.intro),
       photoVisible: Boolean(school.heroPhoto?.url),
-      campusOptions:campuses,activeCampus,campusIndex:0,
+      campusOptions:campuses,activeCampus,campusIndex,
       mapMarkers:activeCampus?[{
         id:1,latitude:activeCampus.latitude,
         longitude:activeCampus.longitude,
@@ -110,53 +122,30 @@ Page({
       fail:()=>wx.showToast({title:'地图暂不可用',icon:'none'}),
     })
   },
-  onConsultSchool() {
-    const school=this.data.school
-    if(!school)return
-    // One confirmation only. Don't stack an action sheet followed by a modal.
-    // The copied text is independently reviewable before the user sends it.
-    void this.prepareConsultSummary(school.name)
-  },
-  confirmConsultSummary(summary:string){
-    wx.showModal({
-      title:'带上院校信息咨询',
-      content:summary+'\n\n确认后复制这段内容并打开客服，进入聊天后请直接粘贴并发送。',
-      confirmText:'复制并打开',
-      success:result=>{
-        if(!result.confirm)return
-        wx.setClipboardData({
-          data:summary,
-          success:()=>openWechatCustomerService(this.data.school ? {
-            title:'九辰院校咨询 · '+this.data.school.name,
-            path:'/packages/schools/detail/detail?id='+encodeURIComponent(this.data.school.id),
-          }:undefined),
-          fail:()=>wx.showToast({title:'复制未成功，请重试',icon:'none'}),
-        })
-      },
-    })
+  async onConsultSchool() {
+    if(!this.data.school || this.data.consultBusy)return
+    this.setData({consultBusy:true})
+    try { await this.prepareConsultSummary(this.data.school.name) }
+    finally { this.setData({consultBusy:false}) }
   },
   async prepareConsultSummary(targetSchool:string) {
     const session=getSavedAuthResult()
-    let name=session?.user.displayName?.trim()||''
     let grade='',major=''
-    // Admin/teacher accounts may have no student profile. This must never stall
-    // the consultation action: show only known values and let the user fill gaps.
-    if(session?.user.role==='student') {
+    // Academic fields are optional context, NEVER proof of account identity.
+    // The central customer-service helper independently re-verifies the active
+    // user's role, internal ID and display name with /auth/me.
+    if(session?.user.role==='student'){
       const [profile,classroom]=await Promise.all([
         getMyAcademicProfile().catch(()=>null),
         getMyClassroom().catch(()=>null),
       ])
-      name=classroom?.student.name?.trim()||name
       grade=profile?.currentGrade?.trim()||''
-      major=profile?.major?.trim()||''
+      major=profile?.major?.trim()||classroom?.student.major?.trim()||''
     }
-    const summary=[
-      '【九辰院校咨询】','目标学校：'+targetSchool,
-      '用户姓名：'+(name||'（请填写）'),
-      '就读年级：'+(grade||'（请填写）'),
-      '用户专业：'+(major||'（请填写）'),
-    ].join('\n')
-    this.confirmConsultSummary(summary)
+    await openVerifiedWechatCustomerService('目标院校咨询',{
+      school:targetSchool,grade,major,
+      path:'/packages/schools/detail/detail?id='+encodeURIComponent(this.data.school?.id||''),
+    })
   },
   onCopyAddress() {
     const address = this.data.school?.address

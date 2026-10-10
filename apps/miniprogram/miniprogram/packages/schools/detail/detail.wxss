@@ -75,3 +75,16 @@ page{background:#eaf4f0;}
 .campus-disclaimer{display:block;background:#fff7e8;color:#815d22;border-left:4rpx solid #d9a93d;font-size:19rpx;line-height:1.6;margin:12rpx 0;padding:9rpx;}
 .campus-address{display:block;font-size:21rpx;color:#456b67;line-height:1.4;}
 .campus-map{height:330rpx;}
+
+/* Photo provenance and non-photographic institutional identity must remain distinct. */
+.hero-photo-indicator{display:inline-block;max-width:100%;margin:13rpx 0 4rpx;padding:6rpx 9rpx;
+ color:#fff8d5;background:rgba(3,44,49,.58);font-size:18rpx;line-height:1.5;word-break:break-word;}
+.hero-photo-indicator.hero-illustrated{color:#d1ffed;background:rgba(9,90,90,.60);}
+.detail-hero:not(.has-photo)::before{content:'';position:absolute;pointer-events:none;right:-70rpx;
+ top:60rpx;width:290rpx;height:290rpx;border-radius:50%;
+ border:45rpx solid rgba(255,255,255,.075);transform:rotate(-22deg);}
+.detail-hero:not(.has-photo)::after{content:'';position:absolute;pointer-events:none;
+ right:55rpx;bottom:10rpx;width:100rpx;height:100rpx;border-right:13rpx solid rgba(245,193,84,.45);
+ border-top:13rpx solid rgba(245,193,84,.45);transform:rotate(45deg);}
+.campus-option:active{opacity:.82;}
+.campus-option.selected .campus-quality{opacity:1;}

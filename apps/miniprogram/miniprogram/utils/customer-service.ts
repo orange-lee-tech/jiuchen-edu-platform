@@ -11,17 +11,36 @@ const CONTACT_ROLE_LABELS:Record<UserRole,string> = {
  * All role and internal-ID values come from a fresh /auth/me response, NOT a
  * client-supplied target-role or impersonated account.
  */
-export async function openVerifiedWechatCustomerService(purpose='联系九辰运营'):Promise<void>{
+export type CustomerServiceContext = {
+  school?: string
+  grade?: string
+  major?: string
+  path?: string
+}
+/** One verified identity confirmation, optionally carrying a school consultation.
+ * This never silently sends clipboard text, role labels or a message card. */
+export async function openVerifiedWechatCustomerService(
+  purpose='联系九辰运营', context:CustomerServiceContext={},
+):Promise<void>{
   const before=getSavedAuthResult()
   if(!before){
     wx.showModal({
       title:'游客身份咨询',
-      content:'你尚未登录，客服只能识别为“未登录游客”，无法判断老师/学员/管理员身份。仍要继续咨询吗？',
+      content:'你尚未登录，客服只能识别为“未登录游客”，无法判断老师/学员/管理员身份。'+
+        (context.school?'\n目标学校：'+context.school:'')+'\n是否继续咨询？',
       confirmText:'游客咨询',cancelText:'返回登录',
       success:result=>{
-        if(result.confirm)openWechatCustomerService({
-          title:'九辰咨询｜未登录游客',path:'/pages/index/index',
-        })
+        if(!result.confirm)return
+        const card={title:'九辰咨询｜未登录游客'+(context.school?'｜'+context.school:''),
+          path:context.path||'/pages/index/index'}
+        if(context.school){
+          wx.setClipboardData({
+            data:['【九辰院校咨询】','当前身份：未登录游客','目标学校：'+context.school,
+              '联系人：（请填写）'].join('\n'),
+            success:()=>openWechatCustomerService(card),
+            fail:()=>wx.showToast({title:'复制失败，请稍后再试',icon:'none'}),
+          })
+        } else openWechatCustomerService(card)
       },
     })
     return
@@ -57,9 +76,13 @@ export async function openVerifiedWechatCustomerService(purpose='联系九辰运
     '当前身份：'+role,
     '联系人：'+name,
     '九辰内部编号：'+(internalId||'尚未绑定'),
+    ...(context.school?['目标学校：'+context.school]:[]),
+    ...(context.grade?['就读年级：'+context.grade]:[]),
+    ...(context.major?['就读专业：'+context.major]:[]),
   ]
   const summary=identityLines.join('\n')
-  const cardTitle=('九辰咨询｜'+role+'｜'+name+(internalId?'｜'+internalId:'')).slice(0,48)
+  const cardTitle=('九辰咨询｜'+role+'｜'+name+(context.school?'｜'+context.school:'')+
+    (internalId?'｜'+internalId:'')).slice(0,48)
   wx.showModal({
     title:'确认客服识别信息',
     content:summary+'\n\n确认后复制信息并打开微信客服。请手动粘贴发送，或主动发送显示的身份卡片；不会后台自动提交。',
@@ -74,7 +97,7 @@ export async function openVerifiedWechatCustomerService(purpose='联系九辰运
       wx.setClipboardData({
         data:summary,
         success:()=>openWechatCustomerService({
-          title:cardTitle,path:'/pages/profile/profile',
+          title:cardTitle,path:context.path||'/pages/profile/profile',
         }),
         fail:()=>wx.showToast({title:'身份信息复制失败',icon:'none'}),
       })
