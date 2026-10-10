@@ -1,3 +1,4 @@
+import { SCHOOL_MEDIA } from './school-media.generated'
 /**
  * Audited starter catalog; NOT a national university directory.
  * Ministry of Education 985 list (39): https://www.moe.gov.cn/srcsite/A22/s7065/200612/t20061206_128833.html
@@ -624,6 +625,7 @@ export const SCHOOLS: readonly School[] = allTuples.map(({name,province,city,key
     (!is211 ? DOUBLE_FIRST_CLASS_2022_SOURCE : is985 ? MOE_985_SOURCE : MOE_211_SOURCE),
   website: '', intro: '', introSource: '', address: '', addressSource: '', founded: '',
   ...verifiedExtras[name],
+  ...SCHOOL_MEDIA[name],
 }))
 
 export function getSchoolById(id: string): School | undefined {
