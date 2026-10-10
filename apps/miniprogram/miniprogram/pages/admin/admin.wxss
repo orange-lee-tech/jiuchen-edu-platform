@@ -74,3 +74,5 @@ button::after { border:0; }
 .readonly-row{display:flex;align-items:center;justify-content:space-between;gap:12rpx;border-bottom:1rpx solid #e2ece8;padding:17rpx 0;}
 .readonly-row .row-main{flex:1;min-width:0;}
 .readonly-go{flex:none;color:#087e75;font-size:21rpx;font-weight:750;}
+
+.admin-quick-return{display:block;padding:14rpx 4rpx;margin:-8rpx 0 20rpx;color:#206881;font-size:23rpx;font-weight:750;}

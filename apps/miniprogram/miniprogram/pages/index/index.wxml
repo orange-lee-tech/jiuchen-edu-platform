@@ -2,28 +2,33 @@
   <role-shell view-slot="home" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready' && shellKind === 'student'}}">
     <view class="home-intro">
-      <text class="eyebrow">九辰保研 · 陪你走清楚每一步</text>
-      <text class="home-title">{{loggedIn ? '从真实背景，找到下一步' : '让保研准备更有方向'}}</text>
-      <text class="home-description">整理学业背景，查看评估建议，接续阶段规划。你的资料和历史结果都能再次查看。</text>
-      <button class="home-primary" bindtap="onPrimary">{{assessmentReady ? '开始 AI 评估' : (loggedIn ? '完善我的资料' : '建立我的保研档案')}}</button>
-      <text class="home-caption">{{assessmentReady ? '已绑定学员 · 学业资料就绪，可以开始评估' : (loggedIn ? '学业资料在“我的”统一管理' : '使用微信登录，已有资料可继续完善')}}</text>
+      <text class="eyebrow">九辰保研 · 从每日行动走向长期目标</text>
+      <text class="home-title">你的保研规划，从今天开始</text>
+      <text class="home-description">查看本学期任务、课表与辅导进度，推进下一件该完成的事。需要调整方向时，再结合背景做 AI 评估。</text>
+      <button class="home-primary" bindtap="onPrimary">进入我的规划 ›</button>
+      <text class="home-caption">{{assessmentReady ? '学业资料就绪 · 可随时查看或重新运行 AI 评估' : (loggedIn ? '在“我的”补全学业资料后可使用 AI 评估' : '登录并绑定身份后，可保存自己的阶段规划')}}</text>
     </view>
-    <text class="section-heading">准备与行动</text>
+    <view class="home-section-bar"><text class="section-heading">准备与行动</text><text class="section-supplement">日常入口 · 按使用频率排列</text></view>
     <view class="action-list">
-      <view class="action-row action-assessment" bindtap="onAssessment" hover-class="action-pressed" aria-role="button" aria-label="背景评估与历史结果">
-        <view class="action-symbol"><image class="action-icon" src="/assets/icons/assessment-active.png" mode="aspectFit" /></view>
-        <view class="action-main"><text class="action-title">背景评估与历史结果</text><text class="action-description">整理背景，查看有依据的分析与建议</text></view>
-        <text class="arrow">›</text>
-      </view>
       <view class="action-row action-planning" bindtap="onPlanning" hover-class="action-pressed" aria-role="button" aria-label="我的阶段规划">
         <view class="action-symbol"><image class="action-icon" src="/assets/icons/calendar-active.png" mode="aspectFit" /></view>
-        <view class="action-main"><text class="action-title">我的阶段规划</text><text class="action-description">查看真实规划、课表与辅导审核进度</text></view>
-        <text class="arrow">›</text>
+        <text class="action-title">我的规划</text><text class="action-description">任务 · 课表 · 进度</text>
+        <text class="action-more">›</text>
       </view>
-      <view class="action-row action-news" bindtap="onNews" hover-class="action-pressed" aria-role="button" aria-label="阅读保研文章">
+      <view class="action-row action-news" bindtap="onNews" hover-class="action-pressed" aria-role="button" aria-label="阅读保研资讯">
         <view class="action-symbol"><image class="action-icon" src="/assets/icons/opportunity-active.png" mode="aspectFit" /></view>
-        <view class="action-main"><text class="action-title">阅读保研文章</text><text class="action-description">浏览已同步、已分类的九辰资讯</text></view>
-        <text class="arrow">›</text>
+        <text class="action-title">保研资讯</text><text class="action-description">动态 · 文件 · 机会</text>
+        <text class="action-more">›</text>
+      </view>
+      <view class="action-row action-assessment" bindtap="onAssessment" hover-class="action-pressed" aria-role="button" aria-label="AI评估与历史结果">
+        <view class="action-symbol"><image class="action-icon" src="/assets/icons/assessment-active.png" mode="aspectFit" /></view>
+        <text class="action-title">AI 评估</text><text class="action-description">背景分析 · 历史报告</text>
+        <text class="action-more">›</text>
+      </view>
+      <view class="action-row action-consult" bindtap="onCustomerService" hover-class="action-pressed" aria-role="button" aria-label="联系九辰顾问">
+        <view class="action-symbol"><image class="action-icon" src="/assets/icons/service-active.png" mode="aspectFit" /></view>
+        <text class="action-title">联系顾问</text><text class="action-description">院校咨询 · 人工答疑</text>
+        <text class="action-more">›</text>
       </view>
     </view>
     <view class="service-section">
@@ -31,10 +36,9 @@
       <view class="service-links">
         <view class="service-link service-products" bindtap="onProducts" hover-class="service-pressed" aria-role="button">服务介绍 <text>›</text></view>
         <view class="service-link service-brand" bindtap="onBrand" hover-class="service-pressed" aria-role="button">关于九辰 <text>›</text></view>
-        <view class="service-link service-advisor" bindtap="onCustomerService" hover-class="service-pressed" aria-role="button"><image class="link-icon" src="/assets/icons/service-active.png" mode="aspectFit" />联系顾问 <text>›</text></view>
-        <view class="service-link service-website" bindtap="onWebsite" hover-class="service-pressed" aria-role="button"><image class="link-icon" src="/assets/icons/website-active.png" mode="aspectFit" />九辰官网 <text>›</text></view>
+        <view class="service-link service-website" bindtap="onWebsite" hover-class="service-pressed" aria-role="button">九辰官网 <text>›</text></view>
       </view>
-      <text class="service-note">服务方案提供介绍与咨询，课程不在线购买。</text>
+      <text class="service-note">咨询与规划分开；服务方案不在小程序内购买课程。</text>
     </view>
   </block>
 </view>

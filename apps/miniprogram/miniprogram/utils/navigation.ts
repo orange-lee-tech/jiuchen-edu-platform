@@ -6,7 +6,7 @@ export type ShellKind = 'student' | 'teacher' | 'admin'
 const SLOT_INDEX: Record<ShellSlot, number> = { home: 0, plan: 1, opportunity: 2, mine: 3 }
 export const ROLE_LABELS: Record<UserRole, string> = { user: '普通用户', student: '学员', teacher: '老师', staff: '内部员工', admin: '管理员' }
 export const TAB_LABELS: Record<ShellKind, readonly string[]> = {
-  student: ['首页', '规划', '机会', '我的'], teacher: ['工作台', '学员', '辅导', '我的'], admin: ['工作台', '用户', '业务', '我的'],
+  student: ['首页', '规划', '机会', '我的'], teacher: ['工作台', '学员', '辅导', '我的'], admin: ['工作台', '查阅', '运营', '我的'],
 }
 export function shellKind(role?: UserRole): ShellKind {
   return role === 'admin' ? 'admin' : role === 'teacher' || role === 'staff' ? 'teacher' : 'student'
@@ -72,7 +72,7 @@ export function validateIntent(route: string, params: Record<string, string | un
     'pages/assessment-result/assessment-result': { id: (v) => UUID.test(v) },
     'pages/teacher-students/teacher-students': {},
     'pages/plan-editor/plan-editor': { stage: (v) => STAGE.test(v), type: (v) => ['gpa', 'english', 'competition', 'research', 'internship'].includes(v), studentId: (v) => UUID.test(v), studentName: (v) => v.length <= 80 && !/[\x00-\x1f]/.test(v) },
-    'pages/admin/admin': { section: (v) => ['admin-users', 'admin-assignments', 'admin-news'].includes(v) },
+    'pages/admin/admin': { section: (v) => ['admin-users', 'admin-assignments', 'admin-news','admin-analytics','admin-readonly'].includes(v) },
     'pages/schedule-import/schedule-import': { view: (v) => ['current', 'manage', 'all'].includes(v) },
     'pages/product-detail/product-detail': { documentKey: (v) => v.length > 0 && v.length <= 160 && !/[/?#\x00-\x1f]/.test(v) },
     'pages/news-detail/news-detail': { id: (v) => UUID.test(v) },

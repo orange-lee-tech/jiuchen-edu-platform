@@ -330,6 +330,7 @@ Page({
     wx.navigateTo({url:'/packages/read-only/view/view?kind=teacher&id='+encodeURIComponent(id)})
   },
 
+  onReturnWorkspace(){ wx.switchTab({url:'/pages/index/index'}) },
   onStudentChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ studentIndex: Number(event.detail.value) })
   },

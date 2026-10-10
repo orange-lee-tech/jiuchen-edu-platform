@@ -32,9 +32,9 @@ Page({
   onHide() { ++this.homeEpoch; this.currentHomeStudentId = null; this.stopShell?.(); this.setData({ shellPhase: 'loading', assessmentReady: false }) },
   onUnload() { ++this.homeEpoch; this.stopShell?.() },
   onPrimary() {
-    if (this.data.assessmentReady) openPage('/pages/position/position')
-    else if (this.data.loggedIn) openPage('/pages/profile-edit/profile-edit')
-    else loginFor('pages/profile-edit/profile-edit')
+    // The daily workflow starts with the plan, not another AI request.
+    // Public visitor still enters the planning shell and can bind an account there.
+    openSlot('plan')
   },
   onAssessment() { openPage('/pages/position/position') },
   onPlanning() { openSlot('plan') },
