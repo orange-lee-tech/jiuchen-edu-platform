@@ -346,6 +346,10 @@ const groupMembership = SCHOOL_GROUPS.map(group => ({
 }))
 const verifiedExtras: Record<string, Partial<School>> = {
   "吉林大学": {
+    "website": "https://www.jlu.edu.cn/",
+    "intro": "吉林大学位于吉林省长春市，始建于1946年，现为教育部直属全国重点综合性大学。学校发展和招生以学校官网发布的信息为准。",
+    "introSource": "https://www.jlu.edu.cn/info/1011/58071.htm",
+    "founded": "1946",
     "address": "吉林省长春市前进大街2699号（前卫南区）",
     "addressSource": "https://www.jlu.edu.cn/info/1238/36174.htm",
     "heroPhoto": {
