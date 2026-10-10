@@ -52,13 +52,13 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
         gpaText:userProfiles.gpaText,rankText:userProfiles.rankText,
       }).from(userProfiles).where(eq(userProfiles.userId,student.userId)).limit(1):[]
 
-      const schedule=await database.db.select({
+      const schedules=await database.db.select({
         id:scheduleImports.id,fileName:scheduleImports.fileName,status:scheduleImports.status,
         parsedJson:scheduleImports.parsedJson,
         updatedAt:scheduleImports.updatedAt,
       }).from(scheduleImports).where(and(
         eq(scheduleImports.studentId,student.id),eq(scheduleImports.status,'parsed')))
-        .orderBy(desc(scheduleImports.updatedAt)).limit(1)
+        .orderBy(desc(scheduleImports.updatedAt))
 
       const revisions=await database.db.select({
         id:planRevisions.id,stageCode:planRevisions.stageCode,type:planRevisions.type,
@@ -72,6 +72,7 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
           organization:growthRecords.organization,role:growthRecords.role,
           description:growthRecords.description,result:growthRecords.result,
           startDate:growthRecords.startDate,endDate:growthRecords.endDate,
+          standardExpression:growthRecords.standardExpression,
           userConfirmed:growthRecords.userConfirmed,
           teacherConfirmed:growthRecords.teacherConfirmed,status:growthRecords.status,
         }).from(growthRecords).where(eq(growthRecords.userId,student.userId))
@@ -86,7 +87,8 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
       return {
         ok:true,readOnly:true,targetType:'student' as const,
         student:{...student,userId:undefined},profile:profile||null,
-        stages:STAGE_DEFINITIONS,classroom,latestSchedule:schedule[0]||null,
+        stages:STAGE_DEFINITIONS,classroom,
+        latestSchedule:schedules[0]||null,schedules,
         revisions,growth,assessments:history,
       }
     },

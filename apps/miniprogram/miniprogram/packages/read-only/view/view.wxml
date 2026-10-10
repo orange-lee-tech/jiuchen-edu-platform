@@ -72,7 +72,12 @@
     </view>
     <view wx:elif="{{section === 'schedule'}}" class="mirror-card">
       <text class="section-title">我的课表</text>
-      <text class="meta">当前最近成功解析：{{student.latestSchedule.fileName || '暂无导入课表'}}</text>
+      <text class="meta">所有已保存课表 · 选择一份浏览，不能修改或重新识别</text>
+      <scroll-view scroll-x class="mirror-tabs">
+        <view class="mirror-tab-list">
+          <view wx:for="{{student.schedules}}" wx:key="id" class="mirror-tab {{selectedScheduleId === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="onScheduleSelect">{{item.fileName}}</view>
+        </view>
+      </scroll-view>
       <view wx:for="{{courses}}" wx:key="index" class="record-row">
         <text class="item-title">{{item.name}}</text><text class="meta">{{item.day}} · {{item.slot}} · {{item.weeks}}</text>
         <text class="meta">{{item.location}}</text>
@@ -85,24 +90,31 @@
         <view class="item-header"><text class="item-title">{{item.title}}</text><text class="status">{{item.type}}</text></view>
         <text class="meta">{{item.organization || ''}} · {{item.startDate || ''}} 至 {{item.endDate || ''}}</text>
         <text class="body-copy">{{item.description || ''}}</text><text class="body-copy">{{item.result || ''}}</text>
+        <text wx:if="{{item.standardExpression}}" class="body-copy">{{item.standardExpression}}</text>
       </view>
       <text wx:if="{{!student.growth.length}}" class="empty">暂无成长记录</text>
     </view>
     <view wx:elif="{{section === 'assessment'}}" class="mirror-card">
       <text class="section-title">AI评估历史 · 仅阅读</text>
       <view wx:for="{{reports}}" wx:key="id" class="record-row">
-        <view class="item-header"><text class="item-title">评估 {{item.date}}</text><text class="status">{{item.status}}</text></view>
-        <text class="body-copy">{{item.summary || '暂无可显示报告正文'}}</text>
-        <view wx:for="{{item.actions}}" wx:for-item="action" wx:key="index" class="task-row">建议：{{action}}</view>
-        <view wx:for="{{item.risks}}" wx:for-item="risk" wx:key="index" class="task-row">风险：{{risk}}</view>
+        <view class="item-header" data-id="{{item.id}}" bindtap="onReportToggle"><text class="item-title">评估 {{item.date}}</text><text class="status">{{item.status}} · {{expandedReportId === item.id ? '收起' : '展开'}} ›</text></view>
+        <view wx:if="{{expandedReportId === item.id}}">
+          <text class="body-copy">{{item.summary || '暂无可显示报告正文'}}</text>
+          <view wx:for="{{item.strengths}}" wx:for-item="strength" wx:key="index" class="task-row">优势：{{strength}}</view>
+          <view wx:for="{{item.targets}}" wx:for-item="target" wx:key="index" class="task-row">目标院校：{{target}}</view>
+          <view wx:for="{{item.actions}}" wx:for-item="action" wx:key="index" class="task-row">建议：{{action}}</view>
+          <view wx:for="{{item.risks}}" wx:for-item="risk" wx:key="index" class="task-row">风险：{{risk}}</view>
+          <view wx:for="{{item.uncertainties}}" wx:for-item="uncertainty" wx:key="index" class="task-row">待核实：{{uncertainty}}</view>
+        </view>
       </view>
       <text wx:if="{{!reports.length}}" class="empty">暂无历史评估。只读模式没有创建、执行或扣次入口。</text>
     </view>
     <view wx:else class="mirror-card">
       <text class="section-title">规划版本历史</text>
-      <view wx:for="{{student.revisions}}" wx:key="id" class="record-row">
+      <view wx:for="{{revisionsView}}" wx:key="id" class="record-row">
         <view class="item-header"><text class="item-title">{{item.title}}</text><text class="status">{{item.status}}</text></view>
         <text class="meta">{{item.stageCode}} · {{item.type}}</text>
+        <view wx:for="{{item.items}}" wx:for-item="revisionItem" wx:key="index" class="task-row"><text>{{revisionItem.name}}</text><text class="meta">{{revisionItem.target || '暂无目标'}} · {{revisionItem.status}}</text></view>
       </view>
       <text wx:if="{{!student.revisions.length}}" class="empty">暂无历史修订</text>
     </view>

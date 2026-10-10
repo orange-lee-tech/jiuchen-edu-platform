@@ -1474,9 +1474,11 @@ export type ReadOnlyStudentResponse = {
   stages:ClassroomStage[]
   classroom:ClassroomView
   latestSchedule:{id:string;fileName:string;status:string;parsedJson:unknown} | null
+  schedules:Array<{id:string;fileName:string;status:string;parsedJson:unknown}>
   revisions:Array<{id:string;title:string;stageCode:string;type:string;status:string}>
   growth:Array<{id:string;type:string;title:string;organization:string|null;role:string|null;
-    startDate:string|null;endDate:string|null;description:string|null;result:string|null}>
+    startDate:string|null;endDate:string|null;description:string|null;result:string|null;
+    standardExpression:string|null}>
   assessments:Array<{id:string;status:string;createdAt:string;completedAt:string|null;outputJson:unknown}>
 }
 export type ReadOnlyTeacherResponse = {
