@@ -29,34 +29,34 @@ Component({
   },
   data: {
     title: '', description: '', actions: [] as Action[], opening: false,
-    browseLoading:false,browseError:'',browseQuery:'',
+    browseLoading:false,browseError:'',browseQuery:'',loadSequence:0,
     students:[] as StudentSummary[],teachers:[] as AdminTeacher[],
     displayedStudents:[] as StudentSummary[],displayedTeachers:[] as AdminTeacher[],
   },
-  loadSequence:0,
-  observers: {
+   observers: {
     'viewSlot, kind': function (viewSlot: string, kind: string) {
       this.setData(content[`${kind}-${viewSlot}`] || { title: '', description: '', actions: [] })
     },
     'viewSlot, kind, phase': function(viewSlot:string,kind:string,phase:string){
       if(phase==='ready'&&kind==='admin'&&viewSlot==='plan')void this.loadReadOnlyPeople()
-      else this.loadSequence++
+      else this.setData({loadSequence:this.data.loadSequence+1})
     },
   },
   methods: {
     async loadReadOnlyPeople(){
-      const serial=++this.loadSequence
+      const serial=this.data.loadSequence+1
+      this.setData({loadSequence:serial})
       this.setData({browseLoading:true,browseError:''})
       try{
         const [students,teachers]=await Promise.all([getAdminStudents(),getAdminTeachers()])
-        if(serial!==this.loadSequence)return
+        if(serial!==this.data.loadSequence)return
         this.setData({students,teachers})
         this.filterReadOnlyPeople()
       }catch(error){
-        if(serial!==this.loadSequence)return
+        if(serial!==this.data.loadSequence)return
         this.setData({browseError:friendlyRequestError(error,'名单加载失败，请重试')})
       }finally{
-        if(serial===this.loadSequence)this.setData({browseLoading:false})
+        if(serial===this.data.loadSequence)this.setData({browseLoading:false})
       }
     },
     filterReadOnlyPeople(){
