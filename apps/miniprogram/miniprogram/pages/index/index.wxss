@@ -29,6 +29,6 @@ button::after{border:0;}
 .service-links{display:flex;flex-wrap:wrap;justify-content:space-between;row-gap:10rpx;width:100%;margin-top:11rpx;}
 .service-link{display:flex;box-sizing:border-box;justify-content:space-between;align-items:center;width:49%;min-height:78rpx;padding:14rpx 17rpx;color:#114889;background:#fff;border:1rpx solid #d2e2ef;border-radius:6rpx;font-size:23rpx;font-weight:750;}
 .service-link text{font-size:32rpx;color:#1659a4;}
-.service-website{background:#e5eeff;}
+.service-website{background:#e5eeff;width:100%;}
 .service-pressed{opacity:.78;}
 .service-note{font-size:20rpx;line-height:1.5;color:#4f6173;margin-top:12rpx;}
