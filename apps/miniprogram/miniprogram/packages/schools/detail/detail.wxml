@@ -9,7 +9,7 @@
     </view>
   </view>
   <view wx:if="{{school.heroPhoto && photoVisible}}" class="photo-credit" data-key="photo" bindtap="copyUrl">
-    {{school.heroPhoto.caption}} · {{school.heroPhoto.author}} · {{school.heroPhoto.license}} · 复制图片出处 ›
+    {{school.heroPhoto.caption}} · 图片裁切展示 · 作者 {{school.heroPhoto.author}} · {{school.heroPhoto.license}} · 复制图片出处 ›
   </view>
   <view wx:elif="{{school.heroPhoto && !photoVisible}}" class="photo-credit">校园照片暂未加载；已自动恢复文字背景，图片可在授权网络环境中启用。</view>
 
