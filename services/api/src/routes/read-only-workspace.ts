@@ -12,7 +12,7 @@ import { loadClassroom } from './classroom-workspace.js'
 
 type DB = Extract<DatabaseContext,{configured:true}>
 
-async function authorizedStudent(
+export async function authorizedStudent(
   db:DB, role:string, operatorId:string, targetId:string,
 ) {
   if (!mayViewStudent(role,false) && role !== 'teacher') return false
