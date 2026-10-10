@@ -15,8 +15,14 @@ export async function openVerifiedWechatCustomerService(purpose='联系九辰运
   const before=getSavedAuthResult()
   if(!before){
     wx.showModal({
-      title:'尚未登录',content:'客服目前无法识别你的业务身份。请先登录后重新联系运营。',
-      showCancel:false,
+      title:'游客身份咨询',
+      content:'你尚未登录，客服只能识别为“未登录游客”，无法判断老师/学员/管理员身份。仍要继续咨询吗？',
+      confirmText:'游客咨询',cancelText:'返回登录',
+      success:result=>{
+        if(result.confirm)openWechatCustomerService({
+          title:'九辰咨询｜未登录游客',path:'/pages/index/index',
+        })
+      },
     })
     return
   }
@@ -53,7 +59,7 @@ export async function openVerifiedWechatCustomerService(purpose='联系九辰运
     '九辰内部编号：'+(internalId||'尚未绑定'),
   ]
   const summary=identityLines.join('\n')
-  const cardTitle=('九辰咨询｜'+role+'｜'+(internalId||name)).slice(0,48)
+  const cardTitle=('九辰咨询｜'+role+'｜'+name+(internalId?'｜'+internalId:'')).slice(0,48)
   wx.showModal({
     title:'确认客服识别信息',
     content:summary+'\n\n确认后复制信息并打开微信客服。请手动粘贴发送，或主动发送显示的身份卡片；不会后台自动提交。',
