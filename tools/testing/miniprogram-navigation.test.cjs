@@ -539,3 +539,60 @@ test('school directory lazily renders cards without truncating the full result c
  p.onLoadMore()
  assert.equal(p.data.schools.length,172)
 })
+
+test('teacher scoped mirror opens for an assigned student without changing login or sending any mutation',async()=>{
+  const h=harness(),uuid='10000000-0000-4000-8000-000000000001'
+  h.auth.saveAuthResult(authFixture('teacher'))
+  const page=h.page('packages/read-only/view/view')
+  page.onLoad({kind:'student',id:uuid})
+  assert.equal(h.requests.length,1)
+  assert.equal(h.requests[0].method,'GET')
+  assert.ok(h.requests[0].url.includes('/me/read-only/students/'+uuid))
+  const fake={ok:true,readOnly:true,targetType:'student',
+    student:{id:uuid,name:'示例学员',university:'某大学',major:'自动化',currentStage:'junior-fall'},
+    profile:{university:'某大学',major:'自动化',currentGrade:'大三',enrollmentYear:2024,gpaText:'3.6',rankText:null},
+    stages:[{code:'junior-fall',label:'大三上',mode:'term',planTypes:['gpa']}],
+    classroom:{ok:true,student:{id:uuid,name:'示例学员'},stage:{code:'junior-fall',label:'大三上'},
+      plans:[{type:'gpa',title:'课程',items:[{id:'task',name:'高数',status:'done'}],revisionStatus:'approved'}],
+      mentors:[],records:[],showGuidance:true,guidanceRecordsReady:true},
+    latestSchedule:null,revisions:[],growth:[],assessments:[]}
+  h.respond(0,fake)
+  await settle()
+  assert.equal(page.data.student.student.name,'示例学员')
+  assert.equal(page.data.student.classroom.plans[0].items.length,1)
+  page.onTab({currentTarget:{dataset:{tab:'assessment'}}})
+  assert.equal(page.data.section,'assessment')
+  assert.equal(h.auth.getSavedAuthResult().user.role,'teacher')
+  assert.ok(h.requests.every(x=>x.method==='GET'))
+})
+test('teacher cannot enter a teacher mirror, ordinary student cannot enter either mirror',()=>{
+  const t=harness();t.auth.saveAuthResult(authFixture('teacher'))
+  const teacherPage=t.page('packages/read-only/view/view')
+  teacherPage.onLoad({kind:'teacher',id:'10000000-0000-4000-8000-000000000002'})
+  assert.match(teacherPage.data.error,/无权/)
+  assert.equal(t.requests.length,0)
+  const u=harness();u.auth.saveAuthResult(authFixture('student'))
+  const studentPage=u.page('packages/read-only/view/view')
+  studentPage.onLoad({kind:'student',id:'10000000-0000-4000-8000-000000000001'})
+  assert.match(studentPage.data.error,/无权/)
+  assert.equal(u.requests.length,0)
+})
+test('administrator can open teacher read projection and only follow assigned students',async()=>{
+  const h=harness();h.auth.saveAuthResult(authFixture('admin'))
+  const page=h.page('packages/read-only/view/view')
+  const id='10000000-0000-4000-8000-000000000002'
+  const sid='10000000-0000-4000-8000-000000000001'
+  page.onLoad({kind:'teacher',id})
+  assert.equal(h.requests.length,1)
+  h.respond(0,{ok:true,readOnly:true,targetType:'teacher',
+    teacher:{id,name:'示例老师',title:'讲师',status:'active',bio:''},
+    assigned:[{studentId:sid,studentName:'示例学员',university:null,major:null,stageCode:null,relationship:'primary'}],
+    pending:[]})
+  await settle()
+  page.onViewAssigned({currentTarget:{dataset:{id:'not-an-assignment'}}})
+  assert.equal(h.navigations.length,0)
+  page.onViewAssigned({currentTarget:{dataset:{id:sid}}})
+  assert.ok(h.navigations[0].url.includes(encodeURIComponent(sid)))
+  assert.ok(h.requests.every(x=>x.method==='GET'))
+  assert.equal(h.auth.getSavedAuthResult().user.role,'admin')
+})
