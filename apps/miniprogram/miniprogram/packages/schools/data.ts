@@ -360,6 +360,12 @@ const notablePublic: ReadonlyArray<readonly [string,string,string,string]> = [
  ['华侨大学','福建','泉州','https://www.hqu.edu.cn/'],
  ['中国社会科学院大学','北京','北京','https://www.ucass.edu.cn/'],
  ['南方医科大学','广东','广州','https://www.smu.edu.cn/'],
+ // Six Minzu Commission schools: the remaining five complement existing 中央民族大学.
+ ['中南民族大学','湖北','武汉','https://www.scuec.edu.cn/'],
+ ['西南民族大学','四川','成都','https://www.swun.edu.cn/'],
+ ['西北民族大学','甘肃','兰州','https://www.xbmu.edu.cn/'],
+ ['北方民族大学','宁夏','银川','https://www.nmu.edu.cn/'],
+ ['大连民族大学','辽宁','大连','https://www.dlnu.edu.cn/'],
 ]
 const publicSchoolSources = new Map(notablePublic.map(([name,,,url])=>[name,url]))
 const allTuples = [
@@ -412,10 +418,12 @@ const groupMembership = SCHOOL_GROUPS.map(group => ({
 /** These are current responsible institutions, NOT historical "former ministry" labels.
  * Keep deliberately scoped to entries with verified institutional evidence.
  */
-export type SchoolAffiliationKey = 'miit' | 'cas' | 'unitedFront' | 'mfa' | 'mps' | 'neac' | 'cass'
+export type SchoolAffiliationKey = 'moe' | 'miit' | 'cas' | 'unitedFront' | 'mfa' | 'mps' | 'neac' | 'cass'
 export const SCHOOL_AFFILIATIONS: ReadonlyArray<{
  key:SchoolAffiliationKey; label:string; members:readonly string[]; sourceUrl:string
 }> = [
+ {key:'moe',label:'教育部',sourceUrl:'https://www.moe.gov.cn/jyb_zzjg/moe_347/',
+  members:`北京大学、清华大学、中国人民大学、北京师范大学、中国农业大学、北京外国语大学、北京科技大学、北京化工大学、北京交通大学、北京邮电大学、中国地质大学（北京）、中国矿业大学（北京）、中国石油大学（北京）、北京林业大学、中国传媒大学、中央财经大学、中国政法大学、中央音乐学院、中央戏剧学院、中央美术学院、北京中医药大学、对外经济贸易大学、华北电力大学、南开大学、天津大学、大连理工大学、东北大学、吉林大学、东北师范大学、东北林业大学、复旦大学、上海交通大学、同济大学、华东理工大学、东华大学、华东师范大学、上海外国语大学、上海财经大学、南京大学、东南大学、中国矿业大学、河海大学、江南大学、南京农业大学、中国药科大学、合肥工业大学、浙江大学、厦门大学、山东大学、中国海洋大学、中国石油大学（华东）、武汉大学、华中科技大学、中国地质大学（武汉）、武汉理工大学、华中师范大学、华中农业大学、中南财经政法大学、中南大学、湖南大学、中山大学、华南理工大学、重庆大学、西南大学、四川大学、西南财经大学、西南交通大学、电子科技大学、西安交通大学、西北农林科技大学、陕西师范大学、西安电子科技大学、长安大学、兰州大学`.split('、')},
  {key:'miit',label:'工业和信息化部',sourceUrl:'https://www.miit.gov.cn/xbymdz/dblj/index.html',
   members:['北京航空航天大学','北京理工大学','哈尔滨工业大学','哈尔滨工程大学','西北工业大学','南京航空航天大学','南京理工大学']},
  {key:'cas',label:'中国科学院',sourceUrl:'https://www.cas.cn/',
@@ -424,7 +432,7 @@ export const SCHOOL_AFFILIATIONS: ReadonlyArray<{
   members:['暨南大学','华侨大学']},
  {key:'mfa',label:'外交部',sourceUrl:'https://www.cfau.edu.cn/',members:['外交学院']},
  {key:'mps',label:'公安部',sourceUrl:'https://www.ppsuc.edu.cn/',members:['中国人民公安大学']},
- {key:'neac',label:'国家民委',sourceUrl:'https://www.muc.edu.cn/',members:['中央民族大学']},
+ {key:'neac',label:'国家民委',sourceUrl:'https://www.neac.gov.cn/seac/',members:['中央民族大学','中南民族大学','西南民族大学','西北民族大学','北方民族大学','大连民族大学']},
  {key:'cass',label:'中国社会科学院',sourceUrl:'https://www.ucass.edu.cn/',members:['中国社会科学院大学']},
 ]
 const affiliationByName = new Map<string,{key:SchoolAffiliationKey;label:string}>(
@@ -557,8 +565,8 @@ export const SCHOOLS: readonly School[] = allTuples.map(({name,province,city,key
   isC9: c9Schools.has(name), is985, is211,
   isDoubleFirst: doubleFirstSet.has(name === '上海体育大学' ? '上海体育学院' :
     name === '华北电力大学（保定）' ? '华北电力大学' : name),
-  affiliationKey: affiliationByName.get(name)?.key || 'none',
-  affiliationLabel: affiliationByName.get(name)?.label || '',
+  affiliationKey: affiliationByName.get(name === '华北电力大学（保定）' ? '华北电力大学' : name)?.key || 'none',
+  affiliationLabel: affiliationByName.get(name === '华北电力大学（保定）' ? '华北电力大学' : name)?.label || '',
   groupTags: groupMembership.filter(group => group.members.has(name)).map(({key,label}) => ({key,label})),
   campusRecord: name === '华北电力大学（保定）',
   sourceUrl: specialtySourceByName.get(name) || publicSchoolSources.get(name) ||
