@@ -34,3 +34,29 @@ button::after{border:0;}
 .service-note{font-size:20rpx;line-height:1.5;color:#4f6173;margin-top:12rpx;}
 
 .home-minor-link{display:block;margin-top:12rpx;color:#ffe29b;font-size:22rpx;font-weight:750;text-decoration:underline;}
+
+/* Intentional vivid four-color identity, larger icons and tighter composition. */
+.home-page{background:linear-gradient(180deg,#e8f1ff 0%,#e9f8f5 63%,#eef4ff 100%);}
+.home-intro{background:linear-gradient(132deg,#103561 0%,#19549b 57%,#087f84 100%);border-left:8rpx solid #ffb43f;border-bottom:6rpx solid #0ba796;box-shadow:0 9rpx 19rpx rgba(14,57,96,.13);}
+.action-list{row-gap:13rpx;}
+.action-row{min-height:171rpx;border-top-width:6rpx;box-shadow:0 3rpx 11rpx rgba(20,55,80,.09);}
+.action-planning{background:#d9f9ee;border-top-color:#009f89;}
+.action-news{background:#fff1cb;border-top-color:#edaa23;}
+.action-assessment{background:#e0eafe;border-top-color:#356eea;}
+.action-consult{background:#d9f0fa;border-top-color:#0d91bf;}
+.action-symbol{height:65rpx;width:65rpx;border-radius:9rpx;}
+.action-planning .action-symbol{background:#83ddc8;}
+.action-news .action-symbol{background:#ffda7b;}
+.action-assessment .action-symbol{background:#b9cfff;}
+.action-consult .action-symbol{background:#a7e0f7;}
+.action-icon{height:43rpx;width:43rpx;}
+.action-title{font-size:28rpx;color:#0d3149;}
+.action-description{font-size:20rpx;color:#486177;}
+.action-more{font-size:37rpx;color:#0a6676;}
+.service-section{margin-top:22rpx;padding-top:14rpx;}
+.service-links{margin-top:9rpx;row-gap:8rpx;}
+.service-link{min-height:67rpx;background:#eff6ff;border-left:5rpx solid #608fe7;}
+.service-products{background:#f5edff;border-left-color:#9367d9;}
+.service-brand{background:#e7f9f6;border-left-color:#2aafa0;}
+.service-website{background:#e2ecff;border-left-color:#4376db;}
+.service-note{margin-top:8rpx;}

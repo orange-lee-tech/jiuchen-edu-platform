@@ -40,8 +40,9 @@
     </view>
 
     <view class="classroom-layout">
-      <scroll-view class="stage-sidebar" scroll-x enhanced show-scrollbar="{{false}}">
+      <scroll-view class="stage-sidebar" scroll-y enhanced show-scrollbar="{{false}}">
         <view class="stage-strip">
+          <text class="stage-rail-title">阶段</text>
           <view class="current-week-nav {{selectedView === 'week' ? 'active' : ''}}" bindtap="onCurrentWeekSchedule" hover-class="stage-pressed">
             <text class="current-week-label">本周课表</text>
           </view>

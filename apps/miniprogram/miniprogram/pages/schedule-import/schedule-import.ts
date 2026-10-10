@@ -353,19 +353,10 @@ Page({
     const id = this.data.importId
     try {
       this.setData({ saving: true, saveError: '' })
-      let confirmed: string
-      try {
-        confirmed = await updateScheduleFirstMonday(id, date)
-      } catch (error) {
-        if (!(error instanceof ApiRequestError) || error.code !== 'backend_version_mismatch')
-          throw error
-        // Transitional compatibility only: the old production API might not
-        // have a date-only route. Never retry on a real 4xx/5xx application error.
-        const current = this.data.schedule
-        if (!current || this.data.importId !== id) return
-        const legacy = await updateScheduleImport(id, { ...current, termStartDate: date })
-        confirmed = legacy.termStartDate || ''
-      }
+      // Metadata-only write: NEVER retry using the old full timetable PUT.
+      // That legacy route rejects real parsed course data with
+      // invalid_schedule_edit_payload and risks overwriting course edits.
+      const confirmed = await updateScheduleFirstMonday(id, date)
       // An older pending response cannot rewrite a newly imported timetable.
       if (this.data.importId !== id || !this.data.schedule) return
       if (confirmed !== date) throw new Error('schedule_date_readback_mismatch')
@@ -376,7 +367,11 @@ Page({
       this.refreshVisibleCourses()
     } catch (error) {
       if (this.data.importId !== id) return
-      const message = friendlyRequestError(error, '本学期起始日期保存失败，请稍后再试')
+      const missingRoute = error instanceof ApiRequestError &&
+        error.code === 'backend_version_mismatch'
+      const message = missingRoute
+        ? '服务端尚未部署第一周日期的独立保存接口。课表已保留，日期未变；需完成 API 受控发布。'
+        : friendlyRequestError(error, '本学期起始日期保存失败，请稍后再试')
       const code = error instanceof ApiRequestError
         ? 'HTTP ' + error.statusCode + ' / ' + error.code
         : error instanceof Error ? error.message : 'unknown'
@@ -386,7 +381,7 @@ Page({
       })
       wx.showModal({
         title: '第一周日期未保存',
-        content: message + '。课表课程仍然保留，原日期未被更改。\n错误码：' + code,
+        content: message + ' 课表课程仍然保留，原日期未被更改。\n错误码：' + code,
         showCancel: false,
       })
     } finally {

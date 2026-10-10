@@ -8,7 +8,7 @@
   <view wx:if="{{loading}}" class="mirror-card">正在安全读取授权对象的资料…</view>
   <view wx:elif="{{error}}" class="mirror-card mirror-error">
     <text class="error">{{error}}</text>
-    <text wx:if="{{backendPending}}" class="empty">这里不会填充示例学员资料，也不会切换管理员的登录身份。</text>
+    <text wx:if="{{backendPending}}" class="empty">访问入口已就绪，服务器需要同步发布。此处不会展示或编造其他用户的私人档案。</text>
     <button wx:if="{{!backendPending}}" bindtap="loadData">重试读取</button>
     <button class="exit-button" bindtap="onExit">返回身份名单</button>
   </view>

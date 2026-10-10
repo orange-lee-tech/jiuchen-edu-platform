@@ -87,18 +87,14 @@ Page({
   onConsultSchool() {
     const school=this.data.school
     if(!school)return
-    wx.showActionSheet({
-      itemList:['携带目标学校咨询','携带目标学校 + 我的姓名、年级、专业'],
-      success:result=>{
-        if(result.tapIndex===0) this.confirmConsultSummary(['【九辰院校咨询】','目标学校：'+school.name].join('\n'))
-        else if(result.tapIndex===1) void this.prepareConsultSummary(school.name)
-      },
-    })
+    // One confirmation only. Don't stack an action sheet followed by a modal.
+    // The copied text is independently reviewable before the user sends it.
+    void this.prepareConsultSummary(school.name)
   },
   confirmConsultSummary(summary:string){
     wx.showModal({
-      title:'发送给九辰客服',
-      content:summary+'\n\n确认后先复制这段信息，再打开微信客服。请在对话框粘贴并发送，微信不允许小程序替你自动发送。',
+      title:'带上院校信息咨询',
+      content:summary+'\n\n确认后复制这段内容并打开客服，进入聊天后请直接粘贴并发送。',
       confirmText:'复制并打开',
       success:result=>{
         if(!result.confirm)return
