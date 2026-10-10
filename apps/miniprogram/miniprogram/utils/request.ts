@@ -1494,6 +1494,12 @@ export function getReadOnlyStudent(id:string,stage?:string):Promise<ReadOnlyStud
     '/me/read-only/students/'+encodeURIComponent(id)+(stage?'?stage='+encodeURIComponent(stage):''),
   )
 }
+export function getReadOnlyStudentStage(id:string,stage:string):Promise<{
+  ok:true;readOnly:true;classroom:ClassroomView
+}>{
+  return request('/me/read-only/students/'+encodeURIComponent(id)+'?stage='+
+    encodeURIComponent(stage)+'&only=classroom')
+}
 export function getReadOnlyTeacher(id:string):Promise<ReadOnlyTeacherResponse>{
   return request<ReadOnlyTeacherResponse>('/me/read-only/teachers/'+encodeURIComponent(id))
 }

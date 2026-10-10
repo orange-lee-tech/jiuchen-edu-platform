@@ -596,3 +596,23 @@ test('administrator can open teacher read projection and only follow assigned st
   assert.ok(h.requests.every(x=>x.method==='GET'))
   assert.equal(h.auth.getSavedAuthResult().user.role,'admin')
 })
+
+test('read-only stage navigation never retransmits private history or uses POST',async()=>{
+  const h=harness(),sid='10000000-0000-4000-8000-000000000001'
+  h.auth.saveAuthResult(authFixture('teacher'))
+  const page=h.page('packages/read-only/view/view')
+  const stage={code:'junior-fall',label:'大三上',mode:'term',planTypes:['gpa']}
+  const next={...stage,code:'junior-spring',label:'大三下'}
+  page.setData({kind:'student',id:sid,viewerRole:'teacher',operatorId:id,
+    student:{ok:true,readOnly:true,targetType:'student',
+      student:{id:sid,name:'示例'},stages:[stage,next],classroom:{stage}},
+    section:'classroom',stageIndex:0})
+  page.onStage({detail:{value:'1'}})
+  assert.equal(h.requests.length,1)
+  assert.ok(h.requests[0].url.includes('only=classroom'))
+  assert.equal(h.requests[0].method,'GET')
+  h.respond(0,{ok:true,readOnly:true,classroom:{stage:next,plans:[],mentors:[],records:[]}})
+  await settle()
+  assert.equal(page.data.stageIndex,1)
+  assert.equal(page.data.student.classroom.stage.code,'junior-spring')
+})

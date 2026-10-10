@@ -29,7 +29,7 @@ export async function authorizedStudent(
  * No /me owner override and no write/AI/payment endpoint accepts the target ID.
  */
 export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:DatabaseContext) {
-  app.get<{Params:{studentId:string};Querystring:{stage?:string}}>(
+  app.get<{Params:{studentId:string};Querystring:{stage?:string;only?:string}}>(
     '/me/read-only/students/:studentId',async(request,reply)=>{
       if(!database.configured)return reply.code(503).send({ok:false,error:'database_not_configured'})
       const operator=await resolveSessionUser(request,database)
@@ -46,6 +46,9 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
       if(!getStageDefinition(stageCode))return reply.code(400).send({ok:false,error:'invalid_stage'})
       // Keep stage plans loaded by the canonical classroom logic (incl. pending revisions).
       const classroom=await loadClassroom(database,student,stageCode,true)
+      if(request.query.only==='classroom'){
+        return {ok:true,readOnly:true,classroom}
+      }
       const [profile]=student.userId?await database.db.select({
         university:userProfiles.university,major:userProfiles.major,
         currentGrade:userProfiles.currentGrade,enrollmentYear:userProfiles.enrollmentYear,

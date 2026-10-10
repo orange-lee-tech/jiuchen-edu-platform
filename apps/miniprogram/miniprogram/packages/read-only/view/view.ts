@@ -1,6 +1,6 @@
 import { getSavedAuthResult } from '../../../utils/auth'
 import {
-  getReadOnlyStudent, getReadOnlyTeacher, friendlyRequestError,
+  getReadOnlyStudent, getReadOnlyStudentStage, getReadOnlyTeacher, friendlyRequestError,
   type ReadOnlyStudentResponse, type ReadOnlyTeacherResponse,
 } from '../../../utils/request'
 
@@ -46,7 +46,7 @@ function scheduleCourses(raw:unknown):Course[] {
 Page({
   data:{
     kind:'student' as 'student'|'teacher',id:'',
-    loading:true,error:'',section:'profile' as Section,viewerRole:'',
+    loading:true,stageLoading:false,error:'',section:'profile' as Section,viewerRole:'',
     readOnly:true,
     student:null as ReadOnlyStudentResponse | null,
     teacher:null as ReadOnlyTeacherResponse | null,
@@ -141,9 +141,23 @@ Page({
   onStage(event:WechatMiniprogram.CustomEvent<{value:string}>){
     const student=this.data.student,index=Number(event.detail.value)
     const stage=student?.stages[index]?.code
-    if(!stage)return
-    this.setData({stageIndex:index})
-    void this.loadData(stage)
+    if(!stage||this.data.stageLoading)return
+    void this.loadStage(stage,index)
+  },
+  async loadStage(stage:string,index:number){
+    if(!this.data.student)return
+    const serial=++this.generation
+    this.setData({stageLoading:true,error:''})
+    try{
+      const result=await getReadOnlyStudentStage(this.data.id,stage)
+      if(serial!==this.generation||!this.data.student)return
+      this.setData({student:{...this.data.student,classroom:result.classroom},
+        stageIndex:index,selectedStage:stage,stageLoading:false})
+    }catch(error){
+      if(serial!==this.generation)return
+      this.setData({stageLoading:false,
+        error:friendlyRequestError(error,'无法读取这个学期的只读计划')})
+    }
   },
   onViewAssigned(event:WechatMiniprogram.BaseEvent){
     if(this.data.viewerRole!=='admin')return
