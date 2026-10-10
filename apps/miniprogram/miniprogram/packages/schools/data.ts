@@ -1,4 +1,4 @@
-import { SCHOOL_MEDIA } from './school-media.generated'
+﻿import { SCHOOL_MEDIA } from './school-media.generated'
 /**
  * Audited starter catalog; NOT a national university directory.
  * Ministry of Education 985 list (39): https://www.moe.gov.cn/srcsite/A22/s7065/200612/t20061206_128833.html
@@ -614,6 +614,12 @@ const verifiedExtras: Record<string, Partial<School>> = {
 export const SCHOOLS: readonly School[] = allTuples.map(({name,province,city,keywords,is985,is211}, index) => ({
   id: 's' + String(index + 1).padStart(3, '0'),
   name, province, city, keywords,
+
+  ...(SCHOOL_MEDIA[name]?.heroPhoto
+    ? {
+        heroPhoto: SCHOOL_MEDIA[name].heroPhoto,
+      }
+    : {}),
   isC9: c9Schools.has(name), is985, is211,
   isDoubleFirst: doubleFirstSet.has(name === '上海体育大学' ? '上海体育学院' :
     name === '华北电力大学（保定）' ? '华北电力大学' : name),
@@ -655,3 +661,4 @@ export function findSchools(
   ))
 }
 export const SCHOOL_REGIONS = ['全部地区', ...Array.from(new Set(SCHOOLS.map(s => s.province)))]
+
