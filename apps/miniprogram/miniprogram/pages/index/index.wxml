@@ -35,11 +35,22 @@
     <view class="service-section">
       <text class="section-heading">认识九辰</text>
       <view class="service-links">
-        <view class="service-link service-products" bindtap="onProducts" hover-class="service-pressed" aria-role="button">服务介绍 <text>›</text></view>
-        <view class="service-link service-brand" bindtap="onBrand" hover-class="service-pressed" aria-role="button">关于九辰 <text>›</text></view>
-        <view class="service-link service-website" bindtap="onWebsite" hover-class="service-pressed" aria-role="button">九辰官网 <text>›</text></view>
+        <view class="service-link service-products" bindtap="onProducts" hover-class="service-pressed" aria-role="button" aria-label="查看九辰服务介绍">
+          <view class="service-symbol"><image class="service-icon" src="/assets/icons/business-active.png" mode="aspectFit" /></view>
+          <text class="service-title">服务介绍</text>
+          <text class="service-description">了解九辰服务</text>
+        </view>
+        <view class="service-link service-brand" bindtap="onBrand" hover-class="service-pressed" aria-role="button" aria-label="了解九辰品牌">
+          <view class="service-symbol"><image class="service-icon" src="/assets/icons/users-active.png" mode="aspectFit" /></view>
+          <text class="service-title">关于九辰</text>
+          <text class="service-description">理念与团队</text>
+        </view>
+        <view class="service-link service-website" bindtap="onWebsite" hover-class="service-pressed" aria-role="button" aria-label="访问九辰官网">
+          <view class="service-symbol"><image class="service-icon" src="/assets/icons/website-active.png" mode="aspectFit" /></view>
+          <text class="service-title">九辰官网</text>
+          <text class="service-description">访问官方网站</text>
+        </view>
       </view>
-      <text class="service-note">咨询与规划分开；服务方案不在小程序内购买课程。</text>
     </view>
   </block>
 </view>
