@@ -659,7 +659,7 @@ test('student homepage prioritizes plan and renders a four-card action grid',()=
  for(const name of ['我的规划','保研资讯','AI 评估','联系顾问'])assert.ok(home.includes(name))
  assert.match(ts,/onPrimary\(\) \{[\s\S]*?openSlot\('plan'\)/)
  const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
- assert.match(css,/\.action-row\{[^}]*width:49%/)
+ assert.match(css,/\.action-row\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)
  assert.match(css,/\.service-link\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)
 })
 test('school consultation sends server-verified role + school in one consent modal',async()=>{
