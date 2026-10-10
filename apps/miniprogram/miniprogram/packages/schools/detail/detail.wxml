@@ -5,7 +5,7 @@
     <view class="hero-content">
       <view class="hero-top"><text>九辰 · 目标院校</text><text class="hero-mark">{{tierLabel}}</text></view>
       <view class="hero-main"><view class="hero-identity"><text class="hero-name">{{school.name}}</text><text class="hero-city">{{cityLabel}}</text></view></view>
-      <view class="hero-tags"><text wx:if="{{school.isC9}}">C9 联盟</text><text wx:for="{{school.groupTags}}" wx:for-item="tag" wx:key="key">{{tag.label}}</text><text wx:if="{{!school.is211}}">非985/211</text></view>
+      <view class="hero-tags"><text wx:if="{{school.isDoubleFirst}}">双一流 · 2022名单</text><text wx:if="{{school.affiliationLabel}}">{{school.affiliationLabel}}</text><text wx:if="{{school.isC9}}">C9 联盟</text><text wx:for="{{school.groupTags}}" wx:for-item="tag" wx:key="key">{{tag.label}}</text><text wx:if="{{!school.is211}}">非985/211</text></view>
     </view>
   </view>
   <view wx:if="{{school.heroPhoto && photoVisible}}" class="photo-credit" data-key="photo" bindtap="copyUrl">
@@ -21,11 +21,13 @@
   <view class="detail-card">
     <view class="detail-heading"><text>学校简介</text><text class="detail-hint">公开资料 · 逐校核验</text></view>
     <text wx:if="{{hasIntro}}" class="intro-text">{{school.intro}}</text>
-    <text wx:else class="intro-text">已收录{{school.name}}的基础信息。历史名单及院校位置应以学校官方资料为准；具体招生资格和项目要求需以当年通知为准。</text>
+    <text wx:else class="intro-text">已收录{{school.name}}的基本院校属性。简介和校区资料尚待逐校官网核验，具体推免资格以当年学校与学院通知为准。</text>
     <view wx:if="{{school.founded}}" class="founded-line">历史起始年份 {{school.founded}} · 以学校校史为准</view>
     <view class="source-links">
+      <view wx:if="{{school.affiliationLabel}}" class="detail-source" data-key="affiliation" bindtap="copyUrl"><text>主管单位：{{school.affiliationLabel}}</text><text>核验来源 ›</text></view>
       <view wx:if="{{school.introSource}}" class="detail-source" data-key="intro" bindtap="copyUrl"><text>学校官方介绍</text><text>复制链接 ›</text></view>
       <view wx:if="{{school.is211}}" class="detail-source" data-key="{{school.is985 ? 'moe' : 'moe211'}}" bindtap="copyUrl"><text>教育部 {{school.is985 ? '985' : '211'}} 工程原始名单</text><text>复制链接 ›</text></view>
+      <view wx:if="{{school.isDoubleFirst}}" class="detail-source" data-key="doubleFirst" bindtap="copyUrl"><text>2022年第二轮双一流建设高校名单</text><text>复制名单 ›</text></view>
       <view wx:if="{{school.isC9}}" class="detail-source" data-key="c9" bindtap="copyUrl"><text>C9 联盟参考</text><text>复制链接 ›</text></view>
     </view>
   </view>

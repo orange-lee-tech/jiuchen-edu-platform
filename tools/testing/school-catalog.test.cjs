@@ -50,7 +50,7 @@ test('industry circles include all seven defense universities and all nine law i
   const directory = fs.readFileSync(path.join(mini,'packages/schools/directory/directory.ts'),'utf8')
   assert.match(directory,/group:value as SchoolGroupKey.*level:'all'/)
   assert.match(directory,/previewFilter\(/)
-  assert.match(directory,/draftRegion.*draftGroup/)
+  assert.match(directory,/draftRegion:[\s\S]*?draftGroup/)
 
 })
 
@@ -151,4 +151,15 @@ test('drawer fixes stale scroll trap with explicit scroll height and staged AND 
    assert.ok(wxml.includes('bindtap="'+key+'"')||wxml.includes('bindinput="'+key+'"'),key)
  assert.match(ts,/draftRegion:this\.data\.region/)
  assert.match(ts,/affiliation:this\.data\.draftAffiliation/)
+})
+
+test('audited Ministry of Education and ethnic-affairs university rosters stay complete',()=>{
+ const moe=school.match(/\{key:'moe',label:'教育部',sourceUrl:'[^']+',\s*members:`([^`]+)`\.split\('、'\)/)
+ assert.ok(moe)
+ const ministry=moe[1].split('、')
+ assert.equal(ministry.length,75)
+ assert.equal(new Set(ministry).size,75)
+ assert.match(school,/国家民委[^\n]+/)
+ for(const u of ['中央民族大学','中南民族大学','西南民族大学','西北民族大学','北方民族大学','大连民族大学'])
+   assert.ok(school.includes(u),u)
 })

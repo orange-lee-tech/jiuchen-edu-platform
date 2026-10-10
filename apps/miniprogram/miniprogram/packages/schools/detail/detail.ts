@@ -1,4 +1,5 @@
-import { getSchoolById, MOE_985_SOURCE, MOE_211_SOURCE, C9_SOURCE, type School } from '../data'
+import { getSchoolById, MOE_985_SOURCE, MOE_211_SOURCE, C9_SOURCE,
+  DOUBLE_FIRST_CLASS_2022_SOURCE, SCHOOL_AFFILIATIONS, type School } from '../data'
 import { getMyAcademicProfile, getMyClassroom } from '../../../utils/request'
 import { getSavedAuthResult } from '../../../utils/auth'
 import { openWechatCustomerService } from '../../../utils/customer-service'
@@ -23,7 +24,8 @@ Page({
     this.setData({
       school, heroLabel: school.name.slice(0,2),
       cityLabel: school.province === school.city ? school.city : school.province + ' · ' + school.city,
-      tierLabel: school.is985 ? '985 / 211' : (school.is211 ? '211 工程' : '行业特色院校'),
+      tierLabel: school.is985 ? '985 / 211' : school.is211 ? '211 工程' :
+        school.isDoubleFirst ? '双一流 · 非211' : '公办特色院校',
       circleLabel: school.groupTags[0]?.label || (school.isC9 ? 'C9' : '未分类'),
       hasIntro: Boolean(school.intro),
       photoVisible: Boolean(school.heroPhoto?.url),
@@ -48,6 +50,8 @@ Page({
       moe: MOE_985_SOURCE, moe211: MOE_211_SOURCE, c9: C9_SOURCE,
       photo: school?.heroPhoto?.sourceUrl || '',
       photoLicense: school?.heroPhoto?.licenseUrl || '',
+      doubleFirst: DOUBLE_FIRST_CLASS_2022_SOURCE,
+      affiliation: SCHOOL_AFFILIATIONS.find(item=>item.key===school?.affiliationKey)?.sourceUrl || '',
       map: school?.mapLocation?.sourceUrl || '',
     }
     const url = urls[key]
