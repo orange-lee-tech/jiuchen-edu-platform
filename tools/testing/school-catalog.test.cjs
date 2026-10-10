@@ -48,7 +48,10 @@ test('industry circles include all seven defense universities and all nine law i
   const specials = ['华东政法大学','西南政法大学','西北政法大学']
   for(const university of specials) assert.ok(school.includes("['"+university+"'"))
   const directory = fs.readFileSync(path.join(mini,'packages/schools/directory/directory.ts'),'utf8')
-  assert.match(directory,/group: value as SchoolGroupKey.*level: 'all'/)
+  assert.match(directory,/group:value as SchoolGroupKey.*level:'all'/)
+  assert.match(directory,/previewFilter\(/)
+  assert.match(directory,/draftRegion.*draftGroup/)
+
 })
 
 test('schools are isolated in a lazy mini-program subpackage and reachable through Opportunity', () => {
@@ -110,4 +113,42 @@ test('all seven defense universities have precise campus POI source metadata', (
     assert.match(snippet,/"sourceUrl": "https:\/\/[^"]+"/,name)
     assert.match(snippet,/"latitude": [-\d.]+, "longitude": [-\d.]+/,name)
   }
+})
+
+test('second-round Double First Class source is exactly 147, no duplicate original institution', () => {
+ const m=school.match(/export const DOUBLE_FIRST_CLASS_2022 = `([^`]+)`\.split\('、'\)/)
+ assert.ok(m,'missing audited 147-name official dataset')
+ const official=m[1].split('、')
+ assert.equal(official.length,147)
+ assert.equal(new Set(official).size,147)
+ const supplemented=school.match(/const newDoubleFirst: ReadonlyArray<readonly \[string,string,string\]> = (\[[\s\S]*?\])\n\/\*\* Selective/)
+ assert.ok(supplemented,'missing non-211 double-first entries')
+ const added=[...supplemented[1].matchAll(/\['([^']+)','([^']+)','([^']+)'\]/g)].map(x=>x[1])
+ assert.equal(added.length,32)
+ const historic=new Set([...rows,...extras].map(x=>x[0]))
+ const display=new Set([...historic,...added].map(n=>n==='上海体育大学'?'上海体育学院':n))
+ display.delete('华北电力大学（保定）')
+ assert.deepEqual([...official].sort(),[...display].sort())
+ assert.match(school,/doubleFirstSet\.has/)
+})
+test('all 15 sector group definitions are explicit and sourced when relevant', () => {
+ const groupPart=school.split('export const SCHOOL_GROUPS:')[1].split('const groupMembership')[0]
+ const keys=[...groupPart.matchAll(/\{ key: '([^']+)'/g)].map(x=>x[1])
+ assert.equal(keys.length,15)
+ assert.equal(new Set(keys).size,15)
+ for(const key of ['architecture8','mechanical4','electric2','teachers6'])
+   assert.ok(keys.includes(key),key)
+})
+test('drawer fixes stale scroll trap with explicit scroll height and staged AND controls',()=>{
+ const wxml=fs.readFileSync(path.join(mini,'packages/schools/directory/directory.wxml'),'utf8')
+ const wxss=fs.readFileSync(path.join(mini,'packages/schools/directory/directory.wxss'),'utf8')
+ const ts=fs.readFileSync(path.join(mini,'packages/schools/directory/directory.ts'),'utf8')
+ assert.match(wxss,/\.filter-scroll\{[^}]*height:55vh/)
+ assert.match(wxss,/\.filter-panel\{[^}]*min-height:0/)
+ assert.match(wxml,/scroll-y="\{\{true\}\}"/)
+ assert.match(wxml,/bindtap="onFilterApply"/)
+ for(const key of ['onFilterRegion','onFilterLevel','onFilterGroup','onFilterAffiliation','onFilterSchool','onFilterQuery'])
+   assert.ok(wxml.includes('bindtap="'+key+'"')||wxml.includes('bindinput="'+key+'"'),key)
+ assert.match(ts,/draftRegion:this\.data\.region/)
+ assert.match(ts,/affiliation:this\.data\.draftAffiliation/)
 })
