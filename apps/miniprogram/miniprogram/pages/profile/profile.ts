@@ -1,6 +1,6 @@
 import { deleteCurrentAccount, getSavedAuthResult, logoutWechatUser, type UserRole } from '../../utils/auth'
 import { friendlyRequestError } from '../../utils/request'
-import { openWechatCustomerService } from '../../utils/customer-service'
+import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 
 // Identity editing already lives in the blue hero. Never repeat the same
@@ -38,7 +38,7 @@ Page({
   },
   onHide() { this.stopShell?.(); this.setData({ shellPhase: 'loading' }) },
   onUnload() { this.stopShell?.() },
-  onCustomerServiceTap() { openWechatCustomerService() },
+  onCustomerServiceTap() { void openVerifiedWechatCustomerService('账号及运营支持') },
   onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },
   onIdentityTap() {
     if (this.data.loggedIn) openPage('/pages/profile-edit/profile-edit')

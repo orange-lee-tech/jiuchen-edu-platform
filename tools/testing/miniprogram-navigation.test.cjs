@@ -703,3 +703,54 @@ test('PKU media/map are real sourced assets and customer-service card points to 
  assert.match(wxml,/mapMarkers/)
  assert.match(service,/sendMessagePath:card\.path/)
 })
+
+test('customer service identifies the actual server-verified role without auto-sending',async()=>{
+ const h=harness()
+ h.auth.saveAuthResult(authFixture('admin'))
+ h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
+ let opened=null, copied=null
+ h.wx.openCustomerServiceChat=options=>{opened=options}
+ h.wx.setClipboardData=options=>{copied=options.data;options.success?.()}
+ const page=h.page('pages/profile/profile')
+ page.onCustomerServiceTap()
+ assert.equal(h.requests.length,1)
+ assert.match(h.requests[0].url,/\/auth\/me/)
+ assert.equal(opened,null)
+ h.respond(0,{ok:true,user:{...authFixture('admin').user,displayName:'测试管理员'},
+   businessIdentity:{businessId:'JCA-ABCD-1234',type:'admin',status:'claimed'}})
+ await settle()
+ assert.equal(h.modals.length,1)
+ assert.match(h.modals[0].content,/管理员/)
+ assert.match(h.modals[0].content,/JCA-ABCD-1234/)
+ assert.equal(opened,null,'no customer-service card may be sent before user consent')
+ h.modals[0].success({confirm:true})
+ assert.match(copied,/当前身份：管理员/)
+ assert.match(copied,/联系人：测试管理员/)
+ assert.match(copied,/九辰内部编号：JCA-ABCD-1234/)
+ assert.equal(opened.showMessageCard,true)
+ assert.match(opened.sendMessageTitle,/管理员/)
+ assert.equal(opened.sendMessagePath,'/pages/profile/profile')
+})
+test('customer-service identity never claims server verification when revalidation fails',async()=>{
+ const h=harness()
+ h.auth.saveAuthResult(authFixture('teacher'))
+ h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
+ let opened=false;h.wx.openCustomerServiceChat=()=>{opened=true}
+ const page=h.page('pages/profile/profile');page.onCustomerServiceTap()
+ h.respond(0,{error:'unauthorized'},401)
+ await settle()
+ assert.equal(opened,false)
+ assert.match(h.modals[0].content,/缓存身份/)
+})
+test('administrator mine keeps two equally sized actions, and workbench uses full-width view rows',()=>{
+ const p=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
+ const w=fs.readFileSync(path.join(root,'components/role-shell/role-shell.wxml'),'utf8')
+ const css=fs.readFileSync(path.join(root,'components/role-shell/role-shell.wxss'),'utf8')
+ assert.match(p,/class="identity-buttons"/)
+ assert.match(p,/class="identity-control identity-copy"/)
+ assert.match(p,/class="identity-control identity-primary"/)
+ assert.doesNotMatch(p,/class="copy-code"/)
+ assert.match(w,/class="admin-action.*" data-key/)
+ assert.match(css,/\.admin-action\{[^}]*width:100%/)
+ assert.match(css,/\.admin-action-main\{[^}]*flex:1 1 0/)
+})

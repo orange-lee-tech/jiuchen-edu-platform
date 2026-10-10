@@ -1,5 +1,5 @@
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, openSlot, shellView } from '../../utils/navigation'
-import { openWechatCustomerService } from '../../utils/customer-service'
+import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { getMyAcademicProfile } from '../../utils/request'
 
 Page({
@@ -46,5 +46,5 @@ Page({
   onProducts() { openPage('/pages/products/products') },
   onBrand() { openPage('/pages/brand/brand') },
   onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },
-  onCustomerService() { openWechatCustomerService() },
+  onCustomerService() { void openVerifiedWechatCustomerService('保研规划咨询') },
 })
