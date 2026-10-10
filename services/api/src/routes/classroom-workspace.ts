@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
@@ -33,6 +33,14 @@ import {
 } from '../services/schedule-parser.js'
 import { createScheduleStorageProvider } from '../services/schedule-storage.js'
 import { resolveSessionUser } from '../services/session.js'
+
+function isFirstMonday(value:unknown):value is string {
+ if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false
+ const [year,month,day]=value.split('-').map(Number)
+ const d=new Date(Date.UTC(year,month-1,day))
+ return d.getUTCFullYear()===year&&d.getUTCMonth()===month-1&&
+ d.getUTCDate()===day&&d.getUTCDay()===1
+}
 
 const itemSchema = z.object({
   name: z.string().trim().min(1).max(160),
@@ -196,7 +204,7 @@ async function applyApprovedPlan(
   return planId
 }
 
-async function loadClassroom(
+export async function loadClassroom(
   database: DatabaseContext & { configured: true },
   student: {
     id: string
@@ -818,6 +826,40 @@ export function registerClassroomWorkspaceRoutes(
       },
     }
   })
+
+  app.put<{Params:{id:string};Body:unknown}>(
+    '/me/classroom/schedule-imports/:id/term-start-date',async(request,reply)=>{
+      if(!database.configured)return reply.code(503).send({ok:false,error:'database_not_configured'})
+      const session=await resolveSessionUser(request,database)
+      if(!session)return reply.code(401).send({ok:false,error:'unauthorized'})
+      const parsed=z.object({termStartDate:z.string()}).strict().safeParse(request.body)
+      if(!parsed.success||!isFirstMonday(parsed.data.termStartDate))
+        return reply.code(400).send({ok:false,error:'schedule_first_monday_required'})
+      const [owned]=await database.db.select({
+        id:scheduleImports.id,status:scheduleImports.status,parsedJson:scheduleImports.parsedJson,
+      }).from(scheduleImports).where(and(
+        eq(scheduleImports.id,request.params.id),eq(scheduleImports.userId,session.userId),
+      )).limit(1)
+      if(!owned)return reply.code(404).send({ok:false,error:'schedule_import_not_found'})
+      if(owned.status!=='parsed'||!owned.parsedJson||
+        typeof owned.parsedJson!=='object'||Array.isArray(owned.parsedJson))
+        return reply.code(409).send({ok:false,error:'schedule_not_parsed'})
+      await database.db.update(scheduleImports).set({
+        parsedJson:sql`JSON_SET(${scheduleImports.parsedJson}, '$.termStartDate', ${parsed.data.termStartDate})`,
+      }).where(and(eq(scheduleImports.id,owned.id),
+        eq(scheduleImports.userId,session.userId),eq(scheduleImports.status,'parsed')))
+      const [confirmed]=await database.db.select({parsedJson:scheduleImports.parsedJson})
+        .from(scheduleImports).where(and(
+          eq(scheduleImports.id,owned.id),eq(scheduleImports.userId,session.userId),
+        )).limit(1)
+      const saved=confirmed?.parsedJson&&typeof confirmed.parsedJson==='object'&&
+        !Array.isArray(confirmed.parsedJson)
+        ? (confirmed.parsedJson as Record<string,unknown>).termStartDate : null
+      if(saved!==parsed.data.termStartDate)
+        return reply.code(409).send({ok:false,error:'schedule_date_readback_mismatch'})
+      return {ok:true,termStartDate:parsed.data.termStartDate}
+    },
+  )
 
   app.put<{
     Params: { id: string }
