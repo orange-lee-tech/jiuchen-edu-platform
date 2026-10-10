@@ -3,7 +3,7 @@
     <image wx:if="{{photoVisible && school.heroPhoto}}" class="hero-photo" src="{{school.heroPhoto.url}}" mode="aspectFill" binderror="onPhotoError" />
     <view class="hero-shade"></view>
     <view class="hero-content">
-      <view class="hero-top"><text>九辰 · 目标院校</text><text class="hero-mark">{{school.is985 ? '985 / 211' : (school.is211 ? '211 工程' : '行业特色院校')}}</text></view>
+      <view class="hero-top"><text>九辰 · 目标院校</text><text class="hero-mark">{{tierLabel}}</text></view>
       <view class="hero-main"><view class="hero-identity"><text class="hero-name">{{school.name}}</text><text class="hero-city">{{cityLabel}}</text></view></view>
       <view class="hero-tags"><text wx:if="{{school.isC9}}">C9 联盟</text><text wx:for="{{school.groupTags}}" wx:for-item="tag" wx:key="key">{{tag.label}}</text><text wx:if="{{!school.is211}}">非985/211</text></view>
     </view>
@@ -15,8 +15,8 @@
 
   <view class="detail-overview">
     <view class="fact-cell"><text class="fact-key">城市</text><text class="fact-value">{{school.city}}</text></view>
-    <view class="fact-cell"><text class="fact-key">院校属性</text><text class="fact-value">{{school.is985 ? '985 / 211' : (school.is211 ? '211' : '特色高校')}}</text></view>
-    <view class="fact-cell"><text class="fact-key">行业分类</text><text class="fact-value">{{school.groupTags.length ? school.groupTags[0].label : (school.isC9 ? 'C9' : '未分类')}}</text></view>
+    <view class="fact-cell"><text class="fact-key">院校属性</text><text class="fact-value">{{tierLabel}}</text></view>
+    <view class="fact-cell"><text class="fact-key">行业分类</text><text class="fact-value">{{circleLabel}}</text></view>
   </view>
   <view class="detail-card">
     <view class="detail-heading"><text>学校简介</text><text class="detail-hint">公开资料 · 逐校核验</text></view>

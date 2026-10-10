@@ -7,6 +7,8 @@ Page({
     school: null as School | null,
     heroLabel: '',
     cityLabel: '',
+    tierLabel: '',
+    circleLabel: '',
     hasIntro: false,
     photoVisible: false,
     mapMarkers: [] as Array<{id:number;latitude:number;longitude:number;title:string}>,
@@ -21,6 +23,8 @@ Page({
     this.setData({
       school, heroLabel: school.name.slice(0,2),
       cityLabel: school.province === school.city ? school.city : school.province + ' · ' + school.city,
+      tierLabel: school.is985 ? '985 / 211' : (school.is211 ? '211 工程' : '行业特色院校'),
+      circleLabel: school.groupTags[0]?.label || (school.isC9 ? 'C9' : '未分类'),
       hasIntro: Boolean(school.intro),
       photoVisible: Boolean(school.heroPhoto?.url),
       mapMarkers: school.mapLocation ? [{
