@@ -75,6 +75,12 @@
         "directory/directory",
         "detail/detail"
       ]
+    },
+    {
+      "root": "packages/read-only",
+      "pages": [
+        "view/view"
+      ]
     }
   ]
 }

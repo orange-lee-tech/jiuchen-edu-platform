@@ -1,0 +1,102 @@
+<view class="mirror-shell">
+  <view class="mirror-banner">
+    <view class="banner-top"><text>权限扩展 · 只读身份查看</text><text class="badge">READ ONLY</text></view>
+    <text class="banner-title">{{kind === 'teacher' ? '老师工作台镜像' : '学员空间镜像'}}</text>
+    <text class="banner-hint">当前仍以{{viewerRole === 'admin' ? '管理员' : '老师'}}账号登录。只能浏览，不支持编辑、审核、AI评估执行、支付或上传。</text>
+    <button class="exit-button" bindtap="onExit">‹ 返回自己的工作台</button>
+  </view>
+  <view wx:if="{{loading}}" class="mirror-card">正在安全读取授权对象的资料…</view>
+  <view wx:elif="{{error}}" class="mirror-card"><text class="error">{{error}}</text><button bindtap="loadData">重试读取</button></view>
+  <block wx:elif="{{kind === 'teacher' && teacher}}">
+    <view class="mirror-card">
+      <text class="section-title">{{teacher.teacher.name}}</text>
+      <text class="meta">老师 · {{teacher.teacher.title || '职务待补充'}} · {{teacher.teacher.status}}</text>
+      <text class="body-copy">{{teacher.teacher.bio || '暂无工作介绍'}}</text>
+    </view>
+    <view class="mirror-card">
+      <text class="section-title">所属学员与辅导关系</text>
+      <view wx:for="{{teacher.assigned}}" wx:key="studentId" class="mirror-row" data-id="{{item.studentId}}" bindtap="onViewAssigned">
+        <view><text class="item-title">{{item.studentName}}</text><text class="meta">{{item.university || '院校未填写'}} · {{item.major || '专业未填写'}}</text><text class="meta">{{item.relationship === 'primary' ? '主辅导' : '协助辅导'}} · {{item.stageCode || '全部阶段'}}</text></view>
+        <text class="arrow">只读查看 ›</text>
+      </view>
+      <text wx:if="{{!teacher.assigned.length}}" class="empty">暂无关联学员</text>
+    </view>
+  </block>
+  <block wx:elif="{{student}}">
+    <view class="student-identity">
+      <text class="section-title">{{student.student.name}}</text>
+      <text class="meta">{{student.student.university || '院校待补充'}} · {{student.student.major || '专业待补充'}}</text>
+      <text class="readonly-note">只读身份：无法提交修改，也不会替该学生运行AI评估</text>
+    </view>
+    <scroll-view scroll-x class="mirror-tabs">
+      <view class="mirror-tab-list">
+        <view wx:for="{{tabs}}" wx:key="key" data-tab="{{item.key}}" bindtap="onTab" class="mirror-tab {{section === item.key ? 'active' : ''}}">{{item.label}}</view>
+      </view>
+    </scroll-view>
+    <view wx:if="{{section === 'profile'}}" class="mirror-card">
+      <text class="section-title">学业资料</text>
+      <view class="kv"><text>姓名</text><text>{{student.student.name}}</text></view>
+      <view class="kv"><text>本科院校</text><text>{{student.profile.university || student.student.university || '未填写'}}</text></view>
+      <view class="kv"><text>专业</text><text>{{student.profile.major || student.student.major || '未填写'}}</text></view>
+      <view class="kv"><text>年级</text><text>{{student.profile.currentGrade || '未填写'}}</text></view>
+      <view class="kv"><text>入学年份</text><text>{{student.profile.enrollmentYear || '未填写'}}</text></view>
+      <view class="kv"><text>GPA</text><text>{{student.profile.gpaText || '未填写'}}</text></view>
+      <view class="kv"><text>排名</text><text>{{student.profile.rankText || '未填写'}}</text></view>
+    </view>
+    <view wx:elif="{{section === 'classroom'}}" class="mirror-card">
+      <text class="section-title">我的规划 · {{student.classroom.stage.label}}</text>
+      <picker range="{{student.stages}}" range-key="label" value="{{stageIndex}}" bindchange="onStage">
+        <view class="stage-picker">切换查看学期：{{student.classroom.stage.label}} ▾</view>
+      </picker>
+      <view wx:for="{{student.classroom.plans}}" wx:key="type" class="plan-block">
+        <view class="item-header"><text class="item-title">{{item.title}}</text><text class="status">{{item.revisionStatus === 'pending' ? '学员待审核版' : item.revisionStatus === 'approved' ? '正式版' : '尚未建立'}}</text></view>
+        <view wx:for="{{item.items}}" wx:for-item="task" wx:key="id" class="task-row"><text>{{task.name}}</text><text class="meta">{{task.target || '暂无具体目标'}} · {{task.status === 'done' ? '已完成' : task.status === 'in_progress' ? '进行中' : '待办'}}</text></view>
+        <text wx:if="{{!item.items.length}}" class="empty">本阶段暂无计划项目</text>
+      </view>
+      <view class="subsection"><text class="section-title">辅导老师</text>
+        <view wx:for="{{student.classroom.mentors}}" wx:key="id" class="mirror-row"><text>{{item.name}}</text><text class="meta">{{item.relationship}}</text></view>
+        <text wx:if="{{!student.classroom.mentors.length}}" class="empty">暂无辅导教师</text>
+      </view>
+      <view class="subsection"><text class="section-title">辅导记录</text>
+        <view wx:for="{{student.classroom.records}}" wx:key="id" class="record-row"><text class="item-title">{{item.title}}</text><text class="body-copy">{{item.content}}</text></view>
+        <text wx:if="{{!student.classroom.records.length}}" class="empty">当前阶段无辅导记录</text>
+      </view>
+    </view>
+    <view wx:elif="{{section === 'schedule'}}" class="mirror-card">
+      <text class="section-title">我的课表</text>
+      <text class="meta">当前最近成功解析：{{student.latestSchedule.fileName || '暂无导入课表'}}</text>
+      <view wx:for="{{courses}}" wx:key="index" class="record-row">
+        <text class="item-title">{{item.name}}</text><text class="meta">{{item.day}} · {{item.slot}} · {{item.weeks}}</text>
+        <text class="meta">{{item.location}}</text>
+      </view>
+      <text wx:if="{{!courses.length}}" class="empty">尚无可展示课表，不会在只读模式重新触发识别</text>
+    </view>
+    <view wx:elif="{{section === 'growth'}}" class="mirror-card">
+      <text class="section-title">成长记录</text>
+      <view wx:for="{{student.growth}}" wx:key="id" class="record-row">
+        <view class="item-header"><text class="item-title">{{item.title}}</text><text class="status">{{item.type}}</text></view>
+        <text class="meta">{{item.organization || ''}} · {{item.startDate || ''}} 至 {{item.endDate || ''}}</text>
+        <text class="body-copy">{{item.description || ''}}</text><text class="body-copy">{{item.result || ''}}</text>
+      </view>
+      <text wx:if="{{!student.growth.length}}" class="empty">暂无成长记录</text>
+    </view>
+    <view wx:elif="{{section === 'assessment'}}" class="mirror-card">
+      <text class="section-title">AI评估历史 · 仅阅读</text>
+      <view wx:for="{{reports}}" wx:key="id" class="record-row">
+        <view class="item-header"><text class="item-title">评估 {{item.date}}</text><text class="status">{{item.status}}</text></view>
+        <text class="body-copy">{{item.summary || '暂无可显示报告正文'}}</text>
+        <view wx:for="{{item.actions}}" wx:for-item="action" wx:key="index" class="task-row">建议：{{action}}</view>
+        <view wx:for="{{item.risks}}" wx:for-item="risk" wx:key="index" class="task-row">风险：{{risk}}</view>
+      </view>
+      <text wx:if="{{!reports.length}}" class="empty">暂无历史评估。只读模式没有创建、执行或扣次入口。</text>
+    </view>
+    <view wx:else class="mirror-card">
+      <text class="section-title">规划版本历史</text>
+      <view wx:for="{{student.revisions}}" wx:key="id" class="record-row">
+        <view class="item-header"><text class="item-title">{{item.title}}</text><text class="status">{{item.status}}</text></view>
+        <text class="meta">{{item.stageCode}} · {{item.type}}</text>
+      </view>
+      <text wx:if="{{!student.revisions.length}}" class="empty">暂无历史修订</text>
+    </view>
+  </block>
+</view>

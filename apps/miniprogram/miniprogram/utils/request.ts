@@ -1465,3 +1465,31 @@ export async function getMyGrowthProfileBootstrap(): Promise<GrowthProfileBootst
   )
   return result
 }
+
+/** These are read projections; they never change the operator's auth/session. */
+export type ReadOnlyStudentResponse = {
+  ok:true;readOnly:true;targetType:'student'
+  student:StudentSummary
+  profile:AcademicProfile | null
+  stages:ClassroomStage[]
+  classroom:ClassroomView
+  latestSchedule:{id:string;fileName:string;status:string;parsedJson:unknown} | null
+  revisions:Array<{id:string;title:string;stageCode:string;type:string;status:string}>
+  growth:Array<{id:string;type:string;title:string;organization:string|null;role:string|null;
+    startDate:string|null;endDate:string|null;description:string|null;result:string|null}>
+  assessments:Array<{id:string;status:string;createdAt:string;completedAt:string|null;outputJson:unknown}>
+}
+export type ReadOnlyTeacherResponse = {
+  ok:true;readOnly:true;targetType:'teacher'
+  teacher:{id:string;name:string;title:string|null;bio:string|null;status:string}
+  assigned:Array<{studentId:string;studentName:string;university:string|null;major:string|null;
+    relationship:string;stageCode:string|null}>
+}
+export function getReadOnlyStudent(id:string,stage?:string):Promise<ReadOnlyStudentResponse>{
+  return request<ReadOnlyStudentResponse>(
+    '/me/read-only/students/'+encodeURIComponent(id)+(stage?'?stage='+encodeURIComponent(stage):''),
+  )
+}
+export function getReadOnlyTeacher(id:string):Promise<ReadOnlyTeacherResponse>{
+  return request<ReadOnlyTeacherResponse>('/me/read-only/teachers/'+encodeURIComponent(id))
+}
