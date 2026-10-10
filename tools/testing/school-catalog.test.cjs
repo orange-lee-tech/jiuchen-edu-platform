@@ -96,3 +96,18 @@ test('school WXML does not nest mustache expressions inside other expressions', 
   assert.match(detail,/heroPhoto\.url/)
   assert.match(detail, /<text wx:else class="intro-text">已收录/)
 })
+
+test('all seven defense universities have precise campus POI source metadata', () => {
+  const names = ['北京航空航天大学','北京理工大学','哈尔滨工业大学',
+    '哈尔滨工程大学','西北工业大学','南京航空航天大学','南京理工大学']
+  const verified = school.split('const verifiedExtras: Record<string, Partial<School>> = {')[1] || ''
+  for (const name of names) {
+    const start = verified.indexOf('"' + name + '": {')
+    assert.ok(start>=0, name + ' missing campus metadata')
+    const next = verified.indexOf('\n  },',start)
+    const snippet = verified.slice(start,next)
+    assert.match(snippet,/"mapLocation"/,name)
+    assert.match(snippet,/"sourceUrl": "https:\/\/[^"]+"/,name)
+    assert.match(snippet,/"latitude": [-\d.]+, "longitude": [-\d.]+/,name)
+  }
+})
