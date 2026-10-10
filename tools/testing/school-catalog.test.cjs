@@ -66,3 +66,15 @@ test('catalog starter data budget remains small for 1.8 GiB shared ECS', () => {
   }
   assert.ok(sum < 256 * 1024, 'starter source exceeded 256KiB budget')
 })
+
+test('school WXML does not nest mustache expressions inside other expressions', () => {
+  // WXML does not support {{...{{...}}...}} even when inner braces occur in
+  // a quoted fallback string. TypeScript checks cannot detect this preview blocker.
+  for (const page of ['directory/directory.wxml', 'detail/detail.wxml']) {
+    const content = fs.readFileSync(path.join(mini, 'packages/schools', page), 'utf8')
+    assert.doesNotMatch(content, /\{\{(?:(?!\}\})[\s\S])*\{\{/, page + ': nested WXML expression')
+  }
+  const detail = fs.readFileSync(path.join(mini, 'packages/schools/detail/detail.wxml'), 'utf8')
+  assert.match(detail, /<text wx:if="\{\{hasIntro\}\}" class="intro-text">\{\{school\.intro\}\}<\/text>/)
+  assert.match(detail, /<text wx:else class="intro-text">已核验该校位于教育部公布的/)
+})
