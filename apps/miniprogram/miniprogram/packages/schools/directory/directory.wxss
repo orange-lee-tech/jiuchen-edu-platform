@@ -29,22 +29,32 @@ page{background:#eaf5f1;}
 .school-arrow{flex:none;color:#09887f;font-size:38rpx;}
 .catalog-source{line-height:1.55;margin:25rpx 5rpx;color:#587c75;font-size:21rpx;}
 .empty-state{display:flex;flex-direction:column;gap:13rpx;background:white;padding:33rpx 26rpx;font-size:25rpx;color:#3f6c63;line-height:1.5;}
-.filter-overlay{position:fixed;z-index:100;inset:0;background:rgba(6,28,28,.4);display:flex;align-items:flex-end;}
-.filter-panel{box-sizing:border-box;width:100%;max-height:78vh;border-radius:24rpx 24rpx 0 0;padding:24rpx;background:white;display:flex;flex-direction:column;}
-.filter-head{display:flex;align-items:center;justify-content:space-between;color:#143e39;font-size:31rpx;font-weight:800;margin-bottom:16rpx;}
-.filter-close{padding:9rpx 14rpx;color:#526862;font-size:28rpx;}
-.filter-scroll{flex:1;min-height:90rpx;max-height:57vh;}
-.filter-region-list{display:flex;flex-wrap:wrap;gap:10rpx;}
-.filter-region{box-sizing:border-box;flex:0 0 calc(33.333% - 7rpx);min-width:0;padding:17rpx 4rpx;border:1rpx solid #d3e8e3;border-radius:9rpx;color:#476c64;text-align:center;font-size:23rpx;}
-.filter-region.selected{background:#0da99a;color:#fff;border-color:#0da99a;font-weight:800;}
-.filter-actions{display:flex;gap:14rpx;padding:19rpx 0 8rpx;}
-.filter-actions button{flex:1;margin:0;border-radius:9rpx;background:#edf5f3;color:#385f5a;font-size:25rpx;}
-.filter-actions button.confirm{background:#0da99a;color:#fff;}
 
+.filter-overlay{position:fixed;inset:0;z-index:1000;background:rgba(11,35,40,.52);display:flex;align-items:flex-end;}
+.filter-panel{box-sizing:border-box;width:100%;height:88vh;max-height:88vh;min-height:0;display:flex;flex-direction:column;background:#fff;border-radius:19rpx 19rpx 0 0;padding:20rpx 24rpx calc(15rpx + env(safe-area-inset-bottom));}
+.filter-head{display:flex;align-items:center;justify-content:space-between;flex:none;font-size:31rpx;font-weight:800;color:#113f43;}
+.filter-close{padding:9rpx 15rpx;font-size:33rpx;color:#677d7b;}
+.filter-subtitle{flex:none;display:block;color:#60827e;font-size:20rpx;line-height:1.55;margin:8rpx 0 13rpx;}
+.filter-scroll{width:100%;height:55vh;flex:1 1 0;min-height:0;box-sizing:border-box;}
+.filter-section{padding:15rpx 0 24rpx;border-bottom:1rpx solid #e0ece8;}
+.filter-section-title{display:block;color:#184f50;font-size:24rpx;font-weight:800;margin-bottom:14rpx;}
+.filter-region-list{display:flex;flex-wrap:wrap;gap:10rpx;}
+.filter-chip{box-sizing:border-box;min-width:0;max-width:100%;padding:14rpx 17rpx;border:1rpx solid #d0e3dc;border-radius:7rpx;color:#466b67;font-size:21rpx;line-height:1.5;background:#fff;}
+.filter-chip.selected{background:#058b81;border-color:#058b81;color:white;font-weight:800;}
+.filter-hint{display:block;font-size:18rpx;line-height:1.55;color:#748985;margin-top:11rpx;}
+.filter-input{box-sizing:border-box;width:100%;height:72rpx;padding:0 15rpx;font-size:22rpx;border:1rpx solid #c9e0da;border-radius:7rpx;background:#f9fcfb;}
+.candidate-list{height:175rpx;margin-top:10rpx;border:1rpx solid #e4eeea;border-radius:7rpx;}
+.candidate-school{padding:12rpx 16rpx;border-bottom:1rpx solid #e7eee9;font-size:21rpx;color:#2c5754;}
+.candidate-school.selected,.selected-school{background:#def5ed;color:#087b6c;font-weight:750;}
+.selected-school{padding:12rpx;margin-top:8rpx;font-size:21rpx;}
+.filter-actions{flex:none;background:#fff;padding:12rpx 0 2rpx;border-top:1rpx solid #e0ece8;}
+.filter-preview{display:block;color:#276960;font-size:21rpx;margin-bottom:10rpx;font-weight:750;}
+.filter-action-buttons{display:flex;gap:12rpx;}
+.filter-action-buttons button{flex:1;margin:0;background:#eaf4f0;color:#41675f;border-radius:8rpx;font-size:24rpx;}
+.filter-action-buttons button.confirm{background:#049a8e;color:#fff;}
 .tier-scroll{width:100%;white-space:nowrap;margin-bottom:14rpx;}
 .tier-scroll .level-tabs{width:max-content;min-width:100%;gap:9rpx;display:flex;flex-wrap:nowrap;margin-bottom:0;}
 .tier-scroll .level-tab{flex:none;padding:14rpx 21rpx;font-size:23rpx;}
-
 .group-label{display:flex;align-items:center;justify-content:space-between;font-size:25rpx;font-weight:800;color:#104a4b;margin:10rpx 0 13rpx;gap:10rpx;}
 .group-label text{font-size:20rpx;color:#537d76;font-weight:500;}
 .group-scroll{width:100%;white-space:nowrap;margin-bottom:13rpx;}
@@ -52,3 +62,7 @@ page{background:#eaf5f1;}
 .group-tab{white-space:nowrap;font-size:22rpx;padding:13rpx 20rpx;background:#f5fbf9;border:1rpx solid #a9d9d2;border-radius:7rpx;color:#245e59;}
 .group-tab.selected{background:#164d64;color:#fff;border-color:#164d64;font-weight:800;}
 .school-tag.circle{background:#fef0da;color:#8b581e;}
+.school-tag.double{background:#d9ebff;color:#27518d;}
+.school-tag.dept{background:#eff0fa;color:#57518a;}
+.filter-summary{color:#09887e;white-space:nowrap;}
+.empty-reset{margin:9rpx 0 0;color:white;background:#0b9e94;font-size:22rpx;width:100%;line-height:65rpx;}
