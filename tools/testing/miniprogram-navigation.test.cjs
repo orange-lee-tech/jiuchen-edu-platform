@@ -754,3 +754,17 @@ test('administrator mine keeps two equally sized actions, and workbench uses ful
  assert.match(css,/\.admin-action\{[^}]*width:100%/)
  assert.match(css,/\.admin-action-main\{[^}]*flex:1 1 0/)
 })
+
+test('guest consultation stays available but cannot claim an authenticated staff role',()=>{
+ const h=harness();h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
+ let opened=null;h.wx.openCustomerServiceChat=options=>{opened=options}
+ const p=h.page('pages/profile/profile')
+ p.onCustomerServiceTap()
+ assert.equal(h.requests.length,0)
+ assert.match(h.modals[0].content,/未登录游客/)
+ assert.equal(opened,null)
+ h.modals[0].success({confirm:true})
+ assert.equal(opened.showMessageCard,true)
+ assert.match(opened.sendMessageTitle,/未登录游客/)
+ assert.doesNotMatch(opened.sendMessageTitle,/管理员|老师|学员/)
+})
