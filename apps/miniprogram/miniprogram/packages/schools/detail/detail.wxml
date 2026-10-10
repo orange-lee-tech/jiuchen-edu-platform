@@ -40,22 +40,27 @@
   </view>
 
   <view class="detail-card geo-card">
-    <view class="detail-heading"><text>学校位置</text><text class="detail-hint">{{school.mapLocation ? '真实地图 · 已核验入口' : '校区坐标待核实'}}</text></view>
-    <block wx:if="{{school.mapLocation}}">
-      <text class="map-name">{{school.mapLocation.campus}} · {{school.city}}</text>
-      <map class="campus-map" latitude="{{school.mapLocation.latitude}}" longitude="{{school.mapLocation.longitude}}" scale="15" markers="{{mapMarkers}}" show-location="{{false}}" />
-      <view class="geo-actions">
-        <button bindtap="onOpenMap" class="map-button">微信地图查看与导航 ›</button>
-        <text class="geo-source" data-key="map" bindtap="copyUrl">复制校区坐标来源 ›</text>
+    <view class="detail-heading"><text>校区地图</text><text class="detail-hint">地图参考 · 可切换校区</text></view>
+    <view class="campus-selector">
+      <view wx:for="{{campusOptions}}" wx:key="index" class="campus-option {{campusIndex === index ? 'selected' : ''}}"
+        data-index="{{index}}" bindtap="onSelectCampus">
+        <text class="campus-label">{{item.campus}}</text>
+        <text class="campus-quality">{{item.quality === 'verified' ? '已核验' : '参考点'}}</text>
       </view>
-    </block>
-    <view wx:else class="geo-pending">
-      <text>该学校尚无核实校区坐标；仍可复制下方官网或已核实地址。</text>
     </view>
-    <view wx:if="{{school.address}}" class="contact-line" bindtap="onCopyAddress"><view><text class="contact-key">公开校区地址</text><text class="contact-value">{{school.address}}</text></view><text class="contact-go">复制 ›</text></view>
-    <view wx:if="{{school.website}}" class="contact-line" data-key="website" bindtap="copyUrl"><view><text class="contact-key">学校官网</text><text class="contact-value">{{school.website}}</text></view><text class="contact-go">复制 ›</text></view>
+    <view wx:if="{{activeCampus}}" class="campus-location">
+      <text class="map-name">{{school.name}} · {{activeCampus.campus}}</text>
+      <map class="campus-map" latitude="{{activeCampus.latitude}}" longitude="{{activeCampus.longitude}}" scale="15"
+        markers="{{mapMarkers}}" show-location="{{false}}" />
+      <text class="campus-disclaimer">{{activeCampus.quality === 'verified' ? '此校区坐标经过单独来源核验。' : '历史公开地理数据参考点，可能与当前校区入口存在偏差；实际到校路线请再次核对。'}}</text>
+      <text wx:if="{{activeCampus.address}}" class="campus-address">{{activeCampus.address}}</text>
+      <view class="geo-actions">
+        <button class="map-button" bindtap="onOpenMap">打开微信地图 ›</button>
+        <text class="geo-source" data-key="map" bindtap="copyUrl">数据出处 ›</text>
+      </view>
+    </view>
+    <view wx:else class="geo-pending">该校区尚无可信坐标，不能使用城市中心冒充。</view>
   </view>
-
   <view class="detail-card project-card">
     <view class="detail-heading"><text>学院与招生项目</text><text class="detail-hint">按当年文件核实</text></view>
     <view wx:if="{{school.admissions}}" class="official-admissions">

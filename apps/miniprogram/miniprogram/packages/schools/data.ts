@@ -487,6 +487,26 @@ const verifiedExtras: Record<string, Partial<School>> = {
       "sourceUrl": "https://ditu.amap.com/place/B01AF0C7AM"
     }
   },
+  "复旦大学": {
+    "heroPhoto":{
+      "url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/201704_Gate_of_Fudan_University_Jiangwan_Campus.jpg/960px-201704_Gate_of_Fudan_University_Jiangwan_Campus.jpg",
+      "caption":"复旦大学江湾校区校门实景 · 2017年",
+      "author":"MNXANL",
+      "license":"CC BY-SA 4.0",
+      "licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl":"https://commons.wikimedia.org/wiki/File:201704_Gate_of_Fudan_University_Jiangwan_Campus.jpg"
+    }
+  },
+  "南开大学": {
+    "heroPhoto":{
+      "url":"https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Library_of_Nankai_University_New_Campus.jpg/960px-Library_of_Nankai_University_New_Campus.jpg",
+      "caption":"南开大学津南校区图书馆实景 · 2015年",
+      "author":"Amazingloong",
+      "license":"CC BY-SA 4.0",
+      "licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl":"https://commons.wikimedia.org/wiki/File:Library_of_Nankai_University_New_Campus.jpg"
+    }
+  },
   "南京大学": {
     "heroPhoto": {
       "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Nanjing_University%2C_Gulou_Campus.jpg/500px-Nanjing_University%2C_Gulou_Campus.jpg",

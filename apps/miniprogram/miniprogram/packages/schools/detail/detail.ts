@@ -2,6 +2,7 @@ import { getSchoolById, MOE_985_SOURCE, MOE_211_SOURCE, C9_SOURCE,
   DOUBLE_FIRST_CLASS_2022_SOURCE, SCHOOL_AFFILIATIONS, type School } from '../data'
 import { getMyAcademicProfile, getMyClassroom } from '../../../utils/request'
 import { getSavedAuthResult } from '../../../utils/auth'
+import { SCHOOL_CAMPUS_POINTS, type SchoolCampusPoint } from '../campus-points'
 import { openWechatCustomerService } from '../../../utils/customer-service'
 Page({
   data: {
@@ -13,6 +14,9 @@ Page({
     hasIntro: false,
     photoVisible: false,
     mapMarkers: [] as Array<{id:number;latitude:number;longitude:number;title:string}>,
+    campusOptions: [] as SchoolCampusPoint[],
+    activeCampus: null as SchoolCampusPoint | null,
+    campusIndex:0,
   },
   onLoad(options: Record<string,string|undefined>) {
     const school = getSchoolById(String(options.id || ''))
@@ -21,6 +25,17 @@ Page({
       return
     }
     wx.setNavigationBarTitle({ title: school.name })
+    const audited = school.mapLocation ? [{
+      campus:school.mapLocation.campus,
+      latitude:school.mapLocation.latitude,longitude:school.mapLocation.longitude,
+      sourceUrl:school.mapLocation.sourceUrl,address:school.address,quality:'verified' as const,
+    }] : []
+    const points = SCHOOL_CAMPUS_POINTS[school.name] || []
+    // An audited campus remains first. Show alternative locations as references,
+    // never replace a known campus with a city center or an uncertain POI.
+    const campuses = [...audited,...points.filter(p=>
+      !audited.some(v=>Math.abs(v.latitude-p.latitude)<.001&&Math.abs(v.longitude-p.longitude)<.001))]
+    const activeCampus=campuses[0] || null
     this.setData({
       school, heroLabel: school.name.slice(0,2),
       cityLabel: school.province === school.city ? school.city : school.province + ' · ' + school.city,
@@ -29,11 +44,12 @@ Page({
       circleLabel: school.groupTags[0]?.label || (school.isC9 ? 'C9' : '未分类'),
       hasIntro: Boolean(school.intro),
       photoVisible: Boolean(school.heroPhoto?.url),
-      mapMarkers: school.mapLocation ? [{
-        id:1,latitude:school.mapLocation.latitude,
-        longitude:school.mapLocation.longitude,
-        title:school.name + ' · ' + school.mapLocation.campus,
-      }] : [],
+      campusOptions:campuses,activeCampus,campusIndex:0,
+      mapMarkers:activeCampus?[{
+        id:1,latitude:activeCampus.latitude,
+        longitude:activeCampus.longitude,
+        title:school.name+' · '+activeCampus.campus,
+      }]:[],
     })
   },
   copyUrl(event: WechatMiniprogram.BaseEvent) {
@@ -52,7 +68,7 @@ Page({
       photoLicense: school?.heroPhoto?.licenseUrl || '',
       doubleFirst: DOUBLE_FIRST_CLASS_2022_SOURCE,
       affiliation: SCHOOL_AFFILIATIONS.find(item=>item.key===school?.affiliationKey)?.sourceUrl || '',
-      map: school?.mapLocation?.sourceUrl || '',
+      map: this.data.activeCampus?.sourceUrl || school?.mapLocation?.sourceUrl || '',
     }
     const url = urls[key]
     if (!url || !/^https:\/\//.test(url)) return
@@ -73,13 +89,23 @@ Page({
       fail:()=>wx.showToast({title:'图片预览未打开，请检查网络',icon:'none'}),
     })
   },
+  onSelectCampus(event:WechatMiniprogram.BaseEvent){
+    const index=Number(event.currentTarget.dataset.index)
+    const point=this.data.campusOptions[index],school=this.data.school
+    if(!point||!school)return
+    this.setData({
+      campusIndex:index,activeCampus:point,
+      mapMarkers:[{id:1,latitude:point.latitude,longitude:point.longitude,
+        title:school.name+' · '+point.campus}],
+    })
+  },
   onOpenMap() {
-    const school=this.data.school, location=school?.mapLocation
+    const school=this.data.school, location=this.data.activeCampus
     if(!school||!location)return
     wx.openLocation({
       latitude:location.latitude,longitude:location.longitude,
       name:school.name + ' · ' + location.campus,
-      address:school.address || school.city,
+      address:location.address || school.address || school.city,
       scale:16,
       fail:()=>wx.showToast({title:'地图暂不可用',icon:'none'}),
     })

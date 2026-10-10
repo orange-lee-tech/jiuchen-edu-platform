@@ -65,3 +65,13 @@ page{background:#eaf4f0;}
 .photo-credit text:first-child{width:100%;color:#527474;}
 .photo-actions{color:#087b70;font-weight:750;text-decoration:underline;margin-right:9rpx;font-size:20rpx;}
 .geo-pending{padding:11rpx 14rpx;}
+
+.campus-selector{display:flex;flex-wrap:wrap;gap:9rpx;margin-bottom:15rpx;}
+.campus-option{display:flex;align-items:center;gap:7rpx;max-width:100%;padding:11rpx 13rpx;border-radius:6rpx;border:1rpx solid #b5d9ce;background:#f0faf6;color:#13645e;font-size:21rpx;}
+.campus-option.selected{background:#066d69;color:#fff;border-color:#066d69;}
+.campus-label{font-weight:800;white-space:normal;}
+.campus-quality{flex:none;font-size:17rpx;opacity:.78;}
+.campus-location{width:100%;}
+.campus-disclaimer{display:block;background:#fff7e8;color:#815d22;border-left:4rpx solid #d9a93d;font-size:19rpx;line-height:1.6;margin:12rpx 0;padding:9rpx;}
+.campus-address{display:block;font-size:21rpx;color:#456b67;line-height:1.4;}
+.campus-map{height:330rpx;}
