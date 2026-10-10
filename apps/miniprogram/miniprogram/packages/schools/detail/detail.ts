@@ -61,6 +61,14 @@ Page({
   onPhotoError() {
     this.setData({photoVisible:false})
   },
+  onPreviewPhoto(){
+    const photo=this.data.school?.heroPhoto
+    if(!photo?.url || !this.data.photoVisible)return
+    wx.previewImage({
+      current:photo.url,urls:[photo.url],
+      fail:()=>wx.showToast({title:'图片预览未打开，请检查网络',icon:'none'}),
+    })
+  },
   onOpenMap() {
     const school=this.data.school, location=school?.mapLocation
     if(!school||!location)return
@@ -76,54 +84,18 @@ Page({
     const school=this.data.school
     if(!school)return
     wx.showActionSheet({
-      itemList:['仅咨询这所学校','携带我的姓名、年级与专业咨询'],
+      itemList:['携带目标学校咨询','携带目标学校 + 我的姓名、年级、专业'],
       success:result=>{
-        if(result.tapIndex===0) {
-          openWechatCustomerService()
-          return
-        }
-        if(result.tapIndex!==1)return
-        void this.prepareConsultSummary(school.name)
+        if(result.tapIndex===0) this.confirmConsultSummary(['【九辰院校咨询】','目标学校：'+school.name].join('\n'))
+        else if(result.tapIndex===1) void this.prepareConsultSummary(school.name)
       },
     })
   },
-  async prepareConsultSummary(targetSchool:string) {
-    const session=getSavedAuthResult()
-    if(!session?.user) {
-      wx.showModal({
-        title:'请先登录',
-        content:'要携带个人学业资料咨询，需要先登录。你也可以重新选择“仅咨询这所学校”。',
-        showCancel:false,
-      })
-      return
-    }
-    let profile
-    let studentName = ''
-    try {
-      const [academic, classroom] = await Promise.all([
-        getMyAcademicProfile(),
-        getMyClassroom().catch(() => null),
-      ])
-      profile = academic
-      studentName = classroom?.student.name?.trim() || ''
-    } catch {
-      wx.showModal({title:'学业资料暂不可用',
-        content:'没有读取成功，本次不会附加姓名、年级或专业。可重新选择“仅咨询这所学校”。',
-        showCancel:false})
-      return
-    }
-    // The data is shown for explicit review; wx.openCustomerServiceChat
-    // cannot prefill or auto-send a customer-service message.
-    const summary=[
-      '【九辰院校咨询】','目标学校：'+targetSchool,
-      '用户姓名（发送前核对）：'+(studentName || session.user.displayName?.trim() || '未填写'),
-      '就读年级：'+(profile.currentGrade?.trim()||'未填写'),
-      '用户专业：'+(profile.major?.trim()||'未填写'),
-    ].join('\n')
+  confirmConsultSummary(summary:string){
     wx.showModal({
-      title:'确认携带哪些资料',
-      content:summary+'\n\n确认后将复制上述信息并打开九辰客服。请在聊天框手动粘贴、检查并发送；不会自动传输。',
-      confirmText:'复制并咨询',
+      title:'发送给九辰客服',
+      content:summary+'\n\n确认后先复制这段信息，再打开微信客服。请在对话框粘贴并发送，微信不允许小程序替你自动发送。',
+      confirmText:'复制并打开',
       success:result=>{
         if(!result.confirm)return
         wx.setClipboardData({
@@ -133,6 +105,29 @@ Page({
         })
       },
     })
+  },
+  async prepareConsultSummary(targetSchool:string) {
+    const session=getSavedAuthResult()
+    let name=session?.user.displayName?.trim()||''
+    let grade='',major=''
+    // Admin/teacher accounts may have no student profile. This must never stall
+    // the consultation action: show only known values and let the user fill gaps.
+    if(session?.user.role==='student') {
+      const [profile,classroom]=await Promise.all([
+        getMyAcademicProfile().catch(()=>null),
+        getMyClassroom().catch(()=>null),
+      ])
+      name=classroom?.student.name?.trim()||name
+      grade=profile?.currentGrade?.trim()||''
+      major=profile?.major?.trim()||''
+    }
+    const summary=[
+      '【九辰院校咨询】','目标学校：'+targetSchool,
+      '用户姓名：'+(name||'（请填写）'),
+      '就读年级：'+(grade||'（请填写）'),
+      '用户专业：'+(major||'（请填写）'),
+    ].join('\n')
+    this.confirmConsultSummary(summary)
   },
   onCopyAddress() {
     const address = this.data.school?.address

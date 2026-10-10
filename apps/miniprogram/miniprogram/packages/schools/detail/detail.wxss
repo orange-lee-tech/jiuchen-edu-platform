@@ -55,3 +55,13 @@ page{background:#eaf4f0;}
 .consult-card{background:#f7fdf9;border-color:#9fd6c6;}
 .consult-desc{display:block;color:#4a7473;font-size:22rpx;line-height:1.65;margin-bottom:18rpx;}
 .consult-button{width:100%;margin:0;background:#0d8479;border:0;border-radius:7rpx;color:#fff;font-size:25rpx;font-weight:800;line-height:80rpx;}
+
+/* Distinguish real media and real map affordances from decorative gradients. */
+.hero-photo{z-index:0;}
+.hero-shade{pointer-events:none;background:linear-gradient(0deg,rgba(4,27,39,.78),rgba(4,35,44,.06) 80%);}
+.hero-content{pointer-events:none;}
+.hero-photo:active{opacity:.9;}
+.photo-credit{display:flex;flex-wrap:wrap;gap:9rpx;justify-content:flex-start;align-items:center;border-bottom:1rpx solid #cbdcd7;padding:10rpx 4rpx;font-size:18rpx;}
+.photo-credit text:first-child{width:100%;color:#527474;}
+.photo-actions{color:#087b70;font-weight:750;text-decoration:underline;margin-right:9rpx;font-size:20rpx;}
+.geo-pending{padding:11rpx 14rpx;}

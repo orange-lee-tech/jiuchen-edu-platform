@@ -1,6 +1,6 @@
 <view wx:if="{{school}}" class="detail-page">
   <view class="detail-hero {{photoVisible ? 'has-photo' : ''}}">
-    <image wx:if="{{photoVisible && school.heroPhoto}}" class="hero-photo" src="{{school.heroPhoto.url}}" mode="aspectFill" binderror="onPhotoError" />
+    <image wx:if="{{photoVisible && school.heroPhoto}}" class="hero-photo" src="{{school.heroPhoto.url}}" mode="aspectFill" binderror="onPhotoError" bindtap="onPreviewPhoto" />
     <view class="hero-shade"></view>
     <view class="hero-content">
       <view class="hero-top"><text>九辰 · 目标院校</text><text class="hero-mark">{{tierLabel}}</text></view>
@@ -8,10 +8,13 @@
       <view class="hero-tags"><text wx:if="{{school.isDoubleFirst}}">双一流 · 2022名单</text><text wx:if="{{school.affiliationLabel}}">{{school.affiliationLabel}}</text><text wx:if="{{school.isC9}}">C9 联盟</text><text wx:for="{{school.groupTags}}" wx:for-item="tag" wx:key="key">{{tag.label}}</text><text wx:if="{{!school.is211}}">非985/211</text></view>
     </view>
   </view>
-  <view wx:if="{{school.heroPhoto && photoVisible}}" class="photo-credit" data-key="photo" bindtap="copyUrl">
-    {{school.heroPhoto.caption}} · 图片裁切展示 · 作者 {{school.heroPhoto.author}} · {{school.heroPhoto.license}} · 复制图片出处 ›
+  <view wx:if="{{school.heroPhoto && photoVisible}}" class="photo-credit">
+    <text>{{school.heroPhoto.caption}} · {{school.heroPhoto.author}} · {{school.heroPhoto.license}}</text>
+    <text class="photo-actions" bindtap="onPreviewPhoto">预览大图 ›</text>
+    <text class="photo-actions" data-key="photo" bindtap="copyUrl">图片出处 ›</text>
+    <text class="photo-actions" data-key="photoLicense" bindtap="copyUrl">许可 ›</text>
   </view>
-  <view wx:elif="{{school.heroPhoto && !photoVisible}}" class="photo-credit">校园照片暂未加载；已自动恢复文字背景，图片可在授权网络环境中启用。</view>
+  <view wx:elif="{{school.heroPhoto && !photoVisible}}" class="photo-credit">校园照片暂未加载。请检查微信图片域名或网络，不能用渐变色假装已补齐照片。</view>
 
   <view class="detail-overview">
     <view class="fact-cell"><text class="fact-key">城市</text><text class="fact-value">{{school.city}}</text></view>
@@ -33,7 +36,7 @@
   </view>
 
   <view class="detail-card geo-card">
-    <view class="detail-heading"><text>学校位置</text><text class="detail-hint">腾讯地图 · 实际校区</text></view>
+    <view class="detail-heading"><text>学校位置</text><text class="detail-hint">{{school.mapLocation ? '真实地图 · 已核验入口' : '校区坐标待核实'}}</text></view>
     <block wx:if="{{school.mapLocation}}">
       <text class="map-name">{{school.mapLocation.campus}} · {{school.city}}</text>
       <map class="campus-map" latitude="{{school.mapLocation.latitude}}" longitude="{{school.mapLocation.longitude}}" scale="15" markers="{{mapMarkers}}" show-location="{{false}}" />
@@ -43,8 +46,7 @@
       </view>
     </block>
     <view wx:else class="geo-pending">
-      <text>校区坐标尚待实地地图数据核验</text>
-      <text>暂不显示城市中心点或编造校园定位。后续录入经过核对的具体校区坐标后自动开放原生地图。</text>
+      <text>该学校尚无核实校区坐标；仍可复制下方官网或已核实地址。</text>
     </view>
     <view wx:if="{{school.address}}" class="contact-line" bindtap="onCopyAddress"><view><text class="contact-key">公开校区地址</text><text class="contact-value">{{school.address}}</text></view><text class="contact-go">复制 ›</text></view>
     <view wx:if="{{school.website}}" class="contact-line" data-key="website" bindtap="copyUrl"><view><text class="contact-key">学校官网</text><text class="contact-value">{{school.website}}</text></view><text class="contact-go">复制 ›</text></view>
@@ -65,7 +67,7 @@
   </view>
   <view class="detail-card consult-card">
     <view class="detail-heading"><text>咨询九辰老师</text><text class="detail-hint">一对一需求沟通</text></view>
-    <text class="consult-desc">可只咨询这所学校，也可在核对后携带姓名、年级、专业，帮助老师更快定位问题。资料不会自动发送。</text>
-    <button class="consult-button" bindtap="onConsultSchool">咨询 {{school.name}} ›</button>
+    <text class="consult-desc">两种方式都会附上目标学校。可选择再携带姓名、年级、专业；缺失信息可在粘贴后补全。微信客服需要用户自行粘贴、发送。</text>
+    <button class="consult-button" bindtap="onConsultSchool">带上 {{school.name}} 信息咨询 ›</button>
   </view>
 </view>

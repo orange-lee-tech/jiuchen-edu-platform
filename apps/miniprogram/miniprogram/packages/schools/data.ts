@@ -544,7 +544,21 @@ const verifiedExtras: Record<string, Partial<School>> = {
     "introSource": "https://www.pku.edu.cn/about.html",
     "address": "北京市海淀区颐和园路5号",
     "addressSource": "https://www.pku.edu.cn/",
-    "founded": "1898"
+    "founded": "1898",
+    "heroPhoto": {
+      "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/dc/Weiming_Lake_of_Peking_University_in_spring_03.jpg/960px-Weiming_Lake_of_Peking_University_in_spring_03.jpg",
+      "caption": "北京大学未名湖实景 · 2024年4月",
+      "author": "星外之神",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Weiming_Lake_of_Peking_University_in_spring_03.jpg"
+    },
+    "mapLocation": {
+      "campus": "燕园校区 · 东侧门",
+      "latitude": 39.993070,
+      "longitude": 116.315282,
+      "sourceUrl": "https://ditu.amap.com/place/B0FFFDC2VL"
+    }
   },
   "中南大学": {
     "website": "https://www.csu.edu.cn/",
