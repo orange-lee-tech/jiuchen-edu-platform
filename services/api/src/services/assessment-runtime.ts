@@ -20,6 +20,7 @@ import {
   CaseKnowledgeSource,
   ProductKnowledgeSource,
 } from './assessment-knowledge.js'
+import { HistoricalMoeSchoolSource } from './school-directory-knowledge.js'
 
 export type AssessmentKnowledgeContext = {
   version: string
@@ -249,6 +250,7 @@ export function createAssessmentRuntimeFromEnv(env: AppEnv): AssessmentRuntime {
         topK: 10,
       }),
       new ProductKnowledgeSource(3),
+      new HistoricalMoeSchoolSource(),
     ]),
     provider: new JsonAssessmentModelProvider(
       createAssessmentAIProvider(env),
