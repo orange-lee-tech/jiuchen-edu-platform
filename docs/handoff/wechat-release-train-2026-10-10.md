@@ -4,7 +4,7 @@ STATE: frozen CODE snapshot; NOT real-device acceptance or public release.
 
 ## Paired candidate SHAs
 - WeChat: this branch starts from p1/foundation 18bfab53ba5c11372355a768ad56591fa0035095 with only this docs-only release note added.
-- API: p1/rc-api-ea8c-readonly-date-2026-10-10 at 28651ed8b013974c11f0bfd53710543738acd42b, based on active production ea8c971008a9efd042ec43fdc62398e136262259, preserving five production fixes. API RC CI PASS at https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38038569787. This SHA includes a nested classroom.student userId leak fix and new route/date regression tests.
+- API: p1/rc-api-ea8c-readonly-date-2026-10-10 at c2c1782d73d419e8176a152d2a1250e2f9054eaa, based on active production ea8c971008a9efd042ec43fdc62398e136262259, preserving five production fixes. API RC CI PASS at https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38038569787. This SHA includes the nested classroom.student userId privacy fix, new route/date regression tests, and graceful missing-growth_records handling; the current CI must be independently checked before any release.
 - Actual ECS remains on ea8c971008a9efd042ec43fdc62398e136262259. No ECS rollout has been executed.
 - Train label: 2026.10.10-rc1 (not official WeChat version number).
 
