@@ -23,6 +23,18 @@ function isMondayDate(value: string): boolean {
     date.getUTCDate() === day && date.getUTCDay() === 1
 }
 
+function mondayDatesInMonth(year: number, month: number) {
+  const first = new Date(Date.UTC(year, month, 1))
+  const firstMonday = 1 + (8 - first.getUTCDay()) % 7
+  const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  const options: Array<{date: string; label: string}> = []
+  for (let day = firstMonday; day <= days; day += 7) {
+    const date = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(day).padStart(2, '0')
+    options.push({date,label: String(month + 1).padStart(2,'0') + '月' + String(day).padStart(2,'0') + '日 · 周一'})
+  }
+  return options
+}
+
 const MAX_SPREADSHEET_BYTES = 5 * 1024 * 1024
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 const DAY_OPTIONS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
@@ -82,6 +94,9 @@ Page({
     visibleCourses: [] as ParsedScheduleCourse[],
     viewMode: 'current' as 'current' | 'all' | 'manage',
     termStartDate: '',
+    mondayPickerOpen: false,
+    mondayMonth: '',
+    mondayOptions: [] as Array<{date:string;label:string}>,
     currentWeek: 0,
     currentWeekLabel: '未设置学期第一周',
     dayOptions: DAY_OPTIONS,
@@ -377,6 +392,41 @@ Page({
     } finally {
       this.setData({ saving: false })
     }
+  },
+
+  setMondayMonth(date: Date) {
+    const year = date.getUTCFullYear(), month = date.getUTCMonth()
+    this.setData({
+      mondayMonth: String(year) + '年' + String(month + 1) + '月',
+      mondayOptions: mondayDatesInMonth(year, month),
+    })
+  },
+
+  onOpenMondayPicker() {
+    if (this.data.saving || !this.data.schedule) return
+    const baseline = this.data.termStartDate
+      ? new Date(this.data.termStartDate + 'T00:00:00Z')
+      : new Date()
+    // Use user's local calendar month when there is no saved date.
+    const year = this.data.termStartDate ? baseline.getUTCFullYear() : baseline.getFullYear()
+    const month = this.data.termStartDate ? baseline.getUTCMonth() : baseline.getMonth()
+    this.setMondayMonth(new Date(Date.UTC(year, month, 1)))
+    this.setData({ mondayPickerOpen: true })
+  },
+  onChangeMondayMonth(event: WechatMiniprogram.BaseEvent) {
+    const delta = Number(event.currentTarget.dataset.delta)
+    if (delta !== 1 && delta !== -1) return
+    const now = this.data.mondayOptions[0]?.date
+    if (!now) return
+    const target = new Date(now + 'T00:00:00Z')
+    this.setMondayMonth(new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + delta, 1)))
+  },
+  onCloseMondayPicker() { this.setData({ mondayPickerOpen: false }) },
+  onPickMonday(event: WechatMiniprogram.BaseEvent) {
+    const date = String(event.currentTarget.dataset.date || '')
+    if (!this.data.mondayOptions.some(option => option.date === date)) return
+    this.setData({ mondayPickerOpen: false })
+    this.onTermStartChange({ detail: { value: date } } as WechatMiniprogram.CustomEvent<{ value: string }>)
   },
 
   onTermStartChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {

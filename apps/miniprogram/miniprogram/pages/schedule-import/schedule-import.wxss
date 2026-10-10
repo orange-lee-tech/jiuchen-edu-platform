@@ -386,3 +386,15 @@
 .term-confirm{background:#08a096;color:white;}
 
 .schedule-save-error{padding:20rpx 23rpx;margin:14rpx 0;background:#fff4ef;border-left:5rpx solid #bf4b34;border-radius:9rpx;color:#923b2d;font-size:23rpx;line-height:1.55;overflow-wrap:anywhere;}
+
+.monday-mask{position:fixed;inset:0;z-index:270;background:rgba(9,30,39,.57);display:flex;align-items:flex-end;}
+.monday-panel{box-sizing:border-box;width:100%;padding:29rpx 27rpx calc(38rpx + env(safe-area-inset-bottom));background:#fff;border-radius:18rpx 18rpx 0 0;border-top:6rpx solid #0e9588;}
+.monday-heading{display:flex;justify-content:space-between;align-items:center;color:#123b4b;font-size:32rpx;font-weight:800;}
+.monday-close{font-size:42rpx;padding:0 10rpx;color:#65767f;}
+.monday-hint{display:block;margin:13rpx 0 23rpx;color:#557278;font-size:22rpx;line-height:1.55;}
+.monday-month-nav{display:flex;align-items:center;justify-content:space-between;gap:14rpx;margin-bottom:15rpx;}
+.monday-month-nav text{font-size:26rpx;color:#153d4d;font-weight:800;}
+.monday-month-nav button{margin:0;background:#eaf4f1;color:#176f65;border-radius:6rpx;font-size:21rpx;line-height:60rpx;padding:0 13rpx;}
+.monday-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12rpx;}
+.monday-option{margin:0;width:100%;border-radius:6rpx;background:#f4faf8;color:#235768;border:1rpx solid #b9d8cf;font-size:24rpx;line-height:76rpx;padding:0 8rpx;}
+.monday-option.current{background:#106b65;color:#fff;}

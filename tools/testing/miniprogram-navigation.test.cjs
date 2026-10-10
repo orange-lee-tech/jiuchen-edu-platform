@@ -478,3 +478,16 @@ test('old backend missing date-only route falls back once to the existing owned 
   assert.equal(page.data.termStartDate,'2026-09-07')
   assert.equal(page.data.saveError,'')
 })
+
+test('Monday-only selector exposes exactly the Mondays of a selected month', () => {
+  const h=harness()
+  const page=h.page('pages/schedule-import/schedule-import')
+  page.setData({schedule:{sourceType:'image',stageCode:'senior-fall',courses:[],warnings:[]},termStartDate:'2026-09-07'})
+  page.onOpenMondayPicker()
+  assert.equal(page.data.mondayPickerOpen,true)
+  assert.deepEqual(Array.from(page.data.mondayOptions,o=>o.date),['2026-09-07','2026-09-14','2026-09-21','2026-09-28'])
+  assert.equal(page.data.mondayOptions.some(o=>o.date==='2026-09-06'),false)
+  page.onChangeMondayMonth({currentTarget:{dataset:{delta:1}}})
+  assert.equal(page.data.mondayMonth,'2026年10月')
+  assert.equal(page.data.mondayOptions.length,4)
+})

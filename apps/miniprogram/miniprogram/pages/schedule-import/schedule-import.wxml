@@ -18,9 +18,7 @@
       <text class="term-title">{{currentWeekLabel}}</text>
       <text class="term-desc">本周筛选依据课程的“周次”字段；未写周次的课程默认每周显示。</text>
     </view>
-    <picker mode="date" value="{{termStartDate}}" disabled="{{saving}}" bindchange="onTermStartChange">
-      <view class="date-picker">{{termStartDate ? '第一周周一：' + termStartDate : '设置第一周周一'}} ›</view>
-    </picker>
+    <view class="date-picker" bindtap="onOpenMondayPicker">{{termStartDate ? '第一周周一：' + termStartDate : '选择第一周周一'}} ›</view>
   </view>
 
   <view wx:if="{{viewMode === 'manage'}}" class="import-actions">
@@ -87,6 +85,24 @@
 
   <view wx:else-if="{{!parsing}}" class="empty surface">
     <text>还没有可用课表。切换到“导入 / 编辑”上传 Excel、CSV 或课表图片。</text>
+  </view>
+
+  <view wx:if="{{mondayPickerOpen}}" class="monday-mask">
+    <view class="monday-panel">
+      <view class="monday-heading">
+        <text>选择学期第一周周一</text>
+        <text class="monday-close" bindtap="onCloseMondayPicker">×</text>
+      </view>
+      <text class="monday-hint">只展示周一，杜绝误选周二至周日。请根据学校教务校历确认开学周次。</text>
+      <view class="monday-month-nav">
+        <button data-delta="-1" bindtap="onChangeMondayMonth">‹ 上个月</button>
+        <text>{{mondayMonth}}</text>
+        <button data-delta="1" bindtap="onChangeMondayMonth">下个月 ›</button>
+      </view>
+      <view class="monday-list">
+        <button wx:for="{{mondayOptions}}" wx:key="date" data-date="{{item.date}}" class="monday-option {{termStartDate === item.date ? 'current' : ''}}" bindtap="onPickMonday">{{item.label}}</button>
+      </view>
+    </view>
   </view>
 
   <view wx:if="{{showStagePicker}}" class="term-overlay">
