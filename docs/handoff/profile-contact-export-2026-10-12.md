@@ -6,7 +6,7 @@ Branch: `p1/foundation`. Baseline: `ad64bdc2b5927db74405604ac757388fafb74479`.
 
 - API typecheck/build: PASS. API tests: 175/175 PASS, including authenticated Profile GET → PUT → GET, nullable enrollmentYear, invalid values and unchanged role checks.
 - Mini-program typecheck: PASS. Navigation/catalog/export tests: 78/78 PASS (67 existing/updated regression tests + 11 report tests).
-- Remote CI: pending publication/check of this code commit; consult the actual latest Actions run. Local tsx CLI cannot open its Unix IPC socket in this environment; equivalent test execution used `node --import tsx --test 'src/**/*.test.ts'`.
+- Remote code CI: PASS for `9ca6a97b0f0e05983df5ef186d2bb37e5fdd82b6` — Push run 38245865250 and PR run 38245869373. This subsequent documentation closeout records those completed runs; consult Actions for the documentation commit itself. Local tsx CLI cannot open its Unix IPC socket in this environment; equivalent test execution used `node --import tsx --test 'src/**/*.test.ts'`.
 - Renderer QA: synthetic data, actual production layout/draw/PNG modules run through a native Canvas adapter. Summary 750×1028; long report 750×6910; decoded PNG inspected at top/middle/bottom. This is NOT WeChat device evidence.
 - Production release/schema/backup/Profile HTTP acceptance: NOT RUN. Public `/health/live` returned ok=true, release=0.3.0-experience; `/health` returned database=ok. These public checks neither identify the actual active Git SHA nor verify enrollment_year/Profile. No SSH/DB access exists in this session. Earlier reports of b150d2c5 and the missing enrollment_year are historical evidence, not a fresh server audit.
 - WeChat Developer Tools, upload, device and photo-album acceptance: NOT RUN.
