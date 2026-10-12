@@ -31,6 +31,20 @@ test('truncated scan reports its real coverage and API errors never return an em
   await assert.rejects(scanOfficialAccountPosts(env),/official_account_publish_48001/)
  }finally{globalThis.fetch=before}
 })
+test('known source total cannot turn an unexpected short page into a complete scan',async()=>{
+ const before=globalThis.fetch
+ globalThis.fetch=async(url,options)=>{
+  if(String(url).includes('/token'))return new Response(JSON.stringify({access_token:'synthetic-short-page'}))
+  const offset=JSON.parse(String(options?.body)).offset
+  return new Response(JSON.stringify({total_count:40,item:offset===0?
+   Array.from({length:20},(_,i)=>({article_id:'g'+i,content:{news_item:[{title:'合成'+i}]}})):
+   [{article_id:'g20',content:{news_item:[{title:'合成20'}]}}]}))
+ }
+ try{
+  const scan=await scanOfficialAccountPosts({WECHAT_OA_APP_ID:'synthetic-known-total',WECHAT_OA_APP_SECRET:'synthetic'} as AppEnv)
+  assert.equal(scan.groupsFetched,21);assert.equal(scan.totalGroups,40);assert.equal(scan.truncated,true)
+ }finally{globalThis.fetch=before}
+})
 test('legacy update timestamps remain visible as source updates, never publication dates',()=>{
  const time=new Date('2026-09-25T01:00:02Z')
  const old=newsTimeView({source:'wechat_official',publishedAt:time})

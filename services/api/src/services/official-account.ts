@@ -166,7 +166,14 @@ export async function scanOfficialAccountPosts(env: AppEnv, maxGroups=200): Prom
       })
     }
     groupsFetched+=payload.item.length
-    if(payload.item.length<count || totalGroups!==null&&groupsFetched>=totalGroups){finished=true;break}
+    if(totalGroups!==null&&groupsFetched>=totalGroups){finished=true;break}
+    // A short page is terminal only when the source did not provide a total.
+    // With a larger advertised total it is an incomplete scan, never a
+    // successful empty/short result that may retire or hide existing posts.
+    if(payload.item.length<count){
+      if(totalGroups===null)finished=true
+      break
+    }
   }
   const latest=(values:Array<string|null>)=>values.filter((v):v is string=>Boolean(v)).sort().at(-1)??null
   return {posts,checkedAt:new Date().toISOString(),groupsFetched,totalGroups,maxGroups,truncated:!finished,
