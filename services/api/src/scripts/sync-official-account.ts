@@ -13,10 +13,10 @@ if (!database.configured) {
 try {
   const result = await syncOfficialAccountPosts(database, env)
   console.log(
-    `${result.failed ? 'PARTIAL' : 'CHECKED'} official account sync: total=${result.total}, created=${result.created}, updated=${result.updated}, unchanged=${result.unchanged}, failed=${result.failed}, truncated=${result.truncated}`,
+    `${result.failed || result.truncated ? 'PARTIAL' : 'CHECKED'} official account sync: total=${result.total}, created=${result.created}, updated=${result.updated}, unchanged=${result.unchanged}, failed=${result.failed}, truncated=${result.truncated}`,
   )
 
-  if(result.failed)process.exitCode=2
+  if(result.failed||result.truncated)process.exitCode=2
 } finally {
   await database.pool.end()
 }

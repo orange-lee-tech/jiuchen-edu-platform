@@ -3,7 +3,7 @@ import type mysql from 'mysql2/promise'
 import { planNewsWindow, shouldCreateRetirementEvent, type DisplayCandidate, type DisplayState } from './news-lifecycle.js'
 
 const toSql = (value: string) => value.slice(0, 19).replace('T', ' ')
-const fromSql = (value: unknown) => value instanceof Date ? value.toISOString() : typeof value === 'string' ? new Date(value.replace(' ', 'T') + (value.endsWith('Z') ? '' : 'Z')).toISOString() : null
+const fromSql = (value: unknown) => typeof value === 'string' ? new Date(value).toISOString() : null
 
 /** One MySQL advisory lock covers timer, manual sync and tag-triggered reconcile.
  * It is connection scoped and releases even when a request fails.
@@ -33,7 +33,10 @@ export async function reconcileNewsWindow(connection: mysql.PoolConnection, now 
       JSON_LENGTH(tags_json) AS tagCount,
       COALESCE(JSON_UNQUOTE(JSON_EXTRACT(content_json,'$.sourceUpdatedAt')), DATE_FORMAT(published_at,'%Y-%m-%dT%H:%i:%sZ')) AS sortTime
       FROM news_posts WHERE source='wechat_official' ORDER BY id`)
-    const [previous] = await connection.query<mysql.RowDataPacket[]>(`SELECT post_id AS postId,phase,buffered_at AS bufferedAt,retire_at AS retireAt FROM news_display_states FOR UPDATE`)
+    const [previous] = await connection.query<mysql.RowDataPacket[]>(`SELECT post_id AS postId,phase,
+      DATE_FORMAT(buffered_at,'%Y-%m-%dT%H:%i:%sZ') AS bufferedAt,
+      DATE_FORMAT(retire_at,'%Y-%m-%dT%H:%i:%sZ') AS retireAt
+      FROM news_display_states FOR UPDATE`)
     const candidates: DisplayCandidate[] = posts.map(row => ({ id:String(row.id),sortTime:row.sortTime?String(row.sortTime):null,approved:Number(row.tagCount)>0,hidden:row.status!=='active' }))
     const existing: DisplayState[] = previous.map(row => ({postId:String(row.postId),phase:row.phase,bufferedAt:fromSql(row.bufferedAt),retireAt:fromSql(row.retireAt)}))
     const plan=planNewsWindow(candidates,existing,now,true)

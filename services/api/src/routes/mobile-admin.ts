@@ -570,7 +570,7 @@ export function registerMobileAdminRoutes(
       const result = await syncOfficialAccountPosts(configuredDatabase, env)
       return {
         ok: true,
-        status:result.failed?'partial':'checked',
+        status:result.failed||result.truncated?'partial':'checked',
         synced: result.total,
         created: result.created,
         updated: result.updated,

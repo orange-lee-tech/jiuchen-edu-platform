@@ -505,7 +505,7 @@ Page({
           (result.truncated?'（本次范围有限，不能保证覆盖全部文章）':''),
         ...result.errors.map(error=>error.reason)].join('\n')
       this.setData({newsSyncSummary:summary})
-      wx.showToast({ title:result.failed?'部分文章同步失败':result.created===0?'已检查，暂无新文章':'同步检查完成',icon:result.failed?'none':'success' })
+      wx.showToast({ title:result.failed||result.truncated?'检查范围未完整':result.created===0?'已检查，暂无新文章':'同步检查完成',icon:result.failed||result.truncated?'none':'success' })
       this.setData(newsReviewState(await getAdminNews(),this.data.newsUnclassifiedFirst))
       if(this.data.newsV2Enabled)void this.loadRetirementTasks()
     } catch (error) {
