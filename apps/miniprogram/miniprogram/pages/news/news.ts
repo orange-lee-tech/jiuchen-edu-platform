@@ -1,6 +1,7 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import { INITIAL_SHELL, observeSlot, openPage, shellView } from '../../utils/navigation'
-import { getNewsPosts, type NewsPost } from '../../utils/request'
+import { getNewsListing, getMyNewsFavorites, type NewsFavorite, type NewsPost } from '../../utils/request'
+import { openOfficialArticle } from '../../utils/official-article'
 
 import {newsPublicationLabel} from '../../utils/news-date'
 
@@ -80,6 +81,10 @@ Page({
     allArticles: [] as NewsCard[],
     pendingClassificationCount: 0,
     pendingClassificationRole: 'none' as 'none' | 'admin' | 'reviewer',
+    retiring: [] as Array<NewsCard & { retireAt: string }>,
+    favorites: [] as NewsFavorite[],
+    newsV2Enabled: false,
+    favoritesError: '',
   },
 
   stopShell: undefined as (() => void) | undefined,
@@ -107,8 +112,24 @@ Page({
       const auth = getSavedAuthResult()
       const role = auth?.user.role ?? 'user'
       const canSeeUnclassified = ['teacher', 'staff', 'admin'].includes(role)
-      const posts = await getNewsPosts()
+      const listing = await getNewsListing()
+      const posts = listing.posts
       if (generation !== this.viewGeneration) return
+      this.setData({
+        newsV2Enabled: listing.v2,
+        retiring: listing.retiring.map(post => ({ ...toCard(post), retireAt: post.retireAt || '' })),
+        favorites: [], favoritesError: '',
+      })
+      if (listing.v2) {
+        try {
+          const favorites = await getMyNewsFavorites()
+          if (generation !== this.viewGeneration) return
+          this.setData({ favorites })
+        } catch {
+          if (generation !== this.viewGeneration) return
+          this.setData({ favoritesError: '收藏暂时无法读取，请刷新重试。' })
+        }
+      }
       if (posts.length === 0) {
         this.setData({
           categories: ['全部'],
@@ -169,6 +190,7 @@ Page({
         articles: [],
         pendingClassificationCount: 0,
         pendingClassificationRole: 'none',
+        retiring: [], favorites: [], newsV2Enabled: false,
       })
     } finally {
       if (generation === this.viewGeneration) this.setData({ loading: false })
@@ -239,5 +261,9 @@ Page({
     wx.navigateTo({
       url: `/pages/news-detail/news-detail?id=${encodeURIComponent(id)}`,
     })
+  },
+  onFavoriteTap(event: WechatMiniprogram.BaseEvent) {
+    const post = this.data.favorites.find(item => item.postId === event.currentTarget.dataset.id)
+    if (post) openOfficialArticle(post.articleUrl)
   },
 })

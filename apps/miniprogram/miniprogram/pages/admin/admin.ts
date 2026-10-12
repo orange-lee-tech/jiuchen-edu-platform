@@ -14,6 +14,10 @@ import {
   getAdminAnalytics,
   getAdminInternalIds,
   getAdminNews,
+  getAdminNewsData,
+  getNewsRetirements,
+  readNewsRetirement,
+  updateNewsRetirementTask,
   getAdminStudents,
   getAdminTeachers,
   getAdminUsers,
@@ -25,6 +29,8 @@ import {
   type AdminAnalyticsPeriod,
   type AdminInternalId,
   type AdminNewsPost,
+  type NewsRetirementTask,
+  type NewsRetirementBatch,
   type AdminTeacher,
   type AdminUser,
   type StudentSummary,
@@ -92,6 +98,11 @@ Page({
     posts: [] as Array<AdminNewsPost&{dateLabel:string}>,
     newsUnclassifiedFirst:false,
     newsSyncSummary:'',
+    newsSyncHistory:'',
+    newsV2Enabled:false,
+    retirementTasks:[] as Array<NewsRetirementTask&{retireLabel:string;sourceLabel:string}>,
+    unreadRetirementBatches:[] as NewsRetirementBatch[],
+    retirementError:'',
     pendingClassificationCount: 0,
     idTypes: ID_TYPES,
     newIdTypeIndex: 0,
@@ -150,13 +161,13 @@ Page({
     }
     try {
       this.setData({ loading: true, loadError: '' })
-      const [internalIds, users, students, teachers, assignments, posts] = await Promise.all([
+      const [internalIds, users, students, teachers, assignments, newsData] = await Promise.all([
         getAdminInternalIds(),
         getAdminUsers(),
         getAdminStudents(),
         getAdminTeachers(),
         getAdminAssignments(),
-        getAdminNews(),
+        getAdminNewsData(),
       ])
 
       const availableIds = internalIds.filter((item) => item.status === 'available')
@@ -168,7 +179,13 @@ Page({
         students,
         teachers,
         assignments,
-        ...newsReviewState(posts,this.data.newsUnclassifiedFirst),
+        ...newsReviewState(newsData.posts,this.data.newsUnclassifiedFirst),
+        newsV2Enabled:newsData.newsV2Enabled,
+        newsSyncHistory:newsData.syncHistory?[`最近成功检查：${newsData.syncHistory.lastCheckedAt?beijingNewsTime(newsData.syncHistory.lastCheckedAt,true):'尚无成功记录'}`,
+          `最近失败：${beijingNewsTime(newsData.syncHistory.lastFailedAt,true)}`,
+          `最新来源更新时间：${beijingNewsTime(newsData.syncHistory.latestSourceUpdatedAt,true)}（非发表时间）`,
+          newsData.syncHistory.lastCheckedAt?`成功检查 ${newsData.syncHistory.fetched} 篇；新增 ${newsData.syncHistory.created}，更新 ${newsData.syncHistory.updated}`:'',
+          newsData.syncHistory.lastError?`最近失败原因：${newsData.syncHistory.lastError}（${newsData.syncHistory.failed} 篇）`:''].filter(Boolean).join('\n'):'',
         availableIds,
         guestUsers,
         bindIdIndex: Math.min(this.data.bindIdIndex, Math.max(0, availableIds.length - 1)),
@@ -177,6 +194,7 @@ Page({
         teacherIndex: Math.min(this.data.teacherIndex, Math.max(0, teachers.length - 1)),
       })
       this.refreshLists()
+      if(newsData.newsV2Enabled)void this.loadRetirementTasks()
     } catch (error) {
       const message = friendlyRequestError(error, '管理数据读取失败，请重试')
       this.setData({ loadError: message })
@@ -265,6 +283,7 @@ Page({
     this.setData({ section })
     if (section === 'admin-analytics') void this.loadAnalytics()
     else if (section === 'admin-readonly') void this.loadReadOnlyRoster()
+    else if(section==='admin-news'&&this.data.newsV2Enabled)void this.loadRetirementTasks()
   },
 
   onIdTypeChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -488,6 +507,7 @@ Page({
       this.setData({newsSyncSummary:summary})
       wx.showToast({ title:result.failed?'部分文章同步失败':result.created===0?'已检查，暂无新文章':'同步检查完成',icon:result.failed?'none':'success' })
       this.setData(newsReviewState(await getAdminNews(),this.data.newsUnclassifiedFirst))
+      if(this.data.newsV2Enabled)void this.loadRetirementTasks()
     } catch (error) {
       const message = error instanceof Error ? error.message : ''
       const title = message.includes('official_account_not_configured')
@@ -498,5 +518,34 @@ Page({
     } finally {
       this.setData({ actionLoading: false })
     }
+  },
+  async loadRetirementTasks(){
+    try{
+      const result=await getNewsRetirements()
+      this.setData({retirementTasks:result.tasks.map(task=>({...task,retireLabel:beijingNewsTime(task.retireAt,true),sourceLabel:beijingNewsTime(task.sourceTime,false)})),
+        unreadRetirementBatches:result.unreadBatches,retirementError:''})
+      if(result.unreadBatches.length){
+        const batch=result.unreadBatches[result.unreadBatches.length-1]
+        const taskTitles=batch.affected.map(row=>result.tasks.find(task=>task.batchId===batch.id&&task.retireAt===row.retireAt)?.title||'文章').join('、')
+        wx.showModal({title:'资讯退役提醒',content:`本次新增 ${batch.entered.length} 篇资讯。${batch.affected.length} 篇即将退出展示：${taskTitles}。详情见资讯管理。`,showCancel:false,
+          success:async reply=>{if(!reply.confirm)return;try{await readNewsRetirement(batch.id);void this.loadRetirementTasks()}catch{this.setData({retirementError:'提醒已读状态保存失败，请重试'})}}})
+      }
+    }catch(error){this.setData({retirementError:friendlyRequestError(error,'退役任务读取失败')})}
+  },
+  onRetirementTask(event:WechatMiniprogram.BaseEvent){
+    const task=this.data.retirementTasks.find(row=>row.taskId===event.currentTarget.dataset.id)
+    if(!task)return
+    const states:NewsRetirementTask['state'][]=['todo','acknowledged','doing','feedback']
+    wx.showActionSheet({itemList:['待办','知晓','在办','反馈','填写备注'],success:reply=>{
+      if(reply.tapIndex===4){
+        wx.showModal({title:'内部备注',editable:true,placeholderText:'记录处理进展',content:task.note||'',success:result=>{
+          if(result.confirm)void this.saveRetirementTask(task,task.state,result.content||'')
+        }})
+      }else void this.saveRetirementTask(task,states[reply.tapIndex],task.note||'')
+    }})
+  },
+  async saveRetirementTask(task:NewsRetirementTask,state:NewsRetirementTask['state'],note:string){
+    try{await updateNewsRetirementTask(task.taskId,state,note);await this.loadRetirementTasks()}
+    catch(error){wx.showToast({title:friendlyRequestError(error,'任务保存失败'),icon:'none'})}
   },
 })

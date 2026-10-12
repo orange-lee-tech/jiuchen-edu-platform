@@ -178,11 +178,26 @@
   </block>
 
   <block wx:else>
+    <view wx:if="{{newsV2Enabled}}" class="card">
+      <text class="card-title">即将退役文章 · {{retirementTasks.length}} 条任务</text>
+      <text wx:if="{{retirementError}}" class="card-note">{{retirementError}}</text>
+      <button class="mini" bindtap="loadRetirementTasks">刷新任务</button>
+      <view wx:for="{{retirementTasks}}" wx:key="taskId" class="list-row news-row">
+        <view class="row-main">
+          <text class="row-title">{{item.title}}</text>
+          <text class="row-desc">来源时间待核实：{{item.sourceLabel}} · 退役：{{item.retireLabel}}</text>
+          <text class="row-desc">{{item.phase === 'buffering' ? '缓冲中' : '历史任务'}} · {{item.state === 'todo' ? '待办' : item.state === 'acknowledged' ? '知晓' : item.state === 'doing' ? '在办' : '反馈'}} · 操作人尾号 {{item.operatorSuffix || '暂无'}}</text>
+          <text wx:if="{{item.note}}" class="row-desc" user-select="true">{{item.note}}</text>
+        </view>
+        <button class="mini" data-id="{{item.taskId}}" bindtap="onRetirementTask">处理</button>
+      </view>
+    </view>
     <view class="card">
       <text class="card-title">九辰教育服务号</text>
       <text class="card-note">默认从服务号已发布图文同步到小程序资讯，不重复人工发布。需要服务端配置服务号 AppID / AppSecret 且账号具有对应发布接口权限。</text>
       <button class="primary" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="onSyncNews">立即同步最近动态</button>
       <text wx:if="{{newsSyncSummary}}" class="card-note" user-select="true">{{newsSyncSummary}}</text>
+      <text wx:if="{{newsSyncHistory}}" class="card-note" user-select="true">{{newsSyncHistory}}</text>
     </view>
 
     <view class="card">

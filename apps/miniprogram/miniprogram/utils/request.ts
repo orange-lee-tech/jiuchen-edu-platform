@@ -736,10 +736,23 @@ export async function deleteAdminAssignment(id: string): Promise<void> {
 }
 
 export async function getAdminNews(): Promise<AdminNewsPost[]> {
-  const result = await request<{ ok: true; posts: AdminNewsPost[] }>(
+  return (await getAdminNewsData()).posts
+}
+export type NewsSyncHistory={lastCheckedAt:string|null;lastFailedAt:string|null;latestSourceUpdatedAt:string|null;fetched:number;created:number;updated:number;failed:number;lastError:string|null}
+export async function getAdminNewsData():Promise<{posts:AdminNewsPost[];newsV2Enabled:boolean;syncHistory:NewsSyncHistory|null}>{
+  const result = await request<{ ok: true; posts: AdminNewsPost[];newsV2Enabled?:boolean;syncHistory?:NewsSyncHistory|null }>(
     '/me/admin/news',
   )
-  return result.posts
+  return {posts:result.posts,newsV2Enabled:Boolean(result.newsV2Enabled),syncHistory:result.syncHistory??null}
+}
+export type NewsRetirementTask={taskId:string;batchId:string;state:'todo'|'acknowledged'|'doing'|'feedback';note:string|null;updatedAt:string;title:string;sourceTime:string|null;retireAt:string|null;phase:string;operatorSuffix:string|null}
+export type NewsRetirementBatch={id:string;createdAt:string;entered:string[];affected:Array<{postId:string;retireAt:string}>}
+export async function getNewsRetirements():Promise<{tasks:NewsRetirementTask[];unreadBatches:NewsRetirementBatch[]}>{
+  return request<{ok:true;tasks:NewsRetirementTask[];unreadBatches:NewsRetirementBatch[]}>('/me/news-retirements')
+}
+export async function readNewsRetirement(id:string):Promise<void>{await request('/me/news-retirements/'+encodeURIComponent(id)+'/read','POST',{})}
+export async function updateNewsRetirementTask(id:string,state:NewsRetirementTask['state'],note:string):Promise<void>{
+  await request('/me/news-retirement-tasks/'+encodeURIComponent(id),'PUT',{state,note})
 }
 
 export type NewsSyncResult={synced:number;created:number;updated:number;unchanged:number;failed:number;
@@ -870,9 +883,11 @@ export type NewsPost = {
   sourceUpdatedAt?: string | null
   publicationTimeSource?: 'manual' | 'explicit_publish_time' | 'unverified'
   source: 'manual' | 'wechat_official'
+  retireAt?:string|null
 }
 
 export type NewsPostDetail = NewsPost & {
+  favoritesEnabled?:boolean
   content: {
     html: string | null
     author: string | null
@@ -881,9 +896,19 @@ export type NewsPostDetail = NewsPost & {
 }
 
 export async function getNewsPosts(): Promise<NewsPost[]> {
-  const result = await request<{ ok: true; posts: NewsPost[] }>('/news')
-  return result.posts
+  return (await getNewsListing()).posts
 }
+export async function getNewsListing():Promise<{v2:boolean;posts:NewsPost[];retiring:NewsPost[]}>{
+  const result=await request<{ok:true;v2?:boolean;posts:NewsPost[];retiring?:NewsPost[]}>('/news')
+  return {v2:Boolean(result.v2),posts:result.posts,retiring:result.retiring||[]}
+}
+export type NewsFavorite={postId:string;title:string;articleUrl:string;favoritedAt:string;phase:string|null}
+export async function getMyNewsFavorites():Promise<NewsFavorite[]>{
+  const result=await request<{ok:true;favorites:NewsFavorite[]}>('/me/news-favorites')
+  return result.favorites
+}
+export async function saveNewsFavorite(id:string):Promise<void>{await request('/me/news-favorites/'+encodeURIComponent(id),'PUT',{})}
+export async function removeNewsFavorite(id:string):Promise<void>{await request('/me/news-favorites/'+encodeURIComponent(id),'DELETE')}
 
 export async function getNewsPost(id: string): Promise<NewsPostDetail> {
   const result = await request<{ ok: true; post: NewsPostDetail }>(
