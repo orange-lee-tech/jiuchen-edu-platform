@@ -1,3 +1,5 @@
+> **2026-10-12 手机验收补充（用户确认）**：`规划 → 本周课表` 已通过手机验收；大四上已导入课表与本周课表的前端学期关联故障关闭。相关前端修复提交 `a20028c77f1fa42d7f784a01ff41e2df168f9a7f`，不再为该缺陷重复施工。先前后台确认第一周设置 PUT 200，Assessment 草稿 POST 201 / PUT 200、运行提交 POST 202；真实模型终态和历史重开仍需独立证据。**生产遗留 blocker**：新版 `GET /me/profile` 反复 HTTP 500，数据库报 `user_profiles.enrollment_year` 字段缺失；只能在只读 Schema 预检、备份及用户明确批准后执行数据库迁移，不得以 UI 验收掩盖 500。此次补充仅更新交接，不代表生产 Schema 已修复。
+
 > **2026-10-12 生产抢修覆盖说明（优先于本文较早的 Assessment PASS 及“禁止 API 发布”阶段性记载）**
 > - 用户新近真机复测：院校图片已可见，关闭图片交付问题；资料及课表导入可用。
 > - ECS 实测现役版本仍为 `ea8c971008a9efd042ec43fdc62398e136262259`，服务 active，`/health` 数据库 ok。第一周设置 `PUT /me/classroom/schedule-imports/:id/term-start-date` 生产日志 `Route not found`，旧发布的 `dist/routes/classroom-workspace.js` 无路由。
