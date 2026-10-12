@@ -611,7 +611,7 @@ export type AdminInternalId = {
   entityId: string | null
   batch: string | null
   claimedAt: string | null
-  name?:string|null;university?:string|null;nameLabel?:string;schoolLabel?:string|null
+  name?:string|null;university?:string|null;major?:string|null;currentStage?:string|null;nameLabel?:string;schoolLabel?:string|null
   displayName?:string|null;userStatus?:string|null;accountRole?:string|null;teacherStatus?:string|null
   assignmentCount?:number;assignmentState?:'unclaimed'|'assigned'|'unassigned'|'not_recorded'
   assignmentLabel?:string;profileState?:'unclaimed'|'incomplete'|'recorded'

@@ -40,6 +40,7 @@
         <view class="id-meta"><text>{{item.typeLabel}}</text><text class="status {{item.status}}">{{item.statusLabel}}</text><text wx:if="{{item.own}}">本人编号</text><text wx:if="{{item.accountLabel}}">{{item.accountLabel}}</text></view>
         <text class="row-desc">{{item.profileLabel}} · {{item.allocationLabel}}</text>
         <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">{{item.schoolLabel || '学校待完善'}}</text>
+        <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">专业：{{item.major || '待完善'}} · 学业阶段：{{item.currentStage || '待完善'}}</text>
         <text wx:if="{{item.auditCategory === 'test_named_bound'}}" class="card-note">已绑定账号含测试命名，请人工核对；未自动改名。</text>
         <view class="id-actions"><button class="mini copy" data-id="{{item.id}}" bindtap="onCopyId">复制编号</button><button wx:if="{{item.actions.length}}" class="mini" disabled="{{actionLoading}}" data-id="{{item.id}}" bindtap="onIdActions">{{item.actions[0] === '暂停访问' ? '暂停 / 更多' : item.actions[0] === '恢复编号' ? '恢复 / 更多' : '绑定 / 更多'}}</button></view>
       </view>

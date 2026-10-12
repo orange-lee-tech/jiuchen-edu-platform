@@ -21,9 +21,11 @@ import {
 } from '../services/internal-identities.js'
 import {
   normalizeNewsTags,
+  newsTimeView,
   syncOfficialAccountPosts,
 } from '../services/news.js'
 import { resolveSessionUser } from '../services/session.js'
+import { readAdminIdentityDirectory } from '../services/admin-identity-directory.js'
 import { readAssessmentCommerceAnalytics, type AnalyticsPeriod } from '../services/commercial-analytics.js'
 
 const createIdSchema = z.object({
@@ -107,20 +109,7 @@ export function registerMobileAdminRoutes(
   app.get('/me/admin/internal-ids', async (request, reply) => {
     if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
-    const rows = await configuredDatabase.db
-      .select({
-        id: internalIds.id,
-        businessId: internalIds.businessId,
-        type: internalIds.type,
-        claimMode: internalIds.claimMode,
-        status: internalIds.status,
-        userId: internalIds.userId,
-        entityId: internalIds.entityId,
-        batch: internalIds.batch,
-        claimedAt: internalIds.claimedAt,
-      })
-      .from(internalIds)
-      .orderBy(asc(internalIds.createdAt))
+    const rows=await readAdminIdentityDirectory(configuredDatabase.pool)
 
     return {
       ok: true,
@@ -486,6 +475,7 @@ export function registerMobileAdminRoutes(
         coverUrl: newsPosts.coverUrl,
         articleUrl: newsPosts.articleUrl,
         tagsJson: newsPosts.tagsJson,
+        contentJson: newsPosts.contentJson,
         publishedAt: newsPosts.publishedAt,
         source: newsPosts.source,
         status: newsPosts.status,
@@ -498,6 +488,8 @@ export function registerMobileAdminRoutes(
       ok: true,
       posts: rows.map((row) => ({
         ...row,
+        ...newsTimeView(row),
+        contentJson: undefined,
         tags: normalizeNewsTags(row.tagsJson),
         tagsJson: undefined,
       })),
@@ -556,16 +548,22 @@ export function registerMobileAdminRoutes(
       const result = await syncOfficialAccountPosts(configuredDatabase, env)
       return {
         ok: true,
+        status:result.failed?'partial':'checked',
         synced: result.total,
         created: result.created,
         updated: result.updated,
+        unchanged:result.unchanged,failed:result.failed,errors:result.errors,
+        checkedAt:result.checkedAt,latestSourcePublishedAt:result.latestSourcePublishedAt,
+        latestSourceUpdatedAt:result.latestSourceUpdatedAt,groupsFetched:result.groupsFetched,
+        totalGroups:result.totalGroups,maxGroups:result.maxGroups,truncated:result.truncated,message:result.message,
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'official_account_sync_failed'
-      app.log.warn({ err: error }, 'Official account sync failed')
+      app.log.warn({ code: /^official_account_[a-z_0-9]+$/.test(message)?message:'official_account_sync_failed' }, 'Official account sync failed')
       return reply.code(502).send({
         ok: false,
-        error: message,
+        error: /^official_account_[a-z_0-9]+$/.test(message)?message:'official_account_sync_failed',
+        checkedAt:new Date().toISOString(),failed:1,
       })
     }
   })
