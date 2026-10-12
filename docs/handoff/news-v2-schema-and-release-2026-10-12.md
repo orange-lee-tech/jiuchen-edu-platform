@@ -22,7 +22,7 @@
 
 ## 生产前检查与备份（由已授权运维执行，记录脱敏结果）
 
-1. 核对现役 immutable release、`/health`、MySQL 版本/会话时区、`news_posts` 和 `users` 的 PK 类型与约束；只读查询 `information_schema.tables/columns/key_column_usage` 检查七张表是否已存在、结构是否冲突。迁移脚本当前只验证表名；**若已有同名但结构不同的表，禁止运行，先修预检**。
+1. 核对现役 immutable release、`/health`、MySQL 版本/会话时区、`news_posts` 和 `users` 的 PK 类型与约束；迁移脚本会在任何 DDL 前后通过 `news-v2-schema-contract.ts` 核对七表列类型/nullability、主键、唯一/普通索引和外键，并要求两个基础 PK 的引擎、utf8mb4、长度和字符序兼容。已有同名漂移表会 fail closed，禁止继续。
 2. 在非生产 MySQL 副本运行脚本两遍、核查结构及外键、模拟40篇导入/20篇窗口、72小时推进、收藏隔离和已读幂等。当前环境没有可用非生产数据库，该项未执行。
 3. 以现行数据库备份机制生成受限访问的全库一致性备份和恢复点；用单独的隔离实例恢复并验证 `news_posts`、`users` 行数和新表（如已存在）。记录备份位置、校验值、恢复耗时、操作人；不得将备份或凭据上传 Git。
 4. 审核 `services/api/src/db/upgrade-news-v2.ts` 七张表的精确 DDL 和备份证据，再单独批准 **News V2 DDL**。只在获批窗口运行 `npm run db:upgrade:news-v2`，重复执行前先核结构；运行后只读核对表、列、索引、外键及行数，无自动旧数据回填。
@@ -35,5 +35,5 @@
 
 - 生产源端 `freepublish/batchget` 40/40 组，最新标题“月满中秋，清辉相伴｜九辰教育祝您中秋安康”；未证实 `update_time` 为发表时间，发布事件/回调未验证。
 - 当前生产无七张 V2 表的只读逐表预检证据；不启用 flag。支付/账本三表也不存在，与本迁移无关。
-- 代码本地 API typecheck/build + 190 测试 PASS；小程序 typecheck + 82 项回归 PASS（运行时应复核最新提交）。新路由权限和窗口规则有合成测试，非生产 MySQL、CI、生产请求、真机均须分别核对。
+- 集成验证点 `efb6ac97cd593a118107f00a18dc49b67c3fad1c`：API typecheck/build + 196 测试 PASS；小程序 typecheck + 82 项回归 PASS；GitHub Actions `38265829840` PASS。新路由权限、窗口规则、多管理员已读/备注审计及 Schema 漂移有合成测试；非生产 MySQL、生产请求、真机仍须分别核对。
 - 真机至少检验学生/老师/管理员收藏、原文官方跳转、20+缓冲、72小时、重复同步已读不再弹、任务历史；无真实可触发退役样本时如实标为未验收。

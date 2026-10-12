@@ -36,17 +36,17 @@
 | 模块 | GitHub / 测试状态 | 生产与验收状态 | 下一动作 |
 | --- | --- | --- | --- |
 | Profile `enrollment_year` | 单列幂等升级脚本及契约检查已存在 | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 单独备份+恢复验证+精确DDL审批；不影响其他独立开发 |
-| 资讯同步分页/真实回执/标签公开控制 | 已提交 `fbf7fda` 等候选；本地测试 | **NOT DEPLOYED** | 先做可安全发布的无 Schema 功能切片 |
+| 资讯同步分页/真实回执/标签公开控制 | `fbf7fda` + `ab6843b`；短页 fail-closed、可信源时间排序；本地通过 | **NOT DEPLOYED** | 按 Release A 构造隔离无 Schema 候选，不能整分支发布 |
 | AI 评估后台统计解耦 | 已提交 `9bda1b5`；真实9条成功记录 | **NOT DEPLOYED**；支付数据源缺表 | 不依赖支付表显示成功评估，支付标“来源不可用” |
 | 身份只读投影/筛选 | `47bc3bc`、`4a91cbc` 候选 | **NOT DEPLOYED**；实名/教师分配样本缺 | 先上线只读且有权投影，缺样本诚实标注 |
 | 客服咨询复制 | GitHub 代码完成、模拟回归通过 | **NOT DEVICE VERIFIED** | 微信复制→客服手动粘贴的真机验收 |
 | 评估普通图/长图/水印 | `9ca6a97` 候选，−25°、alpha 0.30，头尾用户ID日期 | **NOT DEVICE VERIFIED** | 真实手机相册核对无裁切及背景水印 |
-| News V2 20篇窗口/72小时/收藏/退役事件/任务 | 候选 `b2622e9`、`14da4ca` 等；本地合成测试 | **BLOCKED**：生产缺七表；非生产MySQL迁移未通过验收 | 独立Schema验证与审批，之后开关启用 |
+| News V2 20篇窗口/72小时/收藏/退役事件/任务 | `b2622e9`、`14da4ca`、`eb93671`；七表结构合同和多管理员权限测试通过 | **BLOCKED**：生产缺七表；本机无可确认非生产 MySQL | 等非生产迁移两次/回归，再走独立 Schema 审批 |
 | 每小时 News 同步 | `ops/ecs/jiuchen-news-sync.{service,timer}` 定义已提交 | **NOT INSTALLED** | 完成微信权限/频率校验及受控 timer 发布 |
 | 微信真实发表时间 | 源端可证 `update_time`；无可靠 `publish_time` | **PARKED**（不得冒充发表日期） | 留“发表时间待核实/来源更新时间”，待官方能力或样本 |
 | 支付、额度账本和真实充值额 | 代码/合同存在；生产三张表缺失 | **PARKED**（独立合规/Schema gate） | 不补造账本，不启用虚拟支付或假金额 |
 
-**本地测试证据**：最新 Work 报告 API typecheck/build + 190 tests；小程序 typecheck + 82 回归。**需核对当前最新 GitHub Actions CI**；非生产 MySQL、ECS promotion、systemd timer、微信开发者工具和新的真机验收不因本地测试而自动通过。
+**验证证据**：集成验证点 `efb6ac97cd593a118107f00a18dc49b67c3fad1c` API typecheck/build + 196 tests；小程序 typecheck + 82 回归；GitHub Actions [38265829840](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38265829840) PASS（含干净环境后台 typecheck/build）。管理后台本机缺 `vue-tsc`，依赖安装超时后停止，未伪报本地 PASS。公开生产 `/health/live`、`/health`、`/health/config` 本轮成功但不返回 Git SHA。发布拆分见 [P1 独立发布候选](p1-release-candidates-2026-10-12.md)。非生产 MySQL、ECS promotion、systemd timer、微信开发者工具和新的真机验收不因代码/CI 自动通过。
 
 ## 3. 唯一执行优先级：先保护生产，再跨模块推进
 
