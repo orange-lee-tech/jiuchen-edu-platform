@@ -2,13 +2,16 @@
 
 This file applies to Codex and other coding agents working in this repository.
 
-## Active Phase 1 code entry (2026-10-09 Gate 0)
+## Active entry and priority (2026-10-12)
 
-Before changing UI/navigation read, in this order: `CONSTITUTION.md` → `docs/product/v1-baseline.md` → `docs/handoff/CURRENT.md` → `docs/design/jiuchen-v1-experience-blueprint.md` → **`docs/handoff/phase1-codex-execution-2026-10-09.md`** → `docs/design/jiuchen-v1-design-system.md` → dated Phase 0 map for historical route inventory.
+**One current authority:** `docs/handoff/CURRENT.md`. Read in order:
+`CONSTITUTION.md` → `AGENTS.md` → `docs/handoff/CURRENT.md` → relevant module contract/source. Before ECS work also read `ops/ecs/AGENTS.md`.
 
-The older "only Phase 0" execution header and 2026-09-22 construction map are **historical**, not active stop signs. Phase 1a is approved as a **separate, bounded code batch**; Gate 0 itself is docs-only. Do not treat this as approval to touch AI providers, payment, ECS production, database migrations or to fake missing read models.
+The former 2026-10-09 Phase 1a/Gate 0 execution header and previous CURRENT chronology are archived/historical, not standing orders. For traceability only: `docs/handoff/archive/CURRENT-pre-cleanup-2026-10-12.md`.
 
-For Phase 1a, verify current Git SHA and `git status --short` before editing; preserve all local files. Client currently has five tabs and must atomically migrate to four native static paths with compatible legacy navigation. `staff` keeps existing teacher-workspace capability without admin elevation. Apply mobile layout/interaction quality gates in each batch, not only at final visual polish.
+The current order is P0 production protection & truth checking; P1 independently deliverable, schema-free News/Analytics/Identity and existing contact/export verification; P2 News V2 after non-production SQL/backup/explicit production schema approval; P3 other independently authorized tasks. Keep `PARKED` blockers visible and move on rather than repeatedly reopening a single deadlock. Never skip a production safety blocker by classifying it as merely PARKED.
+
+Do not infer a deployment or permission from a code SHA, stale handoff, CI green, or the existence of a migration script. Production DDL, release promotion, timer enabling, WeChat publishing, AI/Payment changes and broadening read-only role powers require their own explicit approval.
 
 ## Authority and scope
 
