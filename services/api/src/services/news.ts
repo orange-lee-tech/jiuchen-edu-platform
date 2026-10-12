@@ -94,7 +94,7 @@ export async function syncOfficialAccountPosts(database:DatabaseContext&{configu
       const incomplete=Boolean(result.failed || scan.truncated)
       if(env.NEWS_V2_ENABLED&&!incomplete)window=await reconcileNewsWindow(connection)
       if(env.NEWS_V2_ENABLED)await recordNewsSync(database.pool,{status:incomplete?'partial':'checked',fetched:result.total,created:result.created,updated:result.updated,failed:result.failed,
-        latestSourceTime:scan.latestSourcePublishedAt??scan.latestSourceUpdatedAt,errorCode:incomplete?'news_sync_incomplete':null})
+        latestSourceTime:scan.latestSourceUpdatedAt,errorCode:incomplete?'news_sync_incomplete':null})
       return {...result,...scan,window,message:incomplete?'检查未完整，已保留原展示窗口':result.created===0?'已检查，暂无新文章':'同步检查完成'}
     }catch(error){
       if(env.NEWS_V2_ENABLED)try{await recordNewsSync(database.pool,{status:'failed',fetched:0,created:0,updated:0,failed:1,latestSourceTime:null,errorCode:'official_source_or_storage_failed'})}catch{}
