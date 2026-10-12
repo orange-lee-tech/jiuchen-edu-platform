@@ -1,5 +1,25 @@
 # 九辰真实数据接管｜施工前审计
 
+## 2026-10-12 21:21 北京时间｜ECS 只读审计补充（替代下文“待执行”状态）
+
+用户已回传 `ECS_REAL_DATA_READ_ONLY.sh` 的实际输出。现役 release `b150d2c5c8720aac8d48fbd0395d8db9c408bc63`，服务 active；数据库会话时区 `+08:00`，实例以摘要识别。以下只保留聚合及脱敏事实；不将原始身份证据、连接信息或令牌提交仓库。
+
+| 来源 | 查询状态 | 生产事实 |
+| --- | --- | --- |
+| `information_schema.columns` | OK | `assessments` 18列、`news_posts` 13列；`user_profiles` 没有 `enrollment_year`；`payment_orders`、`credit_ledger_entries`、`credit_reservations` 三表均不存在 |
+| `assessments` | OK | 成功9、失败5、草稿1；9个成功都有 `completed_at`，5个失败均已开始；所有记录的 `credit_consumed` 合计0 |
+| 支付/账本/预留 | `ER_NO_SUCH_TABLE` | 无法给出充值金额、消费账本、释放次数；不能把不存在的表当作0条订单或0笔消费，也不能补造历史账本 |
+| `internal_ids` | OK | 共32个编号；已取得未认领学员、已认领未分配学员及已认领管理员的脱敏样本；没有已认领且已分配学员、已认领老师样本；管理员没有独立实名/岗位事实。样本中有测试命名，不能当作已核验实名 |
+| 微信 `freepublish/batchget` | OK | 总40组，分页实际取得40组、未截断；样本最前的文章是“月满中秋，清辉相伴｜九辰教育祝您中秋安康”，其 sourceKey/标题与数据库一致。响应仅有 `article_id/content/update_time`，内容含 `create_time/update_time`；样本 `publish_time` 均为空 |
+
+微信最前文章原始 `update_time=1790298002`，数据库旧 `published_at` 回读为 `2026-09-25 01:00:02`，数值对应；这证明旧映射确实取了更新时间，不证明它是实际发表时间。其他样本亦如此。当前不能准确宣称真实发表日期，UI 应标“发表时间待核实”，可另列来源更新时间；不得把后者命名为发表日期。
+
+`assessments` 的样本中，成功记录的 `completed_at` 与 `updated_at` 出现整8小时差，例如 `2026-10-12 10:40:12` 对 `2026-10-12 18:40:11`（均为数据库会话原始字符串）。这提示应用写入时间与数据库默认更新时间可能采用不同序列化/会话时区。不能直接以字段差值推断业务真实发生时刻。Analytics 日期归桶在上线前须用用户成功评估的实际时间、API 返回值、SQL会话转换做三方核对，尤其检查午夜边界；不修改历史时间。
+
+Profile 缺列迁移只允许对 `user_profiles` 添加可空 `enrollment_year INT NULL`，现有脚本及契约检查仍需备份、备份恢复验证和针对这一条 DDL 的批准。支付/账本三表若需启用统计或充值，属于独立商业 Schema 审批，不随 Profile 一并执行。News V2 的新表另案审批。
+
+这次审计已完成生产只读查询及源端最新样本对账，但没有已认领已分配学员/已认领老师样本，没有独立发表时间字段，没有真实支付订单，也没有微信真机证据。三类缺口保持 BLOCKED；Phase 1 可先提交无 Schema 代码并注明数据源错误，Phase 2 仅能在非生产环境验证。
+
 时间：2026-10-12，北京时间。公开接口证据采集开始于20:40:47，完整脱敏结果见 PUBLIC_API_EVIDENCE.json。远程基线：4968c17df895ef75129cf8a4832f41d07fc3f0a5，分支 p1/foundation。此前 Profile、客服复制、评估长图/水印范围继续保留，不撤销；其生产 Schema 和真机门槛仍未关闭。
 
 ## 已执行生产只读请求
