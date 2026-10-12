@@ -611,6 +611,12 @@ export type AdminInternalId = {
   entityId: string | null
   batch: string | null
   claimedAt: string | null
+  name?:string|null;university?:string|null;nameLabel?:string;schoolLabel?:string|null
+  displayName?:string|null;userStatus?:string|null;accountRole?:string|null;teacherStatus?:string|null
+  assignmentCount?:number;assignmentState?:'unclaimed'|'assigned'|'unassigned'|'not_recorded'
+  assignmentLabel?:string;profileState?:'unclaimed'|'incomplete'|'recorded'
+  auditCategory?:'test_named_bound'|'test_named_unclaimed'|'no_test_name';nameVerification?:'not_recorded'
+
 }
 
 export type AdminTeacher = {
@@ -638,6 +644,8 @@ export type AdminNewsPost = {
   articleUrl: string | null
   tags: string[]
   publishedAt: string | null
+  sourceUpdatedAt?: string | null
+  publicationTimeSource?: 'manual' | 'explicit_publish_time' | 'unverified'
   source: 'manual' | 'wechat_official'
   status: 'active' | 'hidden'
 }
@@ -734,13 +742,11 @@ export async function getAdminNews(): Promise<AdminNewsPost[]> {
   return result.posts
 }
 
-export async function syncOfficialAccountNews(): Promise<number> {
-  const result = await request<{ ok: true; synced: number }>(
-    '/me/admin/news/sync',
-    'POST',
-    {},
-  )
-  return result.synced
+export type NewsSyncResult={synced:number;created:number;updated:number;unchanged:number;failed:number;
+  errors:Array<{sourceKey:string;reason:string}>;checkedAt:string;latestSourcePublishedAt:string|null;
+  latestSourceUpdatedAt:string|null;groupsFetched:number;totalGroups:number|null;maxGroups:number;truncated:boolean;message:string}
+export async function syncOfficialAccountNews():Promise<NewsSyncResult>{
+  return request<{ok:true}&NewsSyncResult>('/me/admin/news/sync','POST',{})
 }
 
 export async function updateAdminNewsTags(
@@ -810,8 +816,13 @@ export async function getAssessmentPaymentOrder(id: string): Promise<AssessmentP
 export type AdminAnalyticsPeriod = 'week' | 'month' | 'year'
 export type AdminAnalytics = {
   period: AdminAnalyticsPeriod
-  buckets: Array<{ key: string; label: string; assessmentCount: number; rechargeCount: number; rechargeCreditCount: number }>
-  summary: { assessmentCount: number; rechargeCount: number; rechargeCreditCount: number }
+  buckets:Array<{key:string;label:string;assessmentCount:number;createdCount:number;startedTaskCount:number;failedCount:number;runningCount:number;rechargeCount:number|null;rechargeCreditCount:number|null;rechargeAmountFen:number|null;consumptionCount:number|null;releasedCount:number|null}>
+  summary:{assessmentCount:number;createdCount:number;startedTaskCount:number;failedCount:number;runningCount:number;rechargeCount:number|null;rechargeCreditCount:number|null;rechargeAmountFen:number|null;consumptionCount:number|null;releasedCount:number|null}
+  range:{from:string;before:string;timezone:string;basis:string}
+  sources:Record<'assessments'|'payments'|'ledger'|'reservations',{status:'ok'|'error';error:string|null}>
+  ledger:{freeGranted:number|null;paidGranted:number|null;debitedCredits:number|null;balance:number|null;unallocatedConsumption:number|null;freeUsed:null;paidUsed:null;sourceAllocationStatus:'not_recorded';correctionCredits:number|null}
+  reservations:{held:number|null;released:number|null}
+  gaps:{successWithoutCompletedAt:number;successWithoutDebit:number|null;suspectEightHourCompletionCount:number;runRequestHistory:'not_recorded';actualApiCost:'not_recorded'}
   supplier: {
     status: 'missing' | 'stale' | 'critical' | 'warning' | 'normal' | 'early_stage'
     message: string
@@ -856,6 +867,8 @@ export type NewsPost = {
   articleUrl: string | null
   tags: string[]
   publishedAt: string | null
+  sourceUpdatedAt?: string | null
+  publicationTimeSource?: 'manual' | 'explicit_publish_time' | 'unverified'
   source: 'manual' | 'wechat_official'
 }
 

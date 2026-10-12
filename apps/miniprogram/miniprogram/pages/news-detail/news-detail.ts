@@ -2,12 +2,7 @@ import { getNewsPost, type NewsPostDetail } from '../../utils/request'
 import { articleReaderNodes, type ArticleNode } from '../../utils/article-reader'
 import { validateIntent } from '../../utils/navigation'
 
-function formatDate(value: string | null) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
-}
+import {newsPublicationLabel} from '../../utils/news-date'
 
 Page({
   data: {
@@ -38,7 +33,7 @@ Page({
         post,
         readerNodes: articleReaderNodes(post.content.html || ''),
         coverFailed: false,
-        dateLabel: formatDate(post.publishedAt),
+        dateLabel: newsPublicationLabel(post,true),
       })
     } catch (error) {
       console.info('News detail load failed.', error)

@@ -2,6 +2,8 @@ import { getSavedAuthResult } from '../../utils/auth'
 import { INITIAL_SHELL, observeSlot, openPage, shellView } from '../../utils/navigation'
 import { getNewsPosts, type NewsPost } from '../../utils/request'
 
+import {newsPublicationLabel} from '../../utils/news-date'
+
 type NewsCard = {
   id: string
   title: string
@@ -15,22 +17,13 @@ type NewsCard = {
 
 const FALLBACK_FEATURED: NewsCard = {
   id: '',
-  title: '真实资讯正在同步',
-  summary: '这里只展示九辰已同步或已审核的真实内容，不再使用示例院校占位。',
+  title: '暂无可展示的资讯',
+  summary: '已分类文章会在这里展示；请稍后刷新，或联系老师了解近期资讯。',
   meta: '',
   tags: [],
   primaryTag: '近期关注',
   coverUrl: '',
   coverFailed: false,
-}
-
-function formatDate(value: string | null) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${month}-${day}`
 }
 
 function normalizeRemoteUrl(value: string | null | undefined) {
@@ -43,7 +36,7 @@ function toCard(post: NewsPost): NewsCard {
     id: post.id,
     title: post.title,
     summary: post.summary ?? '',
-    meta: [post.source === 'manual' ? '九辰编辑' : '九辰教育服务号', formatDate(post.publishedAt)]
+    meta: [post.source === 'manual' ? '九辰编辑' : '九辰教育服务号', newsPublicationLabel(post)]
       .filter(Boolean)
       .join(' · '),
     tags: post.tags,

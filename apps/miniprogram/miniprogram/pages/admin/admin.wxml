@@ -37,11 +37,14 @@
       <view wx:if="{{!visibleIds.length}}" class="card-note">没有匹配的编号，请调整搜索或状态。</view>
       <view wx:for="{{visibleIds}}" wx:key="id" class="id-row">
         <text class="id-code" selectable>{{item.businessId}}</text>
-        <view class="id-meta"><text>{{item.typeLabel}}</text><text class="status {{item.status}}">{{item.statusLabel}}</text><text wx:if="{{item.own}}">本人编号</text></view>
+        <view class="id-meta"><text>{{item.typeLabel}}</text><text class="status {{item.status}}">{{item.statusLabel}}</text><text wx:if="{{item.own}}">本人编号</text><text wx:if="{{item.accountLabel}}">{{item.accountLabel}}</text></view>
+        <text class="row-desc">{{item.profileLabel}} · {{item.allocationLabel}}</text>
+        <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">{{item.schoolLabel || '学校待完善'}}</text>
+        <text wx:if="{{item.auditCategory === 'test_named_bound'}}" class="card-note">已绑定账号含测试命名，请人工核对；未自动改名。</text>
         <view class="id-actions"><button class="mini copy" data-id="{{item.id}}" bindtap="onCopyId">复制编号</button><button wx:if="{{item.actions.length}}" class="mini" disabled="{{actionLoading}}" data-id="{{item.id}}" bindtap="onIdActions">{{item.actions[0] === '暂停访问' ? '暂停 / 更多' : item.actions[0] === '恢复编号' ? '恢复 / 更多' : '绑定 / 更多'}}</button></view>
       </view>
     </view>
-    <view class="card"><text class="card-title">账号列表</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayName || '未设置显示名'}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
+    <view class="card"><text class="card-title">账号列表</text><text class="card-note">账号显示名不等于实名。编号卡片使用已有学员/老师档案姓名，缺失或测试命名需人工完善；管理员实名与岗位尚无记录。</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayName || '未设置显示名'}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
   </block>
 
   <block wx:elif="{{section === 'admin-readonly'}}">
@@ -115,15 +118,32 @@
         </view>
         <text class="supplier-tip">公司运营管理 API 服务商余额；这里不是用户充值余额。读数尚未自动同步时，不可将展示视为实时保障。</text>
       </view>
+      <text wx:if="{{analyticsWarning}}" class="card-note" user-select="true">{{analyticsWarning}}。不可用来源显示错误，不计作 0。</text>
+      <text wx:if="{{analytics}}" class="card-note" user-select="true">区间：{{analytics.range.from}} 至 {{analytics.range.before}}（终点不包含） · {{analytics.range.timezone}}
+{{analytics.range.basis}}</text>
       <view wx:if="{{analytics}}" class="analytics-summary">
         <view class="analytics-stat"><text>成功评估</text><text class="analytics-stat-number">{{analytics.summary.assessmentCount}}</text></view>
-        <view class="analytics-stat amber"><text>成功充值订单</text><text class="analytics-stat-number">{{analytics.summary.rechargeCount}}</text><text>购入 {{analytics.summary.rechargeCreditCount}} 次</text></view>
+        <view class="analytics-stat amber"><text>成功充值订单</text><text class="analytics-stat-number">{{analytics.summary.rechargeCount === null ? '读取失败' : analytics.summary.rechargeCount}}</text><text>购入 {{analytics.summary.rechargeCreditCount === null ? '读取失败' : analytics.summary.rechargeCreditCount}} 次</text></view>
+      </view>
+      <view wx:if="{{analytics}}" class="card-note">
+        <text>创建任务 {{analytics.summary.createdCount}} · 曾开始任务 {{analytics.summary.startedTaskCount}} · 失败 {{analytics.summary.failedCount}} · 运行中 {{analytics.summary.runningCount}}
+</text>
+        <text>充值金额 ¥{{rechargeAmountLabel}} · 实际消费笔数 {{analytics.summary.consumptionCount === null ? '读取失败' : analytics.summary.consumptionCount}}
+</text>
+        <text>全历史免费发放 {{analytics.ledger.freeGranted === null ? '读取失败' : analytics.ledger.freeGranted}} · 付费发放 {{analytics.ledger.paidGranted === null ? '读取失败' : analytics.ledger.paidGranted}} · 已扣额度 {{analytics.ledger.debitedCredits === null ? '读取失败' : analytics.ledger.debitedCredits}}
+</text>
+        <text>全历史结算余额 {{analytics.ledger.balance === null ? '读取失败' : analytics.ledger.balance}} · 当前冻结 {{analytics.reservations.held === null ? '读取失败' : analytics.reservations.held}} · 区间退回 {{analytics.summary.releasedCount === null ? '读取失败' : analytics.summary.releasedCount}} 笔 / {{analytics.reservations.released === null ? '读取失败' : analytics.reservations.released}} 额度</text>
+        <text>免费/付费实际使用：来源未记录。未归因消费 {{analytics.ledger.unallocatedConsumption === null ? '读取失败' : analytics.ledger.unallocatedConsumption}}。不推造历史分摊。
+</text>
+        <text>成功但无完成时间：{{analytics.gaps.successWithoutCompletedAt}}（全历史）；成功但无消费账本：{{analytics.gaps.successWithoutDebit === null ? '未能核对' : analytics.gaps.successWithoutDebit}}；完成时间疑似时区偏移：{{analytics.gaps.suspectEightHourCompletionCount}} 条（待核对日期归桶）。
+</text>
+        <text>历史每次运行请求、逐次扣减金额及实际 API 成本尚未记录。次数对比仅为经营辅助，不能当作资金收支。</text>
       </view>
       <text class="card-note">周为近7天、月为近12个月、年为近5年。计数以服务器真实成功记录为准，零值也显示。</text>
     </view>
     <view wx:for="{{analyticsPlots}}" wx:for-item="plot" wx:key="key" class="card">
       <text class="card-title">{{plot.title}}</text>
-      <text class="card-note">当前区间最大值：{{plot.max}} 次，左右滑动可查看完整数据</text>
+      <text class="card-note">当前区间最大值：{{plot.max}} {{plot.unit}}，左右滑动可查看完整数据</text>
       <scroll-view scroll-x class="analytics-scroll">
         <view class="analytics-plot" style="width:{{plot.width}}rpx">
           <view class="analytics-axis"></view>
@@ -133,16 +153,21 @@
               <view wx:if="{{point.hasPrev}}" class="analytics-line {{plot.key === 'rechargeCount' ? 'amber' : ''}}" style="left:{{point.prevX}}rpx;bottom:{{point.prevBottom}}rpx;width:{{point.length}}rpx;transform:rotate({{point.angle}}deg)"></view>
               <view class="analytics-dot {{plot.key === 'rechargeCount' ? 'amber' : ''}}" style="left:{{point.x}}rpx;bottom:{{point.bottom}}rpx"></view>
             </block>
-            <text class="analytics-value" style="left:{{point.x}}rpx;bottom:{{point.labelBottom}}rpx">{{point.count}}</text>
+            <text class="analytics-value" style="left:{{point.x}}rpx;bottom:{{point.labelBottom}}rpx">{{point.display}}</text>
             <text class="analytics-label" style="left:{{point.x}}rpx">{{point.label}}</text>
           </block>
         </view>
       </scroll-view>
     </view>
+    <view wx:if="{{analytics}}" class="card">
+      <text class="card-title">充值订单与额度消费笔数对比</text>
+      <text class="card-note">顺序：时间 · 充值订单 · 额度消费。仅用于经营观察，不代表资金收支；免费使用也会产生消费。</text>
+      <view wx:for="{{analytics.buckets}}" wx:key="key" class="account-row"><text>{{item.label}} · {{item.rechargeCount === null ? '支付读取失败' : item.rechargeCount}} 单 · {{item.consumptionCount === null ? '账本读取失败' : item.consumptionCount}} 笔</text></view>
+    </view>
     <view class="card">
-      <text class="card-title">用户累计充值金额排行榜</text>
-      <text class="card-note">统计历年支付成功订单，按实际支付金额降序排列，不含赠送次数。</text>
-      <text wx:if="{{analytics && !analytics.payers.length}}" class="card-note">目前尚无充值订单。</text>
+      <text class="card-title">当前区间充值金额排行榜</text>
+      <text class="card-note">统计当前区间支付成功订单，按实际支付金额降序排列，不含赠送次数。</text>
+      <text wx:if="{{analytics && analytics.sources.payments.status === 'ok' && !analytics.payers.length}}" class="card-note">目前尚无充值订单。</text>
       <view wx:for="{{analytics ? analytics.payers : []}}" wx:key="userIdSuffix" class="analytics-rank-row">
         <text class="analytics-order">{{index + 1}}</text>
         <view class="analytics-rank-user"><text class="row-title">{{item.displayName}}</text><text class="row-desc">账号尾号 {{item.userIdSuffix}} · {{item.rechargeCount}} 单</text></view>
@@ -155,15 +180,18 @@
     <view class="card">
       <text class="card-title">九辰教育服务号</text>
       <text class="card-note">默认从服务号已发布图文同步到小程序资讯，不重复人工发布。需要服务端配置服务号 AppID / AppSecret 且账号具有对应发布接口权限。</text>
-      <button class="primary" loading="{{actionLoading}}" bindtap="onSyncNews">立即同步最近动态</button>
+      <button class="primary" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="onSyncNews">立即同步最近动态</button>
+      <text wx:if="{{newsSyncSummary}}" class="card-note" user-select="true">{{newsSyncSummary}}</text>
     </view>
 
     <view class="card">
       <text class="card-title">已同步内容与标签 · 待分类 {{pendingClassificationCount}} 篇</text>
-      <text class="card-note">未分类文章置顶；添加标签后学员才可见。重新同步不会覆盖已有标签。留空保存会再次隐藏该文章对学员的展示。</text>
+      <button class="mini" bindtap="onNewsSort">{{newsUnclassifiedFirst ? '未分类优先' : '发表时间倒序'}} · 点击切换</button>
+      <text class="card-note">默认按发表时间倒序，可切换未分类优先；添加标签后学员才可见。重新同步不会覆盖已有标签。留空保存会再次隐藏该文章对学员的展示。</text>
       <view wx:for="{{posts}}" wx:key="id" class="list-row news-row">
         <view class="row-main">
           <text class="row-title">{{item.title}}</text>
+          <text class="row-desc">{{item.dateLabel}}</text>
           <text class="row-desc">{{item.source === 'wechat_official' ? '服务号同步' : '手动'}} · {{item.status === 'active' ? '已发布' : '已隐藏'}}</text>
           <view class="tag-list">
             <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="tag-chip">{{tag}}</text>

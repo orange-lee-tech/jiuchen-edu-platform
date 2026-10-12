@@ -30,28 +30,35 @@ import {
   type StudentSummary,
 } from '../../utils/request'
 
+import {beijingNewsTime,newsPublicationLabel} from '../../utils/news-date'
+
 type Section = 'admin-users' | 'admin-assignments' | 'admin-news' | 'admin-analytics' | 'admin-readonly'
-type Point = { key:string;label:string;count:number;x:number;barX:number;height:number;bottom:number;labelBottom:number;prevX:number;prevBottom:number;length:number;angle:number;hasPrev:boolean }
-type Plot = { key:string;title:string;width:number;max:number;points:Point[] }
-function makePlot(key:'assessmentCount'|'rechargeCount',title:string,rows:AdminAnalytics['buckets']):Plot {
-  const max=Math.max(1,...rows.map(row=>row[key]))
+type Point = { display:string;key:string;label:string;count:number;x:number;barX:number;height:number;bottom:number;labelBottom:number;prevX:number;prevBottom:number;length:number;angle:number;hasPrev:boolean }
+type Plot = { unit:string;key:string;title:string;width:number;max:number;points:Point[] }
+function makePlot(key:'assessmentCount'|'rechargeCount'|'rechargeAmountFen'|'consumptionCount'|'releasedCount'|'failedCount'|'runningCount',title:string,rows:AdminAnalytics['buckets']):Plot {
+  const scale=key==='rechargeAmountFen'?100:1
+  const values=rows.map(row=>Number(row[key]??0)/scale)
+  const actualMax=Math.max(0,...values)
+  const max=Math.max(1,actualMax)
   const points=rows.map((row,i)=>{
-    const x=48+i*90, height=Math.round(row[key]/max*155)
-    const prevHeight=i>0?Math.round(rows[i-1][key]/max*155):0
+    const x=48+i*90, height=Math.round(values[i]/max*155)
+    const prevHeight=i>0?Math.round(values[i-1]/max*155):0
     const delta=height-prevHeight
-    return {key:row.key,label:row.label,count:row[key],x,barX:x-24,height,bottom:36+height,labelBottom:50+height,
+    return {display:key==='rechargeAmountFen'?values[i].toFixed(2):String(values[i]),key:row.key,label:row.label,count:values[i],x,barX:x-24,height,bottom:36+height,labelBottom:50+height,
       prevX:x-90,prevBottom:36+prevHeight,length:Math.sqrt(90*90+delta*delta),angle:-Math.atan2(delta,90)*180/Math.PI,hasPrev:i>0}
   })
-  return {key,title,width:rows.length*90+40,max,points}
+  return {key,title,unit:key==='rechargeAmountFen'?'元':'次',width:rows.length*90+40,max:actualMax,points}
 }
 
-function newsReviewState(posts: AdminNewsPost[]) {
+function newsReviewState(posts: AdminNewsPost[], unclassifiedFirst=false) {
   // Review queue is derived from existing canonical tags; no secondary state store.
   const sorted = [...posts].sort(
-    (a, b) => Number(b.tags.length === 0) - Number(a.tags.length === 0),
+    (a, b) => (unclassifiedFirst ? Number(b.tags.length===0)-Number(a.tags.length===0) : 0) ||
+      (new Date(b.publishedAt||0).getTime()-new Date(a.publishedAt||0).getTime()) ||
+      (new Date(b.sourceUpdatedAt||0).getTime()-new Date(a.sourceUpdatedAt||0).getTime()),
   )
   return {
-    posts: sorted,
+    posts: sorted.map(post=>({...post,dateLabel:newsPublicationLabel(post)})),
     pendingClassificationCount: posts.filter((post) => post.tags.length === 0).length,
   }
 }
@@ -69,6 +76,8 @@ Page({
     chartMode: 'line' as 'line' | 'bar',
     analytics: null as (AdminAnalytics & { payers: Array<AdminAnalytics['payers'][number] & { amountYuan: string }> }) | null,
     analyticsPlots: [] as Plot[],
+    analyticsWarning:'',
+    rechargeAmountLabel:'',
     loading: true,
     actionLoading: false,
     internalIds: [] as AdminInternalId[],
@@ -80,7 +89,9 @@ Page({
     students: [] as StudentSummary[],
     teachers: [] as AdminTeacher[],
     assignments: [] as AdminAssignment[],
-    posts: [] as AdminNewsPost[],
+    posts: [] as Array<AdminNewsPost&{dateLabel:string}>,
+    newsUnclassifiedFirst:false,
+    newsSyncSummary:'',
     pendingClassificationCount: 0,
     idTypes: ID_TYPES,
     newIdTypeIndex: 0,
@@ -157,7 +168,7 @@ Page({
         students,
         teachers,
         assignments,
-        ...newsReviewState(posts),
+        ...newsReviewState(posts,this.data.newsUnclassifiedFirst),
         availableIds,
         guestUsers,
         bindIdIndex: Math.min(this.data.bindIdIndex, Math.max(0, availableIds.length - 1)),
@@ -174,21 +185,34 @@ Page({
       this.setData({ loading: false })
     }
   },
+  analyticsGeneration:0,
   async loadAnalytics() {
+    const generation=++this.analyticsGeneration
+    const owner=getSavedAuthResult()?.user.id
+    const period=this.data.analyticsPeriod
     try {
       this.setData({ loading: true, loadError: '' })
-      const analytics = await getAdminAnalytics(this.data.analyticsPeriod)
+      const analytics = await getAdminAnalytics(period)
+      if(!analytics.sources || !analytics.range)throw new Error('统计接口版本尚未更新，请先部署 API')
+      if(generation!==this.analyticsGeneration || period!==this.data.analyticsPeriod || owner!==getSavedAuthResult()?.user.id)return
       this.setData({
         analytics: { ...analytics, payers: analytics.payers.map(row => ({ ...row, amountYuan: (row.amountFen/100).toFixed(2) })) },
+        rechargeAmountLabel:analytics.summary.rechargeAmountFen===null?'读取失败':(analytics.summary.rechargeAmountFen/100).toFixed(2),
+        analyticsWarning:Object.entries(analytics.sources).filter(([,state])=>state.status==='error').map(([source,state])=>({assessments:'评估',payments:'支付',ledger:'账本',reservations:'冻结记录'}[source]||source)+'读取失败：'+state.error).join('；'),
         analyticsPlots: [
           makePlot('assessmentCount', 'AI 评估使用次数', analytics.buckets),
-          makePlot('rechargeCount', 'AI 评估充值次数', analytics.buckets),
+          ...(analytics.sources.payments.status==='ok'?[makePlot('rechargeCount','成功充值订单次数',analytics.buckets),makePlot('rechargeAmountFen','成功充值金额',analytics.buckets)]:[]),
+          ...(analytics.sources.ledger.status==='ok'?[makePlot('consumptionCount','实际额度消费笔数（账本）',analytics.buckets)]:[]),
+          ...(analytics.sources.reservations.status==='ok'?[makePlot('releasedCount','额度退回记录笔数',analytics.buckets)]:[]),
+          makePlot('failedCount','失败评估任务',analytics.buckets),
+          makePlot('runningCount','运行中的评估任务',analytics.buckets),
         ],
       })
     } catch (error) {
+      if(generation!==this.analyticsGeneration || owner!==getSavedAuthResult()?.user.id)return
       this.setData({ analytics: null, analyticsPlots: [], loadError: friendlyRequestError(error, '统计暂时不可用') })
     } finally {
-      this.setData({ loading: false })
+      if(generation===this.analyticsGeneration)this.setData({ loading: false })
     }
   },
   onAnalyticsPeriod(event: WechatMiniprogram.BaseEvent) {
@@ -430,7 +454,7 @@ Page({
         try {
           this.setData({ actionLoading: true })
           await updateAdminNewsTags(id, tags)
-          this.setData(newsReviewState(await getAdminNews()))
+          this.setData(newsReviewState(await getAdminNews(),this.data.newsUnclassifiedFirst))
           wx.showToast({
             title: tags.length ? '标签已更新' : '标签已清空',
             icon: 'success',
@@ -445,17 +469,31 @@ Page({
     })
   },
 
+  onNewsSort(){
+    const next=!this.data.newsUnclassifiedFirst
+    this.setData({newsUnclassifiedFirst:next,...newsReviewState(this.data.posts,next)})
+  },
   async onSyncNews() {
+    if(this.data.actionLoading)return
     try {
       this.setData({ actionLoading: true })
-      const synced = await syncOfficialAccountNews()
-      wx.showToast({ title: `已同步 ${synced} 条`, icon: 'success' })
-      this.setData(newsReviewState(await getAdminNews()))
+      const result = await syncOfficialAccountNews()
+      const summary=[result.message, '检查时间：'+beijingNewsTime(result.checkedAt,true),
+        '最新来源发表：'+(result.latestSourcePublishedAt?beijingNewsTime(result.latestSourcePublishedAt,true):'待核实'),
+        '最新来源更新：'+beijingNewsTime(result.latestSourceUpdatedAt,true),
+        `新增 ${result.created}，更新 ${result.updated}，未变化 ${result.unchanged}，失败 ${result.failed}`,
+        `已检查 ${result.groupsFetched} 组 / ${result.totalGroups===null?'总数未提供':result.totalGroups+'组'}`+
+          (result.truncated?'（本次范围有限，不能保证覆盖全部文章）':''),
+        ...result.errors.map(error=>error.reason)].join('\n')
+      this.setData({newsSyncSummary:summary})
+      wx.showToast({ title:result.failed?'部分文章同步失败':result.created===0?'已检查，暂无新文章':'同步检查完成',icon:result.failed?'none':'success' })
+      this.setData(newsReviewState(await getAdminNews(),this.data.newsUnclassifiedFirst))
     } catch (error) {
       const message = error instanceof Error ? error.message : ''
       const title = message.includes('official_account_not_configured')
         ? '服务号接口尚未配置'
         : '同步失败，请检查服务号接口权限'
+      this.setData({newsSyncSummary:'检查失败：'+title+'（'+message+'）'})
       wx.showToast({ title, icon: 'none', duration: 2600 })
     } finally {
       this.setData({ actionLoading: false })
