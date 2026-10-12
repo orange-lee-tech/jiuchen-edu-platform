@@ -109,7 +109,7 @@ test('internal ID search, four Chinese states and actions follow real status and
   ]
   assert.equal(filterInternalIds(rows, 'jcs 123', 0)[0].id, 'a')
   assert.equal(filterInternalIds(rows, '', 3)[0].id, 'c')
-  assert.equal(rows.map(r => internalIdView(r).statusLabel).join(','), '可认领,已绑定,已暂停,已撤销')
+  assert.equal(rows.map(r => internalIdView(r).statusLabel).join(','), '未认领,已认领,已暂停,已撤销')
   assert.equal(internalIdView(rows[1], id).actions.length, 0)
   assert.equal(internalIdView(rows[2]).actions.join(','), '恢复编号,撤销授权')
   assert.equal(internalIdView(rows[0]).actions.join(','), '绑定账号,删除编号')
