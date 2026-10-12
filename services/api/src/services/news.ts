@@ -7,6 +7,7 @@ import {
   scanOfficialAccountPosts,
   type OfficialAccountPost,
 } from './official-account.js'
+import { recordNewsSync, reconcileNewsWindow, withNewsLock } from './news-v2-store.js'
 
 export type NewsPostContent = {
   html: string | null
@@ -85,9 +86,21 @@ export async function upsertOfficialAccountPosts(
 }
 
 export async function syncOfficialAccountPosts(database:DatabaseContext&{configured:true},env:AppEnv){
-  const scan=await scanOfficialAccountPosts(env)
-  const result=await upsertOfficialAccountPosts(database,scan.posts)
-  return {...result,...scan,message:result.failed?'部分文章同步失败':result.created===0?'已检查，暂无新文章':'同步检查完成'}
+  return withNewsLock(database.pool,async connection=>{
+    try{
+      const scan=await scanOfficialAccountPosts(env)
+      const result=await upsertOfficialAccountPosts(database,scan.posts)
+      let window=null
+      const incomplete=Boolean(result.failed || scan.truncated)
+      if(env.NEWS_V2_ENABLED&&!incomplete)window=await reconcileNewsWindow(connection)
+      if(env.NEWS_V2_ENABLED)await recordNewsSync(database.pool,{status:incomplete?'partial':'checked',fetched:result.total,created:result.created,updated:result.updated,failed:result.failed,
+        latestSourceTime:scan.latestSourcePublishedAt??scan.latestSourceUpdatedAt,errorCode:incomplete?'news_sync_incomplete':null})
+      return {...result,...scan,window,message:incomplete?'检查未完整，已保留原展示窗口':result.created===0?'已检查，暂无新文章':'同步检查完成'}
+    }catch(error){
+      if(env.NEWS_V2_ENABLED)try{await recordNewsSync(database.pool,{status:'failed',fetched:0,created:0,updated:0,failed:1,latestSourceTime:null,errorCode:'official_source_or_storage_failed'})}catch{}
+      throw error
+    }
+  })
 }
 
 /** Legacy timestamps were populated from update_time, so do not label them as publication time. */

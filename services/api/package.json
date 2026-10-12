@@ -34,6 +34,7 @@
     "db:check:credit-payment": "tsx src/db/check-credit-payment-foundation.ts",
     "db:check:news-experience": "tsx src/db/check-news-experience.ts",
     "db:upgrade:news-experience": "tsx src/db/upgrade-news-experience.ts",
+    "db:upgrade:news-v2": "tsx src/db/upgrade-news-v2.ts",
     "db:check:profile": "tsx src/db/check-profile-foundation.ts"
   },
   "dependencies": {
