@@ -252,13 +252,16 @@ Page({
     const generation = this.viewGeneration, request = ++this.weekRequest
     this.setData({ weekLoading: true, weekError: '', weekCourses: [] })
     try {
-      const stageCode=this.data.currentStageCode
-      const latest = /^(freshman|sophomore|junior|senior)-(fall|spring)$/.test(stageCode)
-        ? await getLatestScheduleImport(stageCode)
-        : null
+      // The current-week panel is independent of the stage navigation.
+      // The API's unfiltered endpoint returns the student's latest parsed schedule.
+      const latest = await getLatestScheduleImport()
       if (generation !== this.viewGeneration || request !== this.weekRequest) return
       const view = weeklyScheduleView(latest?.schedule || null)
-      this.setData({ weekState: view.state, weekLabel: view.currentWeekLabel, weekCourses: view.visibleCourses.map(c => ({ ...c, slot: courseTimeLabel(c) })) })
+      const ownerStage = (this.data.stages as ClassroomStage[]).find(
+        stage => stage.code === latest?.schedule?.stageCode,
+      )
+      const weekLabel = ownerStage ? `${ownerStage.label} · ${view.currentWeekLabel}` : view.currentWeekLabel
+      this.setData({ weekState: view.state, weekLabel, weekCourses: view.visibleCourses.map(c => ({ ...c, slot: courseTimeLabel(c) })) })
     } catch {
       if (generation === this.viewGeneration && request === this.weekRequest) this.setData({ weekError: '本周课表读取失败，请重试。' })
     } finally { if (generation === this.viewGeneration && request === this.weekRequest) this.setData({ weekLoading: false }) }
