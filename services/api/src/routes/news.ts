@@ -5,11 +5,13 @@ import {
   listActiveNewsPosts,
 } from '../services/news.js'
 
+import { resolveSessionUser } from '../services/session.js'
+
 export function registerNewsRoutes(
   app: FastifyInstance,
   database: DatabaseContext,
 ) {
-  app.get('/news', async (_request, reply) => {
+  app.get('/news', async (request, reply) => {
     if (!database.configured) {
       return reply.code(503).send({
         ok: false,
@@ -17,7 +19,9 @@ export function registerNewsRoutes(
       })
     }
 
-    const posts = await listActiveNewsPosts(database, 50)
+    const user=await resolveSessionUser(request,database)
+    const reviewer=Boolean(user&&['admin','teacher','staff'].includes(user.role))
+    const posts = await listActiveNewsPosts(database, 50, reviewer)
 
     return {
       ok: true,
@@ -36,7 +40,9 @@ export function registerNewsRoutes(
       })
     }
 
-    const post = await getActiveNewsPost(database, request.params.id)
+    const user=await resolveSessionUser(request,database)
+    const reviewer=Boolean(user&&['admin','teacher','staff'].includes(user.role))
+    const post = await getActiveNewsPost(database, request.params.id, reviewer)
     if (!post) {
       return reply.code(404).send({
         ok: false,
