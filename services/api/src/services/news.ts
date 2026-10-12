@@ -98,6 +98,26 @@ export function newsTimeView(row:{source:string;publishedAt:Date|null;contentJso
     publicationTimeSource:row.source==='manual'?'manual':content.publicationTimeSource}
 }
 
+/**
+ * Sort by the best verifiable source timestamp without relabelling an update
+ * as a publication. New official-account rows keep update_time in JSON while
+ * legacy rows stored it in published_at, so both representations must sort.
+ */
+export function newsSourceTimeOrder() {
+  return sql<number>`COALESCE(
+    UNIX_TIMESTAMP(${newsPosts.publishedAt}),
+    TIMESTAMPDIFF(
+      SECOND,
+      '1970-01-01 00:00:00',
+      STR_TO_DATE(
+        SUBSTRING(JSON_UNQUOTE(JSON_EXTRACT(${newsPosts.contentJson}, '$.sourceUpdatedAt')), 1, 19),
+        '%Y-%m-%dT%H:%i:%s'
+      )
+    ),
+    UNIX_TIMESTAMP(${newsPosts.createdAt})
+  )`
+}
+
 export async function listActiveNewsPosts(
   database: DatabaseContext & { configured: true },
   limit = 50,
@@ -117,7 +137,7 @@ export async function listActiveNewsPosts(
     })
     .from(newsPosts)
     .where(and(eq(newsPosts.status, 'active'), ...(includeUnclassified ? [] : [sql`JSON_LENGTH(${newsPosts.tagsJson}) > 0`])))
-    .orderBy(desc(newsPosts.publishedAt), desc(newsPosts.createdAt))
+    .orderBy(desc(newsSourceTimeOrder()), desc(newsPosts.createdAt))
     .limit(limit)
 
   return rows.map((row) => ({

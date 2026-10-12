@@ -21,6 +21,7 @@ import {
 } from '../services/internal-identities.js'
 import {
   normalizeNewsTags,
+  newsSourceTimeOrder,
   newsTimeView,
   syncOfficialAccountPosts,
 } from '../services/news.js'
@@ -481,7 +482,7 @@ export function registerMobileAdminRoutes(
         status: newsPosts.status,
       })
       .from(newsPosts)
-      .orderBy(desc(newsPosts.publishedAt), desc(newsPosts.createdAt))
+      .orderBy(desc(newsSourceTimeOrder()), desc(newsPosts.createdAt))
       .limit(50)
 
     return {
