@@ -121,7 +121,7 @@
         <text class="section-title">联系老师</text>
       </view>
       <text class="body-text" user-select="true">可携带本次评估结果与老师确认目标梯度、关键差距和下一阶段执行安排。老师可结合你的时间窗口与现有材料进一步判断。</text>
-      <button class="contact-button" bindtap="onCustomerServiceTap">联系九辰老师</button>
+      <button class="contact-button" loading="{{consulting}}" disabled="{{consulting}}" bindtap="onCustomerServiceTap">联系九辰老师</button>
     </view>
 
     <view class="section-card references-card">
@@ -148,6 +148,12 @@
         </view>
         <text class="reference-arrow">›</text>
       </button>
+    </view>
+
+    <view wx:if="{{output.uncertainties.length || output.disclaimer}}" class="section-card">
+      <text class="section-title">不确定性及说明</text>
+      <text wx:for="{{output.uncertainties}}" wx:key="*this" class="bullet" user-select="true">· {{item}}</text>
+      <text wx:if="{{output.disclaimer}}" class="body-text" user-select="true">{{output.disclaimer}}</text>
     </view>
 
     <button class="secondary history-link" bindtap="onViewHistory">查看全部历史评估</button>

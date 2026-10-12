@@ -57,14 +57,15 @@ function citationSuffix(
     .filter((value): value is number => typeof value === 'number')
 
   const unique = [...new Set(indexes)].sort((left, right) => left - right)
-  return unique.map((index) => `[${index}]`).join('')
+  return unique.map((index) => `[${index}]`).join('') + refs.filter(ref => !indexByRef.has(ref)).map(ref => `[${ref}]`).join('')
 }
 
 export function formatAssessmentDate(value: string | null | undefined) {
-  const parsed = value ? new Date(value) : new Date()
-  const date = Number.isNaN(parsed.getTime()) ? new Date() : parsed
-
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
+  if (!value) return '未记录'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return '未记录'
+  const date = new Date(parsed.getTime() + 8 * 3600000)
+  return `${date.getUTCFullYear()}年${date.getUTCMonth() + 1}月${date.getUTCDate()}日`
 }
 
 function safeDisplayName(value: string) {
@@ -96,13 +97,6 @@ function targetLabel(
   return '信息不足'
 }
 
-function compactReferenceText(value: string, max = 220) {
-  const normalized = value.replace(/\s+/g, ' ').trim()
-  return normalized.length > max
-    ? normalized.slice(0, max).trimEnd() + '…'
-    : normalized
-}
-
 function priorityLabel(priority: 'high' | 'medium' | 'low') {
   if (priority === 'high') return '优先'
   if (priority === 'medium') return '重要'
@@ -119,12 +113,8 @@ function pushFindingSection(
   }>,
   references: AssessmentReportReference[],
 ) {
+  if (!findings.length) return
   lines.push(title)
-
-  if (!findings.length) {
-    lines.push('（一）暂无明确结论', '')
-    return
-  }
 
   findings.forEach((finding, index) => {
     lines.push(
@@ -150,12 +140,15 @@ export function buildAssessmentReportPlainText(
     `当前背景：${assessment.input.profile.university} · ${assessment.input.profile.major}`,
     assessment.model.name ? `评估模型：${assessment.model.name}` : '',
     '',
+    '学业背景与评估概要',
+    output.profileSummary,
+    '',
   ]
 
   pushFindingSection(lines, '一、优势', output.strengths, references)
   pushFindingSection(lines, '二、风险', output.risks, references)
 
-  lines.push('三、目标评估')
+  if (output.targetAssessments.length) lines.push('三、目标评估')
   output.targetAssessments.forEach((target, index) => {
     const program = target.programName ? ` · ${target.programName}` : ''
     lines.push(
@@ -180,10 +173,8 @@ export function buildAssessmentReportPlainText(
     lines.push('')
   })
 
-  lines.push('四、推荐行动')
-  if (!output.recommendedActions.length) {
-    lines.push('（一）暂无额外行动建议。', '')
-  } else {
+  if (output.recommendedActions.length) {
+    lines.push('四、推荐行动')
     output.recommendedActions.forEach((action, index) => {
       lines.push(
         `（${chineseNumber(index)}）${action.title}（${priorityLabel(action.priority)}）`,
@@ -202,10 +193,8 @@ export function buildAssessmentReportPlainText(
     '',
   )
 
-  lines.push('六、参考案例')
-  if (!references.length) {
-    lines.push('当前正文没有直接引用可展示的案例。')
-  } else {
+  if (references.length) {
+    lines.push('六、参考案例')
     references.forEach((reference) => {
       lines.push(
         `[${reference.index}] ${reference.title}${reference.metaLabel ? `（${reference.metaLabel}）` : ''}`,
@@ -217,11 +206,22 @@ export function buildAssessmentReportPlainText(
         lines.push(`2. 结果参照：${reference.resultSummary}`)
       }
       if (reference.excerpt) {
-        lines.push(`3. 案例摘要：${compactReferenceText(reference.excerpt)}`)
+        lines.push(`3. 案例摘要：${reference.excerpt}`)
       }
       lines.push('')
     })
   }
+
+  const referenced = new Set(references.map(item => item.ref))
+  assessment.evidence?.filter(item => !referenced.has(item.ref)).forEach(item => {
+    lines.push(`证据 ${item.ref}：${item.title}（${item.sourceLabel}）`, item.excerpt || '', '')
+  })
+  output.similarCases.filter(item => !referenced.has(item.evidenceRef)).forEach(item => {
+    lines.push(`参考案例：${item.caseId}（${item.sourceType === 'jiuchen' ? '九辰案例' : '外部案例'}）`,
+      item.similarityReason, item.resultSummary, `证据：${item.evidenceRef}`, '')
+  })
+  if (output.uncertainties.length) lines.push('七、不确定性及说明', ...output.uncertainties, '')
+  if (output.disclaimer) lines.push('免责声明', output.disclaimer)
 
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
@@ -230,109 +230,16 @@ export function buildAssessmentReportPlainText(
 export function buildAssessmentReportMarkdown(
   context: AssessmentReportExportContext,
 ) {
-  const { assessment, references } = context
-  const output = assessment.output
-  if (!output) return ''
-
-  const lines = [
-    '# 九辰保研评估报告',
-    '',
-    `- 姓名：${safeDisplayName(context.displayName)}`,
-    `- 评估日期：${formatAssessmentDate(assessment.completedAt || assessment.updatedAt)}`,
-    `- 当前背景：${assessment.input.profile.university} · ${assessment.input.profile.major}`,
-    assessment.model.name ? `- 评估模型：${assessment.model.name}` : '',
-    '',
-    '## 一、优势',
-    '',
-  ].filter(Boolean)
-
-  if (!output.strengths.length) lines.push('暂无明确优势结论。', '')
-  output.strengths.forEach((item, index) => {
-    lines.push(
-      `### （${chineseNumber(index)}）${item.title}`,
-      '',
-      `${item.detail}${citationSuffix(item.evidenceRefs, references)}`,
-      '',
-    )
-  })
-
-  lines.push('## 二、风险', '')
-  if (!output.risks.length) lines.push('暂无明确风险结论。', '')
-  output.risks.forEach((item, index) => {
-    lines.push(
-      `### （${chineseNumber(index)}）${item.title}`,
-      '',
-      `${item.detail}${citationSuffix(item.evidenceRefs, references)}`,
-      '',
-    )
-  })
-
-  lines.push('## 三、目标评估', '')
-  output.targetAssessments.forEach((target, index) => {
-    const program = target.programName ? ` · ${target.programName}` : ''
-    lines.push(
-      `### （${chineseNumber(index)}）${target.schoolName}${program}（${targetLabel(target.tier)}）`,
-      '',
-      `**判断：** ${target.rationale}${citationSuffix(target.evidenceRefs, references)}`,
-      '',
-    )
-    if (target.gapItems.length) {
-      lines.push('**关键差距：**', '')
-      target.gapItems.forEach((item) => lines.push(`- ${item}`))
-      lines.push('')
-    }
-    if (target.actions.length) {
-      lines.push('**针对性动作：**', '')
-      target.actions.forEach((item) => lines.push(`- ${item}`))
-      lines.push('')
-    }
-  })
-
-  lines.push('## 四、推荐行动', '')
-  if (!output.recommendedActions.length) lines.push('暂无额外行动建议。', '')
-  output.recommendedActions.forEach((item, index) => {
-    lines.push(
-      `### （${chineseNumber(index)}）${item.title}（${priorityLabel(item.priority)}）`,
-      '',
-      item.rationale,
-      '',
-    )
-    if (item.timeframe) lines.push(`建议周期：${item.timeframe}`, '')
-  })
-
-  lines.push(
-    '## 五、联系老师',
-    '',
-    '可携带本次评估结果联系九辰老师，重点确认目标梯度、关键差距和下一阶段执行安排。',
-    '',
-    '## 六、参考案例',
-    '',
-  )
-
-  if (!references.length) {
-    lines.push('当前正文没有直接引用可展示的案例。')
-  } else {
-    references.forEach((reference) => {
-      lines.push(
-        `### [${reference.index}] ${reference.title}`,
-        '',
-        reference.metaLabel ? `来源：${reference.metaLabel}` : '',
-        reference.similarityReason
-          ? `与本次判断的关联：${reference.similarityReason}`
-          : '',
-        reference.resultSummary
-          ? `结果参照：${reference.resultSummary}`
-          : '',
-        reference.excerpt ? `案例摘要：${compactReferenceText(reference.excerpt)}` : '',
-        '',
-      )
-    })
-  }
-
-  return lines.filter((line, index, all) =>
-    line !== '' || index === 0 || all[index - 1] !== ''
-  ).join('\n').trim()
+  const text = buildAssessmentReportPlainText(context)
+  if (!text) return ''
+  return text.split('\n').map((line,index)=> {
+    if(index===0)return '# '+line
+    if(/^[一二三四五六七八九十]+、|^学业背景与评估概要$|^免责声明$/.test(line))return '## '+line
+    if(/^（[一二三四五六七八九十]+）/.test(line))return '### '+line
+    return line
+  }).join('\n\n')
 }
+
 
 function utf8Bytes(value: string) {
   const bytes: number[] = []

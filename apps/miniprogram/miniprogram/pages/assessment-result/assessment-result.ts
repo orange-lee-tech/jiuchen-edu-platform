@@ -19,6 +19,8 @@ import {
 } from '../../utils/assessment-report-export'
 
 import { buildAssessmentConsultation } from '../../utils/consultation-payload'
+import { layoutAssessmentImage, drawReportStrip, REPORT_TILE_HEIGHT } from '../../utils/assessment-image'
+import { ReportPngEncoder } from '../../utils/report-png'
 
 const TIER_VIEW = {
   reach: { label: '冲刺', tone: 'reach' },
@@ -139,41 +141,6 @@ function buildResultView(
   }
 }
 
-function wrapImageLine(line: string, maxUnits = 25) {
-  if (!line) return ['']
-
-  const lines: string[] = []
-  let current = ''
-  let units = 0
-
-  for (const char of line) {
-    const charUnits = /[\u0000-\u00ff]/.test(char) ? 0.55 : 1
-    if (units + charUnits > maxUnits && current) {
-      lines.push(current)
-      current = char
-      units = charUnits
-    } else {
-      current += char
-      units += charUnits
-    }
-  }
-
-  if (current) lines.push(current)
-  return lines
-}
-
-function imageVisualLines(text: string) {
-  return text.split(/\r?\n/).flatMap((line) => wrapImageLine(line))
-}
-
-function chunks<T>(items: T[], size: number) {
-  const result: T[][] = []
-  for (let index = 0; index < items.length; index += size) {
-    result.push(items.slice(index, index + size))
-  }
-  return result
-}
-
 type ShareFileApi = {
   shareFileMessage?: (options: {
     filePath: string
@@ -196,7 +163,7 @@ Page({
     output: null as ResultView | null,
     references: [] as AssessmentReportReference[],
     selectedReference: null as AssessmentReportReference | null,
-    exportCanvasHeight: 1600,
+    exportCanvasHeight: REPORT_TILE_HEIGHT,
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -316,19 +283,22 @@ Page({
       itemList: [
         'Markdown（.md）',
         '纯文本（.txt）',
-        '图片',
+        '导出图片（摘要图）',
+        '导出长图（完整报告）',
         'Word（.docx）',
       ],
       success: (result) => {
         if (result.tapIndex === 0) void this.exportTextFile('md')
         if (result.tapIndex === 1) void this.exportTextFile('txt')
-        if (result.tapIndex === 2) void this.exportImageReport()
-        if (result.tapIndex === 3) void this.exportWordFile()
+        if (result.tapIndex === 2) void this.exportImageReport('summary')
+        if (result.tapIndex === 3) void this.exportImageReport('long')
+        if (result.tapIndex === 4) void this.exportWordFile()
       },
     })
   },
 
   async exportTextFile(kind: 'md' | 'txt') {
+    if(this.data.exporting)return
     const context = this.reportExportContext()
     if (!context) return
 
@@ -354,6 +324,7 @@ Page({
   },
 
   async exportWordFile() {
+    if(this.data.exporting)return
     const context = this.reportExportContext()
     if (!context) return
 
@@ -418,123 +389,60 @@ Page({
     })
   },
 
-  async exportImageReport() {
-    const context = this.reportExportContext()
-    if (!context) return
-
-    const text = buildAssessmentReportPlainText(context)
-    const pages = chunks(imageVisualLines(text), 38)
-
+  async exportImageReport(kind: 'summary'|'long') {
+    if(this.data.exporting)return
+    const context=this.reportExportContext()
+    if(!context)return
+    this.setData({exporting:true})
+    let filePath=''
     try {
-      this.setData({ exporting: true })
-      wx.showLoading({ title: '正在生成图片' })
-
-      for (let index = 0; index < pages.length; index += 1) {
-        const tempPath = await this.renderImagePage(
-          pages[index],
-          index + 1,
-          pages.length,
-        )
-        await new Promise<void>((resolve, reject) => {
-          wx.saveImageToPhotosAlbum({
-            filePath: tempPath,
-            success() {
-              resolve()
-            },
-            fail(error) {
-              reject(new Error(error.errMsg || 'save_image_failed'))
-            },
-          })
-        })
+      wx.showLoading({title:'正在生成图片'})
+      const auth=await refreshAuthResult()
+      if(!auth || !this.reportExportContext() || auth.user.id!==this.data.ownerUserId) throw new Error('账号已变化，请重试')
+      const userId=auth.businessIdentity?.status==='claimed' ? auth.businessIdentity.businessId : ''
+      if(!userId)throw new Error('缺少可展示的用户编号，请先绑定学员身份')
+      const isCurrent=()=>getSavedAuthResult()?.user.id===auth.user.id && getSavedAuthResult()?.session.token===auth.session.token && this.data.assessment?.id===context.assessment.id
+      const measureContext=wx.createCanvasContext('reportExportCanvas',this)
+      const layout=layoutAssessmentImage(context,userId,kind,(text,size)=>{
+        measureContext.setFontSize(size);return measureContext.measureText(text).width
+      })
+      const encoder=new ReportPngEncoder(layout.width,layout.height)
+      const manager=wx.getFileSystemManager()
+      filePath=wx.env.USER_DATA_PATH+'/jiuchen-report-'+Date.now()+'.png'
+      const write=(bytes:Uint8Array,append=false)=>new Promise<void>((resolve,reject)=>{
+        const options={filePath,data:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer,
+          success:()=>resolve(),fail:(error:{errMsg?:string})=>reject(new Error(error.errMsg||'图片写入失败'))}
+        if(append)manager.appendFile(options);else manager.writeFile(options)
+      })
+      await write(encoder.header())
+      for(let offset=0;offset<layout.height;offset+=REPORT_TILE_HEIGHT){
+        if(!isCurrent())throw new Error('账号或报告已变化，请重试')
+        const height=Math.min(REPORT_TILE_HEIGHT,layout.height-offset)
+        const pixels=await this.renderImageStrip(layout,userId,offset,height)
+        await write(encoder.strip(pixels,height),true)
       }
-
+      await write(encoder.finish(),true)
+      if(!isCurrent())throw new Error('账号或报告已变化，请重试')
       wx.hideLoading()
-      wx.showToast({
-        title: pages.length > 1 ? `已保存 ${pages.length} 张报告图` : '报告图片已保存',
-        icon: 'success',
-      })
-    } catch (error) {
+      await new Promise<void>((resolve,reject)=>wx.saveImageToPhotosAlbum({filePath,
+        success:()=>resolve(),fail:()=>reject(new Error('图片已生成，但相册保存失败，请检查相册权限后重试'))}))
+      wx.showToast({title:kind==='long'?'完整长图已保存':'摘要图已保存',icon:'success'})
+    } catch(error) {
       wx.hideLoading()
-      console.info('Assessment image export failed.', error)
-      wx.showModal({
-        title: '图片保存失败',
-        content: '请检查相册权限后重试。长报告会自动拆分为多张图片，不会缩小到难以阅读。',
-        showCancel: false,
-      })
+      wx.showModal({title:'图片导出未完成',content:error instanceof Error?error.message:'请重试',showCancel:false})
     } finally {
-      this.setData({ exporting: false })
+      if(filePath)wx.getFileSystemManager().unlink({filePath,fail:()=>{}})
+      this.setData({exporting:false})
     }
   },
 
-  renderImagePage(
-    lines: string[],
-    pageNumber: number,
-    totalPages: number,
-  ) {
-    const width = 750
-    const lineHeight = 38
-    const top = 72
-    const bottom = 72
-    const footerHeight = 48
-    const visualHeight = lines.reduce(
-      (total, line) =>
-        total +
-        lineHeight +
-        (/^[一二三四五六七八九十]+、/.test(line) ? 10 : 0),
-      0,
-    )
-    const height = Math.max(
-      900,
-      top + visualHeight + bottom + footerHeight,
-    )
-
-    return new Promise<string>((resolve, reject) => {
-      this.setData({ exportCanvasHeight: height }, () => {
-        const context = wx.createCanvasContext('reportExportCanvas', this)
-        context.setFillStyle('#ffffff')
-        context.fillRect(0, 0, width, height)
-        context.setTextBaseline('top')
-
-        let y = top
-        lines.forEach((line) => {
-          const isSection = /^[一二三四五六七八九十]+、/.test(line)
-          const isSubsection = /^（[一二三四五六七八九十]+）/.test(line)
-          context.setFillStyle(isSection ? '#20242b' : '#4e5662')
-          context.setFontSize(isSection ? 32 : isSubsection ? 28 : 25)
-          context.fillText(line || ' ', 50, y)
-          y += lineHeight + (isSection ? 10 : 0)
-        })
-
-        context.setFillStyle('#8a9099')
-        context.setFontSize(20)
-        context.fillText(
-          `九辰保研 · 第 ${pageNumber} / ${totalPages} 页`,
-          50,
-          height - 52,
-        )
-
-        context.draw(false, () => {
-          wx.canvasToTempFilePath(
-            {
-              canvasId: 'reportExportCanvas',
-              x: 0,
-              y: 0,
-              width,
-              height,
-              destWidth: width * 2,
-              destHeight: height * 2,
-              fileType: 'png',
-              quality: 1,
-              success(result) {
-                resolve(result.tempFilePath)
-              },
-              fail(error) {
-                reject(new Error(error.errMsg || 'report_canvas_export_failed'))
-              },
-            },
-            this,
-          )
-        })
+  renderImageStrip(layout: ReturnType<typeof layoutAssessmentImage>,userId:string,offset:number,height:number) {
+    return new Promise<Uint8ClampedArray>((resolve,reject)=>{
+      this.setData({exportCanvasHeight:height},()=>{
+        const ctx=wx.createCanvasContext('reportExportCanvas',this)
+        drawReportStrip(ctx,layout,userId,offset,height)
+        ctx.draw(false,()=>wx.canvasGetImageData({canvasId:'reportExportCanvas',x:0,y:0,width:layout.width,height,
+          success:result=>resolve(result.data),fail:error=>reject(new Error(error.errMsg||'画布读取失败'))},this))
       })
     })
   },
