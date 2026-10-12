@@ -1,3 +1,12 @@
+> **2026-10-12 生产抢修覆盖说明（优先于本文较早的 Assessment PASS 及“禁止 API 发布”阶段性记载）**
+> - 用户新近真机复测：院校图片已可见，关闭图片交付问题；资料及课表导入可用。
+> - ECS 实测现役版本仍为 `ea8c971008a9efd042ec43fdc62398e136262259`，服务 active，`/health` 数据库 ok。第一周设置 `PUT /me/classroom/schedule-imports/:id/term-start-date` 生产日志 `Route not found`，旧发布的 `dist/routes/classroom-workspace.js` 无路由。
+> - 生产 `POST /me/assessments` 多次 HTTP 400；具体输入字段未知，不能宣称恢复；旧发布无脱敏 `Assessment input validation failed` 日志。未证实进入 `/:id/run` 或调用 AI。
+> - 已审查候选 Git `b150d2c5c8720aac8d48fbd0395d8db9c408bc63`：候选构建 typecheck/build PASS，包含周一起始接口与评估输入诊断；ECS 单元测试 172/172 PASS。候选测试一度因发布包未携带测试依赖、Windows CRLF 与 Linux LF 差异失败；验证两份 116 条学校镜像内容在 EOL 规范化后完全一致。**这些证据并非生产发布成功。**
+> - 受控生产发布仍待完成：不得手改 `current`、官网、NPM、80/443/8088、支付/Schema/密钥或模型；使用 root-owned immutable release、approved-release、READY、`jiuchen-promote`、健康及真机回归；失败回滚到 `ea8c9710...`。
+> - 抢修验收：第一周日期保存重开；评估草稿保存并从历史重开；后台真实 AI 评估成功、结果持久化、历史重看不二次扣费/重复模型调用。若评估仍 400，先读取脱敏 issuePaths，修前后端数据契约，不放宽鉴权或服务端学籍一致性校验。
+> - 本覆盖说明只修正实时故障优先级；不推翻 Phase 1a 其他原有边界，也不授权生产数据库迁移。
+
 # CURRENT — 九辰保研小程序唯一活跃交接入口
 
 **更新：2026-10-09 · 用户真实手机反馈后的 UI 故障修复已在集成分支施工；GitHub CI 与真机状态分开记录。** 本文件管理当前任务与验收状态；历史日期交接仅记录当时事实，不覆盖本文件。
