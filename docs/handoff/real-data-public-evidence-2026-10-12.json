@@ -1,0 +1,61 @@
+{
+  "checkedAt": "2026-10-12T12:40:47.176499+00:00",
+  "requests": [
+    {
+      "endpoint": "/news",
+      "authenticated": false,
+      "status": 200,
+      "count": 21,
+      "unclassified": 18,
+      "testTagged": 3,
+      "samples": [
+        {
+          "title": "月满中秋，清辉相伴｜九辰教育祝您中秋安康",
+          "publishedAt": "2026-09-25T01:00:02.000Z",
+          "tags": [
+            "测试"
+          ]
+        },
+        {
+          "title": "2027推免确认期：预录取、候补、暂无Offer怎么走",
+          "publishedAt": "2026-09-23T02:00:10.000Z",
+          "tags": [
+            "测试"
+          ]
+        },
+        {
+          "title": "9月21日志愿怎么填？预录取、候补、无Offer分别这样做",
+          "publishedAt": "2026-09-20T04:00:01.000Z",
+          "tags": [
+            "测试"
+          ]
+        },
+        {
+          "title": "2027推免系统明日开放注册：先完成这5步，志愿9月21日再填",
+          "publishedAt": "2026-09-17T11:00:01.000Z",
+          "tags": []
+        },
+        {
+          "title": "没有预推免Offer，正式阶段还能怎么争取？",
+          "publishedAt": "2026-09-17T02:10:32.000Z",
+          "tags": []
+        }
+      ]
+    },
+    {
+      "endpoint": "/me/admin/news",
+      "authenticated": false,
+      "status": 401
+    },
+    {
+      "endpoint": "/me/admin/assessment-analytics",
+      "authenticated": false,
+      "status": 401
+    },
+    {
+      "endpoint": "/me/admin/internal-ids",
+      "authenticated": false,
+      "status": 401
+    }
+  ]
+}
