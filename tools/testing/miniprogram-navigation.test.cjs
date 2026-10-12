@@ -662,68 +662,53 @@ test('student homepage prioritizes plan and renders a four-card action grid',()=
  assert.match(css,/\.action-row\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)
  assert.match(css,/\.service-link\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)
 })
-test('school consultation sends server-verified role + school in one consent modal',async()=>{
+test('unbound school consultation copies the correct school and identifies missing binding',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('admin'))
  h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
  let copied='',opened=null
  h.wx.setClipboardData=opts=>{copied=opts.data;opts.success?.()}
  h.wx.openCustomerServiceChat=opts=>{opened=opts}
  const p=h.page('packages/schools/detail/detail');p.onLoad({id:'s015'})
- assert.equal(p.data.school.name,'复旦大学')
  const flow=p.onConsultSchool()
- assert.equal(h.requests.length,1)
- assert.match(h.requests[0].url,/\/auth\/me/)
- h.respond(0,{ok:true,user:authFixture('admin').user,
-   businessIdentity:{businessId:'JCA-TEST-0001',type:'admin',status:'claimed'}})
- await flow
- assert.equal(h.modals.length,1)
- assert.match(h.modals[0].content,/当前身份：管理员/)
- assert.match(h.modals[0].content,/目标学校：复旦大学/)
+ h.respond(0,{ok:true,user:authFixture('admin').user,businessIdentity:null})
+ await settle()
+ assert.match(copied,/咨询院校：复旦大学/)
+ assert.match(copied,/身份资料尚未绑定/)
  assert.equal(opened,null)
- h.modals[0].success({confirm:true})
- assert.match(copied,/当前身份：管理员/)
- assert.match(copied,/目标学校：复旦大学/)
- assert.match(opened.sendMessageTitle,/管理员/)
- assert.match(opened.sendMessagePath,/packages\/schools\/detail\/detail\?id=s015/)
- assert.equal(h.sheets.length,0)
+ assert.equal(p.data.consultBusy,true)
+ h.modals[0].success({confirm:true});await flow
+ assert.match(opened.sendMessagePath,/id=s015/)
+ assert.equal(p.data.consultBusy,false)
 })
-test('school inquiry never trusts stale role when revalidation fails',async()=>{
+test('school inquiry stops when identity validation fails',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('teacher'))
- h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
- let opened=false;h.wx.openCustomerServiceChat=()=>{opened=true}
+ let opened=false,copied=false;h.wx.openCustomerServiceChat=()=>{opened=true};h.wx.setClipboardData=()=>{copied=true}
  const p=h.page('packages/schools/detail/detail');p.onLoad({id:'s015'})
- const flow=p.onConsultSchool()
- h.respond(0,{error:'unauthorized'},401)
- await flow
- assert.equal(opened,false)
- assert.equal(h.modals.length,1)
- assert.match(h.modals[0].content,/本地缓存/)
+ const flow=p.onConsultSchool();h.respond(0,{error:'unauthorized'},401);await flow
+ assert.equal(opened,false);assert.equal(copied,false)
 })
-test('student school consultation includes server-confirmed student role and known academic context',async()=>{
+test('student school consultation copies all academic fields after authenticating without a classroom fetch',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('student'))
  h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
- let copied='',opened=null
- h.wx.setClipboardData=opts=>{copied=opts.data;opts.success?.()}
- h.wx.openCustomerServiceChat=opts=>{opened=opts}
+ let copied='',opened=null;h.wx.setClipboardData=opts=>{copied=opts.data;opts.success?.()};h.wx.openCustomerServiceChat=opts=>{opened=opts}
  const p=h.page('packages/schools/detail/detail');p.onLoad({id:'s009'})
  const flow=p.onConsultSchool()
- assert.equal(h.requests.length,2,'student context comes from read-only profile and classroom requests')
- h.respond(0,{ok:true,profile:{university:'中南大学',major:'能源与动力工程',
-   currentGrade:'大四',enrollmentYear:2023,gpaText:null,rankText:null}})
- h.respond(1,{ok:true,student:{id,name:'学员甲',major:'能源与动力工程'},
-   stage:{code:'senior-fall',label:'大四上'},plans:[],mentors:[],records:[]})
+ assert.equal(h.requests.length,1);assert.match(h.requests[0].url,/auth\/me/)
+ h.respond(0,{ok:true,user:authFixture('student').user,businessIdentity:{businessId:'JCS-TEST-0001',status:'claimed',type:'student'}})
+ await settle();assert.equal(h.requests.length,2);assert.match(h.requests[1].url,/me\/profile/)
+ h.respond(1,{ok:true,profile:{university:'测试大学',major:'测试专业',currentGrade:'大四',enrollmentYear:2022}})
  await settle()
- assert.equal(h.requests.length,3,'recheck actual server identity after reading profile context')
- h.respond(2,{ok:true,user:{...authFixture('student').user,displayName:'学员甲'},
-   businessIdentity:{businessId:'JCS-0001',status:'claimed',type:'student'}})
- await flow
- assert.equal(h.modals.length,1)
- assert.match(h.modals[0].content,/当前身份：学员/)
- assert.match(h.modals[0].content,/目标学校：南开大学/)
- h.modals[0].success({confirm:true})
- assert.match(copied,/就读年级：大四/)
- assert.match(copied,/就读专业：能源与动力工程/)
- assert.match(opened.sendMessageTitle,/学员/)
+ for(const text of ['咨询院校：南开大学','本科院校：测试大学','本科专业：测试专业','当前年级：大四','入学年份：2022','用户ID：JCS-TEST-0001'])assert.ok(copied.includes(text),text)
+ assert.doesNotMatch(copied,/test-session|undefined|null/)
+ h.modals[0].success({confirm:true});await flow;assert.ok(opened)
+})
+test('school consultation never copies a profile response after switching account',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ let copied=false;h.wx.setClipboardData=()=>{copied=true}
+ const p=h.page('packages/schools/detail/detail');p.onLoad({id:'s009'})
+ const flow=p.onConsultSchool();h.respond(0,{ok:true,user:authFixture().user,businessIdentity:{businessId:'JCS-TEST',status:'claimed',type:'student'}})
+ await settle();h.auth.saveAuthResult(authFixture('student',secondId,'second-session'))
+ h.respond(1,{ok:true,profile:{university:'旧账号大学'}});await flow;assert.equal(copied,false)
 })
 
 test('school map updates preview and navigation while honoring primary campus',()=>{

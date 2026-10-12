@@ -1,9 +1,10 @@
 import { getSchoolById, MOE_985_SOURCE, MOE_211_SOURCE, C9_SOURCE,
   DOUBLE_FIRST_CLASS_2022_SOURCE, SCHOOL_AFFILIATIONS, type School } from '../data'
-import { getMyAcademicProfile, getMyClassroom } from '../../../utils/request'
-import { getSavedAuthResult } from '../../../utils/auth'
+import { getMyAcademicProfile } from '../../../utils/request'
+import { getSavedAuthResult, refreshAuthResult } from '../../../utils/auth'
 import { SCHOOL_CAMPUS_POINTS, type SchoolCampusPoint } from '../campus-points'
-import { openVerifiedWechatCustomerService } from '../../../utils/customer-service'
+import { copyConsultationAndOpen } from '../../../utils/customer-service'
+import { buildSchoolConsultation } from '../../../utils/consultation-payload'
 Page({
   data: {
     school: null as School | null,
@@ -129,27 +130,34 @@ Page({
     finally { this.setData({consultBusy:false}) }
   },
   async prepareConsultSummary(targetSchool:string) {
-    const session=getSavedAuthResult()
-    let grade='',major=''
-    // Academic fields are optional context, NEVER proof of account identity.
-    // The central customer-service helper independently re-verifies the active
-    // user's role, internal ID and display name with /auth/me.
-    if(session?.user.role==='student'){
-      const [profile,classroom]=await Promise.all([
-        getMyAcademicProfile().catch(()=>null),
-        getMyClassroom().catch(()=>null),
-      ])
-      grade=profile?.currentGrade?.trim()||''
-      major=profile?.major?.trim()||classroom?.student.major?.trim()||''
+    const before=getSavedAuthResult()
+    try {
+      const auth=before ? await refreshAuthResult() : null
+      if(before && (!auth || before.user.id!==auth.user.id || before.session.token!==auth.session.token)) {
+        wx.showToast({title:'身份校验失败，请重试',icon:'none'}); return
+      }
+      const bound=auth?.user.role==='student' && auth.businessIdentity?.status==='claimed'
+      const profile=bound ? await getMyAcademicProfile().catch(()=>null) : null
+      const isCurrent=()=>{
+        const current=getSavedAuthResult()
+        return before ? current?.user.id===before.user.id && current?.session.token===before.session.token : !current
+      }
+      const text=buildSchoolConsultation(targetSchool,{
+        bound:Boolean(bound),userId:auth?.businessIdentity?.businessId,displayName:auth?.user.displayName,
+      },profile)
+      await copyConsultationAndOpen(text,{
+        title:'九辰院校咨询｜'+targetSchool,
+        path:'/packages/schools/detail/detail?id='+encodeURIComponent(this.data.school?.id||''),
+      },isCurrent)
+    } catch {
+      wx.showToast({title:'咨询信息准备失败，请重试',icon:'none'})
     }
-    await openVerifiedWechatCustomerService('目标院校咨询',{
-      school:targetSchool,grade,major,
-      path:'/packages/schools/detail/detail?id='+encodeURIComponent(this.data.school?.id||''),
-    })
   },
+
   onCopyAddress() {
     const address = this.data.school?.address
     if (!address) return
     wx.setClipboardData({ data: address, success: () => wx.showToast({ title: '地址已复制', icon: 'success' }) })
   },
 })
+

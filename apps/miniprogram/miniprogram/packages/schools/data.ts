@@ -629,9 +629,11 @@ export const SCHOOLS: readonly School[] = allTuples.map(({name,province,city,key
   campusRecord: name === '华北电力大学（保定）',
   sourceUrl: specialtySourceByName.get(name) || publicSchoolSources.get(name) ||
     (!is211 ? DOUBLE_FIRST_CLASS_2022_SOURCE : is985 ? MOE_985_SOURCE : MOE_211_SOURCE),
-  website: '', intro: '', introSource: '', address: '', addressSource: '', founded: '',
+  website: '', intro: '', introSource: '', founded: '',
   ...verifiedExtras[name],
   ...SCHOOL_MEDIA[name],
+  address: SCHOOL_MEDIA[name]?.address || verifiedExtras[name]?.address || '',
+  addressSource: SCHOOL_MEDIA[name]?.addressSource || verifiedExtras[name]?.addressSource || '',
 }))
 
 export function getSchoolById(id: string): School | undefined {
@@ -661,4 +663,5 @@ export function findSchools(
   ))
 }
 export const SCHOOL_REGIONS = ['全部地区', ...Array.from(new Set(SCHOOLS.map(s => s.province)))]
+
 

@@ -150,3 +150,35 @@ export function openWechatCustomerService(card?:CustomerServiceCard): void {
     },
   })
 }
+
+
+/** Shared clipboard flow. The chat opens only after a real successful copy. */
+export function copyConsultationAndOpen(
+  text: string, card?: CustomerServiceCard, isCurrent: () => boolean = () => true,
+): Promise<void> {
+  return new Promise(resolve => {
+    if (!text || !isCurrent()) {
+      wx.showToast({title:'账号或报告已变化，请重试',icon:'none'})
+      resolve(); return
+    }
+    wx.setClipboardData({
+      data:text,
+      success:()=>{
+        if (!isCurrent()) { resolve(); return }
+        wx.showModal({
+          title:'咨询信息已复制',
+          content:'请在客服对话中粘贴发送。信息不会自动发送给老师。',
+          showCancel:false,confirmText:'打开客服',
+          success:()=>{ if(isCurrent()) openWechatCustomerService(card); resolve() },
+          fail:()=>resolve(),
+        })
+      },
+      fail:()=>{
+        wx.showModal({title:'复制失败',content:'未复制咨询信息，请重试。',confirmText:'重试',
+          success:async result=>{ if(result.confirm && isCurrent()) await copyConsultationAndOpen(text,card,isCurrent); resolve() },
+          fail:()=>resolve(),
+        })
+      },
+    })
+  })
+}

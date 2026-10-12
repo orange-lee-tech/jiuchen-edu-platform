@@ -1,4 +1,4 @@
-import { getSavedAuthResult } from '../../utils/auth'
+import { getSavedAuthResult, refreshAuthResult } from '../../utils/auth'
 import { authorizePage } from '../../utils/navigation'
 import {
   getMyAssessment,
@@ -6,7 +6,7 @@ import {
   type AssessmentOutput,
   type AssessmentRecord,
 } from '../../utils/request'
-import { openWechatCustomerService } from '../../utils/customer-service'
+import { copyConsultationAndOpen } from '../../utils/customer-service'
 import {
   buildAssessmentReportBaseFilename,
   buildAssessmentReportDocx,
@@ -17,6 +17,8 @@ import {
   type AssessmentReportExportContext,
   type AssessmentReportReference,
 } from '../../utils/assessment-report-export'
+
+import { buildAssessmentConsultation } from '../../utils/consultation-payload'
 
 const TIER_VIEW = {
   reach: { label: '冲刺', tone: 'reach' },
@@ -185,6 +187,8 @@ Page({
   data: {
     loading: true,
     exporting: false,
+    consulting: false,
+    ownerUserId: '',
     error: '',
     displayName: '用户',
     assessmentDate: '',
@@ -219,7 +223,9 @@ Page({
 
   async loadResult(id: string) {
     try {
+      const owner=getSavedAuthResult()?.user.id
       const assessment = await getMyAssessment(id)
+      if(!owner || getSavedAuthResult()?.user.id!==owner) throw new Error('账号已变化')
       if (assessment.status !== 'succeeded' || !assessment.output) {
         this.setData({ error: '该评估尚未生成可查看的报告' })
         return
@@ -233,6 +239,7 @@ Page({
 
       this.setData({
         assessment,
+        ownerUserId: owner,
         output,
         references,
         assessmentDate: formatAssessmentDate(
@@ -248,7 +255,7 @@ Page({
   },
 
   reportExportContext(): AssessmentReportExportContext | null {
-    if (!this.data.assessment?.output) return null
+    if (!this.data.assessment?.output || getSavedAuthResult()?.user.id!==this.data.ownerUserId) return null
     return {
       assessment: this.data.assessment,
       displayName: this.data.displayName,
@@ -271,8 +278,20 @@ Page({
     // Keep the reference sheet open when the sheet itself is tapped.
   },
 
-  onCustomerServiceTap() {
-    openWechatCustomerService()
+  async onCustomerServiceTap() {
+    if(this.data.consulting)return
+    const context=this.reportExportContext()
+    if(!context)return
+    this.setData({consulting:true})
+    try {
+      const auth=await refreshAuthResult()
+      const current=()=>getSavedAuthResult()?.user.id===auth?.user.id && getSavedAuthResult()?.session.token===auth?.session.token && this.data.assessment?.id===context.assessment.id && Boolean(this.reportExportContext())
+      if(!auth||!current())throw new Error('账号或报告已变化')
+      await copyConsultationAndOpen(buildAssessmentConsultation(context,
+        auth.businessIdentity?.status==='claimed'?auth.businessIdentity.businessId:'尚未绑定'),
+        {title:'九辰 AI 评估咨询',path:'/pages/assessment-result/assessment-result?id='+encodeURIComponent(context.assessment.id)},current)
+    } catch {wx.showToast({title:'咨询信息准备失败，请重试',icon:'none'})}
+    finally {this.setData({consulting:false})}
   },
 
   onCopyReport() {
