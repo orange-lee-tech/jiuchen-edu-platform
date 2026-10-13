@@ -52,6 +52,8 @@
 
 **2026-10-13 Release A 生产事实（用户 ECS 回执）**：API-only 独立候选 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48` 已完成归档 SHA-256、ECS 受限构建（专项测试 14/14）、无数据库隔离冒烟、不可变 release 封装、审批和 `jiuchen-promote`；输出 `PROMOTE_OK`、`RELEASE_A_PROMOTE_PASS`。旧版 `b150d2c5c8720aac8d48fbd0395d8db9c408bc63` 保留作一键回滚。**本次仅代表部署与基础健康通过，真实业务及新版首次新闻同步待验收。** 先前的 [静态复核](release-a-staging-review-2026-10-13.md) 是发布前历史记录。ECS 完整资源与 timer 实存事实见 [资源地图](../ops/ecs-resource-map.md)。**微信体验版前端须单独核对是否依赖未部署 News V2 Schema/API，不得将全集成小程序未经筛选直接发布。**
 
+**2026-10-13 News V2 非生产 MySQL 进展**：已在 GitHub Actions 一次性 MySQL 8.0.46 容器中真正执行 `db:upgrade:news-v2` 两次；发现并修复 `information_schema.tables.ENGINE` 字段名大小写读取 bug（`1b214d63`）；[CI 38336376860](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38336376860) `mysql-gate` PASS，七表列/索引/外键结构合同与基础旧行保留 PASS。**仅代表临时最小基础表的双次迁移**，不是生产结构复刻、完整业务数据回归，也不是备份/恢复演练；真实生产 DDL、开关、timer 和新版 API 仍待各自审批。
+
 ## 3. 唯一执行优先级：先保护生产，再跨模块推进
 
 **10-13 执行更新**：Release A 已按独立审批完成生产切流，以下 P0/P1 旧的 Release A「尚未部署」步骤已过期，不应重新执行；先补充新版业务回归与下一轮新闻自动同步证据。用户要求继续其他未完成模块施工、最后统一真机验收；这不构成生产 DDL、支付、News V2 开关、跨身份扩权或新的 API promote 的自动批准。
