@@ -24,20 +24,23 @@ function fixture(){return {
  output:{profileSummary:'真实概要',strengths:[{title:'优势一',detail:'具体优势',evidenceRefs:['case:1']}],risks:[{title:'风险一',detail:'具体风险',evidenceRefs:['official:1']}],targetAssessments:[{schoolName:'目标学校',programName:'目标专业',tier:'reach',rationale:'判断条件',gapItems:['差距甲'],actions:['动作甲'],evidenceRefs:['case:1']}],recommendedActions:[{title:'优先行动',priority:'high',rationale:'行动理由',timeframe:'两周'}],similarCases:[{caseId:'c2',evidenceRef:'missing:2',sourceType:'external',similarityReason:'无对应证据',resultSummary:'结果乙'}],uncertainties:['未知条件'],disclaimer:'仅供参考，不保证录取'}}
 }}
 const context=fixture()
-test('consultation maps all profile fields, dates, nulls and unbound identity',()=>{
+test('school consultation uses the agreed clipboard template with missing-field fallbacks',()=>{
  const {buildSchoolConsultation,beijingDate}=loader()('utils/consultation-payload')
  assert.equal(beijingDate(new Date('2026-10-11T16:00:00Z')),'2026-10-12')
- const text=buildSchoolConsultation('当前学校',{bound:true,userId:'JCS-TEST'},null,'2026-10-12')
- assert.ok(text.includes('咨询院校：当前学校'));assert.ok(text.includes('学员：某学员'));assert.ok(text.includes('入学年份：未填写'));assert.ok(!/undefined|null/.test(text))
- const guest=buildSchoolConsultation('当前学校',{bound:false},null);assert.ok(guest.includes('身份资料尚未绑定'));assert.ok(!guest.includes('用户ID'))
+ const text=buildSchoolConsultation('目标学校',{bound:true,userId:'JCS-TEST',displayName:'某学员'},{currentGrade:'大四上',major:'能源与动力工程'},'2026-10-12')
+ for(const line of ['九辰教育咨询','学校：目标学校','学生：某学员','用户ID：JCS-TEST','学校阶段：大四上','专业：能源与动力工程','咨询问题：请填写'])assert.ok(text.includes(line),line)
+ assert.ok(!text.includes('评估编号'))
+ const guest=buildSchoolConsultation('目标学校',{bound:false},null);assert.ok(guest.includes('学生：未认领'));assert.ok(guest.includes('用户ID：未认领'));assert.ok(guest.includes('学校阶段：未填写'));assert.ok(!/undefined|null/.test(guest))
 })
-test('full report retains every generated field, complete evidence, unresolved refs and disclaimer',()=>{
+test('AI consultation copies only summary, advice and risks; full report remains a separate export',()=>{
  const load=loader(),{buildAssessmentConsultation}=load('utils/consultation-payload')
  const text=buildAssessmentConsultation(context,'JCS-TEST')
- for(const part of ['真实概要','具体优势','具体风险','目标专业','判断条件','差距甲','动作甲','优先行动','两周','相似原因','参考结果','完整证据'.repeat(100),'官方证据','官方要求','无对应证据','结果乙','未知条件','仅供参考，不保证录取','[official:1]','synthetic-assessment'])assert.ok(text.includes(part),part)
+ for(const part of ['九辰AI评估咨询','学生：某学员','UID：JCS-TEST','日期：2026-10-12','评估摘要：','真实概要','核心建议：','优先行动：行动理由','风险提示：','风险一：具体风险'])assert.ok(text.includes(part),part)
+ for(const forbidden of ['synthetic-assessment','test-model','完整证据','[official:1]','case:1'])assert.ok(!text.includes(forbidden),forbidden)
  const empty=fixture();empty.assessment.output.strengths=[];empty.assessment.output.risks=[];empty.assessment.output.targetAssessments=[];empty.assessment.output.recommendedActions=[];empty.references=[]
+ const fallback=buildAssessmentConsultation(empty,'');assert.ok(fallback.includes('UID：未填写'));assert.ok(fallback.includes('核心建议：\n暂无明确建议'));assert.ok(fallback.includes('风险提示：\n暂无明确风险提示'))
  const noEmpty=load('utils/assessment-report-export').buildAssessmentReportPlainText(empty)
- assert.ok(!noEmpty.includes('一、优势'));assert.ok(!noEmpty.includes('三、目标评估'))
+ assert.ok(!noEmpty.includes('一、优势'));assert.ok(!noEmpty.includes('三、目标评估'));assert.ok(noEmpty.includes('完整证据')===false)
  assert.throws(()=>buildAssessmentConsultation({...context,assessment:{...context.assessment,status:'draft'}},'JCS-TEST'))
 })
 test('copy failure never opens chat; success requires genuine clipboard success and preserves text',async()=>{
@@ -128,10 +131,10 @@ test('actual export page reports save errors and never claims success',async()=>
  const flow=h.page.exportImageReport('summary');h.respond();await flow
  assert.equal(h.saved.length,0);assert.equal(h.files.size,0);assert.equal(h.modals[0].title,'图片导出未完成');assert.equal(h.page.data.exporting,false)
 })
-test('result contact copies only the loaded successful report and preserves disclaimer',async()=>{
+test('result contact copies the loaded assessment consultation summary only',async()=>{
  const h=pageHarness();let copied='',opened=0
  h.wx.setClipboardData=o=>{copied=o.data;o.success()};h.wx.openCustomerServiceChat=()=>opened++
  const flow=h.page.onCustomerServiceTap();h.respond();await new Promise(resolve=>setImmediate(resolve))
- assert.ok(copied.includes('synthetic-assessment'));assert.ok(copied.includes('仅供参考，不保证录取'));assert.equal(opened,0)
+ assert.ok(copied.includes('评估摘要：'));assert.ok(copied.includes('核心建议：'));assert.ok(copied.includes('风险提示：'));assert.ok(!copied.includes('synthetic-assessment'));assert.equal(opened,0)
  h.modals[0].success({confirm:true});await flow;assert.equal(opened,1);assert.equal(h.requests.length,1)
 })
