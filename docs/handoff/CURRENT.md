@@ -56,6 +56,8 @@
 
 **2026-10-13 新闻数据库关系回归**：新增 GitHub Actions 实际 MySQL 8 七表关系测试，验证收藏、展示状态、退役批次/任务/已读/审计、同步运行记录写入、任务状态转换及外键拒绝非法引用；[CI 38337158353](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38337158353) **PASS**，提交 `75430b3e`。此结果不代表72小时生命周期业务接口端到端、真实生产库复刻、备份恢复或微信验收通过；生产 DDL/发布独立审批不变。
 
+**2026-10-13 后续自动化进展**：News V2 隐藏/撤签/不完整源扫描/72小时退役时间边界纯逻辑回归已加入 (`c42a5bf1`)，完整 CI [38337440168](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38337440168) PASS。Profile Release B 在 GitHub Actions 临时 MySQL 8 中真实执行 `db:upgrade:enrollment-year` 两次，旧院校、年级、GPA 行保留，新增入学年份能写回，结构检查 PASS；[CI 38337530468](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38337530468)。两项均 **TEST PASS / PROD DDL NOT APPROVED / NOT DEPLOYED**；临时数据库测试不等于针对生产实例的备份及隔离恢复验收。
+
 ## 3. 唯一执行优先级：先保护生产，再跨模块推进
 
 **10-13 执行更新**：Release A 已按独立审批完成生产切流，以下 P0/P1 旧的 Release A「尚未部署」步骤已过期，不应重新执行；先补充新版业务回归与下一轮新闻自动同步证据。用户要求继续其他未完成模块施工、最后统一真机验收；这不构成生产 DDL、支付、News V2 开关、跨身份扩权或新的 API promote 的自动批准。
