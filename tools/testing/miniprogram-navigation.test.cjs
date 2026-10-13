@@ -672,8 +672,8 @@ test('unbound school consultation copies the correct school and identifies missi
  const flow=p.onConsultSchool()
  h.respond(0,{ok:true,user:authFixture('admin').user,businessIdentity:null})
  await settle()
- assert.match(copied,/咨询院校：复旦大学/)
- assert.match(copied,/身份资料尚未绑定/)
+ assert.match(copied,/学校：复旦大学/)
+ assert.match(copied,/学生：未认领/)
  assert.equal(opened,null)
  assert.equal(p.data.consultBusy,true)
  h.modals[0].success({confirm:true});await flow
@@ -687,7 +687,7 @@ test('school inquiry stops when identity validation fails',async()=>{
  const flow=p.onConsultSchool();h.respond(0,{error:'unauthorized'},401);await flow
  assert.equal(opened,false);assert.equal(copied,false)
 })
-test('student school consultation copies all academic fields after authenticating without a classroom fetch',async()=>{
+test('student school consultation copies the requested stage and major after authenticating without a classroom fetch',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('student'))
  h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
  let copied='',opened=null;h.wx.setClipboardData=opts=>{copied=opts.data;opts.success?.()};h.wx.openCustomerServiceChat=opts=>{opened=opts}
@@ -698,7 +698,8 @@ test('student school consultation copies all academic fields after authenticatin
  await settle();assert.equal(h.requests.length,2);assert.match(h.requests[1].url,/me\/profile/)
  h.respond(1,{ok:true,profile:{university:'测试大学',major:'测试专业',currentGrade:'大四',enrollmentYear:2022}})
  await settle()
- for(const text of ['咨询院校：南开大学','本科院校：测试大学','本科专业：测试专业','当前年级：大四','入学年份：2022','用户ID：JCS-TEST-0001'])assert.ok(copied.includes(text),text)
+ for(const text of ['学校：南开大学','学校阶段：大四','专业：测试专业','用户ID：JCS-TEST-0001','咨询问题：请填写'])assert.ok(copied.includes(text),text)
+ assert.ok(!copied.includes('入学年份：2022'))
  assert.doesNotMatch(copied,/test-session|undefined|null/)
  h.modals[0].success({confirm:true});await flow;assert.ok(opened)
 })
