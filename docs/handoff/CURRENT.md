@@ -4,6 +4,8 @@
 >
 > **证据边界**：生产现状为 2026-10-12 已收到的只读 ECS 回执及用户真机确认；不等于本文件写入时重新连接 ECS。GitHub 集成分支已提交的代码不等于 ECS 已部署。Work/Codex 须重新读取 HEAD、CI、生产 active release，禁止根据下列历史 SHA 强行切流。
 
+> **成本审计入口（2026-10-13）**：[ECS + CloudBase + OCR + 百炼经济账与防超支审计](../finance/cloud-cost-audit-2026-10-13.md)。ECS 实际付费及续费金额仍待阿里云订单证据；本文不授权采购、计费开关或生产改动。
+
 ## 0. 决策权与固定红线
 
 - 仓库：`orange-lee-tech/jiuchen-edu-platform`；唯一日常施工分支：`p1/foundation`；正式 `main`、分支删除/合并、force-push 均无自动授权。
