@@ -37,7 +37,7 @@
 
 | 模块 | GitHub / 测试状态 | 生产与验收状态 | 下一动作 |
 | --- | --- | --- | --- |
-| Profile `enrollment_year` | 单列幂等升级脚本；隔离 MySQL 双次迁移 PASS | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 针对生产的备份+隔离恢复验证+精确DDL审批；不影响其他独立开发 |
+| P1 微信体验版 RC | `22f3889` 旧接口兼容及回归；[CI 38357710899](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38357710899) PASS | **CODE/TEST READY FOR UPLOAD；DEVICE PENDING；全功能交付 BLOCKED**（Profile 缺列） | 本人上传体验版后按统一清单验收；Profile 生产 Schema 另案审批 |\n| Profile `enrollment_year` | 单列幂等升级脚本；隔离 MySQL 双次迁移 PASS | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 针对生产的备份+隔离恢复验证+精确DDL审批；不影响其他独立开发 |
 | 资讯同步分页/真实回执/标签公开控制 | `fbf7fda` + `ab6843b`；短页 fail-closed、可信源时间排序；本地通过 | **API DEPLOYED 2026-10-13 / DEVICE & DATA PENDING** | 等新版首次 timer 同步日志与真实后台、学员资讯数据验收；不可因旧日志 total=21 冒称新版验收 |
 | AI 评估后台统计解耦 | 已提交 `9bda1b5`；真实9条成功记录 | **API DEPLOYED / DATA ACCEPTANCE PENDING**；支付数据源缺表 | 核查管理员真实周/月/年评估统计，支付仍显示来源不可用 |
 | 身份只读投影/筛选 | `47bc3bc`、`4a91cbc` 候选 | **API DEPLOYED / UI & ROLE SAMPLES PENDING**；实名/教师分配样本缺 | 按角色与前端页面核对，缺样本诚实标注 |
@@ -139,7 +139,7 @@
 **状态**：CODE COMPLETE（本轮两批）；本地 mini typecheck/53 项导航、API typecheck/build/相关测试通过。API 全量在受限环境的唯一院校镜像测试因子进程 `EPERM` 未通过；GitHub Actions 结果以对应 HEAD 实际结论为准。DEPLOYED: NO（仅集成分支代码，Release A 不重复发布）；DEVICE PENDING（微信开发者工具／真机均未执行）。Release A 源码包含课表日期 PUT，既有课表手机验收已通过；本轮首页刷新仍待微信体验版复核。News V2 生产 Schema、支付账本与缺失身份样本仍按各自 Gate 处理，**不可标记本轮 DEVICE PASS**。
 
 
-**P1 体验版依赖 Gate（2026-10-13）**：只读对照 Release A `8cc4bb85` 源码，旧 `/news` 可用、News V2 生产未启；但当前小程序把 Release A 统计响应缺少 `assessmentUserCount` 视为整个统计失败，管理员用户页也与不相干的资讯请求耦合。见 [设备就绪审计](p1-device-readiness-audit-2026-10-13.md)、[体验版清单](p1-experience-candidate-checklist-2026-10-13.md)。在兼容修复与 CI 完成前，**RC NOT READY**；不以源码可编译冒充真机可用。成本控制当前仅[文档设计](../architecture/resource-cost-firewall.md)。
+**P1 体验版依赖 Gate（2026-10-13）**：对照 Release A `8cc4bb85` 源码，旧 `/news` 可用且不调用生产未启用的 News V2；`1d6b1cd` 修复管理员统计旧字段兼容和页面无关请求耦合，`22f3889` 加旧资讯回归。[CI 38357710899](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38357710899) PASS。**CODE/TEST READY FOR UPLOAD / 微信未上传 / DEVICE PENDING**；Profile 生产缺 `enrollment_year`，完善资料可能 500，故 **P1 全功能交付 NOT READY**。见 [设备就绪审计](p1-device-readiness-audit-2026-10-13.md)、[体验版清单](p1-experience-candidate-checklist-2026-10-13.md)。成本控制当前仅[文档设计](../architecture/resource-cost-firewall.md)。
 
 ## CI 最终回执
 

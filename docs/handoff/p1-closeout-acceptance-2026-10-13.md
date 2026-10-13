@@ -6,7 +6,7 @@
 
 | 范围 | 本轮代码核对与修改 | 接口／生产状态 | 体验版核对路径与预期 |
 | --- | --- | --- | --- |
-| 学堂与首页 | 导入和学期确认使用 `/me/classroom/schedule-imports`；日期 PUT 只写 `termStartDate` 并读回。课表页重新显示时读 `/latest`，成功保存后重算周次；首页重新显示时独立读 `/latest`，展示真实学期、本周课程或明确错误。规划页的本周面板也读 `/latest`。 | 新日期 PUT 仍须受控 API 发布，旧生产可能 404；未执行本轮生产写入。 | 学员：我的课表→导入/编辑→选择归属学期→设置第一周周一→返回首页及我的规划→本周课表。核对首页学期、周次、课程与服务端重读一致；失败时不把新日期显示为已保存。 |
+| 学堂与首页 | 导入和学期确认使用 `/me/classroom/schedule-imports`；日期 PUT 只写 `termStartDate` 并读回。课表页重新显示时读 `/latest`，成功保存后重算周次；首页重新显示时独立读 `/latest`，展示真实学期、本周课程或明确错误。规划页的本周面板也读 `/latest`。 | Release A 源码已有独立日期 PUT；此前真机课表 DEVICE PASS，本轮未重复写生产。 | 学员：我的课表→导入/编辑→选择归属学期→设置第一周周一→返回首页及我的规划→本周课表。核对首页学期、周次、课程与服务端重读一致；失败时不把新日期显示为已保存。 |
 | 管理员身份 | `/me/admin/internal-ids` 关联 `users/internal_ids/students/teachers/user_profiles/student_teacher_assignments`。未认领、未分配和资料待完善分别展示；管理员无岗位数字，不把 NULL 变成 0。页面去掉测试命名提示；后台仍识别需要完善的占位姓名，没有批量改名、自动认领或删除。 | 旧只读样本覆盖不全；管理员实名／岗位没有独立记录。只读身份镜像授权不变。 | 管理员→用户与内部编号：未认领学员、已认领未分配学员、已分配学员、老师、管理员分别核对；缺已分配及老师真实样本则记 DATA PENDING。暂停／撤销独立核对，不以分配状态覆盖。 |
 | AI 统计 | `/me/admin/assessment-analytics` 从 `assessments` 统计创建、成功、失败、运行中及区间去重评估用户；创建趋势加入图表，周／月／年及折线／柱状保留。支付按 paid 订单分，账本和冻结独立来源错误。 | 2026-10-12 只读样本有 9 条成功；支付三表不存在，应显示“数据源不可用”，不得显示 0；历史完成时间的时区差仍待真实归桶核验。 | 管理员→AI 评估与充值统计：切换周期和图形，核对已成功评估进入对应区间；用户数指区间创建过评估的不同账号，全库账号数单列。核对充值不可用不影响评估数。 |
 | 资讯运营 | `freepublish/batchget` 每页 20 组，最多 200 组并报告截断；审核过的文章按来源更新时间进 20 条窗口，离窗缓冲 72 小时；收藏写公众号 `mp.weixin.qq.com` 原链接；退役任务待办／知晓／在办／反馈及备注仅老师／管理员可读。 | News V2 七表生产未迁移、开关关闭；旧接口不具备 V2 收藏和退役状态。来源 `update_time` 是来源更新时间，不能冒充发表时间。 | 管理员→资讯运营核对同步回执的检查时间、来源更新时间与最新真实标题；启用 V2 前只验证旧版显示、分类和收藏待开放，V2 状态流转记 DEPLOY PENDING。学员不可见未审核文章及内部备注。 |
@@ -25,3 +25,4 @@
 ## CI 最终回执
 
 最终修复提交 `156f2ab70f7e70e205a35267b1398954663b3cb7` 的 [CI](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200246)、[News V2 隔离 MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200232) 与 [Profile 隔离 MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200256) 均 PASS。CI 只证明测试代码通过，未部署生产或微信体验版；DEVICE PENDING。
+\n\n## P1 RC 依赖审计补充（2026-10-13）\n\n旧 `/news` 由 Release A 直接提供，V2 收藏及退役接口只在服务端开启 V2 时触发。管理员统计对 Release A 未返回的 `assessmentUserCount` 显示“当前 API 未提供”，原成功／失败／创建图表保留；账号、分配与资讯页面已拆开独立读取。代码 `22f3889` 的 CI PASS；完整路径与 Profile 缺列阻塞见 [设备就绪审计](p1-device-readiness-audit-2026-10-13.md)及[最终清单](p1-experience-candidate-checklist-2026-10-13.md)。此候选 **可上传体验版进行有限验收**，但完善资料不可标 PASS，P1 全功能交付 NOT READY。\n
