@@ -6,6 +6,7 @@ import {
   listActiveNewsPosts,
   newsTimeView,
   normalizeNewsTags,
+  normalizeNewsContent,
 } from '../services/news.js'
 import { getNewsV2PostPhase, listNewsV2 } from '../services/news-v2-store.js'
 
@@ -29,7 +30,7 @@ export function registerNewsRoutes(
     if (env?.NEWS_V2_ENABLED) {
       const rows=await listNewsV2(database.pool,reviewer)
       const mapped=rows.map(row=>({id:String(row.id),title:String(row.title),summary:row.summary,coverUrl:row.coverUrl,articleUrl:row.articleUrl,
-        tags:normalizeNewsTags(row.tagsJson),source:row.source,...newsTimeView({source:row.source,publishedAt:row.publishedAt,contentJson:row.contentJson}),
+        tags:normalizeNewsTags(row.tagsJson),source:row.source,mediaType:normalizeNewsContent(row.contentJson).mediaType,...newsTimeView({source:row.source,publishedAt:row.publishedAt,contentJson:row.contentJson}),
         retireAt:row.retireAtEpoch===null?null:new Date(Number(row.retireAtEpoch)*1000).toISOString(),phase:row.phase}))
       return {ok:true,v2:true,posts:mapped.filter(row=>row.source==='manual'||row.phase==='normal'),retiring:mapped.filter(row=>row.phase==='buffering')}
     }

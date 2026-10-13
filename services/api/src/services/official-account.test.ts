@@ -18,8 +18,17 @@ test('official scan pages beyond 20 groups and never treats update time as publi
   assert.deepEqual(offsets,[0,20]);assert.equal(result.posts.length,21);assert.equal(result.truncated,false)
   assert.equal(result.posts[0].publishedAt,null);assert.ok(result.posts[0].content.sourceUpdatedAt)
   assert.equal(result.posts[20].content.publicationTimeSource,'explicit_publish_time')
+  assert.equal(result.pagesFetched,2);assert.equal(result.uniqueGroups,21)
   assert.equal(result.latestSourcePublishedAt,new Date(1800000001*1000).toISOString())
  }finally{globalThis.fetch=before}
+})
+
+test('repeated official pages cannot claim a complete scan of distinct groups',async()=>{
+ const before=globalThis.fetch
+ globalThis.fetch=async url=>new Response(JSON.stringify(String(url).includes('/token')?{access_token:'synthetic'}:
+  {total_count:40,item:Array.from({length:20},(_,i)=>({article_id:'repeated-'+i,content:{news_item:[{title:'合成'}]}}))}))
+ try{await assert.rejects(scanOfficialAccountPosts({WECHAT_OA_APP_ID:'synthetic-repeated',WECHAT_OA_APP_SECRET:'synthetic'} as AppEnv),/pagination_duplicate_group/)}
+ finally{globalThis.fetch=before}
 })
 test('truncated scan reports its real coverage and API errors never return an empty success',async()=>{
  const before=globalThis.fetch

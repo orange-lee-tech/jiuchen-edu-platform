@@ -27,6 +27,13 @@
         </view>
       </block>
     </view>
+    <view wx:if="{{favoritesVisible}}" class="menu-list">
+      <text class="section-heading">我的收藏</text>
+      <text wx:if="{{favoritesLoading}}">正在读取个人收藏…</text>
+      <view wx:elif="{{favoritesError}}"><text>{{favoritesError}}</text><button bindtap="onFavorites">重新读取收藏</button></view>
+      <text wx:elif="{{!favorites.length}}">尚未收藏公众号原文</text>
+      <view wx:for="{{favorites}}" wx:key="postId" class="menu-row" data-id="{{item.postId}}" bindtap="onFavoriteOpen"><text class="menu-title">{{item.title}}</text><text class="arrow">原文 ›</text></view>
+    </view>
     <view class="website-row" bindtap="onWebsite" hover-class="menu-pressed" aria-role="button"><image class="menu-icon" src="/assets/icons/website-active.png" mode="aspectFit" /><text>九辰官网 · 复制地址</text><text class="arrow">›</text></view>
     <view wx:if="{{loggedIn}}" class="account-actions">
       <button class="logout-button" loading="{{loggingOut}}" disabled="{{loggingOut || deleting}}" bindtap="onLogout">退出当前登录</button>

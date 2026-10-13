@@ -79,6 +79,7 @@
     </view>
     <view class="featured-body">
       <text class="featured-title">{{featured.title}}</text>
+      <text wx:if="{{featured.isVideo}}" class="article-meta">视频 · 在服务号原文观看</text>
       <text class="featured-summary">{{featured.summary}}</text>
       <view class="news-card-footer">
         <view class="article-tags"><text wx:for="{{featured.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text></view>
@@ -114,6 +115,7 @@
       </view>
       <view class="article-main">
         <text class="article-title">{{item.title}}</text>
+        <text wx:if="{{item.isVideo}}" class="article-meta">视频 · 在服务号原文观看</text>
         <text wx:if="{{item.summary}}" class="article-summary">{{item.summary}}</text>
         <view class="news-card-footer">
           <view class="article-tags"><text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text><text wx:if="{{item.tags.length === 0}}" class="article-tag muted">未分类</text></view>

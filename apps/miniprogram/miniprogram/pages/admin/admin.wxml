@@ -215,6 +215,7 @@
         <view class="row-main">
           <text class="row-title">{{item.title}}</text>
           <text class="row-desc">{{item.dateLabel}}</text>
+          <text wx:if="{{item.lifecycleLabel}}" class="row-desc">{{item.lifecycleLabel}}</text>
           <text class="row-desc">{{item.source === 'wechat_official' ? '服务号同步' : '手动'}} · {{item.status === 'active' ? '已发布' : '已隐藏'}}</text>
           <view class="tag-list">
             <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="tag-chip">{{tag}}</text>

@@ -637,6 +637,7 @@ export type AdminAssignment = {
 }
 
 export type AdminNewsPost = {
+  lifecycle?:{phase:string;phaseChangedAt:string|null;bufferedAt:string|null;retireAt:string|null}|null
   id: string
   title: string
   summary: string | null
@@ -757,7 +758,8 @@ export async function updateNewsRetirementTask(id:string,state:NewsRetirementTas
 
 export type NewsSyncResult={synced:number;created:number;updated:number;unchanged:number;failed:number;
   errors:Array<{sourceKey:string;reason:string}>;checkedAt:string;latestSourcePublishedAt:string|null;
-  latestSourceUpdatedAt:string|null;groupsFetched:number;totalGroups:number|null;maxGroups:number;truncated:boolean;message:string}
+  latestSourceUpdatedAt:string|null;groupsFetched:number;totalGroups:number|null;maxGroups:number;truncated:boolean;message:string;
+  pagesFetched?:number;uniqueGroups?:number;latestArticles?:Array<{title:string;articleUrl:string|null;sourceUpdatedAt:string|null;publishedAt:string|null}>}
 export async function syncOfficialAccountNews():Promise<NewsSyncResult>{
   return request<{ok:true}&NewsSyncResult>('/me/admin/news/sync','POST',{})
 }
@@ -873,6 +875,7 @@ export async function bindAdminInternalId(
 
 
 export type NewsPost = {
+  mediaType?: 'article' | 'video'
   id: string
   title: string
   summary: string | null
@@ -889,6 +892,7 @@ export type NewsPost = {
 export type NewsPostDetail = NewsPost & {
   favoritesEnabled?:boolean
   content: {
+    mediaType?: 'article' | 'video'
     html: string | null
     author: string | null
     contentSourceUrl: string | null

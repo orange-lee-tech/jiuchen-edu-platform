@@ -60,11 +60,16 @@ function newsReviewState(posts: AdminNewsPost[], unclassifiedFirst=false) {
   // Review queue is derived from existing canonical tags; no secondary state store.
   const sorted = [...posts].sort(
     (a, b) => (unclassifiedFirst ? Number(b.tags.length===0)-Number(a.tags.length===0) : 0) ||
-      (new Date(b.publishedAt||0).getTime()-new Date(a.publishedAt||0).getTime()) ||
-      (new Date(b.sourceUpdatedAt||0).getTime()-new Date(a.sourceUpdatedAt||0).getTime()),
+      (new Date(b.publishedAt||b.sourceUpdatedAt||0).getTime()-new Date(a.publishedAt||a.sourceUpdatedAt||0).getTime()),
   )
   return {
-    posts: sorted.map(post=>({...post,dateLabel:newsPublicationLabel(post)})),
+    posts: sorted.map(post=>({...post,dateLabel:newsPublicationLabel(post),
+      lifecycleLabel:post.status!=='active'?'已隐藏':!post.tags.length?'未审核':post.lifecycle?[
+        ({normal:'正常展示',buffering:'超出30条窗口 · 72小时缓冲',retired:'已退出公共列表',source_invalid:'源端不可用'} as Record<string,string>)[post.lifecycle.phase]||post.lifecycle.phase,
+        '状态变更：'+beijingNewsTime(post.lifecycle.phaseChangedAt,true),
+        ...(post.lifecycle.bufferedAt?['进入缓冲：'+beijingNewsTime(post.lifecycle.bufferedAt,true)]:[]),
+        ...(post.lifecycle.retireAt?['退出时间：'+beijingNewsTime(post.lifecycle.retireAt,true)]:[]),
+      ].join(' · '):''})),
     pendingClassificationCount: posts.filter((post) => post.tags.length === 0).length,
   }
 }
@@ -520,6 +525,8 @@ Page({
         `新增 ${result.created}，更新 ${result.updated}，未变化 ${result.unchanged}，失败 ${result.failed}`,
         `已检查 ${result.groupsFetched} 组 / ${result.totalGroups===null?'总数未提供':result.totalGroups+'组'}`+
           (result.truncated?'（本次范围有限，不能保证覆盖全部文章）':''),
+        result.pagesFetched===undefined?'当前API未提供分页明细':`分页 ${result.pagesFetched} 页；独立发布组 ${result.uniqueGroups}`,
+        ...(result.latestArticles||[]).map(article=>`本次源端最新内容：${article.title}（${article.publishedAt?'发表':'来源更新'} ${beijingNewsTime(article.publishedAt||article.sourceUpdatedAt,true)}）`),
         ...result.errors.map(error=>error.reason)].join('\n')
       this.setData({newsSyncSummary:summary})
       wx.showToast({ title:result.failed||result.truncated?'检查范围未完整':result.created===0?'已检查，暂无新文章':'同步检查完成',icon:result.failed||result.truncated?'none':'success' })

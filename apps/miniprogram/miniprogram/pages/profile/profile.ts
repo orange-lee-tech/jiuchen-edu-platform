@@ -1,5 +1,6 @@
 import { deleteCurrentAccount, getSavedAuthResult, logoutWechatUser, type UserRole } from '../../utils/auth'
-import { friendlyRequestError } from '../../utils/request'
+import { friendlyRequestError, getMyNewsFavorites, type NewsFavorite } from '../../utils/request'
+import { openOfficialArticle } from '../../utils/official-article'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 
@@ -8,19 +9,23 @@ import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shell
 const PERSONAL_MENUS = [
   { key: 'growth', title: '成长档案与简历', desc: '整理长期成长记录，生成真实申请材料' },
   { key: 'assessment', title: 'AI 评估历史与草稿', desc: '接续未完成评估，查看既有报告' },
+  { key: 'favorites', title: '我的收藏', desc: '重新打开已收藏的服务号原文' },
   { key: 'service', title: '联系顾问', desc: '向九辰咨询具体院校与服务方案' },
 ]
 const TEACHER_MENUS = [
   { key: 'students', title: '学员规划与审核', desc: '进入已分配学员的辅导与版本审核' },
+  { key: 'favorites', title: '我的收藏', desc: '重新打开已收藏的服务号原文' },
   { key: 'service', title: '联系运营', desc: '咨询账号、学员分配与业务支持' },
 ]
 const ADMIN_MENUS = [
+  { key: 'favorites', title: '我的收藏', desc: '重新打开已收藏的服务号原文' },
   { key: 'service', title: '联系运营', desc: '咨询账号与服务支持' },
 ]
 Page({
   data: {
     ...INITIAL_SHELL, loggedIn: false, role: '' as UserRole | '', roleLabel: '未登录',
     businessId: '', userName: '', menus: PERSONAL_MENUS, loggingOut: false, deleting: false,
+    favoritesVisible:false,favoritesLoading:false,favoritesError:'',favorites:[] as NewsFavorite[],
   },
   stopShell: undefined as (() => void) | undefined,
   onShow() {
@@ -29,6 +34,7 @@ Page({
       const auth = state.auth
       const role = auth?.user.role || ''
       this.setData({
+        favoritesVisible:false,favorites:[],favoritesError:'',
         ...shellView(state), loggedIn: Boolean(auth), role,
         roleLabel: shellView(state).shellRoleLabel, businessId: auth?.businessIdentity?.businessId || '',
         userName: auth?.user.displayName || (role === 'staff' ? '九辰内部员工' : role === 'teacher' ? '九辰辅导老师' : role === 'admin' ? '九辰管理员' : role === 'student' ? '九辰学员' : '我的保研档案'),
@@ -50,6 +56,7 @@ Page({
   },
   onMenuTap(event: WechatMiniprogram.BaseEvent) {
     const key = String(event.currentTarget.dataset.key || '')
+    if(key==='favorites'){void this.onFavorites();return}
     const destinations: Record<string, string> = {
       profile: 'pages/profile-edit/profile-edit', growth: 'pages/growth-profile/growth-profile',
       assessment: 'pages/assessment-history/assessment-history', position: 'pages/position/position',
@@ -63,6 +70,20 @@ Page({
     if (!destination) return
     if (!this.data.loggedIn && key !== 'position') loginFor(destination)
     else openPage('/' + destination)
+  },
+  async onFavorites(){
+    const owner=getSavedAuthResult()?.user.id
+    if(!owner){loginFor('pages/profile/profile');return}
+    this.setData({favoritesVisible:true,favoritesLoading:true,favoritesError:'',favorites:[]})
+    try{
+      const favorites=await getMyNewsFavorites()
+      if(getSavedAuthResult()?.user.id===owner)this.setData({favorites})
+    }catch(error){if(getSavedAuthResult()?.user.id===owner)this.setData({favoritesError:friendlyRequestError(error,'收藏服务暂时不可用，请稍后重试')})}
+    finally{if(getSavedAuthResult()?.user.id===owner)this.setData({favoritesLoading:false})}
+  },
+  onFavoriteOpen(event:WechatMiniprogram.BaseEvent){
+    const favorite=this.data.favorites.find(item=>item.postId===event.currentTarget.dataset.id)
+    if(favorite)openOfficialArticle(favorite.articleUrl)
   },
   async onLogout() {
     if (this.data.loggingOut) return

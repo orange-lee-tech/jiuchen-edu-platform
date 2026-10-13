@@ -16,12 +16,16 @@
       <text wx:if="{{post.summary}}" class="article-summary">{{post.summary}}</text>
       <button wx:if="{{post.favoritesEnabled}}" class="favorite-action" loading="{{favoriteBusy}}" disabled="{{favoriteBusy || !favoritesReady}}" bindtap="onToggleFavorite">{{favorited ? '已收藏 · 取消收藏' : '收藏原文'}}</button>
       <text wx:if="{{favoriteError}}" class="favorite-note">{{favoriteError}}</text>
-      <button wx:if="{{!post.favoritesEnabled && post.source === 'wechat_official' && post.articleUrl}}" class="favorite-action" disabled>收藏原文 · 待开放</button>
+      <button wx:if="{{!post.favoritesEnabled && post.source === 'wechat_official' && post.articleUrl}}" class="favorite-action" bindtap="onUnavailableFavorite">收藏原文</button>
     </view>
 
     <image wx:if="{{!readerNodes.length && post.coverUrl && !coverFailed}}" class="cover" src="{{post.coverUrl}}" mode="widthFix" binderror="onCoverError" />
 
-    <view wx:if="{{readerNodes.length}}" class="article-content">
+    <view wx:if="{{post.content.mediaType === 'video'}}" class="state-card">
+      <text>视频内容请在公众号原文观看</text>
+      <button class="secondary" bindtap="onOpenOriginal">打开服务号视频</button>
+    </view>
+    <view wx:elif="{{readerNodes.length}}" class="article-content">
       <rich-text nodes="{{readerNodes}}"></rich-text>
     </view>
 

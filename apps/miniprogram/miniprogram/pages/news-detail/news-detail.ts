@@ -4,6 +4,7 @@ import { articleReaderNodes, type ArticleNode } from '../../utils/article-reader
 import { validateIntent } from '../../utils/navigation'
 
 import {newsPublicationLabel} from '../../utils/news-date'
+import {getSavedAuthResult} from '../../utils/auth'
 
 Page({
   data: {
@@ -20,6 +21,8 @@ Page({
   },
 
   postId: '',
+  generation:0,
+  onUnload(){this.generation++},
   onLoad(options: Record<string, string | undefined>) {
     const id = validateIntent('pages/news-detail/news-detail', options)?.params.id || ''
     if (!id) {
@@ -31,9 +34,13 @@ Page({
   },
 
   async loadPost(id: string) {
+    const generation=++this.generation
+    const owner=getSavedAuthResult()?.user.id
+    const current=()=>generation===this.generation&&getSavedAuthResult()?.user.id===owner
     try {
-      this.setData({ loading: true, error: '', favoritesReady:false, favoriteError:'' })
+      this.setData({ loading: true, error: '', favoritesReady:false, favoriteError:'',favorited:false })
       const post = await getNewsPost(id)
+      if(!current())return
       this.setData({
         post,
         readerNodes: articleReaderNodes(post.content.html || ''),
@@ -41,14 +48,15 @@ Page({
         dateLabel: newsPublicationLabel(post,true),
       })
       if(post.favoritesEnabled){
-        try{const saved=await getMyNewsFavorites();if(this.postId===id)this.setData({favorited:saved.some(item=>item.postId===id),favoritesReady:true})}
-        catch{if(this.postId===id)this.setData({favoriteError:'收藏状态暂时无法读取，请重新加载后再试。'})}
+        try{const saved=await getMyNewsFavorites();if(current())this.setData({favorited:saved.some(item=>item.postId===id),favoritesReady:true})}
+        catch{if(current())this.setData({favoriteError:'收藏状态暂时无法读取，请重新加载后再试。'})}
       }
     } catch (error) {
+      if(!current())return
       console.info('News detail load failed.', error)
       this.setData({ error: '资讯正文暂时无法加载，请稍后重试' })
     } finally {
-      this.setData({ loading: false })
+      if(current())this.setData({ loading: false })
     }
   },
 
@@ -64,14 +72,17 @@ Page({
   async onToggleFavorite(){
     const post=this.data.post
     if(!post?.favoritesEnabled||!this.data.favoritesReady||this.data.favoriteBusy)return
+    const owner=getSavedAuthResult()?.user.id,wasFavorited=this.data.favorited
+    const generation=this.generation
     try{
       this.setData({favoriteBusy:true})
-      if(this.data.favorited)await removeNewsFavorite(post.id)
+      if(wasFavorited)await removeNewsFavorite(post.id)
       else await saveNewsFavorite(post.id)
-      this.setData({favorited:!this.data.favorited})
+      if(generation===this.generation&&getSavedAuthResult()?.user.id===owner)this.setData({favorited:!wasFavorited})
     }catch{wx.showToast({title:'收藏未保存，请重试',icon:'none'})}
     finally{this.setData({favoriteBusy:false})}
   },
+  onUnavailableFavorite(){wx.showModal({title:'收藏服务尚不可用',content:'当前服务器尚未启用个人收藏。可以先查看公众号原文；收藏记录需服务器升级后才能保存。',showCancel:false})},
   onCoverError() { this.setData({ coverFailed: true }) },
 
   onRetry() {

@@ -27,3 +27,24 @@
 N01 样本原文：`https://mp.weixin.qq.com/s/WnhmDWF30adA5OM_BipHgQ`（用户确认10月12日已发布）。网络阅读器无法打开，不将抓取失败解释为文章不存在。
 
 真实基线分类：资讯窗口、收藏七表和只读投影为“仓库已有但生产依赖未验”；PDF与原生四栏目标上下文为“代码缺失”；最新文章与模板学员为“数据异常待证据”；优势为空为“保存结果／映射待定位”。本地官方只读检查返回 `official_account_token_40164`，需从已有白名单ECS执行；不修改白名单。
+
+## 阶段1／2代码回执
+
+- 源端重复页现在报 `official_account_pagination_duplicate_group`，不把重复发布组计成完整覆盖；回执含页数、独立发布组数、源端最新3篇标题与时间。此缺陷已用合成重复页复现，不声称是本次10月12日漏文根因。
+- 30条窗口、72小时边界与个人收藏快照保留已落实；含视频的图文走可信公众号原链接，独立视频发布仍需官方源端样本。
+- 后台展示状态变更／缓冲开始／退役截止时间；原因仅根据已有状态与窗口规则说明，不伪造源端撤回证据。
+- 最新本地 API 全量202/202、小程序91/91、typecheck/build通过；后续阶段变更须重新验证。生产七表、开关、原文真机打开仍待独立审批及验收。
+- “收藏原文”不再死按钮；旧API无收藏能力时明确告知服务不可用，不假称已保存；新API具备表及开关后进入真实个人持久化。
+
+## ECS只读定位（无需切流）
+
+将 `tools/diagnostics/news-target-read-only.mjs` 作为诊断文件放入 `/opt/jiuchen-api/staging/diagnostics/`，由已有授权运维账号执行以下命令。脚本不启动API、worker、同步或DDL，只读公众号及 `news_posts`。脚本源文件需从本批提交取出，不覆盖现役release。
+
+```bash
+cd /opt/jiuchen-api/current/services/api
+NEWS_AUDIT_URL='https://mp.weixin.qq.com/s/WnhmDWF30adA5OM_BipHgQ' \
+node --env-file=/etc/jiuchen-api/production.env \
+  /opt/jiuchen-api/staging/diagnostics/news-target-read-only.mjs
+```
+
+若输出 `TARGET_NOT_IDENTIFIED_SHORT_URL_NEEDS_TITLE`，仅补 `NEWS_AUDIT_TITLE` 为该文准确标题再执行一次。输出只含公开文章字段及脱敏数据库样本键，禁止贴环境文件。输出 `NOT_IN_FREEPUBLISH_SOURCE` 时须核对公众号后台实际账号与发布渠道；`SOURCE_PRESENT_DATABASE_MISSING` 才是入库缺口；`DATABASE_PRESENT_HIDDEN_OR_UNCLASSIFIED` 是审核／隐藏环节；可见候选再查公开列表排序和窗口。当前本机40164未获ECS回执，N01生产定位仍为BLOCKED。

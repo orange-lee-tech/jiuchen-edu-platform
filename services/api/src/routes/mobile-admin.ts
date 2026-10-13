@@ -486,8 +486,13 @@ export function registerMobileAdminRoutes(
       .orderBy(desc(newsSourceTimeOrder()), desc(newsPosts.createdAt))
       .limit(50)
 
+    const lifecycle=new Map<string,{phase:string;phaseChangedAt:string|null;bufferedAt:string|null;retireAt:string|null}>()
     let syncHistory:null|{lastCheckedAt:string|null;lastFailedAt:string|null;latestSourceUpdatedAt:string|null;fetched:number;created:number;updated:number;failed:number;lastError:string|null}=null
     if(env.NEWS_V2_ENABLED){
+      const [states]=await configuredDatabase.pool.query<import('mysql2/promise').RowDataPacket[]>(`SELECT post_id AS postId,phase,
+        UNIX_TIMESTAMP(updated_at) AS changedEpoch,UNIX_TIMESTAMP(buffered_at) AS bufferedEpoch,UNIX_TIMESTAMP(retire_at) AS retireEpoch FROM news_display_states`)
+      const time=(epoch:unknown)=>epoch===null?null:new Date(Number(epoch)*1000).toISOString()
+      states.forEach(state=>lifecycle.set(String(state.postId),{phase:state.phase,phaseChangedAt:time(state.changedEpoch),bufferedAt:time(state.bufferedEpoch),retireAt:time(state.retireEpoch)}))
       const [runs]=await configuredDatabase.pool.query<import('mysql2/promise').RowDataPacket[]>(`SELECT status,
         UNIX_TIMESTAMP(checked_at) AS checkedEpoch,UNIX_TIMESTAMP(latest_source_time) AS sourceEpoch,
         fetched,created_count AS created,updated_count AS updated,failed_count AS failed,error_code AS errorCode
@@ -507,6 +512,7 @@ export function registerMobileAdminRoutes(
       posts: rows.map((row) => ({
         ...row,
         ...newsTimeView(row),
+        lifecycle:lifecycle.get(row.id)||null,
         contentJson: undefined,
         tags: normalizeNewsTags(row.tagsJson),
         tagsJson: undefined,
@@ -578,6 +584,7 @@ export function registerMobileAdminRoutes(
         unchanged:result.unchanged,failed:result.failed,errors:result.errors,
         checkedAt:result.checkedAt,latestSourcePublishedAt:result.latestSourcePublishedAt,
         latestSourceUpdatedAt:result.latestSourceUpdatedAt,groupsFetched:result.groupsFetched,
+        pagesFetched:result.pagesFetched,uniqueGroups:result.uniqueGroups,latestArticles:result.latestArticles,
         totalGroups:result.totalGroups,maxGroups:result.maxGroups,truncated:result.truncated,message:result.message,
       }
     } catch (error) {

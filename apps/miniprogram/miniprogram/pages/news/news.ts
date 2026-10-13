@@ -6,6 +6,7 @@ import { openOfficialArticle } from '../../utils/official-article'
 import {newsPublicationLabel} from '../../utils/news-date'
 
 type NewsCard = {
+  isVideo:boolean
   id: string
   title: string
   summary: string
@@ -18,6 +19,7 @@ type NewsCard = {
 }
 
 const FALLBACK_FEATURED: NewsCard = {
+  isVideo:false,
   id: '',
   title: '暂无可展示的资讯',
   summary: '已分类文章会在这里展示；请稍后刷新，或联系老师了解近期资讯。',
@@ -36,6 +38,7 @@ function normalizeRemoteUrl(value: string | null | undefined) {
 
 function toCard(post: NewsPost): NewsCard {
   return {
+    isVideo:post.mediaType==='video',
     id: post.id,
     title: post.title,
     summary: post.summary ?? '',

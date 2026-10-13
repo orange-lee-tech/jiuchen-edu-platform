@@ -7,7 +7,7 @@ export type DisplayState = {
 }
 export type DisplayCandidate = { id: string; sortTime: string | null; approved: boolean; hidden: boolean }
 
-const WINDOW = 20
+export const NEWS_DISPLAY_WINDOW = 30
 const BUFFER_MS = 72 * 60 * 60 * 1000
 
 /** Reconcile only after a complete, successful source scan or an approved tag change.
@@ -18,7 +18,7 @@ export function planNewsWindow(candidates: DisplayCandidate[], existing: Display
   const states = new Map(existing.map(row => [row.postId, row]))
   const approved = candidates.filter(row => row.approved && !row.hidden && states.get(row.id)?.phase !== 'source_invalid')
     .sort((a, b) => (b.sortTime || '').localeCompare(a.sortTime || '') || a.id.localeCompare(b.id))
-  const normalIds = approved.slice(0, WINDOW).map(row => row.id)
+  const normalIds = approved.slice(0, NEWS_DISPLAY_WINDOW).map(row => row.id)
   const normal = new Set(normalIds)
   const changes: DisplayState[] = []
   const entered: string[] = []

@@ -21,7 +21,7 @@ export function registerNewsV2Routes(app:FastifyInstance,database:DatabaseContex
     return user
   }
   app.get('/me/news-favorites',async(request,reply)=>{
-    const user=await requireRole(request,reply,['student','teacher','staff','admin']);if(!user)return
+    const user=await requireRole(request,reply,['user','student','teacher','staff','admin']);if(!user)return
     const [rows]=await pool.query(`SELECT f.post_id AS postId,f.title,f.original_url AS articleUrl,
       f.created_at AS favoritedAt,s.phase
       FROM news_favorites f LEFT JOIN news_display_states s ON s.post_id=f.post_id
@@ -29,11 +29,12 @@ export function registerNewsV2Routes(app:FastifyInstance,database:DatabaseContex
     return {ok:true,favorites:rows}
   })
   app.put<{Params:{id:string}}>('/me/news-favorites/:id',async(request,reply)=>{
-    const user=await requireRole(request,reply,['student','teacher','staff','admin']);if(!user)return
+    const user=await requireRole(request,reply,['user','student','teacher','staff','admin']);if(!user)return
     if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({ok:false,error:'invalid_news_id'})
     const [rows]=await pool.query<import('mysql2/promise').RowDataPacket[]>(`SELECT n.id,n.title,n.article_url AS articleUrl,
       n.published_at AS publishedAt,s.phase FROM news_posts n JOIN news_display_states s ON s.post_id=n.id
-      WHERE n.id=? AND n.status='active' AND JSON_LENGTH(n.tags_json)>0 LIMIT 1`,[request.params.id])
+      WHERE n.id=? AND n.source='wechat_official' AND n.status='active' AND JSON_LENGTH(n.tags_json)>0
+        AND s.phase IN ('normal','buffering') LIMIT 1`,[request.params.id])
     const article=rows[0]
     if(!article||!isOfficialUrl(String(article.articleUrl||'')))return reply.code(404).send({ok:false,error:'official_article_unavailable'})
     await pool.query(`INSERT INTO news_favorites(user_id,post_id,original_url,title,source_time) VALUES(?,?,?,?,?)
@@ -41,7 +42,7 @@ export function registerNewsV2Routes(app:FastifyInstance,database:DatabaseContex
     return {ok:true,articleUrl:article.articleUrl}
   })
   app.delete<{Params:{id:string}}>('/me/news-favorites/:id',async(request,reply)=>{
-    const user=await requireRole(request,reply,['student','teacher','staff','admin']);if(!user)return
+    const user=await requireRole(request,reply,['user','student','teacher','staff','admin']);if(!user)return
     if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({ok:false,error:'invalid_news_id'})
     await pool.query(`DELETE FROM news_favorites WHERE user_id=? AND post_id=?`,[user.userId,request.params.id])
     return {ok:true}

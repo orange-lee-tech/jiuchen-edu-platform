@@ -86,3 +86,25 @@ test('only an administrator can persist an internal task note and audit its acto
   assert.equal(audit?.params[5],'仅管理员内部备注')
   await app.close()
 })
+
+test('personal favorites are idempotent, owner-scoped and retain original URLs after retirement',async()=>{
+ const saved=new Map<string,{postId:string;title:string;articleUrl:string;phase:string}>()
+ const id='00000000-0000-4000-8000-000000000001'
+ for(const owner of ['one','two']){
+  const app=adminFixture(owner,{async query(sql:string,params:unknown[]=[]){
+   if(sql.includes('SELECT n.id'))return [[{id,title:'视频原文',articleUrl:'https://mp.weixin.qq.com/s/synthetic',publishedAt:null,phase:'normal'}]]
+   if(sql.includes('INSERT INTO news_favorites')){const key=params[0]+':'+params[1];if(!saved.has(key))saved.set(key,{postId:id,title:String(params[3]),articleUrl:String(params[2]),phase:'retired'});return [{affectedRows:1}]}
+   if(sql.includes('FROM news_favorites')){
+    assert.ok(!sql.includes('JOIN news_posts'),'saved original URL must not depend on public article visibility')
+    return [[...saved.entries()].filter(([key])=>key.startsWith(params[0]+':')).map(([,value])=>value)]
+   }
+   return [[]]
+  }})
+  const headers={authorization:'Bearer synthetic'}
+  for(let i=0;i<2;i++)assert.equal((await app.inject({method:'PUT',url:'/me/news-favorites/'+id,headers})).statusCode,200)
+  const list=(await app.inject({url:'/me/news-favorites',headers})).json().favorites
+  assert.equal(list.length,1);assert.equal(list[0].phase,'retired');assert.equal(list[0].articleUrl,'https://mp.weixin.qq.com/s/synthetic')
+  await app.close()
+ }
+ assert.equal(saved.size,2)
+})

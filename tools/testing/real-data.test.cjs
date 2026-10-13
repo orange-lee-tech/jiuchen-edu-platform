@@ -48,7 +48,7 @@ test('news cards expose source date, keep every category and defer favorites unt
  assert.match(listing,/发布时间：\{\{featured.dateLabel\}\}/)
  assert.match(listing,/!loading && !featured.id/)
  assert.match(source,/return tags\s*\n/)
- assert.match(detail,/收藏原文 · 待开放/)
+ assert.match(detail,/bindtap="onUnavailableFavorite"/)
  assert.match(detail,/favoriteBusy \|\| !favoritesReady/)
  assert.match(detail,/\{\{favoriteError\}\}/)
 })

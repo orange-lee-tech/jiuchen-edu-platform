@@ -16,6 +16,7 @@ export type NewsPostContent = {
   sourceUpdatedAt: string | null
   sourceCreatedAt: string | null
   publicationTimeSource: 'explicit_publish_time' | 'unverified'
+  mediaType?: 'article' | 'video'
 }
 
 export function normalizeNewsTags(value: unknown) {
@@ -39,6 +40,7 @@ export function normalizeNewsContent(value: unknown): NewsPostContent {
 
   const record = value as Record<string, unknown>
   return {
+    mediaType:record.mediaType==='video'?'video':'article',
     sourceUpdatedAt: typeof record.sourceUpdatedAt==='string'?record.sourceUpdatedAt:null,
     sourceCreatedAt: typeof record.sourceCreatedAt==='string'?record.sourceCreatedAt:null,
     publicationTimeSource: record.publicationTimeSource==='explicit_publish_time'?'explicit_publish_time':'unverified',
@@ -156,6 +158,7 @@ export async function listActiveNewsPosts(
   return rows.map((row) => ({
     ...row,
     ...newsTimeView(row),
+    mediaType:normalizeNewsContent(row.contentJson).mediaType,
     contentJson: undefined, tagsJson: undefined,
     tags: normalizeNewsTags(row.tagsJson),
   }))
