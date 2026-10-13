@@ -16,6 +16,8 @@ export type AssessmentReportReference = {
 export type AssessmentReportExportContext = {
   assessment: AssessmentRecord
   displayName: string
+  userId?: string
+  exportDate?: string
   references: AssessmentReportReference[]
 }
 
@@ -60,7 +62,7 @@ function citationSuffix(
     .filter((value): value is string => Boolean(value))
 
   const unique = [...new Set(caseIds)]
-  return unique.length ? `（参考依据：${unique.join('、')}）` : ''
+  return unique.length ? `（参考案例 ${unique.join('、')}）` : ''
 }
 
 export function formatAssessmentDate(value: string | null | undefined) {
@@ -73,7 +75,29 @@ export function formatAssessmentDate(value: string | null | undefined) {
 
 function safeDisplayName(value: string) {
   const trimmed = value.trim()
-  return trimmed && trimmed !== '微信用户' ? trimmed : '用户'
+  return trimmed && !['微信用户','用户','某学员'].includes(trimmed) ? trimmed : '姓名未登记'
+}
+
+export function assessmentExportIdentity(context:AssessmentReportExportContext){
+  return `${safeDisplayName(context.displayName)} · 用户ID：${context.userId||'用户ID未记录'} · 导出日期：${context.exportDate||formatAssessmentDate(new Date().toISOString())}`
+}
+
+export function assessmentInputLines(context:AssessmentReportExportContext){
+  const input=context.assessment.input
+  const labels:Record<string,string>={university:'本科院校',major:'专业',currentGrade:'年级',gpaText:'GPA',rankText:'排名',backgroundNote:'背景补充',
+    type:'类型',score:'成绩',note:'补充说明',title:'名称',achievementTier:'成果层次',role:'参与角色',organization:'组织',level:'级别',description:'描述',output:'成果',
+    name:'竞赛名称',award:'获奖',schoolName:'目标院校',programName:'目标专业',researchDirection:'研究方向',preferredRegions:'意向地区',
+    includePlanning:'参考规划',includeRecentAssessments:'参考最近历史'}
+  const values:Record<string,string>={cet4:'四级',cet6:'六级',ielts:'雅思',toefl:'托福',gre:'GRE',school:'校级',provincial:'省级',national:'国家级',international:'国际级',other:'其他',project:'科研项目',paper:'论文',patent:'专利',lab:'实验室'}
+  const render=(record:Record<string,unknown>)=>Object.entries(record).filter(([,value])=>value!==null&&value!==undefined&&value!=='')
+    .map(([key,value])=>`${labels[key]||key}：${Array.isArray(value)?value.join('、'):typeof value==='boolean'?(value?'是':'否'):values[String(value)]||String(value)}`)
+  const lines=['用户提供的信息',...render(input.profile)]
+  for(const [title,records] of [['英语成绩',input.english],['科研经历',input.research],['竞赛经历',input.competitions],['申请目标',input.targets]] as const){
+    if(records?.length){lines.push(title);records.forEach((record,index)=>lines.push(`（${index+1}）`,...render(record as unknown as Record<string,unknown>)))}
+  }
+  if(input.preferences)lines.push('个人偏好',...render(input.preferences as Record<string,unknown>))
+  if(input.contextOptions)lines.push('评估参考范围',...render(input.contextOptions))
+  return lines
 }
 
 function safeFilePart(value: string) {
@@ -138,10 +162,13 @@ export function buildAssessmentReportPlainText(
 
   const lines: string[] = [
     '九辰保研评估报告',
+    assessmentExportIdentity(context),
     `姓名：${safeDisplayName(context.displayName)}`,
     `评估日期：${formatAssessmentDate(assessment.completedAt || assessment.updatedAt)}`,
     `当前背景：${assessment.input.profile.university} · ${assessment.input.profile.major}`,
     assessment.model.name ? `评估模型：${assessment.model.name}` : '',
+    '',
+    ...assessmentInputLines(context),
     '',
     '学业背景与评估概要',
     output.profileSummary,
@@ -221,8 +248,7 @@ export function buildAssessmentReportPlainText(
     lines.push(`${item.kind === 'case' ? '案例依据' : '证据依据'}：${item.title}（${item.sourceLabel}）`, item.excerpt || '', '')
   })
   output.similarCases.filter(item => !referenced.has(item.evidenceRef)).forEach(item => {
-    const caseId = traceableAssessmentCaseId(item.caseId)
-    lines.push(`参考案例${caseId ? `：${caseId}` : ''}（${item.sourceType === 'jiuchen' ? '九辰案例' : '外部案例'}）`,
+    lines.push(`参考案例（${item.sourceType === 'jiuchen' ? '九辰案例' : '外部案例'}；编号关联未核实）`,
       item.similarityReason, item.resultSummary, '')
   })
   if (output.uncertainties.length) lines.push('七、不确定性及说明', ...output.uncertainties, '')
@@ -422,10 +448,11 @@ export function buildAssessmentReportDocx(
 
   const documentXml =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
     '<w:body>' +
     paragraphs +
     '<w:sectPr>' +
+    '<w:headerReference w:type="default" r:id="rId2"/><w:footerReference w:type="default" r:id="rId3"/>' +
     '<w:pgSz w:w="11906" w:h="16838"/>' +
     '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/>' +
     '</w:sectPr>' +
@@ -447,6 +474,8 @@ export function buildAssessmentReportDocx(
     '<Default Extension="xml" ContentType="application/xml"/>' +
     '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
     '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+    '<Override PartName="/word/header.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' +
+    '<Override PartName="/word/footer.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
     '</Types>'
 
   const rootRels =
@@ -459,6 +488,8 @@ export function buildAssessmentReportDocx(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header.xml"/>' +
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer.xml"/>' +
     '</Relationships>'
 
   const archive = zipStore([
@@ -467,6 +498,8 @@ export function buildAssessmentReportDocx(
     { name: 'word/document.xml', data: utf8Bytes(documentXml) },
     { name: 'word/_rels/document.xml.rels', data: utf8Bytes(documentRels) },
     { name: 'word/styles.xml', data: utf8Bytes(stylesXml) },
+    { name: 'word/header.xml', data:utf8Bytes(`<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:t>${xmlEscape(assessmentExportIdentity(context))}</w:t></w:r></w:p></w:hdr>`) },
+    { name: 'word/footer.xml', data:utf8Bytes('<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t>九辰教育 · 第 </w:t></w:r><w:fldSimple w:instr="PAGE"/><w:r><w:t> 页</w:t></w:r></w:p></w:ftr>') },
   ])
 
   return archive.buffer as ArrayBuffer
@@ -503,4 +536,15 @@ export function writeAssessmentReportFile(
       fail,
     })
   })
+}
+
+export function cleanupExpiredAssessmentExports(now=Date.now()){
+  const manager=wx.getFileSystemManager()
+  if(typeof manager.readdir!=='function')return
+  manager.readdir({dirPath:wx.env.USER_DATA_PATH,success:result=>{
+    result.files.forEach(name=>{
+      const timestamp=name.match(/^jiuchen-report-(\d{13})-/)?.[1]
+      if(timestamp&&now-Number(timestamp)>10*60*1000)manager.unlink({filePath:wx.env.USER_DATA_PATH+'/'+name,fail:()=>{}})
+    })
+  },fail:()=>{}})
 }

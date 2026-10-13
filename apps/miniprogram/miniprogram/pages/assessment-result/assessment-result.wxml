@@ -17,24 +17,27 @@
       </view>
     </view>
 
-    <view class="section-card strengths-card">
+    <view class="section-card">
+      <text class="section-title">背景与核心结论</text>
+      <text class="body-text" user-select="true">{{output.profileSummary}}</text>
+      <text wx:if="{{!output.strengths.length}}" class="section-note">这份已保存报告未单列优势条目；完整背景和判断见核心结论及各项目标分析。</text>
+    </view>
+    <view wx:if="{{output.strengths.length}}" class="section-card strengths-card">
       <view class="section-heading">
         <text class="section-number">01</text>
         <text class="section-title">优势</text>
       </view>
-      <text wx:if="{{output.strengths.length === 0}}" class="empty">暂无明确优势结论</text>
       <view wx:for="{{output.strengths}}" wx:key="title" class="finding">
         <text class="finding-title">{{item.title}}</text>
         <view class="body-with-citations">
-          <text class="body-text" user-select="true">{{item.detail}}</text>
-          <button
+          <text class="body-text" user-select="true">{{item.detail}}<text
             wx:for="{{item.citations}}"
             wx:for-item="citation"
             wx:key="ref"
             class="citation-link"
             data-ref="{{citation.ref}}"
             catchtap="onReferenceTap"
-          >{{citation.label}}</button>
+          >（参考案例 {{citation.label}}）</text></text>
         </view>
       </view>
     </view>
@@ -48,15 +51,14 @@
       <view wx:for="{{output.risks}}" wx:key="title" class="finding">
         <text class="finding-title">{{item.title}}</text>
         <view class="body-with-citations">
-          <text class="body-text" user-select="true">{{item.detail}}</text>
-          <button
+          <text class="body-text" user-select="true">{{item.detail}}<text
             wx:for="{{item.citations}}"
             wx:for-item="citation"
             wx:key="ref"
             class="citation-link"
             data-ref="{{citation.ref}}"
             catchtap="onReferenceTap"
-          >{{citation.label}}</button>
+          >（参考案例 {{citation.label}}）</text></text>
         </view>
       </view>
     </view>
@@ -78,15 +80,14 @@
       </view>
 
       <view class="body-with-citations rationale">
-        <text class="body-text" user-select="true">{{item.rationale}}</text>
-        <button
+        <text class="body-text" user-select="true">{{item.rationale}}<text
           wx:for="{{item.citations}}"
           wx:for-item="citation"
           wx:key="ref"
           class="citation-link"
           data-ref="{{citation.ref}}"
           catchtap="onReferenceTap"
-        >{{citation.label}}</button>
+        >（参考案例 {{citation.label}}）</text></text>
       </view>
 
       <view wx:if="{{item.gapItems.length}}" class="subsection">

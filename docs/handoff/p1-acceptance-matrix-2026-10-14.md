@@ -48,3 +48,12 @@ node --env-file=/etc/jiuchen-api/production.env \
 ```
 
 若输出 `TARGET_NOT_IDENTIFIED_SHORT_URL_NEEDS_TITLE`，仅补 `NEWS_AUDIT_TITLE` 为该文准确标题再执行一次。输出只含公开文章字段及脱敏数据库样本键，禁止贴环境文件。输出 `NOT_IN_FREEPUBLISH_SOURCE` 时须核对公众号后台实际账号与发布渠道；`SOURCE_PRESENT_DATABASE_MISSING` 才是入库缺口；`DATABASE_PRESENT_HIDDEN_OR_UNCLASSIFIED` 是审核／隐藏环节；可见候选再查公开列表排序和窗口。当前本机40164未获ECS回执，N01生产定位仍为BLOCKED。
+
+## 阶段3回执
+
+- 结构化映射直接读取保存的 `output.strengths`，不存在索引错位；原页面遗漏 `profileSummary`。现完整显示核心结论，空优势条目明确说明“已保存报告未单列”，不把缺条目解释为用户没有优势，也不重写历史分析。历史模型为何没有单列优势仍需真实报告输入输出离线评测；Runtime/Prompt未修改。
+- 已恢复Markdown、Word、PDF、摘要分享图和完整报告长图；所有全文格式包含保存的input及output。JCC只取可信evidence关联，并在对应论据内联标明“参考案例”，展开来源；没有关联时隐藏编号。
+- 姓名来自当前学员业务档案，读取失败／无实名字段时显示“姓名未登记”，不把昵称当实名。用户ID与导出日期统一写入全文；Word逐页页眉，PDF及图片文字水印-25°/alpha.30。
+- PDF使用现有中文Canvas及分段PNG编码器生成A4分页图像PDF（不可选择文字），没有新增后台转换服务。合成fixture实际生成MD、DOCX、PDF、摘要PNG、全文PNG；Poppler解析／渲染4页A4成功，逐页检查中文、水印、页码、无黑块／裁切，修复末尾身份导致的空白第5页。
+- 小程序完整93/93回归通过，尾页修复后导出16/16再验证。Word已核验OOXML结构／页眉与全文保留，真实Word客户端分页仍PENDING；真机文件下载和相册保存仍PENDING。临时文件10分钟清理，下次打开报告也清理本功能过期文件。
+- 资讯提交 `bad572a` 已推送，GitHub CI `38431579957`、News MySQL `38431579922`、Profile MySQL `38431579875` 全部PASS；均不是生产迁移或微信发布证据。

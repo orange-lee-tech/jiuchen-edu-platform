@@ -76,15 +76,15 @@ test('summary and long share images stay bounded, traceable and repeat identity 
  const named={...context,displayName:'李同学'}
  const long=layoutAssessmentImage(named,'JCS-TEST','long',measure,'2026-10-12')
  const text=long.lines.map(l=>l.text).join('')
- assert.ok(!text.includes('完整证据'.repeat(100)));assert.ok(text.includes('仅供参考，不保证录取'));assert.ok(text.includes('JCC-000113'))
- assert.equal(long.lines.filter(l=>l.text.includes('用户ID')).length,2);assert.ok(text.includes('李同学'));assert.equal(long.name,'李同学')
+ assert.ok(text.includes('完整证据'.repeat(100)));assert.ok(text.includes('仅供参考，不保证录取'));assert.ok(text.includes('JCC-000113'))
+ assert.ok(long.lines.filter(l=>l.text.includes('用户ID')).length>=2);assert.ok(text.includes('李同学'));assert.equal(long.name,'李同学')
  const summary=layoutAssessmentImage(context,'JCS-TEST','summary',measure,'2026-10-12')
- assert.ok(summary.lines.map(l=>l.text).join('').includes('摘要图'))
+ assert.ok(summary.lines.map(l=>l.text).join('').includes('摘要分享图'))
+ assert.ok(!summary.lines.map(l=>l.text).join('').includes('完整证据'))
  assert.ok(summary.height<=long.height)
  assert.throws(()=>layoutAssessmentImage(context,'','long',measure))
  const huge=fixture();huge.assessment.output.profileSummary='长'.repeat(20000)
- const bounded=layoutAssessmentImage(huge,'JCS-TEST','long',measure)
- assert.ok(bounded.height*bounded.width<=15000000)
+ assert.throws(()=>layoutAssessmentImage(huge,'JCS-TEST','long',measure),/资源预算/)
 })
 test('watermark uses 0.30 alpha, negative 25 degrees; every strip paints watermark before body',()=>{
  const {drawReportStrip,layoutAssessmentImage}=loader()('utils/assessment-image'),layout=layoutAssessmentImage(context,'JCS-TEST','long',(t,s)=>t.length*s)
@@ -93,17 +93,48 @@ test('watermark uses 0.30 alpha, negative 25 degrees; every strip paints waterma
   const ctx={setFillStyle(){},fillRect(){operations.push('background')},save(){},restore(){},setGlobalAlpha:n=>operations.push(['alpha',n]),setFontSize(){},measureText:()=>({width:440}),translate(){},rotate:n=>operations.push(['rotate',n]),fillText:t=>operations.push(['text',t]),setTextBaseline(){}}
   drawReportStrip(ctx,layout,'JCS-TEST',offset,800)
   assert.equal(operations[0],'background');assert.ok(operations.some(o=>o[0]==='alpha'&&o[1]===.30));assert.ok(operations.some(o=>o[0]==='rotate'&&Math.abs(o[1]+25*Math.PI/180)<1e-9))
-  const mark=operations.findIndex(o=>o[0]==='text'&&o[1].includes('某学员 ·'))
+  const mark=operations.findIndex(o=>o[0]==='text'&&o[1].includes('姓名未登记 ·'))
   const reset=operations.findIndex(o=>o[0]==='alpha'&&o[1]===1)
   assert.ok(mark>0&&reset>mark)
  }
 })
-test('result exposes only copy and a two-choice report download entry',()=>{
+test('result exposes copy and five useful export formats from one download entry',()=>{
  const result=fs.readFileSync(path.resolve(root,'pages/assessment-result/assessment-result.wxml'),'utf8')
  const history=fs.readFileSync(path.resolve(root,'pages/assessment-history/assessment-history.ts'),'utf8')
  assert.match(result,/bindtap="onCopyReport"/);assert.match(result,/bindtap="onDownloadReport"/)
  assert.doesNotMatch(result,/bindtap="onSaveSummary"|bindtap="onSaveLong"/)
  assert.match(history,/pages\/assessment-result\/assessment-result\?id=/)
+ const source=fs.readFileSync(path.resolve(root,'pages/assessment-result/assessment-result.ts'),'utf8')
+ for(const label of ['Markdown','Word','PDF','摘要分享图','完整报告长图'])assert.ok(source.includes(label))
+ assert.ok(!result.includes('暂无明确优势结论'));assert.match(result,/output.profileSummary/)
+ assert.match(result,/参考案例 \{\{citation.label\}\}/)
+})
+
+test('every full format contains persisted user input and reliable identity without a nickname fallback',()=>{
+ const load=loader(),exports=load('utils/assessment-report-export')
+ const supplied=fixture();supplied.displayName='';supplied.userId='JCS-TEST';supplied.exportDate='2026-10-14'
+ supplied.assessment.input.profile.backgroundNote='用户提供的背景必须保留'
+ supplied.assessment.input.english=[{type:'cet6',score:'620',note:'用户备注'}]
+ const text=exports.buildAssessmentReportPlainText(supplied),md=exports.buildAssessmentReportMarkdown(supplied)
+ for(const value of ['姓名未登记','JCS-TEST','2026-10-14','用户提供的背景必须保留','620','用户备注']){assert.ok(text.includes(value));assert.ok(md.includes(value))}
+ const docx=Buffer.from(exports.buildAssessmentReportDocx(supplied)).toString('utf8')
+ assert.ok(docx.includes('header.xml'));assert.ok(docx.includes('用户提供的背景必须保留'));assert.ok(docx.includes('w:headerReference'))
+})
+
+test('PDF pagination preserves every body line and creates a valid indexed-image PDF without Chinese font substitution',()=>{
+ const load=loader(),{ReportPngEncoder}=load('utils/report-png'),{buildAssessmentPdf,paginateAssessmentLayout}=load('utils/report-pdf')
+ const {layoutAssessmentImage}=load('utils/assessment-image')
+ const layout=layoutAssessmentImage(context,'JCS-TEST','long',(text,size)=>[...text].length*size,'2026-10-14')
+ const layouts=paginateAssessmentLayout(layout)
+ assert.ok(layouts.length>1)
+ const bodies=layouts.flatMap(page=>page.lines.filter(line=>line.y>=150&&line.y<1000).map(line=>line.text))
+ const content=layout.lines.slice(0,-3)
+ assert.deepEqual(Array.from(bodies),Array.from(content,line=>line.text));assert.ok(layouts.every(page=>page.lines.every(line=>line.y+line.size<1060)))
+ const png=()=>{const encoder=new ReportPngEncoder(2,2);return Buffer.concat([encoder.header(),encoder.strip(new Uint8ClampedArray(16).fill(255),2),encoder.finish()].map(part=>Buffer.from(part)))}
+ const pdf=Buffer.from(buildAssessmentPdf([png(),png()]))
+ assert.ok(pdf.toString('ascii').startsWith('%PDF-1.4'));assert.ok(pdf.toString('ascii').includes('/Count 2'))
+ const offset=Number(pdf.toString('ascii').match(/startxref\n(\d+)/)[1]);assert.equal(pdf.toString('ascii',offset,offset+4),'xref')
+ assert.throws(()=>buildAssessmentPdf([]),/页数/)
 })
 function pngData(bytes){
  const buffer=Buffer.from(bytes),idat=[]

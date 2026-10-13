@@ -1,4 +1,4 @@
-import { formatAssessmentDate, traceableAssessmentCaseId, type AssessmentReportExportContext } from './assessment-report-export'
+import { buildAssessmentReportPlainText, formatAssessmentDate, traceableAssessmentCaseId, type AssessmentReportExportContext } from './assessment-report-export'
 import { beijingDate } from './consultation-payload'
 
 export const REPORT_WIDTH = 750
@@ -38,10 +38,11 @@ function section(lines: string[], title: string, values: string[], limit: number
 export function shareReport(context: AssessmentReportExportContext, kind: 'summary'|'long'): string {
   const output = context.assessment.output
   if (!output) throw new Error('评估结果尚未生成')
+  if(kind==='long')return buildAssessmentReportPlainText(context)
   const limit = kind === 'summary' ? 2 : 4
   const lines = [
     '九辰教育 AI评估报告',
-    kind === 'summary' ? '摘要图片｜重点结论' : '完整长图｜分享摘要',
+    '摘要分享图｜适合转发，仅含重点结论',
     '核心结论',
     short(output.profileSummary, kind === 'summary' ? 180 : 280),
   ]
@@ -72,9 +73,9 @@ export function layoutAssessmentImage(context: AssessmentReportExportContext, us
   kind: 'summary'|'long', measure: (text:string,size:number)=>number, date=beijingDate()): ReportLayout {
   if (!userId) throw new Error('缺少可展示的用户编号，请先绑定学员身份')
   if(context.assessment.status!=='succeeded'||!context.assessment.output) throw new Error('当前报告不可导出')
-  const name=context.displayName.trim() && context.displayName.trim()!=='微信用户' ? context.displayName.trim() : '某学员'
+  const name=context.displayName.trim() && !['微信用户','用户','某学员'].includes(context.displayName.trim()) ? context.displayName.trim() : '姓名未登记'
   const identity=`${name} ｜ 用户ID：${userId}\n导出日期：${date}`
-  const text=shareReport(context,kind)
+  const text=shareReport({...context,userId,exportDate:date},kind)
   const paragraphs=[identity,`报告日期：${formatAssessmentDate(context.assessment.completedAt || context.assessment.updatedAt)}`,'',text,'',identity]
   const lines: ReportLine[]=[]
   let y=42

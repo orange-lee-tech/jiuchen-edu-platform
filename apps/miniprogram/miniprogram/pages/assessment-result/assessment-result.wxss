@@ -145,9 +145,7 @@
 }
 
 .body-with-citations {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  display: block;
 }
 
 .body-text {
@@ -159,7 +157,7 @@
 }
 
 .citation-link {
-  display: inline-flex;
+  display: inline;
   min-width: 0;
   width: auto;
   margin: 0 0 0 5rpx;
