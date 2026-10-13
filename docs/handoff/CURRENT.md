@@ -54,6 +54,8 @@
 
 **2026-10-13 News V2 非生产 MySQL 进展**：已在 GitHub Actions 一次性 MySQL 8.0.46 容器中真正执行 `db:upgrade:news-v2` 两次；发现并修复 `information_schema.tables.ENGINE` 字段名大小写读取 bug（`1b214d63`）；[CI 38336376860](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38336376860) `mysql-gate` PASS，七表列/索引/外键结构合同与基础旧行保留 PASS。**仅代表临时最小基础表的双次迁移**，不是生产结构复刻、完整业务数据回归，也不是备份/恢复演练；真实生产 DDL、开关、timer 和新版 API 仍待各自审批。
 
+**2026-10-13 新闻数据库关系回归**：新增 GitHub Actions 实际 MySQL 8 七表关系测试，验证收藏、展示状态、退役批次/任务/已读/审计、同步运行记录写入、任务状态转换及外键拒绝非法引用；[CI 38337158353](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38337158353) **PASS**，提交 `75430b3e`。此结果不代表72小时生命周期业务接口端到端、真实生产库复刻、备份恢复或微信验收通过；生产 DDL/发布独立审批不变。
+
 ## 3. 唯一执行优先级：先保护生产，再跨模块推进
 
 **10-13 执行更新**：Release A 已按独立审批完成生产切流，以下 P0/P1 旧的 Release A「尚未部署」步骤已过期，不应重新执行；先补充新版业务回归与下一轮新闻自动同步证据。用户要求继续其他未完成模块施工、最后统一真机验收；这不构成生产 DDL、支付、News V2 开关、跨身份扩权或新的 API promote 的自动批准。
