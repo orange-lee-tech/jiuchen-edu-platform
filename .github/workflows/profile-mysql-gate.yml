@@ -1,0 +1,91 @@
+name: Profile enrollment year isolated MySQL gate
+
+on:
+  push:
+    branches: ['p1/**']
+    paths:
+      - '.github/workflows/profile-mysql-gate.yml'
+      - 'services/api/src/db/upgrade-enrollment-year.ts'
+      - 'services/api/src/db/profile-schema-contract.ts'
+      - 'services/api/src/db/check-profile-foundation.ts'
+  pull_request:
+    paths:
+      - '.github/workflows/profile-mysql-gate.yml'
+      - 'services/api/src/db/upgrade-enrollment-year.ts'
+      - 'services/api/src/db/profile-schema-contract.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  profile-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local_test_only
+          MYSQL_DATABASE: jiuchen_profile_ci
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -plocal_test_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_profile_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Create legacy user profile row in disposable MySQL
+        run: |
+          node --input-type=module <<'JS'
+          import mysql from 'mysql2/promise'
+          const db=await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            await db.query(`CREATE TABLE user_profiles (
+              id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL,
+              university VARCHAR(160) NULL, major VARCHAR(160) NULL,
+              current_grade VARCHAR(40) NULL,
+              gpa_text VARCHAR(80) NULL, rank_text VARCHAR(80) NULL,
+              created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`)
+            await db.query("INSERT INTO user_profiles(id,user_id,university,current_grade,gpa_text) VALUES ('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002','legacy_university','大四上','3.80')")
+          } finally {await db.end()}
+          JS
+      - name: First migration creates only enrollment_year
+        run: npm run db:upgrade:enrollment-year
+      - name: Repeated migration is safe
+        run: npm run db:upgrade:enrollment-year
+      - name: Validate profile contract and retained old values
+        run: |
+          npm run db:check:profile
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          const db=await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            const [rows]=await db.query("SELECT university,current_grade,gpa_text,enrollment_year FROM user_profiles WHERE id='00000000-0000-4000-8000-000000000001'")
+            assert.equal(rows.length,1)
+            assert.equal(rows[0].university,'legacy_university')
+            assert.equal(rows[0].current_grade,'大四上')
+            assert.equal(rows[0].gpa_text,'3.80')
+            assert.equal(rows[0].enrollment_year,null)
+            await db.query("UPDATE user_profiles SET enrollment_year=2023 WHERE id='00000000-0000-4000-8000-000000000001'")
+            const [again]=await db.query("SELECT enrollment_year FROM user_profiles WHERE id='00000000-0000-4000-8000-000000000001'")
+            assert.equal(again[0].enrollment_year,2023)
+            console.log('PROFILE_REAL_MYSQL_GATE_PASS: idempotent upgrade, legacy fields and enrollment year roundtrip')
+          } finally {await db.end()}
+          JS
