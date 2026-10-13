@@ -136,8 +136,10 @@
 
 `p1/foundation` 课表与首页刷新批次 `0d7ae64`，管理员实名状态与区间评估用户数批次 `7ec66ce`；详细来源、缺失真实样本、页面路径及统一验收见 [P1 收尾候选与统一微信验收清单](p1-closeout-acceptance-2026-10-13.md)。News V2 的 20 条已审核窗口、72 小时缓冲、公众号原链接收藏与退役任务经代码／合成测试复核，生产七表及开关依然 PARKED。先前客服复制、长图、院校资源以及 AI Runtime 的既有状态不变。生产真实数据沿用 2026-10-12 只读审计；本轮没有新的私有查询，不能作为最新真机或生产回执。
 
-**状态**：CODE COMPLETE（本轮两批）；本地 mini typecheck/53 项导航、API typecheck/build/相关测试通过。API 全量在受限环境的唯一院校镜像测试因子进程 `EPERM` 未通过；GitHub Actions 结果以对应 HEAD 实际结论为准。DEPLOYED: NO（仅集成分支代码，Release A 不重复发布）；DEVICE PENDING（微信开发者工具／真机均未执行）。课表日期 PUT 的生产受控发布、News V2 生产 Schema、支付账本与缺失身份样本仍按各自 Gate 处理，**不可标记 PASS**。
+**状态**：CODE COMPLETE（本轮两批）；本地 mini typecheck/53 项导航、API typecheck/build/相关测试通过。API 全量在受限环境的唯一院校镜像测试因子进程 `EPERM` 未通过；GitHub Actions 结果以对应 HEAD 实际结论为准。DEPLOYED: NO（仅集成分支代码，Release A 不重复发布）；DEVICE PENDING（微信开发者工具／真机均未执行）。Release A 源码包含课表日期 PUT，既有课表手机验收已通过；本轮首页刷新仍待微信体验版复核。News V2 生产 Schema、支付账本与缺失身份样本仍按各自 Gate 处理，**不可标记本轮 DEVICE PASS**。
 
+
+**P1 体验版依赖 Gate（2026-10-13）**：只读对照 Release A `8cc4bb85` 源码，旧 `/news` 可用、News V2 生产未启；但当前小程序把 Release A 统计响应缺少 `assessmentUserCount` 视为整个统计失败，管理员用户页也与不相干的资讯请求耦合。见 [设备就绪审计](p1-device-readiness-audit-2026-10-13.md)、[体验版清单](p1-experience-candidate-checklist-2026-10-13.md)。在兼容修复与 CI 完成前，**RC NOT READY**；不以源码可编译冒充真机可用。成本控制当前仅[文档设计](../architecture/resource-cost-firewall.md)。
 
 ## CI 最终回执
 
