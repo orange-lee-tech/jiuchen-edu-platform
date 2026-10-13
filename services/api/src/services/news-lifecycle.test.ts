@@ -43,3 +43,38 @@ test('bootstrap overflow does not fabricate a retirement buffer or event',()=>{
  assert.equal(plan.leaving.length,0)
  assert.equal(shouldCreateRetirementEvent(plan),false)
 })
+
+test('hidden or untagged posts retire immediately without a false new-post reminder',()=>{
+  for(const change of [{hidden:true,approved:true},{hidden:false,approved:false}]){
+    const old=states(20)
+    const candidates=rows(20).map((row,index)=>index===0?{...row,...change}:row)
+    const result=planNewsWindow(candidates,old,now,true)
+    assert.equal(result.changes.find(row=>row.postId==='post-00')?.phase,'retired')
+    assert.equal(result.leaving.length,0)
+    assert.equal(shouldCreateRetirementEvent(result),false)
+    assert.ok(!result.normalIds.includes('post-00'))
+  }
+})
+
+test('a partial scan never retires or expires an existing buffer even after deadline',()=>{
+  const buffered:DisplayState={postId:'old',phase:'buffering',bufferedAt:now.toISOString(),retireAt:'2026-10-15T00:00:00.000Z'}
+  const result=planNewsWindow([], [buffered], new Date('2026-11-01T00:00:00Z'), false)
+  assert.deepEqual(result.changes,[])
+  assert.deepEqual(result.leaving,[])
+  assert.equal(shouldCreateRetirementEvent(result),false)
+})
+
+test('the 72-hour buffer is stable across repeated reconciliation and expires on its deadline',()=>{
+  const incoming={id:'new-01',sortTime:new Date(now.getTime()+60000).toISOString(),approved:true,hidden:false}
+  const first=planNewsWindow([...rows(20),incoming],states(20),now,true)
+  const old=first.leaving[0]
+  assert.ok(old)
+  assert.equal(old.phase,'buffering')
+  const persisted=[...states(20).filter(r=>r.postId!==old.postId),...first.changes]
+  const mid=planNewsWindow([...rows(20),incoming],persisted,new Date('2026-10-14T23:59:59Z'),true)
+  assert.equal(mid.leaving.length,0)
+  assert.equal(mid.changes.find(r=>r.postId===old.postId),undefined)
+  const due=planNewsWindow([...rows(20),incoming],persisted,new Date('2026-10-15T00:00:00Z'),true)
+  assert.equal(due.changes.find(r=>r.postId===old.postId)?.phase,'retired')
+  assert.equal(due.leaving.length,0)
+})
