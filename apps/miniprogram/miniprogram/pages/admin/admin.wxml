@@ -41,6 +41,7 @@
         <text class="row-desc">{{item.profileLabel}} · {{item.allocationLabel}}</text>
         <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">{{item.schoolLabel || '学校待完善'}}</text>
         <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">专业：{{item.major || '待完善'}} · 学业阶段：{{item.currentStage || '待完善'}}</text>
+        <text wx:if="{{item.type === 'teacher' && item.userId}}" class="row-desc">实际负责学员：{{item.assignmentCount === undefined ? '来源未记录' : item.assignmentCount}} 人</text>
         <text wx:if="{{item.auditCategory === 'test_named_bound'}}" class="card-note">已绑定账号含测试命名，请人工核对；未自动改名。</text>
         <view class="id-actions"><button class="mini copy" data-id="{{item.id}}" bindtap="onCopyId">复制编号</button><button wx:if="{{item.actions.length}}" class="mini" disabled="{{actionLoading}}" data-id="{{item.id}}" bindtap="onIdActions">{{item.actions[0] === '暂停访问' ? '暂停 / 更多' : item.actions[0] === '恢复编号' ? '恢复 / 更多' : '绑定 / 更多'}}</button></view>
       </view>
@@ -124,8 +125,10 @@
 {{analytics.range.basis}}</text>
       <view wx:if="{{analytics}}" class="analytics-summary">
         <view class="analytics-stat"><text>成功评估</text><text class="analytics-stat-number">{{analytics.summary.assessmentCount}}</text></view>
+        <view class="analytics-stat"><text>当前账号记录数（全库）</text><text class="analytics-stat-number">{{userCount === null ? '读取失败' : userCount}}</text></view>
         <view class="analytics-stat amber"><text>成功充值订单</text><text class="analytics-stat-number">{{analytics.summary.rechargeCount === null ? '读取失败' : analytics.summary.rechargeCount}}</text><text>购入 {{analytics.summary.rechargeCreditCount === null ? '读取失败' : analytics.summary.rechargeCreditCount}} 次</text></view>
       </view>
+      <text wx:if="{{userCountError}}" class="card-note">账号来源读取失败：{{userCountError}}；评估统计保持独立。</text>
       <view wx:if="{{analytics}}" class="card-note">
         <text>创建任务 {{analytics.summary.createdCount}} · 曾开始任务 {{analytics.summary.startedTaskCount}} · 失败 {{analytics.summary.failedCount}} · 运行中 {{analytics.summary.runningCount}}
 </text>

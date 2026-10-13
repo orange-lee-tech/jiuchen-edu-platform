@@ -83,6 +83,8 @@ Page({
     analytics: null as (AdminAnalytics & { payers: Array<AdminAnalytics['payers'][number] & { amountYuan: string }> }) | null,
     analyticsPlots: [] as Plot[],
     analyticsWarning:'',
+    userCount:null as number|null,
+    userCountError:'',
     rechargeAmountLabel:'',
     loading: true,
     actionLoading: false,
@@ -210,10 +212,14 @@ Page({
     const period=this.data.analyticsPeriod
     try {
       this.setData({ loading: true, loadError: '' })
-      const analytics = await getAdminAnalytics(period)
+      const [statistics, accounts] = await Promise.allSettled([getAdminAnalytics(period), getAdminUsers()])
+      if(statistics.status==='rejected')throw statistics.reason
+      const analytics = statistics.value
       if(!analytics.sources || !analytics.range)throw new Error('统计接口版本尚未更新，请先部署 API')
       if(generation!==this.analyticsGeneration || period!==this.data.analyticsPeriod || owner!==getSavedAuthResult()?.user.id)return
       this.setData({
+        userCount:accounts.status==='fulfilled' && Array.isArray(accounts.value) ? accounts.value.length : null,
+        userCountError:accounts.status==='rejected'?friendlyRequestError(accounts.reason,'账号来源读取失败'):accounts.status==='fulfilled' && !Array.isArray(accounts.value)?'账号接口版本不匹配':'',
         analytics: { ...analytics, payers: analytics.payers.map(row => ({ ...row, amountYuan: (row.amountFen/100).toFixed(2) })) },
         rechargeAmountLabel:analytics.summary.rechargeAmountFen===null?'读取失败':(analytics.summary.rechargeAmountFen/100).toFixed(2),
         analyticsWarning:Object.entries(analytics.sources).filter(([,state])=>state.status==='error').map(([source,state])=>({assessments:'评估',payments:'支付',ledger:'账本',reservations:'冻结记录'}[source]||source)+'读取失败：'+state.error).join('；'),
@@ -228,7 +234,7 @@ Page({
       })
     } catch (error) {
       if(generation!==this.analyticsGeneration || owner!==getSavedAuthResult()?.user.id)return
-      this.setData({ analytics: null, analyticsPlots: [], loadError: friendlyRequestError(error, '统计暂时不可用') })
+      this.setData({ analytics: null, analyticsPlots: [], userCount:null, userCountError:'', loadError: friendlyRequestError(error, '统计暂时不可用') })
     } finally {
       if(generation===this.analyticsGeneration)this.setData({ loading: false })
     }
