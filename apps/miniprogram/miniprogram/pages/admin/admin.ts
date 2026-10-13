@@ -41,7 +41,7 @@ import {beijingNewsTime,newsPublicationLabel} from '../../utils/news-date'
 type Section = 'admin-users' | 'admin-assignments' | 'admin-news' | 'admin-analytics' | 'admin-readonly'
 type Point = { display:string;key:string;label:string;count:number;x:number;barX:number;height:number;bottom:number;labelBottom:number;prevX:number;prevBottom:number;length:number;angle:number;hasPrev:boolean }
 type Plot = { unit:string;key:string;title:string;width:number;max:number;points:Point[] }
-function makePlot(key:'assessmentCount'|'rechargeCount'|'rechargeAmountFen'|'consumptionCount'|'releasedCount'|'failedCount'|'runningCount',title:string,rows:AdminAnalytics['buckets']):Plot {
+function makePlot(key:'assessmentCount'|'createdCount'|'rechargeCount'|'rechargeAmountFen'|'consumptionCount'|'releasedCount'|'failedCount'|'runningCount',title:string,rows:AdminAnalytics['buckets']):Plot {
   const scale=key==='rechargeAmountFen'?100:1
   const values=rows.map(row=>Number(row[key]??0)/scale)
   const actualMax=Math.max(0,...values)
@@ -215,7 +215,7 @@ Page({
       const [statistics, accounts] = await Promise.allSettled([getAdminAnalytics(period), getAdminUsers()])
       if(statistics.status==='rejected')throw statistics.reason
       const analytics = statistics.value
-      if(!analytics.sources || !analytics.range)throw new Error('统计接口版本尚未更新，请先部署 API')
+      if(!analytics.sources || !analytics.range || typeof analytics.summary.assessmentUserCount !== 'number')throw new Error('统计接口版本尚未更新，请先部署 API')
       if(generation!==this.analyticsGeneration || period!==this.data.analyticsPeriod || owner!==getSavedAuthResult()?.user.id)return
       this.setData({
         userCount:accounts.status==='fulfilled' && Array.isArray(accounts.value) ? accounts.value.length : null,
@@ -225,6 +225,7 @@ Page({
         analyticsWarning:Object.entries(analytics.sources).filter(([,state])=>state.status==='error').map(([source,state])=>({assessments:'评估',payments:'支付',ledger:'账本',reservations:'冻结记录'}[source]||source)+'读取失败：'+state.error).join('；'),
         analyticsPlots: [
           makePlot('assessmentCount', 'AI 评估使用次数', analytics.buckets),
+          makePlot('createdCount', '创建评估任务', analytics.buckets),
           ...(analytics.sources.payments.status==='ok'?[makePlot('rechargeCount','成功充值订单次数',analytics.buckets),makePlot('rechargeAmountFen','成功充值金额',analytics.buckets)]:[]),
           ...(analytics.sources.ledger.status==='ok'?[makePlot('consumptionCount','实际额度消费笔数（账本）',analytics.buckets)]:[]),
           ...(analytics.sources.reservations.status==='ok'?[makePlot('releasedCount','额度退回记录笔数',analytics.buckets)]:[]),

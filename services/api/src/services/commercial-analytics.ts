@@ -69,7 +69,7 @@ export type PayerRank={userIdSuffix:string;displayName:string;rechargeCount:numb
 export type DataSourceState={status:'ok'|'error';error:string|null}
 export type AssessmentCommerceAnalytics={
   period:AnalyticsPeriod;buckets:AnalyticsBucket[];
-  summary:{assessmentCount:number;createdCount:number;startedTaskCount:number;failedCount:number;runningCount:number;
+  summary:{assessmentCount:number;createdCount:number;startedTaskCount:number;failedCount:number;runningCount:number;assessmentUserCount:number;
     rechargeCount:number|null;rechargeCreditCount:number|null;rechargeAmountFen:number|null;consumptionCount:number|null;releasedCount:number|null};
   range:{from:string;before:string;timezone:'Asia/Shanghai';basis:string};
   sources:{assessments:DataSourceState;payments:DataSourceState;ledger:DataSourceState;reservations:DataSourceState};
@@ -147,7 +147,7 @@ export async function readAssessmentCommerceAnalytics(pool:mysql.Pool,period:Ana
   const query=async(sql:string,params:unknown[]=[])=>{const [rows]=await conn.query<mysql.RowDataPacket[]>(sql,params);return rows}
   const group=(column:string,where:string)=>`SELECT DATE_FORMAT(DATE_ADD(${column},INTERVAL 8 HOUR),?) AS bucketKey,COUNT(*) AS cnt FROM assessments WHERE ${where} AND ${column}>=? AND ${column}<? GROUP BY bucketKey`
   let payers:PayerRank[]=[],freeGranted:number|null=null,paidGranted:number|null=null,debitedCredits:number|null=null,balance:number|null=null,correctionCredits:number|null=null,held:number|null=null,released:number|null=null,successWithoutDebit:number|null=null
-  let successWithoutCompletedAt=0,suspectEightHourCompletionCount=0,runs7d=0
+  let successWithoutCompletedAt=0,suspectEightHourCompletionCount=0,runs7d=0,assessmentUserCount=0
   try{
     // Session state only, never a global/server timezone or business data write.
     const [zone]=await conn.query<mysql.RowDataPacket[]>('SELECT @@session.time_zone AS timeZone')
@@ -162,6 +162,8 @@ export async function readAssessmentCommerceAnalytics(pool:mysql.Pool,period:Ana
       const rows=await query(group(column,where),[dateFormat,fromUtc,beforeUtc])
       for(const row of rows){const bucket=index.get(String(row.bucketKey));if(bucket)bucket[key]=Number(row.cnt)}
     }
+    const users=await query(`SELECT COUNT(DISTINCT user_id) AS cnt FROM assessments WHERE created_at>=? AND created_at<?`,[fromUtc,beforeUtc])
+    assessmentUserCount=Number(users[0]?.cnt??0)
     const gap=await query(`SELECT COUNT(*) AS cnt FROM assessments WHERE status='succeeded' AND completed_at IS NULL`)
     successWithoutCompletedAt=Number(gap[0]?.cnt??0)
     const timezoneGap=await query(`SELECT COUNT(*) AS cnt FROM assessments WHERE status='succeeded' AND completed_at IS NOT NULL AND TIMESTAMPDIFF(SECOND,completed_at,updated_at) BETWEEN 28500 AND 29100`)
@@ -189,7 +191,7 @@ export async function readAssessmentCommerceAnalytics(pool:mysql.Pool,period:Ana
       for(const row of releases){const b=index.get(String(row.bucketKey));if(b)b.releasedCount=Number(row.cnt)}
     }catch(error){sources.reservations={status:'error',error:safeQueryCode(error)};held=released=null;for(const b of buckets)b.releasedCount=null}
     const sum=(key:keyof AnalyticsBucket)=>buckets.reduce((n,b)=>n+Number(b[key]??0),0)
-    return {period,buckets,summary:{assessmentCount:sum('assessmentCount'),createdCount:sum('createdCount'),startedTaskCount:sum('startedTaskCount'),failedCount:sum('failedCount'),runningCount:sum('runningCount'),
+    return {period,buckets,summary:{assessmentCount:sum('assessmentCount'),createdCount:sum('createdCount'),startedTaskCount:sum('startedTaskCount'),failedCount:sum('failedCount'),runningCount:sum('runningCount'),assessmentUserCount,
       rechargeCount:sources.payments.status==='ok'?sum('rechargeCount'):null,rechargeCreditCount:sources.payments.status==='ok'?sum('rechargeCreditCount'):null,rechargeAmountFen:sources.payments.status==='ok'?sum('rechargeAmountFen'):null,consumptionCount:sources.ledger.status==='ok'?sum('consumptionCount'):null,releasedCount:sources.reservations.status==='ok'?sum('releasedCount'):null},
       range:{from,before,timezone:'Asia/Shanghai',basis:'起点包含、终点不包含。成功按完成时间；旧成功无完成时间使用updated_at代理并标记缺口。完成时间与更新时间相差约8小时的记录另列待核对数量，日期归桶在生产时区验收前仅供参考。运行数为曾开始的任务数，不是历史请求次数。排行榜使用当前区间；账本余额和发放总量为全历史。'},sources,
       ledger:{freeGranted,paidGranted,debitedCredits,balance,unallocatedConsumption:debitedCredits,freeUsed:null,paidUsed:null,sourceAllocationStatus:'not_recorded',correctionCredits},reservations:{held,released},

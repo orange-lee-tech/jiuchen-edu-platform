@@ -50,6 +50,7 @@ function fakePool(paymentError=false,ledgerError=false,assessmentError=false){
 test('real analytics separates payment/ledger errors from successful assessments and preserves timezone',async()=>{
  const f=fakePool(true,true),data=await readAssessmentCommerceAnalytics(f.pool,'week',new Date('2026-10-12T04:00:00Z'))
  assert.equal(data.summary.assessmentCount,2)
+ assert.equal(data.summary.assessmentUserCount,2)
  assert.equal(data.summary.rechargeCount,null);assert.equal(data.summary.consumptionCount,null)
  assert.equal(data.sources.payments.status,'error');assert.equal(data.sources.ledger.status,'error')
  assert.equal(data.gaps.successWithoutDebit,null)
@@ -60,6 +61,7 @@ test('real analytics separates payment/ledger errors from successful assessments
 test('analytics uses paid amounts in fen, interval-scoped ranking and explicit unattributed debits',async()=>{
  const f=fakePool(),data=await readAssessmentCommerceAnalytics(f.pool,'week',new Date('2026-10-12T04:00:00Z'))
  assert.equal(data.summary.rechargeAmountFen,1690);assert.equal(data.payers[0].amountFen,1690)
+ assert.ok(f.calls.some(c=>c.sql.includes('COUNT(DISTINCT user_id)')&&c.sql.includes('FROM assessments')))
  assert.equal(data.ledger.freeGranted,5);assert.equal(data.ledger.paidGranted,10);assert.equal(data.ledger.freeUsed,null)
  assert.equal(data.ledger.unallocatedConsumption,2);assert.equal(data.gaps.successWithoutCompletedAt,1)
  assert.equal(data.summary.releasedCount,1);assert.equal(data.reservations.released,1)

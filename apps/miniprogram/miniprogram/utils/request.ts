@@ -613,7 +613,7 @@ export type AdminInternalId = {
   claimedAt: string | null
   name?:string|null;university?:string|null;major?:string|null;currentStage?:string|null;nameLabel?:string;schoolLabel?:string|null
   displayName?:string|null;userStatus?:string|null;accountRole?:string|null;teacherStatus?:string|null
-  assignmentCount?:number;assignmentState?:'unclaimed'|'assigned'|'unassigned'|'not_recorded'
+  assignmentCount?:number|null;assignmentState?:'unclaimed'|'assigned'|'unassigned'|'not_recorded'
   assignmentLabel?:string;profileState?:'unclaimed'|'incomplete'|'recorded'
   auditCategory?:'test_named_bound'|'test_named_unclaimed'|'no_test_name';nameVerification?:'not_recorded'
 
@@ -830,7 +830,7 @@ export type AdminAnalyticsPeriod = 'week' | 'month' | 'year'
 export type AdminAnalytics = {
   period: AdminAnalyticsPeriod
   buckets:Array<{key:string;label:string;assessmentCount:number;createdCount:number;startedTaskCount:number;failedCount:number;runningCount:number;rechargeCount:number|null;rechargeCreditCount:number|null;rechargeAmountFen:number|null;consumptionCount:number|null;releasedCount:number|null}>
-  summary:{assessmentCount:number;createdCount:number;startedTaskCount:number;failedCount:number;runningCount:number;rechargeCount:number|null;rechargeCreditCount:number|null;rechargeAmountFen:number|null;consumptionCount:number|null;releasedCount:number|null}
+  summary:{assessmentCount:number;createdCount:number;startedTaskCount:number;failedCount:number;runningCount:number;assessmentUserCount:number;rechargeCount:number|null;rechargeCreditCount:number|null;rechargeAmountFen:number|null;consumptionCount:number|null;releasedCount:number|null}
   range:{from:string;before:string;timezone:string;basis:string}
   sources:Record<'assessments'|'payments'|'ledger'|'reservations',{status:'ok'|'error';error:string|null}>
   ledger:{freeGranted:number|null;paidGranted:number|null;debitedCredits:number|null;balance:number|null;unallocatedConsumption:number|null;freeUsed:null;paidUsed:null;sourceAllocationStatus:'not_recorded';correctionCredits:number|null}

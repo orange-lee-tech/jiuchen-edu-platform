@@ -41,12 +41,11 @@
         <text class="row-desc">{{item.profileLabel}} · {{item.allocationLabel}}</text>
         <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">{{item.schoolLabel || '学校待完善'}}</text>
         <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">专业：{{item.major || '待完善'}} · 学业阶段：{{item.currentStage || '待完善'}}</text>
-        <text wx:if="{{item.type === 'teacher' && item.userId}}" class="row-desc">实际负责学员：{{item.assignmentCount === undefined ? '来源未记录' : item.assignmentCount}} 人</text>
-        <text wx:if="{{item.auditCategory === 'test_named_bound'}}" class="card-note">已绑定账号含测试命名，请人工核对；未自动改名。</text>
+        <text wx:if="{{item.type === 'teacher' && item.userId}}" class="row-desc">实际负责学员：{{item.assignmentCount == null ? '来源未记录' : item.assignmentCount + ' 人'}}</text>
         <view class="id-actions"><button class="mini copy" data-id="{{item.id}}" bindtap="onCopyId">复制编号</button><button wx:if="{{item.actions.length}}" class="mini" disabled="{{actionLoading}}" data-id="{{item.id}}" bindtap="onIdActions">{{item.actions[0] === '暂停访问' ? '暂停 / 更多' : item.actions[0] === '恢复编号' ? '恢复 / 更多' : '绑定 / 更多'}}</button></view>
       </view>
     </view>
-    <view class="card"><text class="card-title">账号列表</text><text class="card-note">账号显示名不等于实名。编号卡片使用已有学员/老师档案姓名，缺失或测试命名需人工完善；管理员实名与岗位尚无记录。</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayName || '未设置显示名'}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
+    <view class="card"><text class="card-title">账号列表</text><text class="card-note">账号显示名不等于实名。请以编号卡片的已绑定档案为准；资料缺失时显示待完善，管理员岗位没有独立记录。</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayName || '未设置显示名'}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
   </block>
 
   <block wx:elif="{{section === 'admin-readonly'}}">
@@ -120,11 +119,12 @@
         </view>
         <text class="supplier-tip">公司运营管理 API 服务商余额；这里不是用户充值余额。读数尚未自动同步时，不可将展示视为实时保障。</text>
       </view>
-      <text wx:if="{{analyticsWarning}}" class="card-note" user-select="true">{{analyticsWarning}}。不可用来源显示错误，不计作 0。</text>
+      <text wx:if="{{analyticsWarning}}" class="card-note" user-select="true">{{analyticsWarning}}。数据源不可用，不计作 0。</text>
       <text wx:if="{{analytics}}" class="card-note" user-select="true">区间：{{analytics.range.from}} 至 {{analytics.range.before}}（终点不包含） · {{analytics.range.timezone}}
 {{analytics.range.basis}}</text>
       <view wx:if="{{analytics}}" class="analytics-summary">
         <view class="analytics-stat"><text>成功评估</text><text class="analytics-stat-number">{{analytics.summary.assessmentCount}}</text></view>
+        <view class="analytics-stat"><text>区间评估用户</text><text class="analytics-stat-number">{{analytics.summary.assessmentUserCount}}</text></view>
         <view class="analytics-stat"><text>当前账号记录数（全库）</text><text class="analytics-stat-number">{{userCount === null ? '读取失败' : userCount}}</text></view>
         <view class="analytics-stat amber"><text>成功充值订单</text><text class="analytics-stat-number">{{analytics.summary.rechargeCount === null ? '读取失败' : analytics.summary.rechargeCount}}</text><text>购入 {{analytics.summary.rechargeCreditCount === null ? '读取失败' : analytics.summary.rechargeCreditCount}} 次</text></view>
       </view>
