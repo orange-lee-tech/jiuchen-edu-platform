@@ -71,3 +71,30 @@ test('account total uses real users endpoint and does not follow assessment peri
  requests[1].success({statusCode:200,data:{ok:true,users:[{id:'u1'},{id:'u2'}]}})
  await flow;assert.equal(page.data.analytics.summary.assessmentCount,0);assert.equal(page.data.userCount,2);assert.equal(page.data.userCountError,'')
 })
+test('Release A analytics without distinct-user field keeps real assessment data and marks the gap',async()=>{
+ const storage=new Map(),requests=[],wx={getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),request:o=>requests.push(o)}
+ const load=loadModules(wx),auth=load('utils/auth')
+ auth.saveAuthResult({ok:true,user:{id:'00000000-0000-4000-8000-000000000001',role:'admin'},agreement:{type:'user_terms',version:'test',accepted:true},session:{token:'synthetic',expiresAt:'2099-01-01'},businessIdentity:null})
+ load('pages/admin/admin');const page=load.page(),flow=page.loadAnalytics()
+ requests[0].success({statusCode:200,data:{ok:true,analytics:{period:'week',buckets:[{key:'2026-10-12',label:'10/12',assessmentCount:3,createdCount:4,failedCount:1,runningCount:0}],summary:{assessmentCount:3,createdCount:4,failedCount:1,runningCount:0,rechargeAmountFen:null},sources:{assessments:{status:'ok'},payments:{status:'error',error:'ER_NO_SUCH_TABLE'},ledger:{status:'error',error:'ER_NO_SUCH_TABLE'},reservations:{status:'error',error:'ER_NO_SUCH_TABLE'}},payers:[],range:{from:'2026-10-06',before:'2026-10-13',timezone:'Asia/Shanghai',basis:'合成口径'},ledger:{},gaps:{},reservations:{},supplier:{}}}})
+ requests[1].success({statusCode:200,data:{ok:true,users:[{id:'synthetic'}]}})
+ await flow
+ assert.equal(page.data.analytics.summary.assessmentCount,3)
+ assert.equal(page.data.assessmentUserCountLabel,'当前 API 未提供')
+ assert.equal(page.data.analyticsPlots.find(p=>p.key==='createdCount').points[0].display,'4')
+ assert.equal(page.data.analyticsPlots.some(p=>p.key==='rechargeAmountFen'),false)
+})
+test('admin pages only request their own Release A sources',()=>{
+ for(const [section,expected] of [
+  ['admin-users',['/me/admin/internal-ids','/me/admin/users']],
+  ['admin-assignments',['/me/admin/students','/me/admin/teachers','/me/admin/assignments']],
+  ['admin-news',['/me/admin/news']],
+ ]){
+  const storage=new Map(),requests=[],wx={getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),request:o=>requests.push(o)}
+  const load=loadModules(wx),auth=load('utils/auth')
+  auth.saveAuthResult({ok:true,user:{id:'00000000-0000-4000-8000-000000000001',role:'admin'},agreement:{type:'user_terms',version:'test',accepted:true},session:{token:'synthetic',expiresAt:'2099-01-01'},businessIdentity:null})
+  load('pages/admin/admin');const page=load.page()
+  page.setData({section});void page.loadData()
+  assert.deepEqual(requests.map(r=>new URL(r.url).pathname).sort(),expected.slice().sort())
+ }
+})

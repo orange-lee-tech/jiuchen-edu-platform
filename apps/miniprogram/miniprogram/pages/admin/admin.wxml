@@ -124,7 +124,7 @@
 {{analytics.range.basis}}</text>
       <view wx:if="{{analytics}}" class="analytics-summary">
         <view class="analytics-stat"><text>成功评估</text><text class="analytics-stat-number">{{analytics.summary.assessmentCount}}</text></view>
-        <view class="analytics-stat"><text>区间评估用户</text><text class="analytics-stat-number">{{analytics.summary.assessmentUserCount}}</text></view>
+        <view class="analytics-stat"><text>区间评估用户</text><text class="analytics-stat-number">{{assessmentUserCountLabel}}</text></view>
         <view class="analytics-stat"><text>当前账号记录数（全库）</text><text class="analytics-stat-number">{{userCount === null ? '读取失败' : userCount}}</text></view>
         <view class="analytics-stat amber"><text>成功充值订单</text><text class="analytics-stat-number">{{analytics.summary.rechargeCount === null ? '读取失败' : analytics.summary.rechargeCount}}</text><text>购入 {{analytics.summary.rechargeCreditCount === null ? '读取失败' : analytics.summary.rechargeCreditCount}} 次</text></view>
       </view>

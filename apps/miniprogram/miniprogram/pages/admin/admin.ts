@@ -83,6 +83,7 @@ Page({
     analytics: null as (AdminAnalytics & { payers: Array<AdminAnalytics['payers'][number] & { amountYuan: string }> }) | null,
     analyticsPlots: [] as Plot[],
     analyticsWarning:'',
+    assessmentUserCountLabel:'数据源不可用',
     userCount:null as number|null,
     userCountError:'',
     rechargeAmountLabel:'',
@@ -163,40 +164,37 @@ Page({
     }
     try {
       this.setData({ loading: true, loadError: '' })
-      const [internalIds, users, students, teachers, assignments, newsData] = await Promise.all([
-        getAdminInternalIds(),
-        getAdminUsers(),
-        getAdminStudents(),
-        getAdminTeachers(),
-        getAdminAssignments(),
-        getAdminNewsData(),
-      ])
-
-      const availableIds = internalIds.filter((item) => item.status === 'available')
-      const guestUsers = users.filter((item) => item.status === 'active' && item.role === 'user').map(item => ({ ...item, displayLabel: `${item.displayName || '未设置显示名'} · ${item.id.slice(-6)}` }))
-
-      this.setData({
-        internalIds,
-        users,
-        students,
-        teachers,
-        assignments,
-        ...newsReviewState(newsData.posts,this.data.newsUnclassifiedFirst),
-        newsV2Enabled:newsData.newsV2Enabled,
-        newsSyncHistory:newsData.syncHistory?[`最近成功检查：${newsData.syncHistory.lastCheckedAt?beijingNewsTime(newsData.syncHistory.lastCheckedAt,true):'尚无成功记录'}`,
+      if (this.data.section === 'admin-news') {
+        const newsData = await getAdminNewsData()
+        this.setData({
+          ...newsReviewState(newsData.posts,this.data.newsUnclassifiedFirst),
+          newsV2Enabled:newsData.newsV2Enabled,
+          newsSyncHistory:newsData.syncHistory?[`最近成功检查：${newsData.syncHistory.lastCheckedAt?beijingNewsTime(newsData.syncHistory.lastCheckedAt,true):'尚无成功记录'}`,
           `最近失败：${beijingNewsTime(newsData.syncHistory.lastFailedAt,true)}`,
           `最新来源更新时间：${beijingNewsTime(newsData.syncHistory.latestSourceUpdatedAt,true)}（非发表时间）`,
           newsData.syncHistory.lastCheckedAt?`成功检查 ${newsData.syncHistory.fetched} 篇；新增 ${newsData.syncHistory.created}，更新 ${newsData.syncHistory.updated}`:'',
           newsData.syncHistory.lastError?`最近失败原因：${newsData.syncHistory.lastError}（${newsData.syncHistory.failed} 篇）`:''].filter(Boolean).join('\n'):'',
-        availableIds,
-        guestUsers,
-        bindIdIndex: Math.min(this.data.bindIdIndex, Math.max(0, availableIds.length - 1)),
-        bindUserIndex: Math.min(this.data.bindUserIndex, Math.max(0, guestUsers.length - 1)),
-        studentIndex: Math.min(this.data.studentIndex, Math.max(0, students.length - 1)),
-        teacherIndex: Math.min(this.data.teacherIndex, Math.max(0, teachers.length - 1)),
-      })
-      this.refreshLists()
-      if(newsData.newsV2Enabled)void this.loadRetirementTasks()
+        })
+        if(newsData.newsV2Enabled)void this.loadRetirementTasks()
+      } else if (this.data.section === 'admin-assignments') {
+        const [students, teachers, assignments] = await Promise.all([
+          getAdminStudents(), getAdminTeachers(), getAdminAssignments(),
+        ])
+        this.setData({ students, teachers, assignments,
+          studentIndex: Math.min(this.data.studentIndex, Math.max(0, students.length - 1)),
+          teacherIndex: Math.min(this.data.teacherIndex, Math.max(0, teachers.length - 1)),
+        })
+      } else {
+        const [internalIds, users] = await Promise.all([getAdminInternalIds(), getAdminUsers()])
+        const availableIds = internalIds.filter(item => item.status === 'available')
+        const guestUsers = users.filter(item => item.status === 'active' && item.role === 'user')
+          .map(item => ({ ...item, displayLabel: `${item.displayName || '未设置显示名'} · ${item.id.slice(-6)}` }))
+        this.setData({ internalIds, users, availableIds, guestUsers,
+          bindIdIndex: Math.min(this.data.bindIdIndex, Math.max(0, availableIds.length - 1)),
+          bindUserIndex: Math.min(this.data.bindUserIndex, Math.max(0, guestUsers.length - 1)),
+        })
+        this.refreshLists()
+      }
     } catch (error) {
       const message = friendlyRequestError(error, '管理数据读取失败，请重试')
       this.setData({ loadError: message })
@@ -215,10 +213,11 @@ Page({
       const [statistics, accounts] = await Promise.allSettled([getAdminAnalytics(period), getAdminUsers()])
       if(statistics.status==='rejected')throw statistics.reason
       const analytics = statistics.value
-      if(!analytics.sources || !analytics.range || typeof analytics.summary.assessmentUserCount !== 'number')throw new Error('统计接口版本尚未更新，请先部署 API')
+      if(!analytics.sources || !analytics.range || !analytics.summary)throw new Error('统计接口版本尚未更新，请先部署 API')
       if(generation!==this.analyticsGeneration || period!==this.data.analyticsPeriod || owner!==getSavedAuthResult()?.user.id)return
       this.setData({
         userCount:accounts.status==='fulfilled' && Array.isArray(accounts.value) ? accounts.value.length : null,
+        assessmentUserCountLabel:typeof analytics.summary.assessmentUserCount==='number'?String(analytics.summary.assessmentUserCount):'当前 API 未提供',
         userCountError:accounts.status==='rejected'?friendlyRequestError(accounts.reason,'账号来源读取失败'):accounts.status==='fulfilled' && !Array.isArray(accounts.value)?'账号接口版本不匹配':'',
         analytics: { ...analytics, payers: analytics.payers.map(row => ({ ...row, amountYuan: (row.amountFen/100).toFixed(2) })) },
         rechargeAmountLabel:analytics.summary.rechargeAmountFen===null?'读取失败':(analytics.summary.rechargeAmountFen/100).toFixed(2),
