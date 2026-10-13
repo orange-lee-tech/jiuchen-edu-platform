@@ -1,0 +1,97 @@
+name: News V2 isolated MySQL migration gate
+
+on:
+  push:
+    branches:
+      - 'p1/**'
+    paths:
+      - '.github/workflows/news-v2-mysql-gate.yml'
+      - 'services/api/src/db/upgrade-news-v2.ts'
+      - 'services/api/src/db/news-v2-schema-contract.ts'
+      - 'services/api/package.json'
+      - 'services/api/package-lock.json'
+  pull_request:
+    paths:
+      - '.github/workflows/news-v2-mysql-gate.yml'
+      - 'services/api/src/db/upgrade-news-v2.ts'
+      - 'services/api/src/db/news-v2-schema-contract.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local_test_only
+          MYSQL_DATABASE: jiuchen_news_v2_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -plocal_test_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      # Disposable GitHub Actions container only; NEVER point at production.
+      DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_news_v2_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - name: Install exact API dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Prepare legacy base tables and known rows in disposable database
+        run: |
+          node --input-type=module <<'JS'
+          import mysql from 'mysql2/promise'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            await db.query(`CREATE TABLE users (
+              id VARCHAR(36) PRIMARY KEY
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`)
+            await db.query(`CREATE TABLE news_posts (
+              id VARCHAR(36) PRIMARY KEY,
+              title VARCHAR(255) NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`)
+            await db.query("INSERT INTO users(id) VALUES ('00000000-0000-4000-8000-000000000001')")
+            await db.query("INSERT INTO news_posts(id,title) VALUES ('00000000-0000-4000-8000-000000000002','legacy_keep')")
+          } finally { await db.end() }
+          JS
+      - name: Run migration first time
+        run: npm run db:upgrade:news-v2
+      - name: Run migration second time - must be idempotent
+        run: npm run db:upgrade:news-v2
+      - name: Compile contract for independent verification
+        run: npm run build
+      - name: Validate all seven tables and existing data survive
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          import { inspectNewsV2Schema, validateNewsV2SchemaSnapshot } from './dist/db/news-v2-schema-contract.js'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            const snapshot = await inspectNewsV2Schema(db)
+            const issues = validateNewsV2SchemaSnapshot(snapshot)
+            assert.deepEqual(issues, [], 'News V2 columns, indexes and FKs must match contract')
+            assert.equal(snapshot.tables.length, 7)
+            const [rows] = await db.query("SELECT title FROM news_posts WHERE id='00000000-0000-4000-8000-000000000002'")
+            assert.equal(rows.length, 1)
+            assert.equal(rows[0].title, 'legacy_keep')
+            const [users] = await db.query("SELECT id FROM users WHERE id='00000000-0000-4000-8000-000000000001'")
+            assert.equal(users.length, 1)
+            console.log('NEWS_V2_REAL_MYSQL_GATE_PASS: twice migrated; schema contract and legacy rows preserved')
+          } finally { await db.end() }
+          JS
