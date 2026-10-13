@@ -8,13 +8,13 @@ const databaseUrl = process.env.DATABASE_URL
 if (!databaseUrl) throw new Error('DATABASE_URL is required')
 const db = await mysql.createConnection(databaseUrl)
 try {
-  const [base] = await db.query<mysql.RowDataPacket[]>(`SELECT t.table_name AS tableName,t.engine,
+  const [base] = await db.query<mysql.RowDataPacket[]>(`SELECT t.table_name AS tableName,t.engine AS engineName,
     c.data_type AS dataType,c.character_maximum_length AS maxLength,c.is_nullable AS nullableFlag,
     c.character_set_name AS characterSet,c.collation_name AS collationName
     FROM information_schema.tables t JOIN information_schema.columns c
       ON c.table_schema=t.table_schema AND c.table_name=t.table_name AND c.column_name='id'
     WHERE t.table_schema=DATABASE() AND t.table_name IN ('news_posts','users')`)
-  if (base.length !== 2 || base.some((row) => String(row.engine).toUpperCase() !== 'INNODB' ||
+  if (base.length !== 2 || base.some((row) => String(row.engineName).toUpperCase() !== 'INNODB' ||
     String(row.dataType).toLowerCase() !== 'varchar' || Number(row.maxLength) !== 36 ||
     String(row.nullableFlag).toUpperCase() !== 'NO' || String(row.characterSet).toLowerCase() !== 'utf8mb4')) {
     throw new Error('news_v2_base_schema_not_ready')
