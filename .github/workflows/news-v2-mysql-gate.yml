@@ -108,6 +108,36 @@ jobs:
             assert.equal(rows[0].title, 'legacy_keep')
             const [users] = await db.query("SELECT id FROM users WHERE id='00000000-0000-4000-8000-000000000001'")
             assert.equal(users.length, 1)
+            const userId='00000000-0000-4000-8000-000000000001'
+            const postId='00000000-0000-4000-8000-000000000002'
+            const batchId='00000000-0000-4000-8000-000000000003'
+            const taskId='00000000-0000-4000-8000-000000000004'
+            const auditId='00000000-0000-4000-8000-000000000005'
+            await db.query("INSERT INTO news_display_states(post_id,phase) VALUES (?,'normal')",[postId])
+            await db.query("INSERT INTO news_favorites(user_id,post_id,original_url,title) VALUES (?,?,'https://mp.weixin.qq.com/s/test','legacy_keep')",[userId,postId])
+            await db.query("INSERT INTO news_retirement_batches(id,entered_json,affected_json) VALUES (?,JSON_ARRAY(),JSON_ARRAY())",[batchId])
+            await db.query("INSERT INTO news_retirement_tasks(id,batch_id,post_id,state,updated_by) VALUES (?,?,?,'todo',?)",[taskId,batchId,postId,userId])
+            await db.query("INSERT INTO news_retirement_reads(batch_id,user_id) VALUES (?,?)",[batchId,userId])
+            await db.query("INSERT INTO news_task_audit(id,task_id,actor_id,from_state,to_state) VALUES (?,?,?,'todo','acknowledged')",[auditId,taskId,userId])
+            await db.query("INSERT INTO news_sync_runs(id,status,fetched) VALUES ('00000000-0000-4000-8000-000000000006','checked',1)")
+            const [favorites] = await db.query('SELECT title FROM news_favorites WHERE user_id=? AND post_id=?',[userId,postId])
+            assert.equal(favorites[0]?.title,'legacy_keep')
+            const [tasks] = await db.query('SELECT state FROM news_retirement_tasks WHERE id=?',[taskId])
+            assert.equal(tasks[0]?.state,'todo')
+            await db.query("UPDATE news_retirement_tasks SET state='acknowledged' WHERE id=?",[taskId])
+            const [after] = await db.query('SELECT state FROM news_retirement_tasks WHERE id=?',[taskId])
+            assert.equal(after[0]?.state,'acknowledged')
+            await assert.rejects(
+              db.query("INSERT INTO news_favorites(user_id,post_id,original_url,title) VALUES ('00000000-0000-4000-8000-999999999999',?,'https://mp.weixin.qq.com/s/test','invalid')",[postId]),
+              error => error.code==='ER_NO_REFERENCED_ROW_2',
+              'favorites must reject nonexistent users'
+            )
+            await assert.rejects(
+              db.query("INSERT INTO news_retirement_tasks(id,batch_id,post_id) VALUES ('00000000-0000-4000-8000-000000000007',?,?)",['00000000-0000-4000-8000-999999999999',postId]),
+              error => error.code==='ER_NO_REFERENCED_ROW_2',
+              'tasks must reject nonexistent retirement batches'
+            )
+            console.log('NEWS_V2_REAL_MYSQL_RELATIONS_PASS: favorites, tasks, reads, audit, transitions, sync rows and FK negatives')
             console.log('NEWS_V2_REAL_MYSQL_GATE_PASS: twice migrated; schema contract and legacy rows preserved')
           } finally { await db.end() }
           JS
