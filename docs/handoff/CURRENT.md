@@ -19,7 +19,7 @@
 
 | 项目 | 最新可靠证据 | 状态 |
 | --- | --- | --- |
-| 生产 API | 10-12 ECS 只读回执 active release `b150d2c5c8720aac8d48fbd0395d8db9c408bc63`、服务 active；后续变更需实时再查 | OBSERVED（不是最新 Git HEAD） |
+| 生产 API | 10-13 用户 ECS 实测：Release A `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48` 已 `PROMOTE_OK`，`current` / `approved-release` 均指向该版；`previous-release` 为 `b150d2c5c8720aac8d48fbd0395d8db9c408bc63`；`/health/live` HTTP 200、`/health` database=ok；API ActiveState=active、NRestarts=0，MemoryCurrent=68567040 / MemoryMax=268435456；仍待业务验收 | OBSERVED（不是最新 Git HEAD） |
 | 课表 | 导入、第一周周一保存、`大四上 → 本周课表` 手机实测 | **DEVICE PASS** |
 | AI 评估 | 用户明确确认草稿→真实运行→结果持久化→历史重开完整链路 | **DEVICE PASS** |
 | 院校图片 | 172 所 WebP 在真机正确显示（用户确认） | **DEVICE PASS** |
@@ -36,9 +36,9 @@
 | 模块 | GitHub / 测试状态 | 生产与验收状态 | 下一动作 |
 | --- | --- | --- | --- |
 | Profile `enrollment_year` | 单列幂等升级脚本及契约检查已存在 | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 单独备份+恢复验证+精确DDL审批；不影响其他独立开发 |
-| 资讯同步分页/真实回执/标签公开控制 | `fbf7fda` + `ab6843b`；短页 fail-closed、可信源时间排序；本地通过 | **NOT DEPLOYED** | 按 Release A 构造隔离无 Schema 候选，不能整分支发布 |
-| AI 评估后台统计解耦 | 已提交 `9bda1b5`；真实9条成功记录 | **NOT DEPLOYED**；支付数据源缺表 | 不依赖支付表显示成功评估，支付标“来源不可用” |
-| 身份只读投影/筛选 | `47bc3bc`、`4a91cbc` 候选 | **NOT DEPLOYED**；实名/教师分配样本缺 | 先上线只读且有权投影，缺样本诚实标注 |
+| 资讯同步分页/真实回执/标签公开控制 | `fbf7fda` + `ab6843b`；短页 fail-closed、可信源时间排序；本地通过 | **API DEPLOYED 2026-10-13 / DEVICE & DATA PENDING** | 等新版首次 timer 同步日志与真实后台、学员资讯数据验收；不可因旧日志 total=21 冒称新版验收 |
+| AI 评估后台统计解耦 | 已提交 `9bda1b5`；真实9条成功记录 | **API DEPLOYED / DATA ACCEPTANCE PENDING**；支付数据源缺表 | 核查管理员真实周/月/年评估统计，支付仍显示来源不可用 |
+| 身份只读投影/筛选 | `47bc3bc`、`4a91cbc` 候选 | **API DEPLOYED / UI & ROLE SAMPLES PENDING**；实名/教师分配样本缺 | 按角色与前端页面核对，缺样本诚实标注 |
 | 客服咨询复制 | GitHub 代码完成、模拟回归通过 | **NOT DEVICE VERIFIED** | 微信复制→客服手动粘贴的真机验收 |
 | 评估普通图/长图/水印 | `9ca6a97` 候选，−25°、alpha 0.30，头尾用户ID日期 | **NOT DEVICE VERIFIED** | 真实手机相册核对无裁切及背景水印 |
 | News V2 20篇窗口/72小时/收藏/退役事件/任务 | `b2622e9`、`14da4ca`、`eb93671`；七表结构合同和多管理员权限测试通过 | **BLOCKED**：生产缺七表；本机无可确认非生产 MySQL | 等非生产迁移两次/回归，再走独立 Schema 审批 |
@@ -48,9 +48,11 @@
 
 **验证证据**：集成验证点 `efb6ac97cd593a118107f00a18dc49b67c3fad1c` API typecheck/build + 196 tests；小程序 typecheck + 82 回归；GitHub Actions [38265829840](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38265829840) PASS（含干净环境后台 typecheck/build）。管理后台本机缺 `vue-tsc`，依赖安装超时后停止，未伪报本地 PASS。公开生产 `/health/live`、`/health`、`/health/config` 本轮成功但不返回 Git SHA。发布拆分见 [P1 独立发布候选](p1-release-candidates-2026-10-12.md)。非生产 MySQL、ECS promotion、systemd timer、微信开发者工具和新的真机验收不因代码/CI 自动通过。
 
-**2026-10-13 补充发布事实**：Release A 现有 API-only 隔离候选 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`，归档已在 ECS `staging/incoming` 完成 SHA-256 校验，未进行 staging 构建或生产 promote；脚本仍需修订，见 [静态复核](release-a-staging-review-2026-10-13.md)。ECS 完整资源与 timer 实存事实见 [资源地图](../ops/ecs-resource-map.md)。**微信体验版前端须单独核对是否依赖未部署 News V2 Schema/API，不得将全集成小程序未经筛选直接发布。**
+**2026-10-13 Release A 生产事实（用户 ECS 回执）**：API-only 独立候选 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48` 已完成归档 SHA-256、ECS 受限构建（专项测试 14/14）、无数据库隔离冒烟、不可变 release 封装、审批和 `jiuchen-promote`；输出 `PROMOTE_OK`、`RELEASE_A_PROMOTE_PASS`。旧版 `b150d2c5c8720aac8d48fbd0395d8db9c408bc63` 保留作一键回滚。**本次仅代表部署与基础健康通过，真实业务及新版首次新闻同步待验收。** 先前的 [静态复核](release-a-staging-review-2026-10-13.md) 是发布前历史记录。ECS 完整资源与 timer 实存事实见 [资源地图](../ops/ecs-resource-map.md)。**微信体验版前端须单独核对是否依赖未部署 News V2 Schema/API，不得将全集成小程序未经筛选直接发布。**
 
 ## 3. 唯一执行优先级：先保护生产，再跨模块推进
+
+**10-13 执行更新**：Release A 已按独立审批完成生产切流，以下 P0/P1 旧的 Release A「尚未部署」步骤已过期，不应重新执行；先补充新版业务回归与下一轮新闻自动同步证据。用户要求继续其他未完成模块施工、最后统一真机验收；这不构成生产 DDL、支付、News V2 开关、跨身份扩权或新的 API promote 的自动批准。
 
 ### P0 — 保护与可观测性（立即）
 
