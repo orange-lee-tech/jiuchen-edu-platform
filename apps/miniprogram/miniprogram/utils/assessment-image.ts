@@ -7,7 +7,7 @@ export const WATERMARK_ALPHA = .30
 export const WATERMARK_ANGLE = -25 * Math.PI / 180
 
 export type ReportLine = {text: string; y: number; size: number; heading: boolean}
-export type ReportLayout = {width: number; height: number; lines: ReportLine[]; identity: string; date: string}
+export type ReportLayout = {width: number; height: number; lines: ReportLine[]; identity: string; name: string; date: string}
 
 export function wrapReportText(text: string, measure: (text: string) => number, width = 650): string[] {
   return text.split(/\r?\n/).flatMap(paragraph => {
@@ -39,8 +39,9 @@ export function layoutAssessmentImage(context: AssessmentReportExportContext, us
   kind: 'summary'|'long', measure: (text:string,size:number)=>number, date=beijingDate()): ReportLayout {
   if (!userId) throw new Error('缺少可展示的用户编号，请先绑定学员身份')
   if(context.assessment.status!=='succeeded'||!context.assessment.output) throw new Error('当前报告不可导出')
-  const identity=`某学员 ｜ 用户ID：${userId}\n导出日期：${date}`
-  const text=kind==='long' ? buildAssessmentReportPlainText({...context,displayName:'某学员'}) : summaryReport(context)
+  const name=context.displayName.trim() && context.displayName.trim()!=='微信用户' ? context.displayName.trim() : '待完善姓名'
+  const identity=`${name} ｜ 用户ID：${userId}\n导出日期：${date}`
+  const text=kind==='long' ? buildAssessmentReportPlainText(context) : summaryReport(context)
   const paragraphs=[identity,`评估编号：${context.assessment.id}`,`报告日期：${formatAssessmentDate(context.assessment.completedAt || context.assessment.updatedAt)}`,'',text,'',identity]
   const lines: ReportLine[]=[]
   let y=42
@@ -51,14 +52,14 @@ export function layoutAssessmentImage(context: AssessmentReportExportContext, us
   }))
   const height=Math.ceil(y+42)
   if(height*REPORT_WIDTH>15000000) throw new Error('报告超出单张长图资源预算，请使用文本报告联系老师')
-  return {width:REPORT_WIDTH,height,lines,identity,date}
+  return {width:REPORT_WIDTH,height,lines,identity,name,date}
 }
 
 /** Background first; watermark then body. No opaque cards cover the watermark. */
 export function drawReportStrip(ctx: WechatMiniprogram.CanvasContext, layout: ReportLayout, userId:string, offset:number, height:number) {
   ctx.setFillStyle('#ffffff');ctx.fillRect(0,0,layout.width,height)
   ctx.save();ctx.setGlobalAlpha(WATERMARK_ALPHA);ctx.setFillStyle('#b4becb');ctx.setFontSize(23)
-  const mark=`某学员 · 用户ID：${userId} · ${layout.date}`
+  const mark=`${layout.name} · 用户ID：${userId} · ${layout.date}`
   const spacing=Math.max(520,ctx.measureText(mark).width+80)
   // Absolute coordinates preserve the grid across adjacent strips.
   for(let y=Math.floor((offset-600)/260)*260;y<offset+height+600;y+=260){

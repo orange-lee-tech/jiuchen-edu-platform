@@ -65,10 +65,11 @@ test('mixed Chinese/English/emoji wrap without dropping any characters',()=>{
 })
 test('summary is labeled, deterministic; long layout contains all text and both identities',()=>{
  const {layoutAssessmentImage}=loader()('utils/assessment-image'),measure=(text,size)=>[...text].length*size
- const long=layoutAssessmentImage(context,'JCS-TEST','long',measure,'2026-10-12')
+ const named={...context,displayName:'李同学'}
+ const long=layoutAssessmentImage(named,'JCS-TEST','long',measure,'2026-10-12')
  const text=long.lines.map(l=>l.text).join('')
  assert.ok(text.includes('完整证据'.repeat(100)));assert.ok(text.includes('仅供参考，不保证录取'))
- assert.equal(long.lines.filter(l=>l.text.includes('用户ID')).length,2)
+ assert.equal(long.lines.filter(l=>l.text.includes('用户ID')).length,2);assert.ok(text.includes('李同学'));assert.equal(long.name,'李同学')
  const summary=layoutAssessmentImage(context,'JCS-TEST','summary',measure,'2026-10-12')
  assert.ok(summary.lines.map(l=>l.text).join('').includes('摘要图'))
  assert.ok(summary.height<long.height)
@@ -87,6 +88,12 @@ test('watermark uses 0.30 alpha, negative 25 degrees; every strip paints waterma
   const reset=operations.findIndex(o=>o[0]==='alpha'&&o[1]===1)
   assert.ok(mark>0&&reset>mark)
  }
+})
+test('result and historical report share visible picture and long-image actions',()=>{
+ const result=fs.readFileSync(path.resolve(root,'pages/assessment-result/assessment-result.wxml'),'utf8')
+ const history=fs.readFileSync(path.resolve(root,'pages/assessment-history/assessment-history.ts'),'utf8')
+ for(const action of ['onSaveSummary','onSaveLong'])assert.match(result,new RegExp(`bindtap="${action}"`))
+ assert.match(history,/pages\/assessment-result\/assessment-result\?id=/)
 })
 function pngData(bytes){
  const buffer=Buffer.from(bytes),idat=[]

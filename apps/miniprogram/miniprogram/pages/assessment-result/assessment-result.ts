@@ -297,6 +297,9 @@ Page({
     })
   },
 
+  onSaveSummary() { void this.exportImageReport('summary') },
+  onSaveLong() { void this.exportImageReport('long') },
+
   async exportTextFile(kind: 'md' | 'txt') {
     if(this.data.exporting)return
     const context = this.reportExportContext()

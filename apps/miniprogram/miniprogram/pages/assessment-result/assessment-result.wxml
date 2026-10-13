@@ -13,6 +13,8 @@
       <text class="report-meta">{{assessmentDate}} · {{assessment.model.name || '评估模型'}}</text>
       <view class="report-actions">
         <button class="action-button primary-action" bindtap="onCopyReport">复制报告</button>
+        <button class="action-button" loading="{{exporting}}" disabled="{{exporting}}" bindtap="onSaveSummary">保存图片</button>
+        <button class="action-button" loading="{{exporting}}" disabled="{{exporting}}" bindtap="onSaveLong">生成长图</button>
         <button class="action-button" loading="{{exporting}}" disabled="{{exporting}}" bindtap="onDownloadReport">下载报告</button>
       </view>
     </view>
