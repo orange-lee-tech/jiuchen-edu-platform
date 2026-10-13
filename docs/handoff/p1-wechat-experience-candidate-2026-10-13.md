@@ -1,4 +1,6 @@
-# P1 微信体验版候选｜2026-10-13\n\n本文件记录四批历史候选 `df4d31f`；当前 RC 代码 `22f3889` 与 Release A 接口兼容审计见 [设备就绪审计](p1-device-readiness-audit-2026-10-13.md) 和 [P1-20261013 Experience Candidate Checklist](p1-experience-candidate-checklist-2026-10-13.md)。Profile 生产缺列阻塞完整验收，不能沿用下面历史 SHA 上传。
+# P1 微信体验版候选｜2026-10-13
+
+本文件记录四批历史候选 `df4d31f`；当前 RC 代码 `22f3889` 与 Release A 接口兼容审计见 [设备就绪审计](p1-device-readiness-audit-2026-10-13.md) 和 [P1-20261013 Experience Candidate Checklist](p1-experience-candidate-checklist-2026-10-13.md)。Profile 生产缺列阻塞完整验收，不能沿用下面历史 SHA 上传。
 
 **候选源码 SHA：`df4d31fb25da1ce31e22e8bb027b73aa60ed909e`（`p1/foundation`）。** 本文件仅说明小程序候选；尚未由微信开发者工具编译、上传、预览或真机验收。不能把整条集成分支当作生产 API release，也不能重复发布 Release A。
 

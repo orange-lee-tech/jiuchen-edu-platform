@@ -25,4 +25,8 @@
 ## CI 最终回执
 
 最终修复提交 `156f2ab70f7e70e205a35267b1398954663b3cb7` 的 [CI](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200246)、[News V2 隔离 MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200232) 与 [Profile 隔离 MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200256) 均 PASS。CI 只证明测试代码通过，未部署生产或微信体验版；DEVICE PENDING。
-\n\n## P1 RC 依赖审计补充（2026-10-13）\n\n旧 `/news` 由 Release A 直接提供，V2 收藏及退役接口只在服务端开启 V2 时触发。管理员统计对 Release A 未返回的 `assessmentUserCount` 显示“当前 API 未提供”，原成功／失败／创建图表保留；账号、分配与资讯页面已拆开独立读取。代码 `22f3889` 的 CI PASS；完整路径与 Profile 缺列阻塞见 [设备就绪审计](p1-device-readiness-audit-2026-10-13.md)及[最终清单](p1-experience-candidate-checklist-2026-10-13.md)。此候选 **可上传体验版进行有限验收**，但完善资料不可标 PASS，P1 全功能交付 NOT READY。\n
+
+
+## P1 RC 依赖审计补充（2026-10-13）
+
+旧 `/news` 由 Release A 直接提供，V2 收藏及退役接口只在服务端开启 V2 时触发。管理员统计对 Release A 未返回的 `assessmentUserCount` 显示“当前 API 未提供”，原成功／失败／创建图表保留；账号、分配与资讯页面已拆开独立读取。代码 `22f3889` 的 CI PASS；完整路径与 Profile 缺列阻塞见 [设备就绪审计](p1-device-readiness-audit-2026-10-13.md)及[最终清单](p1-experience-candidate-checklist-2026-10-13.md)。此候选 **可上传体验版进行有限验收**，但完善资料不可标 PASS，P1 全功能交付 NOT READY。
