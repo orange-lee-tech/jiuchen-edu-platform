@@ -69,6 +69,22 @@ jobs:
             await db.query("INSERT INTO news_posts(id,title) VALUES ('00000000-0000-4000-8000-000000000002','legacy_keep')")
           } finally { await db.end() }
           JS
+      - name: Diagnose base ID schema contract without secrets
+        run: |
+          node --input-type=module <<'JS'
+          import mysql from 'mysql2/promise'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            const [rows] = await db.query(`SELECT t.table_name AS tableName,t.engine,
+              c.data_type AS dataType,c.character_maximum_length AS maxLength,
+              c.is_nullable AS nullableFlag,c.character_set_name AS characterSet,
+              c.collation_name AS collationName
+              FROM information_schema.tables t JOIN information_schema.columns c
+              ON c.table_schema=t.table_schema AND c.table_name=t.table_name AND c.column_name='id'
+              WHERE t.table_schema=DATABASE() AND t.table_name IN ('news_posts','users')`)
+            console.log('BASE_ID_SCHEMA_METADATA', JSON.stringify(rows))
+          } finally { await db.end() }
+          JS
       - name: Run migration first time
         run: npm run db:upgrade:news-v2
       - name: Run migration second time - must be idempotent
