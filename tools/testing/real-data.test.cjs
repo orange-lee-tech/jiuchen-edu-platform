@@ -48,6 +48,16 @@ test('news cards expose source date, keep every category and defer favorites unt
  assert.match(detail,/favoriteBusy \|\| !favoritesReady/)
  assert.match(detail,/\{\{favoriteError\}\}/)
 })
+test('Release A news response only reads the old public endpoint',async()=>{
+ const requests=[],wx={request:o=>requests.push(o),getStorageSync:()=>null}
+ const load=loadModules(wx)
+ load('pages/news/news');const page=load.page(),flow=page.loadNews()
+ assert.equal(new URL(requests[0].url).pathname,'/news')
+ requests[0].success({statusCode:200,data:{ok:true,posts:[]}})
+ await flow
+ assert.equal(page.data.newsV2Enabled,false)
+ assert.equal(requests.length,1,'no favorites or retirement request without server V2 flag')
+})
 test('analytics page retains successful assessments but removes error-backed payment plots',async()=>{
  const storage=new Map(),requests=[],wx={getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),request:o=>requests.push(o)}
  const load=loadModules(wx),auth=load('utils/auth')
