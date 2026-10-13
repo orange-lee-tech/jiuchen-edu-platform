@@ -46,6 +46,8 @@
 | 微信真实发表时间 | 源端可证 `update_time`；无可靠 `publish_time` | **PARKED**（不得冒充发表日期） | 留“发表时间待核实/来源更新时间”，待官方能力或样本 |
 | 支付、额度账本和真实充值额 | 代码/合同存在；生产三张表缺失 | **PARKED**（独立合规/Schema gate） | 不补造账本，不启用虚拟支付或假金额 |
 
+**2026-10-13 管理后台只读候选**：`142eaa5`、`8911919`、`a74a1d8` 在 `p1/foundation` 接入现有管理员 `/auth/me`、评估统计、身份目录和资讯只读 API；会话仅留本地开发页面内存，旧本地编辑路由仍只供开发，正式 Web 登录尚未接入。统计缺表显示来源不可用，接口失败不作零；日期明示来源更新时间。GitHub Actions [38335494470](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38335494470) / [38335497980](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38335497980) PASS（小程序、管理端类型检查/2项只读测试/构建、API 测试/构建）。**CODE COMPLETE（只读本地候选） / CI PASS / PRODUCTION NOT DEPLOYED / DEVICE PENDING**。统一验收见 [体验版清单](experience-acceptance-2026-10-13.md)。
+
 **验证证据**：集成验证点 `efb6ac97cd593a118107f00a18dc49b67c3fad1c` API typecheck/build + 196 tests；小程序 typecheck + 82 回归；GitHub Actions [38265829840](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38265829840) PASS（含干净环境后台 typecheck/build）。管理后台本机缺 `vue-tsc`，依赖安装超时后停止，未伪报本地 PASS。公开生产 `/health/live`、`/health`、`/health/config` 本轮成功但不返回 Git SHA。发布拆分见 [P1 独立发布候选](p1-release-candidates-2026-10-12.md)。非生产 MySQL、ECS promotion、systemd timer、微信开发者工具和新的真机验收不因代码/CI 自动通过。
 
 **2026-10-13 Release A 生产事实（用户 ECS 回执）**：API-only 独立候选 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48` 已完成归档 SHA-256、ECS 受限构建（专项测试 14/14）、无数据库隔离冒烟、不可变 release 封装、审批和 `jiuchen-promote`；输出 `PROMOTE_OK`、`RELEASE_A_PROMOTE_PASS`。旧版 `b150d2c5c8720aac8d48fbd0395d8db9c408bc63` 保留作一键回滚。**本次仅代表部署与基础健康通过，真实业务及新版首次新闻同步待验收。** 先前的 [静态复核](release-a-staging-review-2026-10-13.md) 是发布前历史记录。ECS 完整资源与 timer 实存事实见 [资源地图](../ops/ecs-resource-map.md)。**微信体验版前端须单独核对是否依赖未部署 News V2 Schema/API，不得将全集成小程序未经筛选直接发布。**
