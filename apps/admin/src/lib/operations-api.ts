@@ -59,7 +59,12 @@ export function operationsClient(token: string, transport: typeof fetch = fetch)
     },
     async analytics(period: Period) {
       const result = await read<{ ok: true; analytics: Analytics }>(`/me/admin/assessment-analytics?period=${period}`, token, transport)
-      if (!result.analytics?.sources || !result.analytics.range) throw new OperationsError(200, '统计接口版本不匹配')
+      const data = result.analytics
+      if (!data?.range?.timezone || !Array.isArray(data.buckets) || !data.summary || !Number.isFinite(data.summary.assessmentCount) ||
+        !data.ledger || !data.gaps || !data.supplier || !Array.isArray(data.payers) ||
+        !(['assessments', 'payments', 'ledger', 'reservations'] as const).every(source => ['ok', 'error'].includes(data.sources?.[source]?.status))) {
+        throw new OperationsError(200, '统计接口版本不匹配')
+      }
       return result.analytics
     },
     async identities() {
