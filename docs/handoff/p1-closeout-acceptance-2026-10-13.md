@@ -20,3 +20,8 @@
 - 小程序 TypeScript 与 `miniprogram-navigation.test.cjs` 53 项通过（含周次、日期保存、返回重读和首页入口）；其他候选专项沿用之前批次的 CI 证据，不在本轮重报真机 PASS。
 - API typecheck/build 通过；相关 analytics、identity、News lifecycle 测试通过。完整 API 测试经 `node --import tsx --test` 为 46/47：唯一失败的院校目录镜像测试在受限工作环境内 `spawnSync node EPERM`；单独运行目录生成器 `--check` 通过。`npm test` 的 tsx IPC 也因 `listen EPERM` 不能在本环境执行；需 GitHub CI 独立确认完整测试。
 - 本轮未用生产凭据执行私有 GET、官方同步 POST、DB 写入、DDL、微信上传或手机验收。代码完成与 CI／真机状态要依据提交后实际运行结果更新。
+
+
+## CI 最终回执
+
+最终修复提交 `156f2ab70f7e70e205a35267b1398954663b3cb7` 的 [CI](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200246)、[News V2 隔离 MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200232) 与 [Profile 隔离 MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200256) 均 PASS。CI 只证明测试代码通过，未部署生产或微信体验版；DEVICE PENDING。

@@ -137,3 +137,8 @@
 `p1/foundation` 课表与首页刷新批次 `0d7ae64`，管理员实名状态与区间评估用户数批次 `7ec66ce`；详细来源、缺失真实样本、页面路径及统一验收见 [P1 收尾候选与统一微信验收清单](p1-closeout-acceptance-2026-10-13.md)。News V2 的 20 条已审核窗口、72 小时缓冲、公众号原链接收藏与退役任务经代码／合成测试复核，生产七表及开关依然 PARKED。先前客服复制、长图、院校资源以及 AI Runtime 的既有状态不变。生产真实数据沿用 2026-10-12 只读审计；本轮没有新的私有查询，不能作为最新真机或生产回执。
 
 **状态**：CODE COMPLETE（本轮两批）；本地 mini typecheck/53 项导航、API typecheck/build/相关测试通过。API 全量在受限环境的唯一院校镜像测试因子进程 `EPERM` 未通过；GitHub Actions 结果以对应 HEAD 实际结论为准。DEPLOYED: NO（仅集成分支代码，Release A 不重复发布）；DEVICE PENDING（微信开发者工具／真机均未执行）。课表日期 PUT 的生产受控发布、News V2 生产 Schema、支付账本与缺失身份样本仍按各自 Gate 处理，**不可标记 PASS**。
+
+
+## CI 最终回执
+
+最终修复提交 `156f2ab70f7e70e205a35267b1398954663b3cb7` 的 [CI](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200246)、[News V2 隔离 MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200232) 与 [Profile 隔离 MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200256) 均 PASS。CI 只证明测试代码通过，未部署生产或微信体验版；DEVICE PENDING。
