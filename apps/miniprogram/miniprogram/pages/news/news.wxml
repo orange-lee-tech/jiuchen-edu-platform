@@ -81,6 +81,7 @@
       <text class="featured-tag">{{featured.primaryTag}}</text>
       <text class="featured-title">{{featured.title}}</text>
       <text class="featured-summary">{{featured.summary}}</text>
+      <text class="featured-meta">{{featured.meta}}</text>
       <text class="featured-more">{{featured.id ? '小程序内阅读全文 ›' : '等待同步内容'}}</text>
     </view>
   </view>
@@ -120,7 +121,7 @@
       </view>
     </view>
 
-    <view wx:if="{{!loading && articles.length === 0}}" class="empty surface">
+    <view wx:if="{{!loading && !featured.id}}" class="empty surface">
       当前分类暂无内容。
     </view>
   </view>

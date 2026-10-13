@@ -15,6 +15,8 @@ Page({
     coverFailed: false,
     favorited:false,
     favoriteBusy:false,
+    favoritesReady:false,
+    favoriteError:'',
   },
 
   postId: '',
@@ -30,7 +32,7 @@ Page({
 
   async loadPost(id: string) {
     try {
-      this.setData({ loading: true, error: '' })
+      this.setData({ loading: true, error: '', favoritesReady:false, favoriteError:'' })
       const post = await getNewsPost(id)
       this.setData({
         post,
@@ -39,7 +41,8 @@ Page({
         dateLabel: newsPublicationLabel(post,true),
       })
       if(post.favoritesEnabled){
-        try{const saved=await getMyNewsFavorites();if(this.postId===id)this.setData({favorited:saved.some(item=>item.postId===id)})}catch{ /* An unavailable favorite source must not hide the article. */ }
+        try{const saved=await getMyNewsFavorites();if(this.postId===id)this.setData({favorited:saved.some(item=>item.postId===id),favoritesReady:true})}
+        catch{if(this.postId===id)this.setData({favoriteError:'收藏状态暂时无法读取，请重新加载后再试。'})}
       }
     } catch (error) {
       console.info('News detail load failed.', error)
@@ -60,7 +63,7 @@ Page({
   },
   async onToggleFavorite(){
     const post=this.data.post
-    if(!post?.favoritesEnabled||this.data.favoriteBusy)return
+    if(!post?.favoritesEnabled||!this.data.favoritesReady||this.data.favoriteBusy)return
     try{
       this.setData({favoriteBusy:true})
       if(this.data.favorited)await removeNewsFavorite(post.id)

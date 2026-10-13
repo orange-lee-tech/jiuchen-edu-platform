@@ -34,6 +34,20 @@ test('news administrator defaults to publication ordering and switches classific
  assert.equal(page.data.newsUnclassifiedFirst,false)
  page.onNewsSort();assert.equal(page.data.posts[0].id,'old');page.onNewsSort();assert.equal(page.data.posts[0].id,'new')
 })
+test('news cards expose source date, keep every category and defer favorites until the V2 source is ready',()=>{
+ const load=loadModules();load('pages/news/news');const page=load.page()
+ const cards=[{id:'a',tags:['分类一']},{id:'b',tags:['分类二']}]
+ assert.equal(page.filterArticles(cards,1,['全部','分类一','分类二'])[0].id,'a')
+ const listing=fs.readFileSync(path.join(root,'pages/news/news.wxml'),'utf8')
+ const detail=fs.readFileSync(path.join(root,'pages/news-detail/news-detail.wxml'),'utf8')
+ const source=fs.readFileSync(path.join(root,'pages/news/news.ts'),'utf8')
+ assert.match(listing,/\{\{featured.meta\}\}/)
+ assert.match(listing,/!loading && !featured.id/)
+ assert.match(source,/return tags\s*\n/)
+ assert.match(detail,/收藏原文 · 待开放/)
+ assert.match(detail,/favoriteBusy \|\| !favoritesReady/)
+ assert.match(detail,/\{\{favoriteError\}\}/)
+})
 test('analytics page retains successful assessments but removes error-backed payment plots',async()=>{
  const storage=new Map(),requests=[],wx={getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),request:o=>requests.push(o)}
  const load=loadModules(wx),auth=load('utils/auth')

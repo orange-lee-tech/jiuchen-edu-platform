@@ -20,6 +20,7 @@
 .page-shell .category.active { background: #2f6fed; color: #fff; }
 .page-shell .featured-summary, .page-shell .article-summary { color: #5f6b78; font-size: 25rpx; line-height: 1.75; }
 .page-shell .article-meta { color: #5f6b78; font-size: 23rpx; }
+.featured-meta { display: block; color: #5f6b78; font-size: 22rpx; line-height: 1.5; margin-top: 12rpx; }
 .page-shell .article-tag { font-size: 22rpx; }
 .featured:active, .article-card:active { background: #e7eef8; }
 .reference-news-button, .news-error button, .news-empty button { border-radius: 8rpx; margin: 24rpx 0; padding: 20rpx 24rpx; font-size: 27rpx; line-height: 1.5; white-space: normal; background: #e7eef8; color: #2459be; }

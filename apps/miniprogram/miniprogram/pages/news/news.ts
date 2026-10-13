@@ -64,7 +64,7 @@ function uniqueTags(cards: NewsCard[]) {
     tags.push('未分类')
   }
 
-  return tags.slice(0, 12)
+  return tags
 }
 
 Page({
@@ -171,7 +171,7 @@ Page({
       const categories = ['全部', ...uniqueTags(cards)]
 
       this.setData({
-        sourceLabel: '九辰教育服务号',
+        sourceLabel: '真实资讯 · 人工分类',
         categories,
         currentCategory: 0,
         featured: first,
