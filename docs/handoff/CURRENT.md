@@ -37,13 +37,13 @@
 
 | 模块 | GitHub / 测试状态 | 生产与验收状态 | 下一动作 |
 | --- | --- | --- | --- |
-| Profile `enrollment_year` | 单列幂等升级脚本及契约检查已存在 | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 单独备份+恢复验证+精确DDL审批；不影响其他独立开发 |
+| Profile `enrollment_year` | 单列幂等升级脚本；隔离 MySQL 双次迁移 PASS | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 针对生产的备份+隔离恢复验证+精确DDL审批；不影响其他独立开发 |
 | 资讯同步分页/真实回执/标签公开控制 | `fbf7fda` + `ab6843b`；短页 fail-closed、可信源时间排序；本地通过 | **API DEPLOYED 2026-10-13 / DEVICE & DATA PENDING** | 等新版首次 timer 同步日志与真实后台、学员资讯数据验收；不可因旧日志 total=21 冒称新版验收 |
 | AI 评估后台统计解耦 | 已提交 `9bda1b5`；真实9条成功记录 | **API DEPLOYED / DATA ACCEPTANCE PENDING**；支付数据源缺表 | 核查管理员真实周/月/年评估统计，支付仍显示来源不可用 |
 | 身份只读投影/筛选 | `47bc3bc`、`4a91cbc` 候选 | **API DEPLOYED / UI & ROLE SAMPLES PENDING**；实名/教师分配样本缺 | 按角色与前端页面核对，缺样本诚实标注 |
 | 客服咨询复制 | GitHub 代码完成、模拟回归通过 | **NOT DEVICE VERIFIED** | 微信复制→客服手动粘贴的真机验收 |
 | 评估普通图/长图/水印 | `9ca6a97` 候选，−25°、alpha 0.30，头尾用户ID日期 | **NOT DEVICE VERIFIED** | 真实手机相册核对无裁切及背景水印 |
-| News V2 20篇窗口/72小时/收藏/退役事件/任务 | `b2622e9`、`14da4ca`、`eb93671`；七表结构合同和多管理员权限测试通过 | **BLOCKED**：生产缺七表；本机无可确认非生产 MySQL | 等非生产迁移两次/回归，再走独立 Schema 审批 |
+| News V2 20篇窗口/72小时/收藏/退役事件/任务 | 隔离 MySQL 8 双次迁移、七表结构/关系与逻辑边界回归 PASS（见下方 Actions） | **BLOCKED**：生产缺七表；未做生产库备份及隔离恢复 | 精确生产 Schema 清单与备份/恢复演练后独立审批，不切换开关 |
 | News 同步 timer | 已在 ECS 实际运行；`OnUnitActiveUSec=30min`，使用现役 `current` 同步脚本，日志多次显示 `total=21, created=0, updated=21` | **PRODUCTION ACTIVE**；尚无独立内存/CPU/超时上限 | 先按实际资源观测，再单独批准 timer 治理；Release A 不重装 timer |
 | 微信真实发表时间 | 源端可证 `update_time`；无可靠 `publish_time` | **PARKED**（不得冒充发表日期） | 留“发表时间待核实/来源更新时间”，待官方能力或样本 |
 | 支付、额度账本和真实充值额 | 代码/合同存在；生产三张表缺失 | **PARKED**（独立合规/Schema gate） | 不补造账本，不启用虚拟支付或假金额 |
@@ -59,6 +59,8 @@
 **2026-10-13 新闻数据库关系回归**：新增 GitHub Actions 实际 MySQL 8 七表关系测试，验证收藏、展示状态、退役批次/任务/已读/审计、同步运行记录写入、任务状态转换及外键拒绝非法引用；[CI 38337158353](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38337158353) **PASS**，提交 `75430b3e`。此结果不代表72小时生命周期业务接口端到端、真实生产库复刻、备份恢复或微信验收通过；生产 DDL/发布独立审批不变。
 
 **2026-10-13 后续自动化进展**：News V2 隐藏/撤签/不完整源扫描/72小时退役时间边界纯逻辑回归已加入 (`c42a5bf1`)，完整 CI [38337440168](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38337440168) PASS。Profile Release B 在 GitHub Actions 临时 MySQL 8 中真实执行 `db:upgrade:enrollment-year` 两次，旧院校、年级、GPA 行保留，新增入学年份能写回，结构检查 PASS；[CI 38337530468](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38337530468)。两项均 **TEST PASS / PROD DDL NOT APPROVED / NOT DEPLOYED**；临时数据库测试不等于针对生产实例的备份及隔离恢复验收。
+
+**2026-10-13 P1 小程序四批候选**：从 `550516a` 基线连续提交客服模板 `e2438d1`/旧断言修复 `7d1a6d2`、报告图片入口和姓名水印 `754cd80`、管理员账号总数/老师实际负责人数 `f988173`、资讯分类和收藏待开放体验 `df4d31f`。本地小程序类型检查及 85 项回归 PASS；最终源码 HEAD `df4d31fb25da1ce31e22e8bb027b73aa60ed909e` 的 [Push CI 38350387011](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38350387011)、[PR CI 38350391483](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38350391483)、[News V2 MySQL gate 38350391472](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38350391472)、[Profile MySQL gate 38350391385](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38350391385) 全部 PASS。首次客服模板提交的旧断言 CI FAIL 已由后续提交修复。**CODE COMPLETE（四批小程序候选） / TEST PASS / WECHAT NOT UPLOADED / DEVICE PENDING / PRODUCTION API 仍为 Release A**。精确范围和一次性验收见 [P1 微信体验版候选](p1-wechat-experience-candidate-2026-10-13.md)。
 
 ## 3. 唯一执行优先级：先保护生产，再跨模块推进
 

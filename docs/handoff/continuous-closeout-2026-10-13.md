@@ -48,3 +48,7 @@
 - GitHub Actions `38335494470`、`38335497980` 均 PASS；本地管理端依赖缺失，执行了只读适配器 2 项测试，管理端 typecheck/build 使用 GitHub CI 结果。未调用生产管理员私有接口，真实身份/文章/评估样本未在本批重验。
 - News V2 七表生产缺失且没有已确认的非生产 MySQL；本批未运行迁移、未开启开关、未触碰现有 30 分钟 timer。Profile 生产缺列、客服/长图/地图新回归仍等待统一手机验收。
 - [微信体验版统一验收清单](experience-acceptance-2026-10-13.md) 已备妥。CODE：只读后台候选完成；TEST：CI PASS；DEPLOY：本批未部署；DEVICE：PENDING。Release A 已部署事实维持原记录，不重复发布。下一次生产动作需精确候选/Schema/资源审批，微信体验版上传由本人操作。
+
+## 6. P1 小程序四批一次性体验版候选
+
+`df4d31fb25da1ce31e22e8bb027b73aa60ed909e` 已包含客服复制模板、评估摘要图/长图直接入口与个性化水印、管理员真实账号数/老师负责学员数、资讯分类与收藏待开放文案。四批提交和差异见 [候选清单](p1-wechat-experience-candidate-2026-10-13.md)。本地 typecheck + 85 项回归，Push CI `38350387011`、PR CI `38350391483`、两条隔离 MySQL gates `38350391472`/`38350391385` 均 PASS。CODE COMPLETE / TEST PASS；微信体验版 NOT UPLOADED、DEVICE PENDING；生产仍为 Release A。首次模板旧断言 CI FAIL 已修复。没有执行生产 DDL、News V2 开关、正式发布或旧基础功能重复施工。
