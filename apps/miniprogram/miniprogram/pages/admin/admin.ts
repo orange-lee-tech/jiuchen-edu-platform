@@ -92,7 +92,8 @@ Page({
     internalIds: [] as AdminInternalId[],
     visibleIds: [] as ReturnType<typeof internalIdView>[],
     idQuery: '', idFilter: 0, idFilters: ID_FILTERS,
-    userQuery: '', visibleUsers: [] as Array<AdminUser & { roleLabel: string; statusLabel: string }>,
+    userQuery: '', visibleUsers: [] as Array<AdminUser & { roleLabel: string; statusLabel: string; displayLabel: string }>,
+    unboundAccountCount: 0,
     formMode: '' as '' | 'create' | 'bind', loadError: '',
     users: [] as AdminUser[],
     students: [] as StudentSummary[],
@@ -251,7 +252,17 @@ Page({
   },
   refreshLists() {
     const q = this.data.userQuery.trim().toLowerCase()
-    this.setData({ visibleIds: filterInternalIds(this.data.internalIds, this.data.idQuery, this.data.idFilter, getSavedAuthResult()?.user.id), visibleUsers: this.data.users.filter(u => !q || [u.displayName, u.id].some(v => v?.toLowerCase().includes(q))).map(u => ({ ...u, roleLabel: { user: '普通用户', student: '学员', teacher: '老师', staff: '内部员工', admin: '管理员' }[u.role], statusLabel: u.status === 'active' ? '正常' : '已停用' })) })
+    const matched = this.data.users.filter(u => !q || [u.displayName, u.id].some(v => v?.toLowerCase().includes(q)))
+    this.setData({
+      visibleIds: filterInternalIds(this.data.internalIds, this.data.idQuery, this.data.idFilter, getSavedAuthResult()?.user.id),
+      unboundAccountCount: this.data.users.filter(user => user.role === 'user').length,
+      visibleUsers: matched.filter(user => user.role !== 'user').map(user => ({
+        ...user,
+        displayLabel: { user: '普通账号', student: '学员账号', teacher: '老师账号', staff: '内部员工账号', admin: '管理员账号' }[user.role],
+        roleLabel: { user: '普通用户', student: '学员', teacher: '老师', staff: '内部员工', admin: '管理员' }[user.role],
+        statusLabel: user.status === 'active' ? '正常' : '已停用',
+      })),
+    })
   },
   onIdSearch(event: WechatMiniprogram.Input) { this.setData({ idQuery: event.detail.value }); this.refreshLists() },
   onUserSearch(event: WechatMiniprogram.Input) { this.setData({ userQuery: event.detail.value }); this.refreshLists() },

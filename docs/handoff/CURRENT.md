@@ -145,3 +145,9 @@
 ## CI 最终回执
 
 最终修复提交 `156f2ab70f7e70e205a35267b1398954663b3cb7` 的 [CI](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200246)、[News V2 隔离 MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200232) 与 [Profile 隔离 MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38356200256) 均 PASS。CI 只证明测试代码通过，未部署生产或微信体验版；DEVICE PENDING。
+
+## 2026-10-13 P1 最终体验收尾
+
+本批已撤回只读身份页模拟学生五入口的越界实现，`app.json`、原生 `tabBar`、全局导航和普通学生启动流程均无差异。管理员身份展示改为使用既有 identity 接口的档案／认领／分配字段，不把账号昵称当实名；评估导出仅保留复制及图片下载入口，PNG 透明像素按白底合成，案例编号只显示规范六位 JCC；资讯卡片与首页课表完成有限展示收尾。详见 [P1 最终体验收尾](p1-final-experience-closeout-2026-10-13.md)。
+
+本地验证：小程序 typecheck PASS、91/91 回归 PASS；API typecheck/build PASS、199/199 tests PASS。生产 API 仍为 Release A `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`，本批没有 ECS、DDL、支付、AI Runtime、News V2 开关或 timer 操作。**当前状态：CODE/LOCAL TEST READY；GitHub CI、微信上传和 DEVICE 均 PENDING。**

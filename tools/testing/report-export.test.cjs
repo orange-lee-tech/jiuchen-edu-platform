@@ -12,14 +12,14 @@ function loader(wx={}){
   const module={exports:{}};cache.set(filename,module)
   const code=ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText
   const requireLocal=n=>n.includes('config/runtime')?{runtimeConfig:{apiTransport:'http',apiBaseUrl:'https://test.invalid',wechatCustomerService:{corpId:'test-corp',url:'https://test.invalid'}}}:load(path.relative(root,path.resolve(path.dirname(filename),n)))
-  vm.runInNewContext(code,{module,exports:module.exports,require:requireLocal,wx,console,Date,Map,Set,Uint8Array,Uint8ClampedArray,ArrayBuffer,DataView,Promise,Page:definition=>{pageDefinition=definition},getCurrentPages:()=>[]})
+  vm.runInNewContext(code,{module,exports:module.exports,require:requireLocal,wx,console,Date,Map,Set,Uint8Array,Uint8ClampedArray,ArrayBuffer,DataView,Promise,setTimeout,clearTimeout,Page:definition=>{pageDefinition=definition},getCurrentPages:()=>[]})
   return module.exports
  }
  load.page=()=>({...pageDefinition,data:{...pageDefinition.data},setData(value,callback){Object.assign(this.data,value);callback?.()}})
  return load
 }
 function fixture(){return {
- displayName:'某学员',references:[{index:1,ref:'case:1',caseId:'c1',title:'测试案例',metaLabel:'外部来源',excerpt:'完整证据'.repeat(100),similarityReason:'相似原因',resultSummary:'参考结果',sourceType:'external'}],
+ displayName:'某学员',references:[{ref:'case:1',caseId:'JCC-000113',title:'测试案例',metaLabel:'外部来源',excerpt:'完整证据'.repeat(100),similarityReason:'相似原因',resultSummary:'参考结果',sourceType:'external'}],
  assessment:{id:'synthetic-assessment',status:'succeeded',completedAt:'2026-10-12T10:00:00Z',updatedAt:'2026-10-12T10:00:00Z',model:{name:'test-model'},input:{profile:{university:'测试大学',major:'测试专业'}},evidence:[{ref:'official:1',title:'官方证据',sourceLabel:'学校官网',excerpt:'官方要求'}],
  output:{profileSummary:'真实概要',strengths:[{title:'优势一',detail:'具体优势',evidenceRefs:['case:1']}],risks:[{title:'风险一',detail:'具体风险',evidenceRefs:['official:1']}],targetAssessments:[{schoolName:'目标学校',programName:'目标专业',tier:'reach',rationale:'判断条件',gapItems:['差距甲'],actions:['动作甲'],evidenceRefs:['case:1']}],recommendedActions:[{title:'优先行动',priority:'high',rationale:'行动理由',timeframe:'两周'}],similarCases:[{caseId:'c2',evidenceRef:'missing:2',sourceType:'external',similarityReason:'无对应证据',resultSummary:'结果乙'}],uncertainties:['未知条件'],disclaimer:'仅供参考，不保证录取'}}
 }}
@@ -63,19 +63,25 @@ test('mixed Chinese/English/emoji wrap without dropping any characters',()=>{
  const lines=wrapReportText(text,t=>[...t].length*25,650)
  assert.equal(lines.join(''),text);assert.ok(lines.every(t=>[...t].length<=26))
 })
-test('summary is labeled, deterministic; long layout contains all text and both identities',()=>{
+test('case references expose only canonical six-digit JCC identifiers',()=>{
+ const {traceableAssessmentCaseId}=loader()('utils/assessment-report-export')
+ assert.equal(traceableAssessmentCaseId('case:JCC-000113:v1'),'JCC-000113')
+ for(const value of ['source-42','JCC-113','JCC-0001137',''])assert.equal(traceableAssessmentCaseId(value),'')
+})
+test('summary and long share images stay bounded, traceable and repeat identity information',()=>{
  const {layoutAssessmentImage}=loader()('utils/assessment-image'),measure=(text,size)=>[...text].length*size
  const named={...context,displayName:'李同学'}
  const long=layoutAssessmentImage(named,'JCS-TEST','long',measure,'2026-10-12')
  const text=long.lines.map(l=>l.text).join('')
- assert.ok(text.includes('完整证据'.repeat(100)));assert.ok(text.includes('仅供参考，不保证录取'))
+ assert.ok(!text.includes('完整证据'.repeat(100)));assert.ok(text.includes('仅供参考，不保证录取'));assert.ok(text.includes('JCC-000113'))
  assert.equal(long.lines.filter(l=>l.text.includes('用户ID')).length,2);assert.ok(text.includes('李同学'));assert.equal(long.name,'李同学')
  const summary=layoutAssessmentImage(context,'JCS-TEST','summary',measure,'2026-10-12')
  assert.ok(summary.lines.map(l=>l.text).join('').includes('摘要图'))
- assert.ok(summary.height<long.height)
+ assert.ok(summary.height<=long.height)
  assert.throws(()=>layoutAssessmentImage(context,'','long',measure))
  const huge=fixture();huge.assessment.output.profileSummary='长'.repeat(20000)
- assert.throws(()=>layoutAssessmentImage(huge,'JCS-TEST','long',measure),/资源预算/)
+ const bounded=layoutAssessmentImage(huge,'JCS-TEST','long',measure)
+ assert.ok(bounded.height*bounded.width<=15000000)
 })
 test('watermark uses 0.30 alpha, negative 25 degrees; every strip paints watermark before body',()=>{
  const {drawReportStrip,layoutAssessmentImage}=loader()('utils/assessment-image'),layout=layoutAssessmentImage(context,'JCS-TEST','long',(t,s)=>t.length*s)
@@ -89,10 +95,11 @@ test('watermark uses 0.30 alpha, negative 25 degrees; every strip paints waterma
   assert.ok(mark>0&&reset>mark)
  }
 })
-test('result and historical report share visible picture and long-image actions',()=>{
+test('result exposes only copy and a two-choice report download entry',()=>{
  const result=fs.readFileSync(path.resolve(root,'pages/assessment-result/assessment-result.wxml'),'utf8')
  const history=fs.readFileSync(path.resolve(root,'pages/assessment-history/assessment-history.ts'),'utf8')
- for(const action of ['onSaveSummary','onSaveLong'])assert.match(result,new RegExp(`bindtap="${action}"`))
+ assert.match(result,/bindtap="onCopyReport"/);assert.match(result,/bindtap="onDownloadReport"/)
+ assert.doesNotMatch(result,/bindtap="onSaveSummary"|bindtap="onSaveLong"/)
  assert.match(history,/pages\/assessment-result\/assessment-result\?id=/)
 })
 function pngData(bytes){
@@ -109,6 +116,12 @@ test('streaming PNG decodes multiple strips across deflate blocks with exact com
  assert.ok(buffer.length<1250000)
  assert.throws(()=>new ReportPngEncoder(750,30000),/资源预算/)
  assert.throws(()=>new ReportPngEncoder(750,10).finish(),/完整/)
+})
+test('streaming PNG composites transparent device pixels over white instead of black',()=>{
+ const {ReportPngEncoder}=loader()('utils/report-png'),encoder=new ReportPngEncoder(2,1)
+ const pixels=new Uint8ClampedArray([0,0,0,0,0,0,0,255])
+ const {raw}=pngData(Buffer.concat([encoder.header(),encoder.strip(pixels,1),encoder.finish()].map(p=>Buffer.from(p))))
+ assert.deepEqual([...raw],[0,255,0])
 })
 module.exports={loader,fixture}
 

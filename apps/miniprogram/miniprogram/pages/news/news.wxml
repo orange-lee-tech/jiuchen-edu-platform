@@ -31,7 +31,7 @@
     <text class="section-title">即将退役 · {{retiring.length}} 篇</text>
     <view wx:for="{{retiring}}" wx:key="id" class="news-extra-row" data-id="{{item.id}}" bindtap="onArticleTap">
       <text class="news-extra-title">{{item.title}}</text>
-      <text class="news-extra-meta">{{item.meta}} · 将于 {{item.retireAt}} 退出资讯列表</text>
+      <text class="news-extra-meta">{{item.sourceLabel}} · {{item.dateLabel}} · 将于 {{item.retireAt}} 退出资讯列表</text>
     </view>
   </view>
   <view wx:if="{{newsV2Enabled}}" class="news-extra">
@@ -78,11 +78,13 @@
       <view wx:else class="cover-fallback featured-fallback">讯</view>
     </view>
     <view class="featured-body">
-      <text class="featured-tag">{{featured.primaryTag}}</text>
       <text class="featured-title">{{featured.title}}</text>
       <text class="featured-summary">{{featured.summary}}</text>
-      <text class="featured-meta">{{featured.meta}}</text>
-      <text class="featured-more">{{featured.id ? '小程序内阅读全文 ›' : '等待同步内容'}}</text>
+      <view class="news-card-footer">
+        <view class="article-tags"><text wx:for="{{featured.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text></view>
+        <text class="featured-meta">来源：{{featured.sourceLabel}}</text>
+        <text class="featured-meta">发布时间：{{featured.dateLabel}}</text>
+      </view>
     </view>
   </view>
 
@@ -111,13 +113,13 @@
         <view wx:else class="cover-fallback">讯</view>
       </view>
       <view class="article-main">
-        <view class="article-tags">
-          <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text>
-          <text wx:if="{{item.tags.length === 0}}" class="article-tag muted">未分类</text>
-        </view>
         <text class="article-title">{{item.title}}</text>
         <text wx:if="{{item.summary}}" class="article-summary">{{item.summary}}</text>
-        <text class="article-meta">{{item.meta}}</text>
+        <view class="news-card-footer">
+          <view class="article-tags"><text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text><text wx:if="{{item.tags.length === 0}}" class="article-tag muted">未分类</text></view>
+          <text class="article-meta">来源：{{item.sourceLabel}}</text>
+          <text class="article-meta">发布时间：{{item.dateLabel}}</text>
+        </view>
       </view>
     </view>
 

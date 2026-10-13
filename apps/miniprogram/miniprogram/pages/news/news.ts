@@ -9,7 +9,8 @@ type NewsCard = {
   id: string
   title: string
   summary: string
-  meta: string
+  sourceLabel: string
+  dateLabel: string
   tags: string[]
   primaryTag: string
   coverUrl: string
@@ -20,7 +21,8 @@ const FALLBACK_FEATURED: NewsCard = {
   id: '',
   title: '暂无可展示的资讯',
   summary: '已分类文章会在这里展示；请稍后刷新，或联系老师了解近期资讯。',
-  meta: '',
+  sourceLabel: '',
+  dateLabel: '',
   tags: [],
   primaryTag: '近期关注',
   coverUrl: '',
@@ -37,9 +39,8 @@ function toCard(post: NewsPost): NewsCard {
     id: post.id,
     title: post.title,
     summary: post.summary ?? '',
-    meta: [post.source === 'manual' ? '九辰编辑' : '九辰教育服务号', newsPublicationLabel(post)]
-      .filter(Boolean)
-      .join(' · '),
+    sourceLabel: post.source === 'manual' ? '九辰编辑' : '九辰教育服务号',
+    dateLabel: newsPublicationLabel(post),
     tags: post.tags,
     primaryTag: post.tags[0] || '未分类',
     coverUrl: normalizeRemoteUrl(post.coverUrl),

@@ -1,4 +1,4 @@
-import { buildAssessmentReportPlainText, formatAssessmentDate, type AssessmentReportExportContext } from './assessment-report-export'
+import { formatAssessmentDate, traceableAssessmentCaseId, type AssessmentReportExportContext } from './assessment-report-export'
 import { beijingDate } from './consultation-payload'
 
 export const REPORT_WIDTH = 750
@@ -21,32 +21,65 @@ export function wrapReportText(text: string, measure: (text: string) => number, 
   })
 }
 
-export function summaryReport(context: AssessmentReportExportContext): string {
+function short(value: string, max: number) {
+  const chars = [...value.trim()]
+  return chars.length > max ? chars.slice(0, max).join('') + '…' : chars.join('')
+}
+
+function section(lines: string[], title: string, values: string[], limit: number) {
+  lines.push(title)
+  if (!values.length) {
+    lines.push('暂无明确结论')
+    return
+  }
+  values.slice(0, limit).forEach((value) => lines.push(`• ${short(value, 110)}`))
+}
+
+export function shareReport(context: AssessmentReportExportContext, kind: 'summary'|'long'): string {
   const output = context.assessment.output
   if (!output) throw new Error('评估结果尚未生成')
-  const short = (value: string, max: number) => [...value].length > max ? [...value].slice(0,max).join('') + '…' : value
-  return ['九辰教育｜AI 评估摘要图', '摘要选取各项前 2 条；详细条件、证据和行动请查看完整报告。',
-    '背景与结论', short(output.profileSummary,160),
-    ...(output.strengths.length ? ['主要优势',...output.strengths.slice(0,2).map(i=>short(i.title+'：'+i.detail,90))] : []),
-    ...(output.risks.length ? ['风险与不足',...output.risks.slice(0,2).map(i=>short(i.title+'：'+i.detail,90))] : []),
-    ...(output.targetAssessments.length ? ['目标建议',...output.targetAssessments.slice(0,2).map(i=>short(i.schoolName+(i.programName?' · '+i.programName:'')+'：'+i.rationale,90))] : []),
-    ...(output.recommendedActions.length ? ['关键行动',...output.recommendedActions.slice(0,2).map(i=>short(i.title+'：'+i.rationale,90))] : []),
-    '免责声明',output.disclaimer,
-  ].join('\n')
+  const limit = kind === 'summary' ? 2 : 4
+  const lines = [
+    '九辰教育 AI评估报告',
+    kind === 'summary' ? '摘要图片｜重点结论' : '完整长图｜分享摘要',
+    '核心结论',
+    short(output.profileSummary, kind === 'summary' ? 180 : 280),
+  ]
+  section(lines, '优势', output.strengths.map(item => `${item.title}：${item.detail}`), limit)
+  section(lines, '风险', output.risks.map(item => `${item.title}：${item.detail}`), limit)
+  section(lines, '目标建议', output.targetAssessments.map(item =>
+    `${item.schoolName}${item.programName ? ` · ${item.programName}` : ''}：${item.rationale}`), limit)
+  section(lines, '关键行动', output.recommendedActions.map(item =>
+    `${item.title}：${item.rationale}${item.timeframe ? `（${item.timeframe}）` : ''}`), limit)
+  lines.push('免责声明', short(output.disclaimer || '评估仅供规划参考，不构成录取承诺。', 180))
+  lines.push('参考依据')
+  const traceableReferences = context.references
+    .map(reference => ({...reference,caseId:traceableAssessmentCaseId(reference.caseId)}))
+    .filter(reference => reference.caseId)
+  if (traceableReferences.length) {
+    traceableReferences.slice(0, kind === 'summary' ? 4 : 8).forEach(reference => {
+      const reason = reference.similarityReason || reference.title
+      lines.push(`${reference.caseId}${reason ? `（${short(reason, 36)}）` : ''}`)
+    })
+  } else {
+    lines.push('本次摘要没有可展示的案例引用')
+  }
+  lines.push('本图为分享摘要，完整报告请在九辰教育小程序查看。')
+  return lines.join('\n')
 }
 
 export function layoutAssessmentImage(context: AssessmentReportExportContext, userId: string,
   kind: 'summary'|'long', measure: (text:string,size:number)=>number, date=beijingDate()): ReportLayout {
   if (!userId) throw new Error('缺少可展示的用户编号，请先绑定学员身份')
   if(context.assessment.status!=='succeeded'||!context.assessment.output) throw new Error('当前报告不可导出')
-  const name=context.displayName.trim() && context.displayName.trim()!=='微信用户' ? context.displayName.trim() : '待完善姓名'
+  const name=context.displayName.trim() && context.displayName.trim()!=='微信用户' ? context.displayName.trim() : '某学员'
   const identity=`${name} ｜ 用户ID：${userId}\n导出日期：${date}`
-  const text=kind==='long' ? buildAssessmentReportPlainText(context) : summaryReport(context)
-  const paragraphs=[identity,`评估编号：${context.assessment.id}`,`报告日期：${formatAssessmentDate(context.assessment.completedAt || context.assessment.updatedAt)}`,'',text,'',identity]
+  const text=shareReport(context,kind)
+  const paragraphs=[identity,`报告日期：${formatAssessmentDate(context.assessment.completedAt || context.assessment.updatedAt)}`,'',text,'',identity]
   const lines: ReportLine[]=[]
   let y=42
   paragraphs.forEach(paragraph=>paragraph.split('\n').forEach(p=>{
-    const heading=/^[一二三四五六七八九十]+、|^九辰|^免责声明$|^背景与结论$|^主要优势$|^风险与不足$|^目标建议$|^关键行动$|^学业背景与评估概要$/.test(p)
+    const heading=/^九辰|^免责声明$|^核心结论$|^优势$|^风险$|^目标建议$|^关键行动$|^参考依据$/.test(p)
     const size=heading?30:25
     wrapReportText(p,t=>measure(t,size)).forEach(text=>{lines.push({text,y,size,heading});y+=heading?48:38})
   }))

@@ -48,7 +48,12 @@ export class ReportPngEncoder {
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < this.width; x++) {
         const i = (y * this.width + x) * 4
-        raw[y * (this.width + 1) + x + 1] = Math.round(rgba[i] * .2126 + rgba[i + 1] * .7152 + rgba[i + 2] * .0722)
+        const alpha = rgba[i + 3] / 255
+        const luminance = rgba[i] * .2126 + rgba[i + 1] * .7152 + rgba[i + 2] * .0722
+        // Some real devices return transparent pixels around a freshly resized
+        // legacy canvas. Composite against the report's white background so
+        // those pixels can never become opaque black in the streamed PNG.
+        raw[y * (this.width + 1) + x + 1] = Math.round(luminance * alpha + 255 * (1 - alpha))
       }
     }
     for (const value of raw) { this.a = (this.a + value) % 65521; this.b = (this.b + this.a) % 65521 }

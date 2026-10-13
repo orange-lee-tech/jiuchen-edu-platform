@@ -9,6 +9,9 @@
 .card { padding:24rpx; margin-bottom:24rpx; background:#fafbfc; border:1rpx solid #d8dee6; border-radius:6rpx; }
 .card-title { font-size:30rpx; font-weight:700; margin-bottom:14rpx; }
 .card-note { font-size:24rpx; color:#5f6b78; line-height:1.7; margin:14rpx 0; }
+.state-note { display:inline-block; margin-top:10rpx; padding:5rpx 10rpx; border-radius:6rpx; background:#fff1d7; color:#8a5a12; font-size:20rpx; font-weight:700; }
+.visitor-card { border-left:6rpx solid #7d8da1; background:#f6f8fa; }
+.visitor-count { display:block; margin:8rpx 0; color:#274662; font-size:42rpx; font-weight:850; }
 .list-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12rpx; margin-bottom:16rpx; }
 .list-toolbar .card-title { margin:0; }
 .input,.picker-field { min-height:80rpx; padding:18rpx; box-sizing:border-box; border:1rpx solid #d8dee6; font-size:26rpx; background:#fff; margin:12rpx 0; border-radius:6rpx; word-break:break-word; }

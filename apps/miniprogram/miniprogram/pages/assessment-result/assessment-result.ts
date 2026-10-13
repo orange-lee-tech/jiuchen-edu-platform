@@ -8,12 +8,9 @@ import {
 } from '../../utils/request'
 import { copyConsultationAndOpen } from '../../utils/customer-service'
 import {
-  buildAssessmentReportBaseFilename,
-  buildAssessmentReportDocx,
-  buildAssessmentReportMarkdown,
   buildAssessmentReportPlainText,
   formatAssessmentDate,
-  writeAssessmentReportFile,
+  traceableAssessmentCaseId,
   type AssessmentReportExportContext,
   type AssessmentReportReference,
 } from '../../utils/assessment-report-export'
@@ -30,7 +27,7 @@ const TIER_VIEW = {
 } as const
 
 type CitationView = {
-  index: number
+  label: string
   ref: string
 }
 
@@ -76,14 +73,17 @@ function buildReferences(
   output.targetAssessments.forEach((item) => addRefs(item.evidenceRefs))
   output.similarCases.forEach((item) => addRefs([item.evidenceRef]))
 
-  return orderedRefs.map((ref, index) => {
+  return orderedRefs.map((ref) => {
     const item = evidenceByRef.get(ref)!
     const similar = similarByRef.get(ref)
+    const sourceId = similar?.caseId || item.sourceId || ''
+    const absoluteCaseId = traceableAssessmentCaseId(sourceId)
+      || traceableAssessmentCaseId(ref)
+      || ''
 
     return {
-      index: index + 1,
       ref,
-      caseId: similar?.caseId || item.sourceId || '',
+      caseId: absoluteCaseId,
       title: item.title,
       metaLabel: [item.sourceLabel, item.year ? String(item.year) : '']
         .filter(Boolean)
@@ -100,11 +100,11 @@ function citationViews(
   refs: string[],
   references: AssessmentReportReference[],
 ): CitationView[] {
-  const indexByRef = new Map(references.map((item) => [item.ref, item.index]))
+  const labelByRef = new Map(references.map((item) => [item.ref, item.caseId]))
   return refs
     .map((ref) => {
-      const index = indexByRef.get(ref)
-      return typeof index === 'number' ? { index, ref } : null
+      const label = labelByRef.get(ref)
+      return label ? { label, ref } : null
     })
     .filter((item): item is CitationView => Boolean(item))
 }
@@ -139,15 +139,6 @@ function buildResultView(
             : '建议',
     })),
   }
-}
-
-type ShareFileApi = {
-  shareFileMessage?: (options: {
-    filePath: string
-    fileName?: string
-    success?: () => void
-    fail?: (error: { errMsg?: string }) => void
-  }) => void
 }
 
 Page({
@@ -231,8 +222,8 @@ Page({
   },
 
   onReferenceTap(event: WechatMiniprogram.BaseEvent) {
-    const index = Number(event.currentTarget.dataset.index)
-    const reference = this.data.references.find((item) => item.index === index)
+    const ref = String(event.currentTarget.dataset.ref || '')
+    const reference = this.data.references.find((item) => item.ref === ref)
     if (!reference) return
     this.setData({ selectedReference: reference })
   },
@@ -281,113 +272,12 @@ Page({
 
     wx.showActionSheet({
       itemList: [
-        'Markdown（.md）',
-        '纯文本（.txt）',
-        '导出图片（摘要图）',
-        '导出长图（完整报告）',
-        'Word（.docx）',
+        '摘要图片',
+        '完整长图',
       ],
       success: (result) => {
-        if (result.tapIndex === 0) void this.exportTextFile('md')
-        if (result.tapIndex === 1) void this.exportTextFile('txt')
-        if (result.tapIndex === 2) void this.exportImageReport('summary')
-        if (result.tapIndex === 3) void this.exportImageReport('long')
-        if (result.tapIndex === 4) void this.exportWordFile()
-      },
-    })
-  },
-
-  onSaveSummary() { void this.exportImageReport('summary') },
-  onSaveLong() { void this.exportImageReport('long') },
-
-  async exportTextFile(kind: 'md' | 'txt') {
-    if(this.data.exporting)return
-    const context = this.reportExportContext()
-    if (!context) return
-
-    try {
-      this.setData({ exporting: true })
-      wx.showLoading({ title: '正在生成文件' })
-      const baseName = buildAssessmentReportBaseFilename(context)
-      const fileName = `${baseName}.${kind}`
-      const content =
-        kind === 'md'
-          ? buildAssessmentReportMarkdown(context)
-          : buildAssessmentReportPlainText(context)
-      const filePath = await writeAssessmentReportFile(fileName, content)
-      wx.hideLoading()
-      this.presentGeneratedFile(filePath, fileName, false)
-    } catch (error) {
-      wx.hideLoading()
-      console.error('Assessment text export failed.', error)
-      wx.showToast({ title: '文件生成失败，请稍后重试', icon: 'none' })
-    } finally {
-      this.setData({ exporting: false })
-    }
-  },
-
-  async exportWordFile() {
-    if(this.data.exporting)return
-    const context = this.reportExportContext()
-    if (!context) return
-
-    try {
-      this.setData({ exporting: true })
-      wx.showLoading({ title: '正在生成 Word' })
-      const baseName = buildAssessmentReportBaseFilename(context)
-      const fileName = `${baseName}.docx`
-      const data = buildAssessmentReportDocx(context)
-      const filePath = await writeAssessmentReportFile(fileName, data)
-      wx.hideLoading()
-      this.presentGeneratedFile(filePath, fileName, true)
-    } catch (error) {
-      wx.hideLoading()
-      console.error('Assessment Word export failed.', error)
-      wx.showToast({ title: 'Word 生成失败，请稍后重试', icon: 'none' })
-    } finally {
-      this.setData({ exporting: false })
-    }
-  },
-
-  presentGeneratedFile(
-    filePath: string,
-    fileName: string,
-    canOpenDocument: boolean,
-  ) {
-    const shareApi = wx as unknown as ShareFileApi
-    const itemList = canOpenDocument
-      ? ['打开文件', '发送 / 保存文件']
-      : ['发送 / 保存文件']
-
-    wx.showActionSheet({
-      itemList,
-      success: (result) => {
-        if (canOpenDocument && result.tapIndex === 0) {
-          wx.openDocument({
-            filePath,
-            fileType: 'docx',
-            showMenu: true,
-            fail(error) {
-              console.info('Failed to open exported Word document.', error)
-              wx.showToast({ title: '文件已生成，可选择发送保存', icon: 'none' })
-            },
-          })
-          return
-        }
-
-        if (!shareApi.shareFileMessage) {
-          wx.showToast({ title: '文件已生成，当前微信版本不支持文件发送', icon: 'none' })
-          return
-        }
-
-        shareApi.shareFileMessage({
-          filePath,
-          fileName,
-          fail(error) {
-            console.info('Failed to share exported report file.', error)
-            wx.showToast({ title: '文件已生成，但发送失败', icon: 'none' })
-          },
-        })
+        if (result.tapIndex === 0) void this.exportImageReport('summary')
+        if (result.tapIndex === 1) void this.exportImageReport('long')
       },
     })
   },
@@ -429,7 +319,7 @@ Page({
       wx.hideLoading()
       await new Promise<void>((resolve,reject)=>wx.saveImageToPhotosAlbum({filePath,
         success:()=>resolve(),fail:()=>reject(new Error('图片已生成，但相册保存失败，请检查相册权限后重试'))}))
-      wx.showToast({title:kind==='long'?'完整长图已保存':'摘要图已保存',icon:'success'})
+      wx.showToast({title:kind==='long'?'完整长图已保存':'摘要图片已保存',icon:'success'})
     } catch(error) {
       wx.hideLoading()
       wx.showModal({title:'图片导出未完成',content:error instanceof Error?error.message:'请重试',showCancel:false})
@@ -444,8 +334,8 @@ Page({
       this.setData({exportCanvasHeight:height},()=>{
         const ctx=wx.createCanvasContext('reportExportCanvas',this)
         drawReportStrip(ctx,layout,userId,offset,height)
-        ctx.draw(false,()=>wx.canvasGetImageData({canvasId:'reportExportCanvas',x:0,y:0,width:layout.width,height,
-          success:result=>resolve(result.data),fail:error=>reject(new Error(error.errMsg||'画布读取失败'))},this))
+        ctx.draw(false,()=>setTimeout(()=>wx.canvasGetImageData({canvasId:'reportExportCanvas',x:0,y:0,width:layout.width,height,
+          success:result=>resolve(result.data),fail:error=>reject(new Error(error.errMsg||'画布读取失败'))},this),20))
       })
     })
   },

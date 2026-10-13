@@ -12,7 +12,10 @@
     <view class="home-schedule" bindtap="onPlanning" aria-role="button" aria-label="查看我的本周课表">
       <text class="section-heading">本周课表 ›</text>
       <text class="home-schedule-meta">{{scheduleLoading ? '正在读取最新课表…' : scheduleError || (scheduleStage + ' · ' + scheduleLabel)}}</text>
-      <text wx:for="{{scheduleCourses}}" wx:key="*this" class="home-schedule-course">{{item}}</text>
+      <view wx:for="{{scheduleCourses}}" wx:key="index" class="home-schedule-course">
+        <view class="home-course-when"><text class="home-course-day">{{item.day}}</text><text class="home-course-time">{{item.time}}</text></view>
+        <view class="home-course-main"><text class="home-course-name">{{item.name}}</text><text class="home-course-location">地点：{{item.location}}</text></view>
+      </view>
       <text wx:if="{{scheduleEmptyWeek}}" class="home-schedule-course">本周没有匹配课程</text>
     </view>
     <view class="home-section-bar"><text class="section-heading">准备与行动</text><text class="section-supplement">日常入口 · 按使用频率排列</text></view>

@@ -13,8 +13,6 @@
       <text class="report-meta">{{assessmentDate}} · {{assessment.model.name || '评估模型'}}</text>
       <view class="report-actions">
         <button class="action-button primary-action" bindtap="onCopyReport">复制报告</button>
-        <button class="action-button" loading="{{exporting}}" disabled="{{exporting}}" bindtap="onSaveSummary">保存图片</button>
-        <button class="action-button" loading="{{exporting}}" disabled="{{exporting}}" bindtap="onSaveLong">生成长图</button>
         <button class="action-button" loading="{{exporting}}" disabled="{{exporting}}" bindtap="onDownloadReport">下载报告</button>
       </view>
     </view>
@@ -34,9 +32,9 @@
             wx:for-item="citation"
             wx:key="ref"
             class="citation-link"
-            data-index="{{citation.index}}"
+            data-ref="{{citation.ref}}"
             catchtap="onReferenceTap"
-          >[{{citation.index}}]</button>
+          >{{citation.label}}</button>
         </view>
       </view>
     </view>
@@ -56,9 +54,9 @@
             wx:for-item="citation"
             wx:key="ref"
             class="citation-link"
-            data-index="{{citation.index}}"
+            data-ref="{{citation.ref}}"
             catchtap="onReferenceTap"
-          >[{{citation.index}}]</button>
+          >{{citation.label}}</button>
         </view>
       </view>
     </view>
@@ -86,9 +84,9 @@
           wx:for-item="citation"
           wx:key="ref"
           class="citation-link"
-          data-index="{{citation.index}}"
+          data-ref="{{citation.ref}}"
           catchtap="onReferenceTap"
-        >[{{citation.index}}]</button>
+        >{{citation.label}}</button>
       </view>
 
       <view wx:if="{{item.gapItems.length}}" class="subsection">
@@ -139,10 +137,10 @@
         wx:for="{{references}}"
         wx:key="ref"
         class="reference-row"
-        data-index="{{item.index}}"
+        data-ref="{{item.ref}}"
         bindtap="onReferenceTap"
       >
-        <text class="reference-index">[{{item.index}}]</text>
+        <text wx:if="{{item.caseId}}" class="reference-index">{{item.caseId}}</text>
         <view class="reference-main">
           <text class="reference-title">{{item.title}}</text>
           <text wx:if="{{item.metaLabel}}" class="reference-meta">{{item.metaLabel}}</text>
@@ -164,7 +162,7 @@
   <view wx:if="{{selectedReference}}" class="reference-mask" catchtap="onCloseReference">
     <view class="reference-sheet" catchtap="onStopTap">
       <view class="reference-sheet-head">
-        <text class="reference-sheet-index">[{{selectedReference.index}}]</text>
+        <text wx:if="{{selectedReference.caseId}}" class="reference-sheet-index">{{selectedReference.caseId}}</text>
         <button class="reference-close" bindtap="onCloseReference">×</button>
       </view>
       <text class="reference-sheet-title">{{selectedReference.title}}</text>
@@ -185,7 +183,7 @@
         <text class="reference-detail-text" user-select="true">{{selectedReference.excerpt}}</text>
       </view>
 
-      <text wx:if="{{selectedReference.caseId}}" class="reference-case-id">案例标识：{{selectedReference.caseId}}</text>
+      <text wx:if="{{selectedReference.caseId}}" class="reference-case-id">参考编号：{{selectedReference.caseId}}</text>
     </view>
   </view>
 

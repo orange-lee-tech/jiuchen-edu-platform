@@ -36,16 +36,20 @@
       <picker range="{{idFilters}}" value="{{idFilter}}" bindchange="onIdFilter"><view class="picker-field">{{idFilters[idFilter]}} · 匹配 {{visibleIds.length}} 个 ›</view></picker>
       <view wx:if="{{!visibleIds.length}}" class="card-note">没有匹配的编号，请调整搜索或状态。</view>
       <view wx:for="{{visibleIds}}" wx:key="id" class="id-row">
+        <text class="row-title">{{item.entityLabel}}</text>
         <text class="id-code" selectable>{{item.businessId}}</text>
         <view class="id-meta"><text>{{item.typeLabel}}</text><text class="status {{item.status}}">{{item.statusLabel}}</text><text wx:if="{{item.own}}">本人编号</text><text wx:if="{{item.accountLabel}}">{{item.accountLabel}}</text></view>
-        <text class="row-desc">{{item.profileLabel}} · {{item.allocationLabel}}</text>
-        <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">{{item.schoolLabel || '学校待完善'}}</text>
-        <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">专业：{{item.major || '待完善'}} · 学业阶段：{{item.currentStage || '待完善'}}</text>
+        <text wx:if="{{item.type === 'student'}}" class="row-desc">{{item.schoolMajorLabel}}</text>
+        <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">学业阶段：{{item.currentStage || '资料待完善'}}</text>
+        <text wx:if="{{item.type === 'student' && item.assignmentState === 'unassigned'}}" class="state-note">未分配老师</text>
+        <text wx:if="{{item.type === 'teacher' && item.userId}}" class="state-note">{{item.assignmentLabel}}</text>
         <text wx:if="{{item.type === 'teacher' && item.userId}}" class="row-desc">实际负责学员：{{item.assignmentCount == null ? '来源未记录' : item.assignmentCount + ' 人'}}</text>
+        <text wx:if="{{item.type === 'admin'}}" class="state-note">{{item.assignmentLabel}}</text>
         <view class="id-actions"><button class="mini copy" data-id="{{item.id}}" bindtap="onCopyId">复制编号</button><button wx:if="{{item.actions.length}}" class="mini" disabled="{{actionLoading}}" data-id="{{item.id}}" bindtap="onIdActions">{{item.actions[0] === '暂停访问' ? '暂停 / 更多' : item.actions[0] === '恢复编号' ? '恢复 / 更多' : '绑定 / 更多'}}</button></view>
       </view>
     </view>
-    <view class="card"><text class="card-title">账号列表</text><text class="card-note">账号显示名不等于实名。请以编号卡片的已绑定档案为准；资料缺失时显示待完善，管理员岗位没有独立记录。</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayName || '未设置显示名'}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
+    <view class="card visitor-card"><text class="card-title">未绑定身份账号</text><text class="visitor-count">{{unboundAccountCount}}</text><text class="card-note">来自真实普通账号记录，仅展示数量；不把未绑定账号冒充学员，也不展示昵称作为实名。</text></view>
+    <view class="card"><text class="card-title">正式账号</text><text class="card-note">账号显示名不等于实名。正式身份以内部编号与已绑定档案为准；资料缺失时显示待完善。</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的正式账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayLabel}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
   </block>
 
   <block wx:elif="{{section === 'admin-readonly'}}">

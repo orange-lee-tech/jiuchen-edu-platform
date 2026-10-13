@@ -1,11 +1,12 @@
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, openSlot, shellView } from '../../utils/navigation'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { getLatestScheduleImport, getMyAcademicProfile } from '../../utils/request'
-import { weeklyScheduleView } from '../../utils/schedule-view'
+import { courseTimeLabel, weeklyScheduleView } from '../../utils/schedule-view'
 
 Page({
   data: { ...INITIAL_SHELL, loggedIn: false, assessmentReady: false,
-    scheduleLoading: false, scheduleError: '', scheduleLabel: '', scheduleStage: '', scheduleEmptyWeek: false, scheduleCourses: [] as string[] },
+    scheduleLoading: false, scheduleError: '', scheduleLabel: '', scheduleStage: '', scheduleEmptyWeek: false,
+    scheduleCourses: [] as Array<{day:string;time:string;name:string;location:string}> },
   homeEpoch: 0,
   currentHomeStudentId: null as string | null,
   stopShell: undefined as (() => void) | undefined,
@@ -27,7 +28,9 @@ Page({
           'junior-spring':'大三下','senior-fall':'大四上','senior-spring':'大四下' }
         this.setData({ scheduleLoading: false, scheduleStage: stages[latest?.schedule?.stageCode || ''] || '学期待确认',
           scheduleLabel: view.state === 'missing' ? '尚未导入课表' : view.state === 'date' ? '待设置第一周周一' : view.currentWeekLabel,
-          scheduleEmptyWeek: view.state === 'empty', scheduleCourses: view.visibleCourses.slice(0, 3).map(c => `${c.day} ${c.name}`) })
+          scheduleEmptyWeek: view.state === 'empty', scheduleCourses: view.visibleCourses.slice(0, 3).map(course => ({
+            day:course.day,time:courseTimeLabel(course),name:course.name,location:course.location || '暂无',
+          })) })
       }).catch(() => {
         if (epoch === this.homeEpoch && studentId === this.currentHomeStudentId)
           this.setData({ scheduleLoading: false, scheduleError: '本周课表读取失败，请稍后重试' })

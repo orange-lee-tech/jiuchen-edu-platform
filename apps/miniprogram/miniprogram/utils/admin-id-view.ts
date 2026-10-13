@@ -5,7 +5,17 @@ export function internalIdView(item: AdminInternalId, currentUserId = '') {
   const typeLabel = { student: '学员', teacher: '老师', admin: '管理员' }[item.type]
   const own = Boolean(currentUserId && item.userId === currentUserId)
   const actions = own ? [] : item.status === 'claimed' ? ['暂停访问', '撤销授权'] : item.status === 'disabled' ? ['恢复编号', ...(item.userId ? ['撤销授权'] : ['删除编号'])] : ['绑定账号', '删除编号']
-  return { ...item, statusLabel, typeLabel, own, actions,
+  const unclaimed = item.profileState === 'unclaimed' || !item.userId
+  const incomplete = item.profileState === 'incomplete'
+  const entityLabel = item.type === 'student'
+    ? unclaimed ? '未认领学员' : incomplete ? '资料待完善' : item.nameLabel || '资料待完善'
+    : item.type === 'teacher'
+      ? unclaimed ? '未认领老师' : incomplete ? '资料待完善' : item.nameLabel || '资料待完善'
+      : item.nameLabel || '管理员资料待完善'
+  const schoolMajorLabel = item.type === 'student'
+    ? unclaimed ? '学校待补充' : `${item.schoolLabel || '学校待补充'} · ${item.major || '专业待补充'}`
+    : ''
+  return { ...item, statusLabel, typeLabel, own, actions, entityLabel, schoolMajorLabel,
     profileLabel:item.nameLabel||(item.userId?'档案待读取':'未认领'),
     allocationLabel:item.assignmentLabel||(item.userId?'分配状态待读取':'未认领'),
     accountLabel:item.userStatus==='deleted'?'账号已停用':item.teacherStatus==='inactive'?'老师档案已停用':'',

@@ -3,7 +3,6 @@ import type {
 } from './request'
 
 export type AssessmentReportReference = {
-  index: number
   ref: string
   caseId: string
   title: string
@@ -47,17 +46,21 @@ function chineseNumber(index: number) {
   return CHINESE_NUMBERS[index] || String(index + 1)
 }
 
+export function traceableAssessmentCaseId(value: string) {
+  return value.match(/\bJCC-\d{6}\b/i)?.[0].toUpperCase() || ''
+}
+
 function citationSuffix(
   refs: string[],
   references: AssessmentReportReference[],
 ) {
-  const indexByRef = new Map(references.map((item) => [item.ref, item.index]))
-  const indexes = refs
-    .map((ref) => indexByRef.get(ref))
-    .filter((value): value is number => typeof value === 'number')
+  const caseIdByRef = new Map(references.map((item) => [item.ref, traceableAssessmentCaseId(item.caseId)]))
+  const caseIds = refs
+    .map((ref) => caseIdByRef.get(ref))
+    .filter((value): value is string => Boolean(value))
 
-  const unique = [...new Set(indexes)].sort((left, right) => left - right)
-  return unique.map((index) => `[${index}]`).join('') + refs.filter(ref => !indexByRef.has(ref)).map(ref => `[${ref}]`).join('')
+  const unique = [...new Set(caseIds)]
+  return unique.length ? `（参考依据：${unique.join('、')}）` : ''
 }
 
 export function formatAssessmentDate(value: string | null | undefined) {
@@ -196,8 +199,9 @@ export function buildAssessmentReportPlainText(
   if (references.length) {
     lines.push('六、参考案例')
     references.forEach((reference) => {
+      const caseId = traceableAssessmentCaseId(reference.caseId)
       lines.push(
-        `[${reference.index}] ${reference.title}${reference.metaLabel ? `（${reference.metaLabel}）` : ''}`,
+        `${caseId ? `${caseId} ` : ''}${reference.title}${reference.metaLabel ? `（${reference.metaLabel}）` : ''}`,
       )
       if (reference.similarityReason) {
         lines.push(`1. 与本次判断的关联：${reference.similarityReason}`)
@@ -217,7 +221,8 @@ export function buildAssessmentReportPlainText(
     lines.push(`证据 ${item.ref}：${item.title}（${item.sourceLabel}）`, item.excerpt || '', '')
   })
   output.similarCases.filter(item => !referenced.has(item.evidenceRef)).forEach(item => {
-    lines.push(`参考案例：${item.caseId}（${item.sourceType === 'jiuchen' ? '九辰案例' : '外部案例'}）`,
+    const caseId = traceableAssessmentCaseId(item.caseId)
+    lines.push(`参考案例${caseId ? `：${caseId}` : ''}（${item.sourceType === 'jiuchen' ? '九辰案例' : '外部案例'}）`,
       item.similarityReason, item.resultSummary, `证据：${item.evidenceRef}`, '')
   })
   if (output.uncertainties.length) lines.push('七、不确定性及说明', ...output.uncertainties, '')

@@ -271,3 +271,14 @@
 .news-extra-row:last-child{border-bottom:0;}
 .news-extra-title{font-size:26rpx;font-weight:700;color:#273548;line-height:1.5;}
 .news-extra-meta{font-size:21rpx;color:#637388;line-height:1.6;}
+
+/* Fixed mobile news cards: 16:9 media, bounded copy, source/date/tags. */
+.featured,.article-card{display:block;min-height:0;overflow:hidden;}
+.featured-media,.article-media{position:relative;width:100%;height:0;min-height:0;padding-top:56.25%;background:#edf1f5;}
+.featured-cover,.article-cover,.featured-media .cover-fallback,.article-media .cover-fallback{position:absolute;inset:0;width:100%;height:100%;min-height:0;}
+.featured-body,.article-main{box-sizing:border-box;display:flex;flex-direction:column;height:330rpx;padding:20rpx 22rpx;}
+.featured-title,.article-title{display:-webkit-box;overflow:hidden;min-height:76rpx;margin-top:0;-webkit-box-orient:vertical;-webkit-line-clamp:2;word-break:break-word;}
+.featured-summary,.article-summary{display:-webkit-box;overflow:hidden;min-height:96rpx;max-height:96rpx;margin-top:8rpx;-webkit-box-orient:vertical;-webkit-line-clamp:3;word-break:break-word;}
+.news-card-footer{margin-top:auto;}
+.news-card-footer .article-tags{max-height:46rpx;overflow:hidden;flex-wrap:nowrap;}
+.featured-meta,.article-meta{display:block;overflow:hidden;margin-top:5rpx;color:#7b8793;font-size:19rpx;line-height:1.35;white-space:nowrap;text-overflow:ellipsis;}

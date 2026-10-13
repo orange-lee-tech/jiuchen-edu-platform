@@ -11,7 +11,15 @@ button::after{border:0;}
 .home-caption{font-size:21rpx;line-height:1.55;color:#d6e6ef;margin-top:14rpx;}
 .home-minor-link{display:block;margin-top:12rpx;color:#f5dbac;font-size:22rpx;font-weight:700;text-decoration:underline;}
 .home-schedule{margin-top:18rpx;padding:20rpx 24rpx;background:#fff;border:1rpx solid #cbdbe5;border-radius:9rpx;}
-.home-schedule-meta,.home-schedule-course{display:block;margin-top:8rpx;font-size:23rpx;line-height:1.5;color:#38566b;}
+.home-schedule-meta{display:block;margin-top:8rpx;font-size:23rpx;line-height:1.5;color:#38566b;}
+.home-schedule-course{display:flex;align-items:stretch;gap:18rpx;margin-top:15rpx;padding-top:15rpx;border-top:1rpx solid #dce7ed;color:#38566b;}
+.home-course-when{display:flex;flex:0 0 168rpx;flex-direction:column;justify-content:center;padding-right:16rpx;border-right:1rpx solid #d5e2e9;}
+.home-course-day,.home-course-time,.home-course-name,.home-course-location{display:block;}
+.home-course-day{font-size:22rpx;font-weight:800;color:#1f6176;}
+.home-course-time{margin-top:4rpx;font-size:20rpx;color:#5f7888;}
+.home-course-main{display:flex;flex:1;min-width:0;flex-direction:column;justify-content:center;}
+.home-course-name{font-size:24rpx;font-weight:800;line-height:1.45;color:#173f59;word-break:break-word;}
+.home-course-location{margin-top:5rpx;font-size:20rpx;color:#687f8d;}
 .home-section-bar{display:flex;align-items:center;justify-content:space-between;gap:10rpx;margin:28rpx 0 15rpx;}
 .section-heading{font-size:30rpx;font-weight:800;line-height:1.45;color:#142d48;margin:0;}
 .section-supplement{font-size:19rpx;color:#647b8c;text-align:right;}

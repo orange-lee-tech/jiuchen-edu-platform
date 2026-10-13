@@ -365,9 +365,9 @@
 
 .reference-index {
   flex-shrink: 0;
-  width: 56rpx;
+  width: 150rpx;
   color: #315f9d;
-  font-size: 22rpx;
+  font-size: 20rpx;
   font-weight: 800;
 }
 
