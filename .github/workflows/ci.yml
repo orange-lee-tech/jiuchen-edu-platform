@@ -30,11 +30,12 @@ jobs:
       - name: Verify native navigation, real-data and export regressions
         run: node --test tools/testing/miniprogram-navigation.test.cjs tools/testing/school-catalog.test.cjs tools/testing/report-export.test.cjs tools/testing/real-data.test.cjs
 
-      - name: Install and build admin
+      - name: Install, test and build admin
         working-directory: apps/admin
         run: |
           npm install
           npm run typecheck
+          npm test
           npm run build
 
       - name: Install, test and build API
