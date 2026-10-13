@@ -10,6 +10,8 @@ button::after{border:0;}
 .home-primary{display:flex;width:100%;justify-content:center;align-items:center;margin:23rpx 0 0;min-height:86rpx;padding:12rpx 20rpx;background:#ecca80;color:#173951;font-size:28rpx;line-height:1.4;font-weight:800;}
 .home-caption{font-size:21rpx;line-height:1.55;color:#d6e6ef;margin-top:14rpx;}
 .home-minor-link{display:block;margin-top:12rpx;color:#f5dbac;font-size:22rpx;font-weight:700;text-decoration:underline;}
+.home-schedule{margin-top:18rpx;padding:20rpx 24rpx;background:#fff;border:1rpx solid #cbdbe5;border-radius:9rpx;}
+.home-schedule-meta,.home-schedule-course{display:block;margin-top:8rpx;font-size:23rpx;line-height:1.5;color:#38566b;}
 .home-section-bar{display:flex;align-items:center;justify-content:space-between;gap:10rpx;margin:28rpx 0 15rpx;}
 .section-heading{font-size:30rpx;font-weight:800;line-height:1.45;color:#142d48;margin:0;}
 .section-supplement{font-size:19rpx;color:#647b8c;text-align:right;}

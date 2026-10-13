@@ -459,6 +459,23 @@ test('schedule start-date edit sends only metadata and commits after server ackn
   await settle()
   assert.equal(page.data.termStartDate,'2026-09-07')
   assert.equal(page.data.schedule.termStartDate,'2026-09-07')
+  assert.equal(page.data.currentWeek > 0, true)
+})
+
+test('returning to schedule page rereads latest saved term and does not replace an active edit', async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/schedule-import/schedule-import')
+ page.setData({importId:'old',schedule:{stageCode:'junior-fall',termStartDate:null,courses:[],warnings:[]}})
+ page.onShow()
+ assert.equal(h.requests.length,1)
+ h.respond(0,{ok:true,import:{id:'new',fileName:'课表.xlsx',schedule:{stageCode:'junior-spring',termStartDate:'2026-09-07',courses:[],warnings:[]}}})
+ await settle()
+ assert.equal(page.data.importId,'new')
+ assert.equal(page.data.stageChoiceLabel,'大三下')
+ assert.equal(page.data.termStartDate,'2026-09-07')
+ page.setData({editing:true})
+ page.onShow()
+ assert.equal(h.requests.length,1)
 })
 
 test('old backend missing date-only route NEVER resubmits the entire timetable', async()=>{
@@ -658,6 +675,9 @@ test('student homepage prioritizes plan and renders a four-card action grid',()=
  assert.match(home,/进入我的规划/)
  for(const name of ['我的规划','保研资讯','AI 评估','联系顾问'])assert.ok(home.includes(name))
  assert.match(ts,/onPrimary\(\) \{[\s\S]*?openSlot\('plan'\)/)
+ assert.match(home,/本周课表/)
+ assert.match(ts,/getLatestScheduleImport\(\)/)
+ assert.match(ts,/weeklyScheduleView\(latest\?\.schedule \|\| null\)/)
  const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
  assert.match(css,/\.action-row\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)
  assert.match(css,/\.service-link\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)

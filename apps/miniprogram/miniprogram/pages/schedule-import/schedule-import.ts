@@ -108,6 +108,11 @@ Page({
   onLoad(options: Record<string, string | undefined>) {
     authorizePage('pages/schedule-import/schedule-import', options, () => this.initializeSchedule(options))
   },
+  onShow() {
+    // A page kept in the navigation stack can be shown after another edit.
+    // Do not replace an in-progress import or unsaved local correction.
+    if (this.data.importId && !this.data.parsing && !this.data.saving && !this.data.editing) void this.loadLatestSchedule()
+  },
   initializeSchedule(options: Record<string, string | undefined>) {
     const requested = options.view === 'manage' ? 'manage' : 'current'
     this.setData({ viewMode: requested })
@@ -120,20 +125,26 @@ Page({
   async loadLatestSchedule() {
     try {
       const latest = await getLatestScheduleImport()
-      if (!latest?.schedule) return
+      if (this.data.parsing || this.data.saving || this.data.editing) return
+      if (!latest?.schedule) {
+        this.setData({ importId: '', fileName: '', schedule: null, termStartDate: '', stageChoice: '', stageChoiceLabel: '' })
+        this.refreshVisibleCourses()
+        return
+      }
 
       const schedule = latest.schedule
       this.setData({
         importId: latest.id,
         fileName: latest.fileName,
         schedule,
+        saveError: '',
         termStartDate: schedule.termStartDate || '',
         stageChoice: schedule.stageCode || '',
         stageChoiceLabel: TERM_OPTIONS.find(stage => stage.code === schedule.stageCode)?.label || '未归档的旧课表',
       })
       this.refreshVisibleCourses()
     } catch (error) {
-      console.info('Latest schedule unavailable.', error)
+      this.setData({ saveError: friendlyRequestError(error, '课表读取失败，请重新进入或稍后重试') })
     }
   },
 
