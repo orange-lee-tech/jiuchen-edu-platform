@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
+import OperationsWorkspace from './OperationsWorkspace.vue'
 import {
   bindInternalId,
   bindStudentIdentity,
@@ -49,7 +50,9 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 const notice = ref('')
-const activeSection = ref<'classroom' | 'identity' | 'products'>('classroom')
+const activeSection = ref<'classroom' | 'identity' | 'products' | 'operations'>('operations')
+const devMode = import.meta.env.DEV
+let legacyLoaded = false
 const health = ref<HealthResponse | null>(null)
 
 const students = ref<StudentSummary[]>([])
@@ -207,11 +210,6 @@ async function loadProductKnowledge() {
   } catch (cause) {
     showError(cause)
   }
-}
-
-async function openProductKnowledge() {
-  activeSection.value = 'products'
-  await loadProductKnowledge()
 }
 
 async function setProductStatus(
@@ -572,7 +570,14 @@ async function addAssignment() {
   }
 }
 
-onMounted(async () => {
+async function openLegacy(section: 'classroom' | 'identity' | 'products') {
+  if (!devMode) return
+  activeSection.value = section
+  if (legacyLoaded) {
+    if (section === 'products') await loadProductKnowledge()
+    return
+  }
+  legacyLoaded = true
   try {
     health.value = await fetchHealth()
 
@@ -598,7 +603,7 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
 </script>
 
 <template>
@@ -607,7 +612,9 @@ onMounted(async () => {
       <div>
         <p class="eyebrow">九辰教育 · 内部工作台</p>
         <h1>{{
-          activeSection === 'classroom'
+          activeSection === 'operations'
+            ? '真实业务数据'
+            : activeSection === 'classroom'
             ? '我的课堂管理'
             : activeSection === 'identity'
               ? '账号与身份管理'
@@ -615,7 +622,9 @@ onMounted(async () => {
         }}</h1>
         <p class="muted">
           {{
-            activeSection === 'classroom'
+            activeSection === 'operations'
+              ? '管理员授权的资讯、评估与账号只读核对。电脑端正式登录仍需独立接入。'
+              : activeSection === 'classroom'
               ? '维护学员阶段、计划与具体任务。'
               : activeSection === 'identity'
                 ? '管理微信身份、正式学员、辅导老师及授权关系。'
@@ -623,30 +632,34 @@ onMounted(async () => {
           }}
         </p>
       </div>
-      <div class="status-chip" :class="{ ok: health?.dependencies.database === 'ok' }">
+      <div v-if="activeSection !== 'operations'" class="status-chip" :class="{ ok: health?.dependencies.database === 'ok' }">
         数据库 {{ health?.dependencies.database ?? 'checking' }}
       </div>
     </header>
 
     <nav class="section-tabs">
+      <button type="button" :class="{ active: activeSection === 'operations' }" @click="activeSection = 'operations'">真实运营数据</button>
       <button
+        v-if="devMode"
         type="button"
         :class="{ active: activeSection === 'classroom' }"
-        @click="activeSection = 'classroom'"
+        @click="openLegacy('classroom')"
       >
         课堂管理
       </button>
       <button
+        v-if="devMode"
         type="button"
         :class="{ active: activeSection === 'identity' }"
-        @click="activeSection = 'identity'"
+        @click="openLegacy('identity')"
       >
         账号与身份
       </button>
       <button
+        v-if="devMode"
         type="button"
         :class="{ active: activeSection === 'products' }"
-        @click="openProductKnowledge"
+        @click="openLegacy('products')"
       >
         产品资料
       </button>
@@ -665,7 +678,8 @@ onMounted(async () => {
       :message="notice"
     />
 
-    <t-card v-if="loading" :bordered="false">正在加载后台数据…</t-card>
+    <OperationsWorkspace v-if="activeSection === 'operations'" />
+    <t-card v-else-if="loading" :bordered="false">正在加载后台数据…</t-card>
 
     <t-card
       v-else-if="health?.dependencies.database !== 'ok'"
