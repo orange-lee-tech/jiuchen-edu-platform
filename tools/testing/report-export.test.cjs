@@ -64,9 +64,12 @@ test('mixed Chinese/English/emoji wrap without dropping any characters',()=>{
  assert.equal(lines.join(''),text);assert.ok(lines.every(t=>[...t].length<=26))
 })
 test('case references expose only canonical six-digit JCC identifiers',()=>{
- const {traceableAssessmentCaseId}=loader()('utils/assessment-report-export')
+ const {traceableAssessmentCaseId,buildAssessmentReportPlainText}=loader()('utils/assessment-report-export')
  assert.equal(traceableAssessmentCaseId('case:JCC-000113:v1'),'JCC-000113')
  for(const value of ['source-42','JCC-113','JCC-0001137',''])assert.equal(traceableAssessmentCaseId(value),'')
+ const report=buildAssessmentReportPlainText(context)
+ assert.ok(report.includes('JCC-000113'))
+ for(const internalRef of ['case:1','missing:2','official:1'])assert.ok(!report.includes(internalRef))
 })
 test('summary and long share images stay bounded, traceable and repeat identity information',()=>{
  const {layoutAssessmentImage}=loader()('utils/assessment-image'),measure=(text,size)=>[...text].length*size

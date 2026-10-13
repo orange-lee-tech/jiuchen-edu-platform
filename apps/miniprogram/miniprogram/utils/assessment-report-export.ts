@@ -218,12 +218,12 @@ export function buildAssessmentReportPlainText(
 
   const referenced = new Set(references.map(item => item.ref))
   assessment.evidence?.filter(item => !referenced.has(item.ref)).forEach(item => {
-    lines.push(`证据 ${item.ref}：${item.title}（${item.sourceLabel}）`, item.excerpt || '', '')
+    lines.push(`${item.kind === 'case' ? '案例依据' : '证据依据'}：${item.title}（${item.sourceLabel}）`, item.excerpt || '', '')
   })
   output.similarCases.filter(item => !referenced.has(item.evidenceRef)).forEach(item => {
     const caseId = traceableAssessmentCaseId(item.caseId)
     lines.push(`参考案例${caseId ? `：${caseId}` : ''}（${item.sourceType === 'jiuchen' ? '九辰案例' : '外部案例'}）`,
-      item.similarityReason, item.resultSummary, `证据：${item.evidenceRef}`, '')
+      item.similarityReason, item.resultSummary, '')
   })
   if (output.uncertainties.length) lines.push('七、不确定性及说明', ...output.uncertainties, '')
   if (output.disclaimer) lines.push('免责声明', output.disclaimer)
