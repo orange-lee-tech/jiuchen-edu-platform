@@ -42,11 +42,13 @@
 | 客服咨询复制 | GitHub 代码完成、模拟回归通过 | **NOT DEVICE VERIFIED** | 微信复制→客服手动粘贴的真机验收 |
 | 评估普通图/长图/水印 | `9ca6a97` 候选，−25°、alpha 0.30，头尾用户ID日期 | **NOT DEVICE VERIFIED** | 真实手机相册核对无裁切及背景水印 |
 | News V2 20篇窗口/72小时/收藏/退役事件/任务 | `b2622e9`、`14da4ca`、`eb93671`；七表结构合同和多管理员权限测试通过 | **BLOCKED**：生产缺七表；本机无可确认非生产 MySQL | 等非生产迁移两次/回归，再走独立 Schema 审批 |
-| 每小时 News 同步 | `ops/ecs/jiuchen-news-sync.{service,timer}` 定义已提交 | **NOT INSTALLED** | 完成微信权限/频率校验及受控 timer 发布 |
+| News 同步 timer | 已在 ECS 实际运行；`OnUnitActiveUSec=30min`，使用现役 `current` 同步脚本，日志多次显示 `total=21, created=0, updated=21` | **PRODUCTION ACTIVE**；尚无独立内存/CPU/超时上限 | 先按实际资源观测，再单独批准 timer 治理；Release A 不重装 timer |
 | 微信真实发表时间 | 源端可证 `update_time`；无可靠 `publish_time` | **PARKED**（不得冒充发表日期） | 留“发表时间待核实/来源更新时间”，待官方能力或样本 |
 | 支付、额度账本和真实充值额 | 代码/合同存在；生产三张表缺失 | **PARKED**（独立合规/Schema gate） | 不补造账本，不启用虚拟支付或假金额 |
 
 **验证证据**：集成验证点 `efb6ac97cd593a118107f00a18dc49b67c3fad1c` API typecheck/build + 196 tests；小程序 typecheck + 82 回归；GitHub Actions [38265829840](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38265829840) PASS（含干净环境后台 typecheck/build）。管理后台本机缺 `vue-tsc`，依赖安装超时后停止，未伪报本地 PASS。公开生产 `/health/live`、`/health`、`/health/config` 本轮成功但不返回 Git SHA。发布拆分见 [P1 独立发布候选](p1-release-candidates-2026-10-12.md)。非生产 MySQL、ECS promotion、systemd timer、微信开发者工具和新的真机验收不因代码/CI 自动通过。
+
+**2026-10-13 补充发布事实**：Release A 现有 API-only 隔离候选 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`，归档已在 ECS `staging/incoming` 完成 SHA-256 校验，未进行 staging 构建或生产 promote；脚本仍需修订，见 [静态复核](release-a-staging-review-2026-10-13.md)。ECS 完整资源与 timer 实存事实见 [资源地图](../ops/ecs-resource-map.md)。**微信体验版前端须单独核对是否依赖未部署 News V2 Schema/API，不得将全集成小程序未经筛选直接发布。**
 
 ## 3. 唯一执行优先级：先保护生产，再跨模块推进
 
