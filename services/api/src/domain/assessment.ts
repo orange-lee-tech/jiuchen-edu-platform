@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const ASSESSMENT_INPUT_SCHEMA_VERSION = 'assessment-input-v1'
 export const ASSESSMENT_OUTPUT_SCHEMA_VERSION = 'assessment-output-v1'
-export const ASSESSMENT_AGENT_VERSION = 'assessment-agent-v2'
+export const ASSESSMENT_AGENT_VERSION = 'assessment-agent-v3'
 
 const nullableShortText = (max: number) =>
   z.string().trim().min(1).max(max).nullable().optional()
