@@ -412,7 +412,7 @@ test('new user and each claimed business role receive a separate, dismissible 4-
   first.lifetimes.detached.call(first)
   for (const page of ['index', 'classroom', 'news', 'profile']) {
     const wxml = fs.readFileSync(path.join(root, `pages/${page}/${page}.wxml`), 'utf8')
-    assert.match(wxml, /<first-use-guide \/>/)
+    assert.ok(wxml.includes('<first-use-guide'))
   }
 })
 
@@ -563,28 +563,19 @@ test('school directory lazily renders cards without truncating the full result c
  assert.equal(p.data.schools.length,172)
 })
 
-test('teacher scoped mirror opens for an assigned student without changing login or sending any mutation',async()=>{
+test('teacher read-only entry opens the existing native student tabs without changing login',async()=>{
   const h=harness(),uuid='10000000-0000-4000-8000-000000000001'
   h.auth.saveAuthResult(authFixture('teacher'))
   const page=h.page('packages/read-only/view/view')
   page.onLoad({kind:'student',id:uuid})
   assert.equal(h.requests.length,1)
   assert.equal(h.requests[0].method,'GET')
-  assert.ok(h.requests[0].url.includes('/me/read-only/students/'+uuid))
-  const fake={ok:true,readOnly:true,targetType:'student',
-    student:{id:uuid,name:'示例学员',university:'某大学',major:'自动化',currentStage:'junior-fall'},
-    profile:{university:'某大学',major:'自动化',currentGrade:'大三',enrollmentYear:2024,gpaText:'3.6',rankText:null},
-    stages:[{code:'junior-fall',label:'大三上',mode:'term',planTypes:['gpa']}],
-    classroom:{ok:true,student:{id:uuid,name:'示例学员'},stage:{code:'junior-fall',label:'大三上'},
-      plans:[{type:'gpa',title:'课程',items:[{id:'task',name:'高数',status:'done'}],revisionStatus:'approved'}],
-      mentors:[],records:[],showGuidance:true,guidanceRecordsReady:true},
-    latestSchedule:null,revisions:[],growth:[],assessments:[]}
+  assert.ok(h.requests[0].url.includes('/me/read-only/context?kind=student&id='+uuid))
+  const fake={ok:true,operatorUserId:id,readToken:'ro.synthetic',expiresAt:'2099-01-01',subject:{id:uuid,kind:'student',role:'student',name:'合成学员',businessId:'JCS-SYNTHETIC'}}
   h.respond(0,fake)
   await settle()
-  assert.equal(page.data.student.student.name,'示例学员')
-  assert.equal(page.data.student.classroom.plans[0].items.length,1)
-  page.onTab({currentTarget:{dataset:{tab:'assessment'}}})
-  assert.equal(page.data.section,'assessment')
+  assert.equal(h.navigations[0].api,'switchTab');assert.equal(h.navigations[0].url,'/pages/index/index')
+  assert.equal(h.load('utils/read-only-context').getReadOnlyContext().role,'student')
   assert.equal(h.auth.getSavedAuthResult().user.role,'teacher')
   assert.ok(h.requests.every(x=>x.method==='GET'))
 })
@@ -600,44 +591,40 @@ test('teacher cannot enter a teacher mirror, ordinary student cannot enter eithe
   assert.match(studentPage.data.error,/无权/)
   assert.equal(u.requests.length,0)
 })
-test('administrator can open teacher read projection and only follow assigned students',async()=>{
+test('administrator teacher view uses teacher four-tab labels while retaining the original session',async()=>{
   const h=harness();h.auth.saveAuthResult(authFixture('admin'))
   const page=h.page('packages/read-only/view/view')
   const id='10000000-0000-4000-8000-000000000002'
-  const sid='10000000-0000-4000-8000-000000000001'
   page.onLoad({kind:'teacher',id})
   assert.equal(h.requests.length,1)
-  h.respond(0,{ok:true,readOnly:true,targetType:'teacher',
-    teacher:{id,name:'示例老师',title:'讲师',status:'active',bio:''},
-    assigned:[{studentId:sid,studentName:'示例学员',university:null,major:null,stageCode:null,relationship:'primary'}],
-    pending:[]})
+  h.respond(0,{ok:true,operatorUserId:authFixture('admin').user.id,readToken:'ro.synthetic',expiresAt:'2099-01-01',subject:{id,kind:'teacher',role:'teacher',name:'合成老师',businessId:'JCT-SYNTHETIC'}})
   await settle()
-  page.onViewAssigned({currentTarget:{dataset:{id:'not-an-assignment'}}})
-  assert.equal(h.navigations.length,0)
-  page.onViewAssigned({currentTarget:{dataset:{id:sid}}})
-  assert.ok(h.navigations[0].url.includes(encodeURIComponent(sid)))
+  assert.equal(h.navigations[0].url,'/pages/index/index')
+  let role
+  h.nav.observeShell(state=>role=state.auth?.user.role)
+  h.respond(1,{ok:true,user:authFixture('admin').user,businessIdentity:null});await settle()
+  assert.equal(role,'teacher')
+  assert.deepEqual(Array.from(h.nav.TAB_LABELS.teacher),['工作台','学员','辅导','我的'])
   assert.ok(h.requests.every(x=>x.method==='GET'))
   assert.equal(h.auth.getSavedAuthResult().user.role,'admin')
 })
 
-test('read-only stage navigation never retransmits private history or uses POST',async()=>{
+test('read-only native reads use target header; writes never leave client; exit discards late target reads',async()=>{
   const h=harness(),sid='10000000-0000-4000-8000-000000000001'
   h.auth.saveAuthResult(authFixture('teacher'))
-  const page=h.page('packages/read-only/view/view')
-  const stage={code:'junior-fall',label:'大三上',mode:'term',planTypes:['gpa']}
-  const next={...stage,code:'junior-spring',label:'大三下'}
-  page.setData({kind:'student',id:sid,viewerRole:'teacher',operatorId:id,
-    student:{ok:true,readOnly:true,targetType:'student',
-      student:{id:sid,name:'示例'},stages:[stage,next],classroom:{stage}},
-    section:'classroom',stageIndex:0})
-  page.onStage({detail:{value:'1'}})
+  const view=h.load('utils/read-only-context')
+  view.setReadOnlyContext({kind:'student',id:sid,role:'student',name:'合成',businessId:'JCS-SYNTHETIC',operatorUserId:id,readToken:'ro.synthetic',expiresAt:'2099-01-01'})
+  const api=h.load('utils/request')
+  await assert.rejects(api.request('/me/classroom/plans','PUT',{}),/read_only_write_forbidden/)
+  assert.equal(h.requests.length,0)
+  const read=api.request('/me/classroom?stage=junior-spring')
   assert.equal(h.requests.length,1)
-  assert.ok(h.requests[0].url.includes('only=classroom'))
+  assert.equal(h.requests[0].header['X-Jiuchen-Read-Only-Target'],'student:'+sid)
+  assert.equal(h.requests[0].header.Authorization,'Bearer ro.synthetic')
   assert.equal(h.requests[0].method,'GET')
-  h.respond(0,{ok:true,readOnly:true,classroom:{stage:next,plans:[],mentors:[],records:[]}})
-  await settle()
-  assert.equal(page.data.stageIndex,1)
-  assert.equal(page.data.student.classroom.stage.code,'junior-spring')
+  view.clearReadOnlyContext();h.respond(0,{ok:true})
+  await assert.rejects(read,/session_changed/)
+  assert.equal(h.auth.getSavedAuthResult().user.role,'teacher')
 })
 
 test('read-only views are in a lazy package and do not expose editing or AI action buttons',()=>{
@@ -648,15 +635,33 @@ test('read-only views are in a lazy package and do not expose editing or AI acti
  const source=fs.readFileSync(path.join(root,'packages/read-only/view/view.ts'),'utf8')
  const teacher=fs.readFileSync(path.join(root,'pages/teacher-students/teacher-students.ts'),'utf8')
  const admin=fs.readFileSync(path.join(root,'pages/admin/admin.wxml'),'utf8')
- assert.match(view,/READ ONLY/)
- assert.match(view,/我的规划/)
- assert.match(view,/AI评估历史/)
+ assert.match(view,/确认目标身份的只读权限/)
+ assert.doesNotMatch(view,/学员空间镜像|mirror-tabs|student-tabbar/)
+ assert.match(source,/switchTab/)
  assert.match(teacher,/packages\/read-only\/view\/view/)
  assert.match(admin,/只读切换/)
  assert.doesNotMatch(view, /bindtap="on(?:Save|RunAssessment|Pay|Upload|Approve|Reject)/)
  assert.doesNotMatch(source,/saveAuthResult\(|setApiSessionToken\(|request\([^)]*,\s*'POST'/)
  // WXML must never contain double-nested braces; these break real preview uploads.
  assert.doesNotMatch(view,/\{\{(?:(?!\}\})[\s\S])*\{\{/)
+})
+
+test('expired read token returns to the original session and target data never enters the growth cache',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('admin'))
+ const view=h.load('utils/read-only-context'),target='10000000-0000-4000-8000-000000000001'
+ view.setReadOnlyContext({kind:'student',id:target,role:'student',name:'合成学员',businessId:'JCS-SYNTHETIC',operatorUserId:id,readToken:'ro.synthetic',expiresAt:'2099-01-01'})
+ let writes=0;h.wx.setStorage=()=>writes++
+ const cache=h.load('utils/growth-profile-cache')
+ assert.equal(await cache.getCachedGrowthProfileBootstrap(),null)
+ await cache.saveGrowthProfileBootstrap({privateTarget:'must-not-cache'});assert.equal(writes,0)
+ const read=h.load('utils/request').request('/me/profile')
+ h.respond(0,{ok:false,error:'unauthorized'},401)
+ await assert.rejects(read,/unauthorized/)
+ assert.equal(view.isReadOnly(),false);assert.equal(h.auth.getSavedAuthResult().session.token,'test-session')
+ const profile=h.page('pages/profile/profile')
+ view.setReadOnlyContext({kind:'student',id:target,role:'student',name:'合成学员',businessId:'JCS-SYNTHETIC',operatorUserId:id,readToken:'ro.second',expiresAt:'2099-01-01'})
+ profile.onExitReadOnly();assert.equal(view.isReadOnly(),false);assert.equal(h.navigations.at(-1).url,'/pages/index/index')
+ assert.equal(h.auth.getSavedAuthResult().user.role,'admin')
 })
 
 test('admin identity mirror is promoted without requiring unrelated news/analytics APIs',async()=>{

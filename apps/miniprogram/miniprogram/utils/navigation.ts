@@ -1,4 +1,5 @@
 import { getSavedAuthResult, refreshAuthResult, subscribeAuth, type AuthState, type BootstrapResult, type UserRole } from './auth'
+import {getReadOnlyContext,isReadOnly,subscribeReadOnlyContext} from './read-only-context'
 
 export const SHELL_PATHS = ['pages/index/index', 'pages/classroom/classroom', 'pages/news/news', 'pages/profile/profile'] as const
 export type ShellSlot = 'home' | 'plan' | 'opportunity' | 'mine'
@@ -15,13 +16,24 @@ export const TAB_ICONS: Record<ShellKind, readonly string[]> = {
   student: ['home', 'calendar', 'opportunity', 'mine'], teacher: ['workbench', 'users', 'coaching', 'mine'], admin: ['workbench', 'users', 'business', 'mine'],
 }
 export function shellView(state: AuthState) {
-  return { shellPhase: state.phase, shellKind: shellKind(state.auth?.user.role), shellRoleLabel: state.auth ? ROLE_LABELS[state.auth.user.role] : '未登录', shellMessage: state.message }
+  return { shellPhase: state.phase, shellKind: shellKind(state.auth?.user.role), shellRoleLabel: state.auth ? ROLE_LABELS[state.auth.user.role] : '未登录', shellMessage: state.message,readOnly:isReadOnly() }
 }
 export const INITIAL_SHELL = shellView({ phase: 'loading', auth: null, message: '' })
 
 export function observeShell(listener: (state: AuthState) => void) {
   void refreshAuthResult()
-  return subscribeAuth(listener)
+  let lastState:AuthState|undefined
+  const emit=(state:AuthState)=>{
+    lastState=state
+    const view=getReadOnlyContext()
+    if(view&&state.auth?.user.id===view.operatorUserId)listener({...state,auth:{...state.auth,
+      user:{...state.auth.user,role:view.role,displayName:view.name},
+      businessIdentity:{businessId:view.businessId,type:view.kind,status:'claimed'}}})
+    else listener(state)
+  }
+  const stopAuth=subscribeAuth(emit)
+  const stopView=subscribeReadOnlyContext(()=>{if(lastState)emit(lastState)})
+  return ()=>{stopAuth();stopView()}
 }
 export function observeSlot(slot: ShellSlot, listener: (state: AuthState) => void) {
   return observeShell((state) => {
@@ -31,10 +43,11 @@ export function observeSlot(slot: ShellSlot, listener: (state: AuthState) => voi
 }
 
 export function initializeNavigation() {
-  subscribeAuth((state) => {
+  observeShell((state) => {
     if (state.phase === 'loading') return
-    const labels = TAB_LABELS[shellKind(state.phase === 'ready' ? state.auth?.user.role : undefined)]
-    const icons = TAB_ICONS[shellKind(state.phase === 'ready' ? state.auth?.user.role : undefined)]
+    const role=getReadOnlyContext()?.role||(state.phase === 'ready' ? state.auth?.user.role : undefined)
+    const labels = TAB_LABELS[shellKind(role)]
+    const icons = TAB_ICONS[shellKind(role)]
     labels.forEach((text, index) => wx.setTabBarItem({ index, text, iconPath: `assets/icons/${icons[index]}-normal.png`, selectedIconPath: `assets/icons/${icons[index]}-active.png`, fail: () => {} }))
   })
   void refreshAuthResult()
@@ -42,7 +55,12 @@ export function initializeNavigation() {
 
 function navigationFailure() { wx.showToast({ title: '页面未打开，请再试一次', icon: 'none' }) }
 export function openSlot(slot: ShellSlot) { wx.switchTab({ url: `/${SHELL_PATHS[SLOT_INDEX[slot]]}`, fail: navigationFailure }) }
-export function openPage(url: string) { wx.navigateTo({ url, fail: navigationFailure }) }
+export function openPage(url: string) {
+  if(isReadOnly()&&!routeAllowed(url.split('?')[0].replace(/^\//,''),getReadOnlyContext()?.role)){
+    wx.showToast({title:'只读查看不能执行此操作',icon:'none'});return
+  }
+  wx.navigateTo({ url, fail: navigationFailure })
+}
 export function safeBack() {
   if (getCurrentPages().length > 1) wx.navigateBack({ fail: () => openSlot('mine') })
   else openSlot('mine')
@@ -50,6 +68,7 @@ export function safeBack() {
 
 const STUDENT_ROLES: UserRole[] = ['user', 'student']
 export function routeAllowed(route: string, role: UserRole | undefined, options: Record<string, string | undefined> = {}) {
+  if(isReadOnly()&&['pages/admin/admin','pages/schedule-import/schedule-import','pages/assessment-form/assessment-form','pages/profile-edit/profile-edit'].includes(route))return false
   if (route === 'pages/admin/admin') return role === 'admin'
   if (route === 'pages/teacher-students/teacher-students') return role === 'teacher' || role === 'staff' || role === 'admin'
   if (route === 'pages/plan-editor/plan-editor') return options.studentId ? role === 'teacher' || role === 'staff' || role === 'admin' : role === 'student'
@@ -127,6 +146,7 @@ export function authorizePage(route: string, options: Record<string, string | un
   stop = observeShell((state) => {
     if (initialized || state.phase !== 'ready' || !state.auth || !routeAllowed(route, state.auth.user.role, options) || !validateIntent(route, options)) return
     initialized = true
+    if(page&&typeof page.setData==='function')page.setData({readOnly:isReadOnly()})
     initialize()
     stop?.()
   })

@@ -1,4 +1,5 @@
 import { getSavedAuthResult } from '../../utils/auth'
+import {getReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 import { weeklyScheduleView, courseTimeLabel } from '../../utils/schedule-view'
 import {
@@ -142,22 +143,24 @@ Page({
   async initializeClassroom() {
     const generation = ++this.viewGeneration
     const auth = getSavedAuthResult()
+    const role=getReadOnlyContext()?.role||auth?.user.role
     if (!auth) {
       this.setData({ mode: 'guest', plans: [], mentors: [], records: [] })
       return
     }
 
-    if (auth.user.role === 'teacher' || auth.user.role === 'staff' || auth.user.role === 'admin') {
+    if (role === 'teacher' || role === 'staff' || role === 'admin') {
       this.setData({ mode: 'teacher', plans: [], mentors: [], records: [] })
       return
     }
 
-    if (auth.user.role !== 'student') {
+    if (role !== 'student') {
       this.setData({ mode: 'unbound', plans: [], mentors: [], records: [] })
       return
     }
-    const sameOwner = this.selectedOwner === auth.user.id
-    this.selectedOwner = auth.user.id
+    const owner=getReadOnlyContext()?.id||auth.user.id
+    const sameOwner = this.selectedOwner === owner
+    this.selectedOwner = owner
     if (!sameOwner) this.setData({ selectedView: 'stage' })
 
     this.setData({ mode: 'student', loading: true, loadError: '', plans: [], mentors: [], records: [] })
@@ -268,6 +271,7 @@ Page({
   },
 
   onScheduleImport() {
+    if(isReadOnly())return
     wx.navigateTo({ url: '/pages/schedule-import/schedule-import?view=manage' })
   },
 

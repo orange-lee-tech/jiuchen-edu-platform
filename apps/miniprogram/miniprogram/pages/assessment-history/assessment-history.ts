@@ -1,5 +1,6 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import { authorizePage } from '../../utils/navigation'
+import {isReadOnly} from '../../utils/read-only-context'
 import {
   getMyAssessments,
   type AssessmentRecord,
@@ -49,7 +50,7 @@ Page({
     clearRefreshTimer()
     authorizePage('pages/assessment-history/assessment-history', {}, () => {
       const role = getSavedAuthResult()?.user.role
-      this.setData({ canCreateAssessment: role === 'user' || role === 'student' })
+      this.setData({ canCreateAssessment: !isReadOnly()&&(role === 'user' || role === 'student') })
       if (pageVisible) void this.loadAssessments(false)
     })
   },
@@ -116,6 +117,7 @@ Page({
     if (!id) return
 
     if (status === 'draft') {
+      if(isReadOnly()){wx.showToast({title:'只读查看不能编辑草稿',icon:'none'});return}
       wx.navigateTo({
         url: `/pages/assessment-form/assessment-form?id=${encodeURIComponent(id)}`,
       })

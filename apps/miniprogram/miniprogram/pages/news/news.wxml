@@ -132,4 +132,4 @@
   </block>
   </block>
 </view>
-<first-use-guide />
+<first-use-guide wx:if="{{!readOnly}}" />

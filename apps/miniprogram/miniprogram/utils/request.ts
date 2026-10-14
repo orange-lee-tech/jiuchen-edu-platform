@@ -1,5 +1,6 @@
 import { clearApiSessionToken, getApiSessionToken } from './session'
 import { runtimeConfig } from '../config/runtime'
+import {getReadOnlyContext,readOnlyVersion,clearReadOnlyContext} from './read-only-context'
 
 export type LivenessResponse = {
   ok: boolean
@@ -238,6 +239,12 @@ export function request<T>(
   data?: WechatMiniprogram.IAnyObject,
 ): Promise<T> {
   const sessionToken = getApiSessionToken()
+  const view=getReadOnlyContext()
+  if(view&&method!=='GET')return Promise.reject(new ApiRequestError(403,'read_only_write_forbidden'))
+  const scoped=view&&!path.startsWith('/auth/')&&!path.startsWith('/me/read-only/')
+  const version=readOnlyVersion()
+  const bearer=scoped?view.readToken:sessionToken
+  const viewHeader=scoped?{'X-Jiuchen-Read-Only-Target':`${view.kind}:${view.id}`}:{ }
 
   if (runtimeConfig.apiTransport === 'cloudrun') {
     return new Promise((resolve, reject) => {
@@ -249,10 +256,12 @@ export function request<T>(
         method,
         header: {
           'X-WX-SERVICE': runtimeConfig.cloudServiceName,
-          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+          ...viewHeader,
+          ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
         },
         data,
         success(response) {
+          if(scoped&&version!==readOnlyVersion()){reject(new ApiRequestError(409,'session_changed'));return}
           if (sessionToken && sessionToken !== getApiSessionToken()) {
             reject(new ApiRequestError(409, 'session_changed'))
             return
@@ -262,7 +271,9 @@ export function request<T>(
             return
           }
 
-          if (response.statusCode === 401 && sessionToken) clearApiSessionToken(sessionToken)
+          if(response.statusCode===401&&scoped)clearReadOnlyContext()
+          else if (response.statusCode === 401 && sessionToken) clearApiSessionToken(sessionToken)
+          if(scoped&&response.statusCode===403&&/^read_only_(target|invalid)/.test(String(asErrorRecord(response.data).code||asErrorRecord(response.data).error||'')))clearReadOnlyContext()
           reject(responseError(response.statusCode, response.data))
         },
         fail(error) {
@@ -277,8 +288,9 @@ export function request<T>(
       url: `${runtimeConfig.apiBaseUrl}${path}`,
       method,
       data,
-      header: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
+      header: {...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),...viewHeader},
       success(response) {
+        if(scoped&&version!==readOnlyVersion()){reject(new ApiRequestError(409,'session_changed'));return}
         if (sessionToken && sessionToken !== getApiSessionToken()) {
           reject(new ApiRequestError(409, 'session_changed'))
           return
@@ -288,7 +300,9 @@ export function request<T>(
           return
         }
 
-        if (response.statusCode === 401 && sessionToken) clearApiSessionToken(sessionToken)
+        if(response.statusCode===401&&scoped)clearReadOnlyContext()
+        else if (response.statusCode === 401 && sessionToken) clearApiSessionToken(sessionToken)
+        if(scoped&&response.statusCode===403&&/^read_only_(target|invalid)/.test(String(asErrorRecord(response.data).code||asErrorRecord(response.data).error||'')))clearReadOnlyContext()
         reject(responseError(response.statusCode, response.data))
       },
       fail(error) {

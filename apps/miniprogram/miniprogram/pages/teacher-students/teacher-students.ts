@@ -1,4 +1,5 @@
 import { authorizePage } from '../../utils/navigation'
+import {isReadOnly} from '../../utils/read-only-context'
 import {
   approvePlanRevision,
   friendlyRequestError,
@@ -61,6 +62,7 @@ Page({
     })
   },
   onEditStudentPlan(event: WechatMiniprogram.BaseEvent) {
+    if(isReadOnly())return
     const index = Number(event.currentTarget.dataset.index)
     const student = this.data.students[index]
     if (!student) return
@@ -84,6 +86,7 @@ Page({
   },
 
   onApprove(event: WechatMiniprogram.BaseEvent) {
+    if(isReadOnly())return
     const id = String(event.currentTarget.dataset.id || '')
     if (!id) return
     wx.showModal({
@@ -107,6 +110,7 @@ Page({
   },
 
   onReject(event: WechatMiniprogram.BaseEvent) {
+    if(isReadOnly())return
     const id = String(event.currentTarget.dataset.id || '')
     if (!id) return
     wx.showModal({

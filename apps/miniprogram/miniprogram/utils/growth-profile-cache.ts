@@ -3,6 +3,7 @@ import {
   type BootstrapResult,
 } from './auth'
 import type { GrowthProfileBootstrap } from './request'
+import {isReadOnly,readOnlyVersion} from './read-only-context'
 
 const PREFIX = 'jiuchen-growth-profile-bootstrap'
 const VERSION = 1
@@ -16,6 +17,7 @@ type CacheEnvelope = {
 }
 
 let memory: CacheEnvelope | null = null
+let memoryKey=''
 
 function cacheIdentity(auth: BootstrapResult | null) {
   if (!auth) return 'anonymous'
@@ -67,11 +69,14 @@ export async function getCachedGrowthProfileBootstrap(): Promise<{
   data: GrowthProfileBootstrap
   fresh: boolean
 } | null> {
+  if(isReadOnly())return null
+  const storageKey=key(),version=readOnlyVersion()
   const now = Date.now()
   const envelope =
-    memory && memory.version === VERSION
+    memory && memory.version === VERSION && memoryKey===storageKey
       ? memory
-      : await getStorage<CacheEnvelope>(key())
+      : await getStorage<CacheEnvelope>(storageKey)
+  if(isReadOnly()||version!==readOnlyVersion()||storageKey!==key())return null
 
   if (!envelope || envelope.version !== VERSION) return null
 
@@ -83,6 +88,7 @@ export async function getCachedGrowthProfileBootstrap(): Promise<{
   }
 
   memory = envelope
+  memoryKey=storageKey
   return {
     data: envelope.data,
     fresh: age <= FRESH_MS,
@@ -90,16 +96,19 @@ export async function getCachedGrowthProfileBootstrap(): Promise<{
 }
 
 export async function saveGrowthProfileBootstrap(data: GrowthProfileBootstrap) {
+  if(isReadOnly())return
   const envelope: CacheEnvelope = {
     version: VERSION,
     savedAt: Date.now(),
     data,
   }
   memory = envelope
-  await setStorage(key(), envelope)
+  memoryKey=key()
+  await setStorage(memoryKey, envelope)
 }
 
 export async function clearGrowthProfileBootstrapCache() {
+  if(isReadOnly())return
   memory = null
   await removeStorage(key())
 }

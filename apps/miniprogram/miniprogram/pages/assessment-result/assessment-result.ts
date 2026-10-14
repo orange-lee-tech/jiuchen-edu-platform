@@ -25,6 +25,7 @@ import { buildAssessmentConsultation } from '../../utils/consultation-payload'
 import { layoutAssessmentImage, drawReportStrip, REPORT_TILE_HEIGHT } from '../../utils/assessment-image'
 import { ReportPngEncoder } from '../../utils/report-png'
 import {buildAssessmentPdf,paginateAssessmentLayout} from '../../utils/report-pdf'
+import {getReadOnlyContext,readOnlyVersion} from '../../utils/read-only-context'
 
 const TIER_VIEW = {
   reach: { label: '冲刺', tone: 'reach' },
@@ -154,6 +155,7 @@ Page({
     exporting: false,
     consulting: false,
     ownerUserId: '',
+    viewVersion:0,
     error: '',
     displayName: '',
     assessmentDate: '',
@@ -192,6 +194,7 @@ Page({
   async loadResult(id: string) {
     try {
       const owner=getSavedAuthResult()?.user.id
+      const version=readOnlyVersion()
       const assessment = await getMyAssessment(id)
       if(!owner || getSavedAuthResult()?.user.id!==owner) throw new Error('账号已变化')
       if (assessment.status !== 'succeeded' || !assessment.output) {
@@ -205,7 +208,7 @@ Page({
       )
       const output = buildResultView(assessment.output, references)
       let displayName=''
-      if(getSavedAuthResult()?.user.role==='student'){
+      if((getReadOnlyContext()?.role||getSavedAuthResult()?.user.role)==='student'){
         try{displayName=(await getMyClassroom()).student.name||''}catch{/* A nickname is never a real-name fallback. */}
       }
       if(getSavedAuthResult()?.user.id!==owner)return
@@ -213,6 +216,7 @@ Page({
       this.setData({
         assessment,
         ownerUserId: owner,
+        viewVersion:version,
         output,
         references,
         displayName,
@@ -229,11 +233,11 @@ Page({
   },
 
   reportExportContext(): AssessmentReportExportContext | null {
-    if (this.unloaded || !this.data.assessment?.output || getSavedAuthResult()?.user.id!==this.data.ownerUserId) return null
+    if (this.unloaded || !this.data.assessment?.output || readOnlyVersion()!==this.data.viewVersion || getSavedAuthResult()?.user.id!==this.data.ownerUserId) return null
     return {
       assessment: this.data.assessment,
       displayName: this.data.displayName,
-      userId:getSavedAuthResult()?.businessIdentity?.businessId||this.data.ownerUserId,
+      userId:getReadOnlyContext()?.businessId||getSavedAuthResult()?.businessIdentity?.businessId||this.data.ownerUserId,
       exportDate:formatAssessmentDate(new Date().toISOString()),
       references: this.data.references,
     }
@@ -311,7 +315,7 @@ Page({
     const context=this.reportExportContext()
     if(!context)return
     const owner=this.data.ownerUserId,reportId=context.assessment.id
-    const current=()=>!this.unloaded&&getSavedAuthResult()?.user.id===owner&&this.data.assessment?.id===reportId
+    const current=()=>Boolean(this.reportExportContext())&&getSavedAuthResult()?.user.id===owner&&this.data.assessment?.id===reportId
     this.setData({exporting:true});wx.showLoading({title:'正在生成报告'})
     let filePath=''
     try{
@@ -362,8 +366,8 @@ Page({
       wx.showLoading({title:'正在生成图片'})
       const auth=await refreshAuthResult()
       if(!auth || !this.reportExportContext() || auth.user.id!==this.data.ownerUserId) throw new Error('账号已变化，请重试')
-      const userId=auth.businessIdentity?.status==='claimed' ? auth.businessIdentity.businessId : auth.user.id
-      const isCurrent=()=>!this.unloaded&&getSavedAuthResult()?.user.id===auth.user.id && getSavedAuthResult()?.session.token===auth.session.token && this.data.assessment?.id===context.assessment.id
+      const userId=context.userId||(auth.businessIdentity?.status==='claimed' ? auth.businessIdentity.businessId : auth.user.id)
+      const isCurrent=()=>Boolean(this.reportExportContext())&&getSavedAuthResult()?.user.id===auth.user.id && getSavedAuthResult()?.session.token===auth.session.token && this.data.assessment?.id===context.assessment.id
       const measureContext=wx.createCanvasContext('reportExportCanvas',this)
       const layout=layoutAssessmentImage(context,userId,kind,(text,size)=>{
         measureContext.setFontSize(size);return measureContext.measureText(text).width

@@ -1,13 +1,14 @@
 import { refreshAuthResult, type AuthState } from '../../utils/auth'
 import { loginFor, observeShell, openSlot, routeAllowed, stopPageAuthorization, validateIntent } from '../../utils/navigation'
+import {readOnlyVersion} from '../../utils/read-only-context'
 
 type ProtectedPage = ReturnType<typeof getCurrentPages>[number]
-const contexts = new WeakMap<object, { page: ProtectedPage; owner: string | null; stop?: () => void }>()
+const contexts = new WeakMap<object, { page: ProtectedPage; owner: string | null; viewVersion:number;stop?: () => void }>()
 
 Component({
   data: { visible: true, phase: 'loading', title: '正在确认访问权限', message: '确认后会显示当前账号的内容。', needsLogin: false },
   lifetimes: {
-    attached() { contexts.set(this, { page: getCurrentPages().slice(-1)[0], owner: null }); this.watchAuth() },
+    attached() { contexts.set(this, { page: getCurrentPages().slice(-1)[0], owner: null,viewVersion:readOnlyVersion() }); this.watchAuth() },
     detached() { const context = contexts.get(this); context?.stop?.(); if (context) stopPageAuthorization(context.page); contexts.delete(this) },
   },
   pageLifetimes: {
@@ -24,7 +25,7 @@ Component({
         const page = context.page
         const options = (page as unknown as { options?: Record<string, string> })?.options || {}
         const validLink = Boolean(validateIntent(page?.route || '', options))
-        const sameAccount = !context.owner || context.owner === state.auth?.user.id
+        const sameAccount = (!context.owner || context.owner === state.auth?.user.id)&&context.viewVersion===readOnlyVersion()
         const allowed = state.phase === 'ready' && validLink && sameAccount && routeAllowed(page?.route || '', state.auth?.user.role, options)
         if (allowed && state.auth) {
           context.owner = state.auth.user.id

@@ -63,5 +63,5 @@
     </view>
   </block>
 </view>
-<first-use-guide />
+<first-use-guide wx:if="{{!readOnly}}" />
 <official-website-dialog id="website-dialog" />

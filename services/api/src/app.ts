@@ -1,4 +1,5 @@
 import Fastify from 'fastify'
+import {registerReadOnlyWriteGuard} from './services/read-only-context.js'
 import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -39,6 +40,7 @@ export function buildApp(env: AppEnv) {
   })
 
   const database = createDatabaseContext(env)
+  registerReadOnlyWriteGuard(app)
   const assessmentRuntime = createAssessmentRuntimeFromEnv(env)
   const assessmentImport = createAssessmentImportService(env)
   const scheduleAI = createScheduleAIProvider(env)

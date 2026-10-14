@@ -1,4 +1,5 @@
 import { authorizePage } from '../../utils/navigation'
+import {isReadOnly} from '../../utils/read-only-context'
 import {
   friendlyRequestError,
   getLatestScheduleImport,
@@ -82,7 +83,7 @@ Page({
         schedulePrefillCount: 0,
       })
 
-      if (!this.data.teacherMode && this.data.type === 'gpa' && items.length === 0 && revisionStatus === 'none') {
+      if (!isReadOnly() && !this.data.teacherMode && this.data.type === 'gpa' && items.length === 0 && revisionStatus === 'none') {
         const latestSchedule = await getLatestScheduleImport().catch(() => null)
         const courseNames = Array.from(new Set(
           (latestSchedule?.schedule?.courses ?? [])
@@ -122,10 +123,12 @@ Page({
   },
 
   onTitleInput(event: WechatMiniprogram.Input) {
+    if(isReadOnly())return
     this.setData({ title: event.detail.value })
   },
 
   onAddItem() {
+    if(isReadOnly())return
     if (this.data.items.length >= 50) return
     this.setData({
       items: [
@@ -136,6 +139,7 @@ Page({
   },
 
   onItemInput(event: WechatMiniprogram.Input) {
+    if(isReadOnly())return
     const index = Number(event.currentTarget.dataset.index)
     const field = String(event.currentTarget.dataset.field) as 'name' | 'target'
     const items = [...this.data.items]
@@ -145,6 +149,7 @@ Page({
   },
 
   onStatusChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if(isReadOnly())return
     const index = Number(event.currentTarget.dataset.index)
     const option = STATUS_OPTIONS[Number(event.detail.value)]
     const items = [...this.data.items]
@@ -154,6 +159,7 @@ Page({
   },
 
   onRemoveItem(event: WechatMiniprogram.BaseEvent) {
+    if(isReadOnly())return
     const index = Number(event.currentTarget.dataset.index)
     const items = [...this.data.items]
     items.splice(index, 1)
@@ -161,6 +167,7 @@ Page({
   },
 
   async onSave() {
+    if(isReadOnly())return
     const title = this.data.title.trim()
     const items = this.data.items
       .map((item) => ({

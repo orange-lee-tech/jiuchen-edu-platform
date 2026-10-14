@@ -23,7 +23,7 @@
           <text class="section-title">基础身份与学业</text>
           <text class="section-sub">来源：Canonical Profile</text>
         </view>
-        <text class="link" bindtap="onEditBaseProfile">修改 ›</text>
+        <text wx:if="{{!readOnly}}" class="link" bindtap="onEditBaseProfile">修改 ›</text>
       </view>
       <view class="fact-grid">
         <view class="fact"><text class="fact-label">姓名</text><text class="fact-value">{{profile.identity.displayName || '待补充'}}</text></view>
@@ -63,7 +63,7 @@
       <button
         class="confirm-button"
         loading="{{importing}}"
-        disabled="{{importing}}"
+        disabled="{{importing || readOnly}}"
         bindtap="onConfirmAssessmentImport"
       >确认所选内容并同步到成长履历</button>
       <text class="confirm-note">未勾选的内容不会写入。以后修改 Canonical Fact 后，简历和填表包会重新投影。</text>
@@ -127,7 +127,7 @@
         wx:if="{{resume}}"
         class="docx-button"
         loading="{{openingDocument}}"
-        disabled="{{openingDocument}}"
+        disabled="{{openingDocument || readOnly}}"
         bindtap="onOpenResumeDocx"
       >生成并打开 DOCX 简历</button>
       <text wx:if="{{resume}}" class="artifact-note">即时基于当前已确认事实生成，不写回 Canonical Profile；可在微信文档预览中继续分享或保存。</text>

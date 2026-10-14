@@ -3,6 +3,7 @@ import { friendlyRequestError, getMyNewsFavorites, type NewsFavorite } from '../
 import { openOfficialArticle } from '../../utils/official-article'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
+import {getReadOnlyContext,clearReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 
 // Identity editing already lives in the blue hero. Never repeat the same
 // action in a long menu or create parallel assessment entry routes.
@@ -47,6 +48,7 @@ Page({
   onCustomerServiceTap() { void openVerifiedWechatCustomerService('账号及运营支持') },
   onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },
   onIdentityTap() {
+    if(isReadOnly()){wx.showToast({title:'当前为只读查看，不能编辑资料',icon:'none'});return}
     if (this.data.loggedIn) openPage('/pages/profile-edit/profile-edit')
     else loginFor('pages/profile-edit/profile-edit')
   },
@@ -86,6 +88,7 @@ Page({
     if(favorite)openOfficialArticle(favorite.articleUrl)
   },
   async onLogout() {
+    if(isReadOnly())return
     if (this.data.loggingOut) return
     this.setData({ loggingOut: true })
     let serverConfirmed = true
@@ -96,6 +99,7 @@ Page({
     wx.reLaunch({ url: '/pages/index/index' })
   },
   onDeleteAccount() {
+    if(isReadOnly())return
     if (this.data.deleting || this.data.loggingOut) return
     wx.showModal({
       title: '注销账号',
@@ -134,5 +138,10 @@ Page({
         })
       },
     })
+  },
+  onExitReadOnly(){
+    if(!getReadOnlyContext())return
+    clearReadOnlyContext()
+    wx.switchTab({url:'/pages/index/index'})
   },
 })

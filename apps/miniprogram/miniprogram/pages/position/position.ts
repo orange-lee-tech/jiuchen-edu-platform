@@ -1,4 +1,5 @@
 import { getSavedAuthResult } from '../../utils/auth'
+import {isReadOnly,getReadOnlyContext} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeShell, openSlot, shellView } from '../../utils/navigation'
 import { getMyAcademicProfile } from '../../utils/request'
 
@@ -38,7 +39,7 @@ Page({
     const auth = getSavedAuthResult()
     const canEditProfile =
       Boolean(auth) &&
-      (auth?.user.role === 'user' || auth?.user.role === 'student')
+      ((getReadOnlyContext()?.role||auth?.user.role) === 'user' || (getReadOnlyContext()?.role||auth?.user.role) === 'student')
 
     const sameOwner = this.profileOwner === auth?.user.id
     if (canEditProfile && !sameOwner) {
@@ -71,6 +72,7 @@ Page({
   onUnload() { this.stopAuth?.() },
 
   onStartAssessment() {
+    if(isReadOnly())return
     const auth = getSavedAuthResult()
 
     if (!auth) {
@@ -96,12 +98,14 @@ Page({
   },
 
   onProfileCardTap() {
+    if(isReadOnly())return
     if (this.data.canEditProfile) wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
     else if (getSavedAuthResult()) openSlot('mine')
     else loginFor('pages/position/position', {}, true)
   },
 
   onDimensionTap(event: WechatMiniprogram.BaseEvent) {
+    if(isReadOnly())return
     const auth = getSavedAuthResult()
     if (!auth) {
       loginFor('pages/position/position', {}, true)

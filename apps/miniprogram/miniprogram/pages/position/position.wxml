@@ -5,7 +5,7 @@
     <text class="eyebrow">AI 保研定位</text>
     <text class="hero-title">先认识自己，再决定冲哪里</text>
     <text class="hero-desc">结合个人背景、目标院校与项目数据，形成结构化定位建议。结果用于辅助规划，不展示伪精确录取概率。</text>
-    <button class="primary-btn" bindtap="onStartAssessment">开始 AI 评估</button>
+    <button wx:if="{{!readOnly}}" class="primary-btn" bindtap="onStartAssessment">开始 AI 评估</button>
     <button class="history-btn" bindtap="onAssessmentHistory">查看历史评估</button>
     <text class="quota">历史结果可再次查看；是否运行新评估由你决定。</text>
   </view>
@@ -15,7 +15,7 @@
       <text class="section-title">我的背景</text>
       <text class="section-subtitle">{{canEditProfile ? '来自“我的个人资料”，仅在资料编辑页修改' : '登录后可查看个人学业背景'}}</text>
     </view>
-    <text wx:if="{{canEditProfile}}" class="link" bindtap="onProfileCardTap">编辑资料 ›</text>
+    <text wx:if="{{canEditProfile && !readOnly}}" class="link" bindtap="onProfileCardTap">编辑资料 ›</text>
   </view>
 
   <view wx:if="{{canEditProfile}}" class="profile-card surface" bindtap="onProfileCardTap">

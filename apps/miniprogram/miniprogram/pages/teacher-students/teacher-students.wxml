@@ -15,7 +15,7 @@
       <text class="review-student">{{item.studentName}}</text>
       <text class="review-title">{{item.title}}</text>
       <text class="review-meta">{{item.stageCode}} · {{item.type}} · {{item.itemsJson.length}} 项任务</text>
-      <view class="review-actions">
+      <view wx:if="{{!readOnly}}" class="review-actions">
         <button class="reject-button" data-id="{{item.id}}" bindtap="onReject">否决</button>
         <button class="approve-button" data-id="{{item.id}}" bindtap="onApprove">通过进档</button>
       </view>
@@ -37,7 +37,7 @@
       </view>
       <view class="student-actions">
         <text class="arrow">只读查看 ›</text>
-        <button class="edit-mini" catchtap="onEditStudentPlan" data-index="{{index}}">编辑计划</button>
+        <button wx:if="{{!readOnly}}" class="edit-mini" catchtap="onEditStudentPlan" data-index="{{index}}">编辑计划</button>
       </view>
     </view>
   </view>
