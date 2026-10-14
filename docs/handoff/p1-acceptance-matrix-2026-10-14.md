@@ -122,3 +122,9 @@ N03视频目标是标题、封面、摘要及真实服务号视频原链接的�
 
 - 同步至修复提交 `7165a11de9792d5c366cc4b618417f041caf7d65`；首次人工运行发现新测试第121行 TypeScript 泛型缺 `>`，已修复。随后 `npm.cmd --prefix services/api run typecheck` PASS，`npm.cmd --prefix services/api test` **209/209 PASS**，`npm.cmd --prefix services/api run build` PASS。依赖 `npm.cmd ... ci` 安装188包成功。原本 `project.config.json` 本地修改未覆盖。
 - 本机回执证明本批 API 代码可构建、回归通过；GitHub Actions 仍显示失败且 job 日志404，根因未核实。当前 **LOCAL API PASS / GITHUB CI UNRESOLVED / PROD NOT DEPLOYED / DEVICE PENDING**。自动漏取缺口、真实补录和AI优势质量缺陷均未由此测试通过。
+
+## 10月14日22时后优势质量门槛候选
+
+- `dff3c9cf9080cc6af95800a28284f3c386b92ba5`：评估输入明确填写竞赛奖项或科研产出且输出 `strengths=[]` 时，使用既有**最多一次**模型修复机会，要求核对真实成果并引用相应 input ref；修复仍无优势则抛 `assessment_strengths_missing`，后台按已有失败路径持久化并释放预留额度。无奖项／无科研产出输入仍允许空数组；不按 GPA 或科研参与经历推断必然优势。
+- Agent 版本从 `assessment-agent-v2` 提升为 `assessment-agent-v3`，输出 Schema 不变；历史成功报告保持原样，无自动重跑或二次扣费。新增合成样本覆盖“修复后有据优势”和“修复后仍空则失败”。本地仅 Node24 语法检查；**API typecheck / 211 项预期测试 / build 尚待用户本地回执**，GitHub Actions 状态另核。该候选不改变生产模型选型或知识库，运行时修复可能产生一次额外模型调用，属于待独立发布范围。
+- 这条门槛防止未来有明确成果的空优势报告被记为成功；匿名生产历史样本 `9689ad9c77b4` 缺原始模型输出，不能倒推出当时是模型空生成还是引用过滤删除，仍需脱敏样本核对。既有历史报告不伪造补全。
