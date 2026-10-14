@@ -26,7 +26,7 @@ import {
   syncOfficialAccountPosts,
 } from '../services/news.js'
 import { resolveSessionUser } from '../services/session.js'
-import { readAdminIdentityDirectory } from '../services/admin-identity-directory.js'
+import { readAdminIdentityDirectory,readAdminReadOnlyRoster } from '../services/admin-identity-directory.js'
 import { readAssessmentCommerceAnalytics, type AnalyticsPeriod } from '../services/commercial-analytics.js'
 import { reconcileNewsWindow, withNewsLock } from '../services/news-v2-store.js'
 
@@ -331,6 +331,11 @@ export function registerMobileAdminRoutes(
       ok: true,
       students: rows,
     }
+  })
+
+  app.get('/me/admin/read-only-directory',async(request,reply)=>{
+    if(!(await requireAdmin(request,reply,configuredDatabase)))return
+    return {ok:true,...await readAdminReadOnlyRoster(configuredDatabase.pool)}
   })
 
   app.get('/me/admin/teachers', async (request, reply) => {

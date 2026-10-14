@@ -19,6 +19,7 @@ import {
   readNewsRetirement,
   updateNewsRetirementTask,
   getAdminStudents,
+  getAdminReadOnlyRoster,
   getAdminTeachers,
   getAdminUsers,
   syncOfficialAccountNews,
@@ -150,7 +151,7 @@ Page({
     try{
       this.setData({loading:true,loadError:''})
       // Read-only identity entry should never depend on payment analytics or news sync.
-      const [students,teachers]=await Promise.all([getAdminStudents(),getAdminTeachers()])
+      const {students,teachers}=await getAdminReadOnlyRoster()
       this.setData({students,teachers})
     }catch(error){
       this.setData({loadError:friendlyRequestError(error,'身份列表未能读取，请重试')})
@@ -404,12 +405,12 @@ Page({
 
   onReadOnlyStudent(event: WechatMiniprogram.BaseEvent) {
     const id=String(event.currentTarget.dataset.id||'')
-    if(!this.data.students.some(x=>x.id===id))return
+    if(!this.data.students.some(x=>x.id===id&&(x as StudentSummary&{canView?:boolean}).canView!==false))return
     wx.navigateTo({url:'/packages/read-only/view/view?kind=student&id='+encodeURIComponent(id)})
   },
   onReadOnlyTeacher(event: WechatMiniprogram.BaseEvent) {
     const id=String(event.currentTarget.dataset.id||'')
-    if(!this.data.teachers.some(x=>x.id===id))return
+    if(!this.data.teachers.some(x=>x.id===id&&x.canView!==false))return
     wx.navigateTo({url:'/packages/read-only/view/view?kind=teacher&id='+encodeURIComponent(id)})
   },
 

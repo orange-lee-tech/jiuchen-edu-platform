@@ -638,6 +638,11 @@ export type AdminTeacher = {
   name: string
   title: string | null
   status: 'active' | 'inactive'
+  stateLabel?:string;canView?:boolean;businessId?:string|null
+}
+
+export async function getAdminReadOnlyRoster():Promise<{students:Array<StudentSummary&{stateLabel?:string;canView?:boolean;businessId?:string|null}>;teachers:AdminTeacher[];isolatedUnclaimedSeedCount:number}>{
+ return request('/me/admin/read-only-directory')
 }
 
 export type AdminAssignment = {

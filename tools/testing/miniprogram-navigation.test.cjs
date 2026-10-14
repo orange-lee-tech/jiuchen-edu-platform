@@ -664,14 +664,17 @@ test('expired read token returns to the original session and target data never e
  assert.equal(h.auth.getSavedAuthResult().user.role,'admin')
 })
 
-test('admin identity mirror is promoted without requiring unrelated news/analytics APIs',async()=>{
+test('admin identity roster uses protected canonical projection without unrelated news/analytics APIs',async()=>{
  const h=harness()
  h.auth.saveAuthResult(authFixture('admin'))
  const admin=h.page('pages/admin/admin')
  admin.initializeAdmin({section:'admin-readonly'})
- assert.equal(h.requests.length,2)
- assert.ok(h.requests.some(r=>r.url.includes('/me/admin/students')))
- assert.ok(h.requests.some(r=>r.url.includes('/me/admin/teachers')))
+ assert.equal(h.requests.length,1)
+ assert.ok(h.requests[0].url.includes('/me/admin/read-only-directory'))
+ h.respond(0,{ok:true,students:[{id:'unclaimed',name:'未认领学员',canView:false}],teachers:[],isolatedUnclaimedSeedCount:21})
+ await new Promise(resolve=>setImmediate(resolve))
+ admin.onReadOnlyStudent({currentTarget:{dataset:{id:'unclaimed'}}})
+ assert.equal(h.navigations.length,0)
  assert.ok(h.requests.every(r=>!r.url.includes('/me/admin/news')))
 })
 test('student homepage prioritizes plan and renders a four-card action grid',()=>{
@@ -758,10 +761,9 @@ test('school map updates preview and navigation while honoring primary campus',(
 test('administrator browse bottom tab queries roster immediately without nested management page',async()=>{
  const h=harness(),c=h.component('role-shell',{kind:'admin',viewSlot:'plan',phase:'ready'})
  c.observers['viewSlot, kind, phase'].call(c,'plan','admin','ready')
- assert.equal(h.requests.length,2)
+ assert.equal(h.requests.length,1)
  assert.ok(h.requests.every(x=>x.method==='GET'))
- h.respond(0,{ok:true,students:[{id, name:'学生甲',university:'中南大学',major:'能动'}]})
- h.respond(1,{ok:true,teachers:[{id:secondId,name:'老师乙',title:'顾问',status:'active'}]})
+ h.respond(0,{ok:true,students:[{id, name:'学生甲',university:'中南大学',major:'能动',canView:true}],teachers:[{id:secondId,name:'老师乙',title:'顾问',status:'active',canView:true}],isolatedUnclaimedSeedCount:21})
  await settle()
  assert.equal(c.data.displayedStudents.length,1)
  assert.equal(c.data.displayedTeachers.length,1)

@@ -60,16 +60,16 @@
     <view class="card">
       <text class="card-title">全部学员</text>
       <view wx:for="{{students}}" wx:key="id" class="readonly-row" data-id="{{item.id}}" bindtap="onReadOnlyStudent">
-        <view class="row-main"><text class="row-title">{{item.name}}</text><text class="row-desc">{{item.university || '院校待补充'}} · {{item.major || '专业待补充'}}</text></view>
-        <text class="readonly-go">查看 ›</text>
+        <view class="row-main"><text class="row-title">{{item.name}}</text><text class="row-desc">{{item.university || '院校待补充'}} · {{item.major || '专业待补充'}}</text><text class="row-desc">{{item.stateLabel}}</text></view>
+        <text class="readonly-go">{{item.canView === false ? '暂不可查看' : '查看 ›'}}</text>
       </view>
       <text wx:if="{{!students.length}}" class="card-note">暂无学员档案</text>
     </view>
     <view class="card">
       <text class="card-title">全部老师</text>
       <view wx:for="{{teachers}}" wx:key="id" class="readonly-row" data-id="{{item.id}}" bindtap="onReadOnlyTeacher">
-        <view class="row-main"><text class="row-title">{{item.name}}</text><text class="row-desc">{{item.title || '职务待补充'}} · {{item.status}}</text></view>
-        <text class="readonly-go">查看 ›</text>
+        <view class="row-main"><text class="row-title">{{item.name}}</text><text class="row-desc">{{item.title || '职务待补充'}} · {{item.stateLabel}}</text></view>
+        <text class="readonly-go">{{item.canView === false ? '暂不可查看' : '查看 ›'}}</text>
       </view>
       <text wx:if="{{!teachers.length}}" class="card-note">暂无老师档案</text>
     </view>

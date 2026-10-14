@@ -1,6 +1,6 @@
 import { refreshAuthResult } from '../../utils/auth'
 import { openPage, openSlot } from '../../utils/navigation'
-import { getAdminStudents, getAdminTeachers, friendlyRequestError, type StudentSummary, type AdminTeacher } from '../../utils/request'
+import { getAdminReadOnlyRoster, friendlyRequestError, type StudentSummary, type AdminTeacher } from '../../utils/request'
 
 type Action = { key: string; title: string; description: string; url: string }
 const students: Action = { key: 'students', title: '查看我的学员', description: '查看获授权的学员，进入对应阶段规划。', url: '/pages/teacher-students/teacher-students' }
@@ -48,7 +48,7 @@ Component({
       this.setData({loadSequence:serial})
       this.setData({browseLoading:true,browseError:''})
       try{
-        const [students,teachers]=await Promise.all([getAdminStudents(),getAdminTeachers()])
+        const {students,teachers}=await getAdminReadOnlyRoster()
         if(serial!==this.data.loadSequence)return
         this.setData({students,teachers})
         this.filterReadOnlyPeople()
@@ -74,12 +74,12 @@ Component({
     },
     onBrowseStudent(event:WechatMiniprogram.BaseEvent){
       const id=String(event.currentTarget.dataset.id||'')
-      if(!this.data.students.some(item=>item.id===id))return
+      if(!this.data.students.some(item=>item.id===id&&(item as StudentSummary&{canView?:boolean}).canView!==false))return
       openPage('/packages/read-only/view/view?kind=student&id='+encodeURIComponent(id))
     },
     onBrowseTeacher(event:WechatMiniprogram.BaseEvent){
       const id=String(event.currentTarget.dataset.id||'')
-      if(!this.data.teachers.some(item=>item.id===id))return
+      if(!this.data.teachers.some(item=>item.id===id&&item.canView!==false))return
       openPage('/packages/read-only/view/view?kind=teacher&id='+encodeURIComponent(id))
     },
     onRetry() { void refreshAuthResult() },

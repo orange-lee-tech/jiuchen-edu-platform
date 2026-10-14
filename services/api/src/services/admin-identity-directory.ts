@@ -1,5 +1,38 @@
 import type mysql from 'mysql2/promise'
 
+/** Seed provenance, never a nickname heuristic. Bound seed identities may be real users. */
+export function officialRosterProjection(rows:Array<Record<string,unknown>>){
+ const hidden=rows.filter(row=>!row.userId&&(row.batch==='dev-seed-v1'||row.type==='student'&&row.id==='00000000-0000-4000-8000-000000000001'))
+ const people=rows.filter(row=>!hidden.includes(row)).map(row=>{
+  const state=identityDirectoryState({type:String(row.type),status:String(row.identityStatus||'available'),userId:row.userId?String(row.userId):null,
+   name:row.name?String(row.name):null,university:row.university?String(row.university):null,assignmentCount:Number(row.assignmentCount||0)})
+  const claimed=state.profileState!=='unclaimed'
+  return {id:String(row.id),name:!claimed?(row.type==='student'?'未认领学员':'未认领老师'):state.profileState==='incomplete'?'资料待完善':state.nameLabel,
+   university:claimed?state.schoolLabel:'学校待补充',major:claimed?String(row.major||'专业待补充'):'专业待补充',currentStage:row.currentStage||null,
+   title:row.title||null,status:row.status||'active',businessId:row.businessId||null,
+   stateLabel:!claimed?'未认领':state.profileState==='incomplete'?'资料待完善':state.assignmentState==='unassigned'?(row.type==='student'?'已认领未分配老师':'已认领未分配学员'):'已认领 · 已分配',
+   canView:claimed&&row.userStatus==='active'&&row.identityStatus==='claimed'&&
+    (row.type==='student'?row.accountRole==='student':['teacher','staff'].includes(String(row.accountRole)))&&row.status!=='inactive',
+   provenance:row.batch==='dev-seed-v1'?'bound_seed_requires_review':'business_record'}
+ })
+ return {students:people.filter(row=>rows.find(raw=>raw.id===row.id)?.type==='student'),teachers:people.filter(row=>rows.find(raw=>raw.id===row.id)?.type==='teacher'),isolatedUnclaimedSeedCount:hidden.length}
+}
+
+export async function readAdminReadOnlyRoster(pool:mysql.Pool){
+ const [students]=await pool.query<mysql.RowDataPacket[]>(`SELECT s.id,'student' AS type,s.user_id AS userId,s.name,
+  COALESCE(NULLIF(p.university,''),s.university) AS university,COALESCE(NULLIF(p.major,''),s.major) AS major,s.current_stage AS currentStage,
+  i.batch,i.business_id AS businessId,i.status AS identityStatus,u.status AS userStatus,u.role AS accountRole,
+  (SELECT COUNT(DISTINCT a.teacher_id) FROM student_teacher_assignments a JOIN teachers t ON t.id=a.teacher_id AND t.status='active' WHERE a.student_id=s.id) AS assignmentCount
+  FROM students s LEFT JOIN users u ON u.id=s.user_id LEFT JOIN user_profiles p ON p.user_id=s.user_id
+  LEFT JOIN internal_ids i ON i.type='student' AND i.entity_id=s.id AND (s.user_id IS NULL OR i.user_id=s.user_id) ORDER BY s.created_at,s.id`)
+ const [teachers]=await pool.query<mysql.RowDataPacket[]>(`SELECT t.id,'teacher' AS type,t.user_id AS userId,t.name,t.title,t.status,
+  i.batch,i.business_id AS businessId,i.status AS identityStatus,u.status AS userStatus,u.role AS accountRole,
+  (SELECT COUNT(DISTINCT a.student_id) FROM student_teacher_assignments a JOIN students s ON s.id=a.student_id AND s.user_id IS NOT NULL WHERE a.teacher_id=t.id) AS assignmentCount
+  FROM teachers t LEFT JOIN users u ON u.id=t.user_id
+  LEFT JOIN internal_ids i ON i.type='teacher' AND i.entity_id=t.id AND (t.user_id IS NULL OR i.user_id=t.user_id) ORDER BY t.created_at,t.id`)
+ return officialRosterProjection([...students,...teachers])
+}
+
 export function identityDirectoryState(row:{type:string;status:string;userId:string|null;name:string|null;university:string|null;assignmentCount:number|null;displayName?:string|null;userStatus?:string|null}){
  const testNamed=Boolean([row.name,row.displayName].some(v=>v&&/测试|体验|演示|^test\b|^demo\b|^学员[-－]?JCS|^老师[-－]?JCT/i.test(v)))
  const claimed=['claimed','disabled'].includes(row.status)&&Boolean(row.userId)
