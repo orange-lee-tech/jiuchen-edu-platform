@@ -16,6 +16,22 @@ test('news dates use Beijing time and distinguish verified publications from leg
  assert.match(newsPublicationLabel({source:'wechat_official',publishedAt:'2026-09-25T01:00:02Z'}),/发表时间待核实.*来源更新/)
  assert.equal(newsPublicationLabel({source:'wechat_official',publishedAt:null}),'发表时间待核实')
 })
+
+test('read-only article diagnostic never infers absence from incomplete or legacy scan coverage',()=>{
+ const source=fs.readFileSync(path.resolve(__dirname,'../diagnostics/news-target-read-only.mjs'),'utf8')
+ const expression=source.slice(source.indexOf('  report.verdict ='),source.indexOf('\n} catch(error)'))
+ const verdict=options=>{
+  const state={report:{},coverageVerified:true,title:'合成公开标题',matches:[],rows:[],...options}
+  vm.runInNewContext(expression,state)
+  return state.report.verdict
+ }
+ assert.match(verdict({coverageVerified:false}),/^SOURCE_COVERAGE_UNVERIFIED/)
+ assert.match(verdict({coverageVerified:false,title:''}),/^SOURCE_COVERAGE_UNVERIFIED/)
+ assert.match(verdict({}),/^NOT_IN_FREEPUBLISH_SOURCE/)
+ assert.equal(verdict({matches:[{sourceKey:'synthetic'}]}),'SOURCE_PRESENT_DATABASE_MISSING')
+ assert.equal(verdict({matches:[{}],rows:[{status:'hidden',tagCount:1}]}),'DATABASE_PRESENT_HIDDEN_OR_UNCLASSIFIED')
+ assert.equal(verdict({matches:[{}],rows:[{status:'active',tagCount:1}]}),'DATABASE_VISIBLE_CANDIDATE_COMPARE_PUBLIC_LIST_ORDER_AND_WINDOW')
+})
 test('identity filters preserve paused authorization while showing actual assignment and profile flags',()=>{
  const {filterInternalIds,internalIdView,ID_FILTERS}=loadModules()('utils/admin-id-view')
  const base={id:'1',businessId:'JCS-SYNTHETIC',type:'student',status:'claimed',userId:'owner',assignmentState:'unassigned',profileState:'incomplete',nameLabel:'待完善实名',assignmentLabel:'未分配'}

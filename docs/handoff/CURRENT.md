@@ -38,6 +38,7 @@
 | 模块 | GitHub / 测试状态 | 生产与验收状态 | 下一动作 |
 | --- | --- | --- | --- |
 | P1 微信体验版 RC | `22f3889` 旧接口兼容及回归；[CI 38357710899](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38357710899) PASS | **CODE/TEST READY FOR UPLOAD；DEVICE PENDING；全功能交付 BLOCKED**（Profile 缺列） | 本人上传体验版后按统一清单验收；Profile 生产 Schema 另案审批 |
+| P1 10-14截图收口（现行候选） | 业务源码`a1541a1`（API`cc918fd`）；API208/208、小程序94/94、typecheck/build PASS；[CI38490779604](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38490779604)、News/Profile MySQL PASS | **CODE/CI PASS / 本批PROD NOT DEPLOYED / DEVICE PENDING / 发布候选BLOCKED**；原四栏不变、恢复五种导出、原生只读上下文、未认领种子隔离、30＋72 | 按[逐项矩阵](p1-acceptance-matrix-2026-10-14.md)与[精确交付/审批/回滚材料](p1-final-experience-closeout-2026-10-13.md)执行；先收10月12日文章ECS只读回执；禁止全集成切流 |
 | Profile `enrollment_year` | 单列幂等升级脚本；隔离 MySQL 双次迁移 PASS | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 针对生产的备份+隔离恢复验证+精确DDL审批；不影响其他独立开发 |
 | 资讯同步分页/真实回执/标签公开控制 | `fbf7fda` + `ab6843b`；短页 fail-closed、可信源时间排序；本地通过 | **API DEPLOYED 2026-10-13 / DEVICE & DATA PENDING** | 等新版首次 timer 同步日志与真实后台、学员资讯数据验收；不可因旧日志 total=21 冒称新版验收 |
 | AI 评估后台统计解耦 | 已提交 `9bda1b5`；真实9条成功记录 | **API DEPLOYED / DATA ACCEPTANCE PENDING**；支付数据源缺表 | 核查管理员真实周/月/年评估统计，支付仍显示来源不可用 |
@@ -45,7 +46,7 @@
 | 客服咨询复制 | GitHub 代码完成、模拟回归通过 | **NOT DEVICE VERIFIED** | 微信复制→客服手动粘贴的真机验收 |
 | 评估普通图/长图/水印 | `9ca6a97` 候选，−25°、alpha 0.30，头尾用户ID日期 | **NOT DEVICE VERIFIED** | 真实手机相册核对无裁切及背景水印 |
 | News V2 30条窗口/72小时/收藏/退役事件/任务 | 10-14用户确认30条现行合同；旧20条为历史目标。七表隔离迁移历史测试见下方 Actions | **BLOCKED**：生产七表／备份恢复未获本轮证据 | 按[现行合同](../product/news-experience-contract-2026-10-14.md)核验30条边界；DDL与开关分别审批 |
-| News 同步 timer | 已在 ECS 实际运行；`OnUnitActiveUSec=30min`，使用现役 `current` 同步脚本，日志多次显示 `total=21, created=0, updated=21` | **PRODUCTION ACTIVE**；尚无独立内存/CPU/超时上限 | 先按实际资源观测，再单独批准 timer 治理；Release A 不重装 timer |
+| News 同步 timer | 已在 ECS 实际运行；最近unit证据`OnUnitActiveUSec=30min`；旧日志`total=21`不能证明最新内容。用户报告ECS治理完成，本轮未重验限制实值 | **PRODUCTION ACTIVE / 治理USER REPORTED / 最新同步DATA PENDING** | 保持现有timer，不按历史每小时方案重装；需unit限制和新扫描回执。变更另批 |
 | 微信真实发表时间 | 源端可证 `update_time`；无可靠 `publish_time` | **PARKED**（不得冒充发表日期） | 留“发表时间待核实/来源更新时间”，待官方能力或样本 |
 | 支付、额度账本和真实充值额 | 代码/合同存在；生产三张表缺失 | **PARKED**（独立合规/Schema gate） | 不补造账本，不启用虚拟支付或假金额 |
 
@@ -87,7 +88,7 @@
 1. 先在非生产 MySQL 验证 `services/api/src/db/upgrade-news-v2.ts` 七张表：重复迁移、字段/外键/索引、同名冲突、生命周期/收藏/提醒与数据保留；核实内存/磁盘开销。
 2. 执行可恢复备份演练并形成精确审批清单；用户批准七表 DDL 后方可生产迁移。
 3. 先关 `NEWS_V2_ENABLED` 部署受控 API，再在 Schema 已验证情况下单独开功能；30条正常窗口 + 72小时缓冲 + 公众号原文收藏 + 多管理员一次性退役提醒及“待办/知晓/在办/反馈”任务。
-4. 每小时 systemd timer 与可选微信事件按单一幂等服务实现。安装 timer 必须额外授权；手动刷新始终保留。
+4. 复用现役 systemd timer 与同一幂等服务；不按历史每小时目标重装已经运行的约30分钟timer。unit／频率变更必须额外授权；手动刷新始终保留。
 5. 分角色真机验证收藏、原文跳转、标签隔离、退役备注（老师可见管理员可编辑）、已读不重复、72小时模拟。
 
 ### P3 — 其他独立业务（不为 P2 等待）
@@ -106,7 +107,7 @@
 | 真实充值、付费余额与准确消费归因 | 生产商业三表缺失；虚拟支付合规独立 Gate | 真实评估次数统计 | 商业 Schema、微信能力、支付回调等专项审批 |
 | 已认领老师 / 已分配学员全角色验收 | 生产未找到样本 | 其他角色的只读投影和列表 | 用户提供真实样本并在真机验证 |
 | Profile 生产DDL | 备份/恢复与精确审批尚未完成 | 资讯/统计/身份代码施工和不依赖该接口的测试 | 单列迁移单独审批 |
-| News V2 生产启用 | 七表尚未经过非生产MySQL和备份关口 | P1 无表模块及已有资讯功能 | schema+发布+flag独立审批 |
+| News V2 生产启用 | 临时MySQL双次迁移及关系CI已通过；生产结构复刻、备份恢复及七表DDL未批准 | P1 无表模块及已有资讯功能 | 生产结构/恢复证据＋schema/隔离发布/flag独立审批 |
 | 真实手机客服与长图验收 | 代码测试不替代手机 | 后端只读审计/其他功能开发 | 上传体验版并完成手机复制、相册测试 |
 
 **搁置不是删除需求**：登记负责人/触发条件/证据，解除阻塞时再进入 P1/P2；不得无限重复要求用户粘贴相同日志。

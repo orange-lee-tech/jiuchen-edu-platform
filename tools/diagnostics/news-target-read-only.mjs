@@ -9,7 +9,7 @@ const targetUrl = process.env.NEWS_AUDIT_URL || 'https://mp.weixin.qq.com/s/Wnhm
 const targetTitle = process.env.NEWS_AUDIT_TITLE?.trim() || ''
 const require = createRequire(resolve('package.json'))
 const mysql = require('mysql2/promise')
-const { scanOfficialAccountPosts } = await import(pathToFileURL(resolve('dist/services/official-account.js')).href)
+const { scanOfficialAccountPosts } = await import(pathToFileURL(resolve(process.env.NEWS_AUDIT_SCANNER_PATH || 'dist/services/official-account.js')).href)
 const fingerprint = value => createHash('sha256').update(String(value)).digest('hex').slice(0,12)
 const report = { mode:'READ_ONLY', targetUrl, targetTitle, checkedAt:new Date().toISOString() }
 let connection
@@ -22,7 +22,9 @@ try {
       || html.match(/var\s+msg_title\s*=\s*["']([^"']+)/)?.[1] || ''
   } catch { report.articleMetadata = 'unavailable_use_NEWS_AUDIT_TITLE' }
   const matches = scan.posts.filter(post => post.articleUrl === targetUrl || title && post.title === title)
+  const coverageVerified=Number.isInteger(scan.pagesFetched)&&Number.isInteger(scan.uniqueGroups)&&scan.uniqueGroups===scan.groupsFetched&&!scan.truncated
   report.source = { groupsFetched:scan.groupsFetched,totalGroups:scan.totalGroups,truncated:scan.truncated,
+    pagesFetched:scan.pagesFetched??null,uniqueGroups:scan.uniqueGroups??null,coverageVerified,
     latestSourceUpdatedAt:scan.latestSourceUpdatedAt,latestSourcePublishedAt:scan.latestSourcePublishedAt,
     posts:scan.posts.length, matchedTitle:title || null,
     matches:matches.map(post=>({sourceKey:post.sourceKey,title:post.title,url:post.articleUrl,
@@ -46,7 +48,8 @@ try {
   }
   report.database={matches:rows.map(({id,...row})=>({...row,sampleKey:fingerprint(id)}))}
   await connection.query('COMMIT')
-  report.verdict = !title && !matches.length ? 'TARGET_NOT_IDENTIFIED_SHORT_URL_NEEDS_TITLE'
+  report.verdict = !matches.length&&!coverageVerified ? 'SOURCE_COVERAGE_UNVERIFIED_DO_NOT_CONCLUDE_ARTICLE_ABSENT'
+    : !title && !matches.length ? 'TARGET_NOT_IDENTIFIED_SHORT_URL_NEEDS_TITLE'
     : !matches.length ? 'NOT_IN_FREEPUBLISH_SOURCE_VERIFY_ACCOUNT_AND_PUBLICATION_CHANNEL'
     : !rows.length ? 'SOURCE_PRESENT_DATABASE_MISSING'
     : rows.every(row=>row.status!=='active'||!Number(row.tagCount)) ? 'DATABASE_PRESENT_HIDDEN_OR_UNCLASSIFIED'

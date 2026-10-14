@@ -40,16 +40,17 @@ N01 样本原文：`https://mp.weixin.qq.com/s/WnhmDWF30adA5OM_BipHgQ`（用户�
 
 ## ECS只读定位（无需切流）
 
-将 `tools/diagnostics/news-target-read-only.mjs` 作为诊断文件放入 `/opt/jiuchen-api/staging/diagnostics/`，由已有授权运维账号执行以下命令。脚本不启动API、worker、同步或DDL，只读公众号及 `news_posts`。脚本源文件需从本批提交取出，不覆盖现役release。
+将 `tools/diagnostics/news-target-read-only.mjs` 作为诊断文件放入 `/opt/jiuchen-api/staging/diagnostics/`，并将已测试业务树的 `services/api/src/services/official-account.ts` 独立放为该目录的 `official-account.mts`。后者只有可擦除的type import，无运行时依赖，使用Node22受控类型擦除读取。由已有授权运维账号执行以下命令。脚本不启动API、worker、同步或DDL，只读公众号及 `news_posts`。两文件不覆盖现役release；独立scanner防止现役旧代码把重复页误报完整。
 
 ```bash
 cd /opt/jiuchen-api/current/services/api
 NEWS_AUDIT_URL='https://mp.weixin.qq.com/s/WnhmDWF30adA5OM_BipHgQ' \
-node --env-file=/etc/jiuchen-api/production.env \
+NEWS_AUDIT_SCANNER_PATH='/opt/jiuchen-api/staging/diagnostics/official-account.mts' \
+node --experimental-strip-types --env-file=/etc/jiuchen-api/production.env \
   /opt/jiuchen-api/staging/diagnostics/news-target-read-only.mjs
 ```
 
-若输出 `TARGET_NOT_IDENTIFIED_SHORT_URL_NEEDS_TITLE`，仅补 `NEWS_AUDIT_TITLE` 为该文准确标题再执行一次。输出只含公开文章字段及脱敏数据库样本键，禁止贴环境文件。输出 `NOT_IN_FREEPUBLISH_SOURCE` 时须核对公众号后台实际账号与发布渠道；`SOURCE_PRESENT_DATABASE_MISSING` 才是入库缺口；`DATABASE_PRESENT_HIDDEN_OR_UNCLASSIFIED` 是审核／隐藏环节；可见候选再查公开列表排序和窗口。当前本机40164未获ECS回执，N01生产定位仍为BLOCKED。
+若输出 `TARGET_NOT_IDENTIFIED_SHORT_URL_NEEDS_TITLE`，仅补 `NEWS_AUDIT_TITLE` 为该文准确标题再执行一次。输出只含公开文章字段及脱敏数据库样本键，禁止贴环境文件。`SOURCE_COVERAGE_UNVERIFIED` 禁止推断文章不存在；不完整扫描或旧scanner缺独立组数均受此门槛约束。输出 `NOT_IN_FREEPUBLISH_SOURCE` 时须核对公众号后台实际账号与发布渠道；`SOURCE_PRESENT_DATABASE_MISSING` 才是入库缺口；`DATABASE_PRESENT_HIDDEN_OR_UNCLASSIFIED` 是审核／隐藏环节；可见候选再查公开列表排序和窗口。当前本机40164未获ECS回执，N01生产定位仍为BLOCKED。
 
 ## 阶段3回执
 
@@ -74,3 +75,7 @@ node --env-file=/etc/jiuchen-api/production.env \
 - 新GET `/me/admin/read-only-directory` 受原管理员权限保护，不改变分配接口和写权限。返回认领／分配／待完善标签及可查看状态；未认领、禁用、无有效目标角色不可进入原生查看。搜索保留姓名、学校专业，原有四栏未变。
 - 新只读聚合诊断 `tools/diagnostics/identity-seed-read-only.mjs` 仅输出种子批次绑定数及Profile列存在性，不输出个人姓名或凭据。在ECS按上方诊断目录方式取出后，从current/services/api执行 `node --env-file=/etc/jiuchen-api/production.env /opt/jiuchen-api/staging/diagnostics/identity-seed-read-only.mjs`，不会启动应用或worker。
 - 只读切片 `1806210396b6592149eae480fb1d00b17524c156` 的集成CI `38488469097`、News MySQL `38488469119`、Profile MySQL `38488469141` 均PASS。正式名单生产聚合回执与真实账号验收仍PENDING。
+
+## 阶段6最终门槛
+
+业务源码`a1541a118b69728979258d479162ddcaddbad649`的CI `38490779604`、News MySQL `38490779887`、Profile MySQL `38490779609`均PASS。API208/208、typecheck/build通过，小程序typecheck通过；最后增加诊断覆盖负例后全量95/95。普通学生四栏和app.json未改；学堂缺地点显示“地点：暂无”，只读首页不提示可运行AI。资源／备份／生产只读回执／微信真机未验；精确范围、依赖、执行与回滚材料见 [最终交接](p1-final-experience-closeout-2026-10-13.md)。本轮未制作可切流隔离包，发布候选BLOCKED，不伪报READY。
