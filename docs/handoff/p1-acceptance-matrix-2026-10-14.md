@@ -133,3 +133,8 @@ N03视频目标是标题、封面、摘要及真实服务号视频原链接的�
 
 - 用户同步到 `7629646` 后执行：API typecheck PASS、build PASS；测试 211 项中 210 PASS、1 FAIL。唯一失败为 `/assessments/meta` 断言仍期待 `assessment-agent-v2`，而新质量门槛已经升级为 v3；两项新增优势行为测试均 PASS。
 - 提交 `1d72b0158bd4b1233ad1b19f9478e52cd4b410d3` 将该元数据测试期望改为 v3。此提交之后的 211 项全量结果**尚未重新取得**；不得把先前 210/211 记为全通过。生产运行时与历史记录未变。
+
+## 10月14日22:24 CST修复后本地复验
+
+- 用户拉取至 `312c92d`，`npm.cmd --prefix services/api test`：**211/211 PASS**、0 FAIL。此前同一源码变更的 typecheck/build 已 PASS；新增优势修复及失败释放额度两项测试 PASS。此为 Windows 本地验证，不代表实际 AI 生成质量或历史样本修复。
+- 该 HEAD 的 GitHub CI `38579714244`、News MySQL `38579714277`、Profile MySQL `38579714313` 的 job 均显示 FAILURE，job steps 为空；无法将远端失败归因于业务代码，也不能写为 CI PASS。生产未部署，设备未验。
