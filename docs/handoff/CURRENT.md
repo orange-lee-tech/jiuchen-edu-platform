@@ -38,7 +38,7 @@
 | 模块 | GitHub / 测试状态 | 生产与验收状态 | 下一动作 |
 | --- | --- | --- | --- |
 | P1 微信体验版 RC | `22f3889` 旧接口兼容及回归；[CI 38357710899](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38357710899) PASS | **CODE/TEST READY FOR UPLOAD；DEVICE PENDING；全功能交付 BLOCKED**（Profile 缺列） | 本人上传体验版后按统一清单验收；Profile 生产 Schema 另案审批 |
-| P1 10-14截图收口（现行候选） | 业务源码`a1541a1`（API`cc918fd`）；API208/208、小程序94/94、typecheck/build PASS；[CI38490779604](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38490779604)、News/Profile MySQL PASS | **CODE/CI PASS / 本批PROD NOT DEPLOYED / DEVICE PENDING / 发布候选BLOCKED**；原四栏不变、恢复五种导出、原生只读上下文、未认领种子隔离、30＋72 | 按[逐项矩阵](p1-acceptance-matrix-2026-10-14.md)与[精确交付/审批/回滚材料](p1-final-experience-closeout-2026-10-13.md)执行；先收10月12日文章ECS只读回执；禁止全集成切流 |
+| P1 10-14截图收口（现行候选） | 业务源码`a1541a1`（API`cc918fd`）；API208/208、小程序94/94、typecheck/build PASS；[CI38490779604](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38490779604)、News/Profile MySQL PASS | **CODE/CI PASS / 本批PROD NOT DEPLOYED / DEVICE PENDING / 发布候选BLOCKED**；原四栏不变、恢复五种导出、原生只读上下文、未认领种子隔离、30＋72 | 按[逐项矩阵](p1-acceptance-matrix-2026-10-14.md)与[精确交付/审批/回滚材料](p1-final-experience-closeout-2026-10-13.md)执行；同账号后台已发表但freepublish完整41篇缺目标；受控补录候选`f69f99a`已提交，新增CI失败且日志404，需复验；禁止全集成切流 |
 | Profile `enrollment_year` | 单列幂等升级脚本；隔离 MySQL 双次迁移 PASS | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 针对生产的备份+隔离恢复验证+精确DDL审批；不影响其他独立开发 |
 | 资讯同步分页/真实回执/标签公开控制 | `fbf7fda` + `ab6843b`；短页 fail-closed、可信源时间排序；本地通过 | **API DEPLOYED 2026-10-13 / DEVICE & DATA PENDING** | 等新版首次 timer 同步日志与真实后台、学员资讯数据验收；不可因旧日志 total=21 冒称新版验收 |
 | AI 评估后台统计解耦 | 已提交 `9bda1b5`；真实9条成功记录 | **API DEPLOYED / DATA ACCEPTANCE PENDING**；支付数据源缺表 | 核查管理员真实周/月/年评估统计，支付仍显示来源不可用 |
