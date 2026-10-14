@@ -117,3 +117,8 @@ N03视频目标是标题、封面、摘要及真实服务号视频原链接的�
 - 同一原文链接重复提交返回既有记录；同标题不同原文链接返回409待人工核对。新增记录仍按 `wechat_official` 进入既有30条窗口与72小时缓冲、可按个人收藏原链接。后续接口若取得同名不同链接，源端新行默认未分类，不自动公开成第二张卡；仍需独立来源身份核对。独立视频仅使用原文链接及卡片信息，无小程序内播放器。
 - 业务提交 `f69f99a68655fb263b99362de210be3a95eb74a2`；本地 Node24 对改动的三个 TS 文件 `node --check` PASS。该提交的 [CI](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38572604647)、[News MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38572604689)、[Profile MySQL Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38572604662) 均显示 FAILURE；job 步骤信息为空，日志接口404 BlobNotFound，不能判定代码是否通过类型检查或测试。前一条纯文档提交 `16c68b6` 的同三项工作流也为 FAILURE。候选状态为 **CODE COMMITTED / SYNTAX CHECK ONLY / FULL CI UNVERIFIED / PROD NOT DEPLOYED / DEVICE PENDING**。
 - 这个入口可补已确认的10月12日文章，但**未解决公众号后台发表记录57次与API返回40组的自动同步差异**。下一步需要同账号官方数据字段级回执，确定可稳定枚举新增发表的接口或事件，再做单一来源适配及长期漏取告警。不得仅用人工补录宣布自动抓取修好。真实补录、DDL、NEWS_V2开关、API切流和微信上传均未执行。
+
+## 10月14日22:01 CST本地验证回执（用户 PowerShell）
+
+- 同步至修复提交 `7165a11de9792d5c366cc4b618417f041caf7d65`；首次人工运行发现新测试第121行 TypeScript 泛型缺 `>`，已修复。随后 `npm.cmd --prefix services/api run typecheck` PASS，`npm.cmd --prefix services/api test` **209/209 PASS**，`npm.cmd --prefix services/api run build` PASS。依赖 `npm.cmd ... ci` 安装188包成功。原本 `project.config.json` 本地修改未覆盖。
+- 本机回执证明本批 API 代码可构建、回归通过；GitHub Actions 仍显示失败且 job 日志404，根因未核实。当前 **LOCAL API PASS / GITHUB CI UNRESOLVED / PROD NOT DEPLOYED / DEVICE PENDING**。自动漏取缺口、真实补录和AI优势质量缺陷均未由此测试通过。
