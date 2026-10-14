@@ -89,3 +89,22 @@ jobs:
             console.log('PROFILE_REAL_MYSQL_GATE_PASS: idempotent upgrade, legacy fields and enrollment year roundtrip')
           } finally {await db.end()}
           JS
+      - name: Backup and restore the disposable profile fixture
+        run: |
+          export MYSQL_PWD=local_test_only
+          mysqldump -h127.0.0.1 -uroot --single-transaction --set-gtid-purged=OFF --no-tablespaces jiuchen_profile_ci > "$RUNNER_TEMP/profile-backup.sql"
+          mysql -h127.0.0.1 -uroot -e 'CREATE DATABASE jiuchen_profile_restore_ci CHARACTER SET utf8mb4'
+          mysql -h127.0.0.1 -uroot jiuchen_profile_restore_ci < "$RUNNER_TEMP/profile-backup.sql"
+          DATABASE_URL=mysql://root:local_test_only@127.0.0.1:3306/jiuchen_profile_restore_ci npm run db:check:profile
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          const source=await mysql.createConnection(process.env.DATABASE_URL)
+          const restored=await mysql.createConnection('mysql://root:local_test_only@127.0.0.1:3306/jiuchen_profile_restore_ci')
+          try {
+            const [before]=await source.query('SELECT * FROM user_profiles ORDER BY id')
+            const [after]=await restored.query('SELECT * FROM user_profiles ORDER BY id')
+            assert.deepEqual(after,before)
+            console.log('DISPOSABLE_PROFILE_BACKUP_RESTORE_PASS (not production backup or structure replica)')
+          } finally {await source.end();await restored.end()}
+          JS

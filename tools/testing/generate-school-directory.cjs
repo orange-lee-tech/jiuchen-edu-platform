@@ -19,7 +19,7 @@ const text='/** Generated from apps/miniprogram/miniprogram/packages/schools/dat
 ' */\nexport const MOE_PROJECT_ROSTER = '+JSON.stringify(rows,null,2)+' as const\n'
 const out=path.join(root,'services/api/src/data/school-directory.generated.ts')
 if(process.argv.includes('--check')){
-  if(!fs.existsSync(out)||fs.readFileSync(out,'utf8')!==text)
+  if(!fs.existsSync(out)||fs.readFileSync(out,'utf8').replace(/\r\n/g,'\n')!==text)
     throw new Error('school_directory_api_mirror_out_of_sync_run_generator')
   process.stdout.write('school roster mirror verified: '+rows.length+' records\n')
 }else{

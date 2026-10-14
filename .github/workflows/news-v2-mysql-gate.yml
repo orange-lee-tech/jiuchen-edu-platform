@@ -141,3 +141,27 @@ jobs:
             console.log('NEWS_V2_REAL_MYSQL_GATE_PASS: twice migrated; schema contract and legacy rows preserved')
           } finally { await db.end() }
           JS
+      - name: Backup and restore the disposable seven-table fixture
+        run: |
+          # Synthetic CI database only; no production URL or dataset.
+          export MYSQL_PWD=local_test_only
+          mysqldump -h127.0.0.1 -uroot --single-transaction --set-gtid-purged=OFF --no-tablespaces jiuchen_news_v2_ci > "$RUNNER_TEMP/news-v2-backup.sql"
+          mysql -h127.0.0.1 -uroot -e 'CREATE DATABASE jiuchen_news_v2_restore_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+          mysql -h127.0.0.1 -uroot jiuchen_news_v2_restore_ci < "$RUNNER_TEMP/news-v2-backup.sql"
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          import {inspectNewsV2Schema,validateNewsV2SchemaSnapshot} from './dist/db/news-v2-schema-contract.js'
+          const source=await mysql.createConnection(process.env.DATABASE_URL)
+          const restored=await mysql.createConnection('mysql://root:local_test_only@127.0.0.1:3306/jiuchen_news_v2_restore_ci')
+          const order={users:'id',news_posts:'id',news_display_states:'post_id',news_favorites:'user_id,post_id',news_retirement_batches:'id',news_retirement_tasks:'id',news_retirement_reads:'batch_id,user_id',news_task_audit:'id',news_sync_runs:'id'}
+          try {
+            assert.deepEqual(validateNewsV2SchemaSnapshot(await inspectNewsV2Schema(restored)),[])
+            for(const [table,pk] of Object.entries(order)){
+              const [before]=await source.query(`SELECT * FROM ${table} ORDER BY ${pk}`)
+              const [after]=await restored.query(`SELECT * FROM ${table} ORDER BY ${pk}`)
+              assert.deepEqual(after,before,table+' restored schema/data must match')
+            }
+            console.log('DISPOSABLE_NEWS_BACKUP_RESTORE_PASS (not production backup or structure replica)')
+          } finally {await source.end();await restored.end()}
+          JS
