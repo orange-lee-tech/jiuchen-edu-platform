@@ -126,7 +126,7 @@ test('verified official fallback is admin-only, URL restricted and idempotent wi
       if(sql.includes('GET_LOCK'))return [[{acquired:1}]]
       if(sql.includes('@@session.time_zone'))return [[{zone:'+00:00'}]]
       if(sql.includes('SELECT id,article_url AS articleUrl'))return [state.stored?[{id:state.stored.id,articleUrl:state.stored.articleUrl}]:[]]
-      if(sql.includes("source_key LIKE 'admin-verified:%'"))return [[]]
+      if(sql.includes("source='wechat_official' AND title=?"))return [[]]
       if(sql.includes('FROM news_posts WHERE source='))return [state.stored?[{id:state.stored.id,status:'active',tagCount:1,sortTime:'2026-10-12T05:00:00Z'}]:[]]
       if(sql.includes('FROM news_display_states FOR UPDATE'))return [[]]
       if(sql.includes('INSERT INTO news_posts')){
