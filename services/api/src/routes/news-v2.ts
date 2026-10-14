@@ -70,7 +70,7 @@ export function registerNewsV2Routes(app:FastifyInstance,database:DatabaseContex
           return
         }
         const [sameTitle]=await connection.query<import('mysql2/promise').RowDataPacket[]>(
-          "SELECT id FROM news_posts WHERE source_key LIKE 'admin-verified:%' AND title=? LIMIT 1 FOR UPDATE",
+          "SELECT id FROM news_posts WHERE source='wechat_official' AND title=? LIMIT 1 FOR UPDATE",
           [post.title])
         if(sameTitle.length)throw new Error('verified_official_title_conflict')
         await connection.query(
