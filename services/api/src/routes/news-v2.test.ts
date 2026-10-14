@@ -108,3 +108,51 @@ test('personal favorites are idempotent, owner-scoped and retain original URLs a
  }
  assert.equal(saved.size,2)
 })
+
+test('verified official fallback is admin-only, URL restricted and idempotent within the 30-item window',async()=>{
+  const student=fixture('student')
+  const payload={title:'合成保研资讯',articleUrl:'https://mp.weixin.qq.com/s/synthetic-original',
+    publishedAt:'2026-10-12T13:00:00+08:00',tags:['保研'],mediaType:'article'}
+  assert.equal((await student.app.inject({method:'POST',url:'/me/admin/news/verified-official',
+    headers:{authorization:'Bearer synthetic'},payload})).statusCode,403)
+  assert.equal(student.getCalls(),0)
+  await student.app.close()
+
+  const writes:Array<{sql:string;params:unknown[]}=[]
+  const state:{stored:{id:string;articleUrl:string;sourceKey:string}|null}={stored:null}
+  const connection={
+    async beginTransaction(){},async commit(){},async rollback(){},release(){},destroy(){},
+    async query(sql:string,params:unknown[]=[]){
+      if(sql.includes('GET_LOCK'))return [[{acquired:1}]]
+      if(sql.includes('@@session.time_zone'))return [[{zone:'+00:00'}]]
+      if(sql.includes('SELECT id,article_url AS articleUrl'))return [state.stored?[{id:state.stored.id,articleUrl:state.stored.articleUrl}]:[]]
+      if(sql.includes("source_key LIKE 'admin-verified:%'"))return [[]]
+      if(sql.includes('FROM news_posts WHERE source='))return [state.stored?[{id:state.stored.id,status:'active',tagCount:1,sortTime:'2026-10-12T05:00:00Z'}]:[]]
+      if(sql.includes('FROM news_display_states FOR UPDATE'))return [[]]
+      if(sql.includes('INSERT INTO news_posts')){
+        writes.push({sql,params})
+        state.stored={id:String(params[0]),sourceKey:String(params[1]),articleUrl:String(params[5])}
+      }
+      return [[]]
+    },
+  }
+  const app=adminFixture('synthetic-admin',{async getConnection(){return connection}})
+  const headers={authorization:'Bearer synthetic'}
+  for(const badUrl of ['https://evil.example/s/abc','http://mp.weixin.qq.com/s/abc',
+    'https://mp.weixin.qq.com.evil.example/s/abc']){
+    assert.equal((await app.inject({method:'POST',url:'/me/admin/news/verified-official',
+      headers,payload:{...payload,articleUrl:badUrl}})).statusCode,400)
+  }
+  const first=await app.inject({method:'POST',url:'/me/admin/news/verified-official',headers,payload})
+  assert.equal(first.statusCode,200)
+  assert.equal(first.json().created,true)
+  const again=await app.inject({method:'POST',url:'/me/admin/news/verified-official',headers,payload})
+  assert.equal(again.statusCode,200)
+  assert.equal(again.json().created,false)
+  assert.equal(again.json().id,first.json().id)
+  assert.equal(writes.length,1)
+  assert.equal(writes[0].params[5],payload.articleUrl)
+  assert.equal(writes[0].params[8],'2026-10-12 05:00:00')
+  assert.equal(JSON.parse(String(writes[0].params[6])).publicationTimeSource,'admin_verified_publish_record')
+  await app.close()
+})
