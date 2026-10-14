@@ -26,8 +26,9 @@ import {
   syncOfficialAccountPosts,
 } from '../services/news.js'
 import { resolveSessionUser } from '../services/session.js'
-import { readAdminIdentityDirectory } from '../services/admin-identity-directory.js'
+import { readAdminIdentityDirectory,readAdminReadOnlyRoster } from '../services/admin-identity-directory.js'
 import { readAssessmentCommerceAnalytics, type AnalyticsPeriod } from '../services/commercial-analytics.js'
+import { reconcileNewsWindow, withNewsLock } from '../services/news-v2-store.js'
 
 const createIdSchema = z.object({
   type: z.enum(['student', 'teacher', 'admin']),
@@ -332,6 +333,11 @@ export function registerMobileAdminRoutes(
     }
   })
 
+  app.get('/me/admin/read-only-directory',async(request,reply)=>{
+    if(!(await requireAdmin(request,reply,configuredDatabase)))return
+    return {ok:true,...await readAdminReadOnlyRoster(configuredDatabase.pool)}
+  })
+
   app.get('/me/admin/teachers', async (request, reply) => {
     if (!(await requireAdmin(request, reply, configuredDatabase))) return
 
@@ -485,11 +491,33 @@ export function registerMobileAdminRoutes(
       .orderBy(desc(newsSourceTimeOrder()), desc(newsPosts.createdAt))
       .limit(50)
 
+    const lifecycle=new Map<string,{phase:string;phaseChangedAt:string|null;bufferedAt:string|null;retireAt:string|null}>()
+    let syncHistory:null|{lastCheckedAt:string|null;lastFailedAt:string|null;latestSourceUpdatedAt:string|null;fetched:number;created:number;updated:number;failed:number;lastError:string|null}=null
+    if(env.NEWS_V2_ENABLED){
+      const [states]=await configuredDatabase.pool.query<import('mysql2/promise').RowDataPacket[]>(`SELECT post_id AS postId,phase,
+        UNIX_TIMESTAMP(updated_at) AS changedEpoch,UNIX_TIMESTAMP(buffered_at) AS bufferedEpoch,UNIX_TIMESTAMP(retire_at) AS retireEpoch FROM news_display_states`)
+      const time=(epoch:unknown)=>epoch===null?null:new Date(Number(epoch)*1000).toISOString()
+      states.forEach(state=>lifecycle.set(String(state.postId),{phase:state.phase,phaseChangedAt:time(state.changedEpoch),bufferedAt:time(state.bufferedEpoch),retireAt:time(state.retireEpoch)}))
+      const [runs]=await configuredDatabase.pool.query<import('mysql2/promise').RowDataPacket[]>(`SELECT status,
+        UNIX_TIMESTAMP(checked_at) AS checkedEpoch,UNIX_TIMESTAMP(latest_source_time) AS sourceEpoch,
+        fetched,created_count AS created,updated_count AS updated,failed_count AS failed,error_code AS errorCode
+        FROM news_sync_runs ORDER BY checked_at DESC LIMIT 100`)
+      const successful=runs.find(row=>row.status==='checked')
+      const failure=runs.find(row=>row.status==='failed'||row.status==='partial')
+      syncHistory={lastCheckedAt:successful?new Date(Number(successful.checkedEpoch)*1000).toISOString():null,
+        lastFailedAt:failure?new Date(Number(failure.checkedEpoch)*1000).toISOString():null,
+        latestSourceUpdatedAt:successful?.sourceEpoch?new Date(Number(successful.sourceEpoch)*1000).toISOString():null,
+        fetched:Number(successful?.fetched??0),created:Number(successful?.created??0),updated:Number(successful?.updated??0),
+        failed:Number(failure?.failed??0),lastError:failure?.errorCode??null}
+    }
     return {
       ok: true,
+      newsV2Enabled: Boolean(env.NEWS_V2_ENABLED),
+      syncHistory,
       posts: rows.map((row) => ({
         ...row,
         ...newsTimeView(row),
+        lifecycle:lifecycle.get(row.id)||null,
         contentJson: undefined,
         tags: normalizeNewsTags(row.tagsJson),
         tagsJson: undefined,
@@ -524,10 +552,15 @@ export function registerMobileAdminRoutes(
       })
     }
 
-    await configuredDatabase.db
-      .update(newsPosts)
-      .set({ tagsJson: parsed.data.tags })
-      .where(eq(newsPosts.id, post.id))
+    if(env.NEWS_V2_ENABLED){
+      await withNewsLock(configuredDatabase.pool,async connection=>{
+        await reconcileNewsWindow(connection,new Date(),async()=>{
+          await connection.query('UPDATE news_posts SET tags_json=? WHERE id=?',[JSON.stringify(parsed.data.tags),post.id])
+        })
+      })
+    }else{
+      await configuredDatabase.db.update(newsPosts).set({ tagsJson: parsed.data.tags }).where(eq(newsPosts.id, post.id))
+    }
 
     return {
       ok: true,
@@ -549,13 +582,14 @@ export function registerMobileAdminRoutes(
       const result = await syncOfficialAccountPosts(configuredDatabase, env)
       return {
         ok: true,
-        status:result.failed?'partial':'checked',
+        status:result.failed||result.truncated?'partial':'checked',
         synced: result.total,
         created: result.created,
         updated: result.updated,
         unchanged:result.unchanged,failed:result.failed,errors:result.errors,
         checkedAt:result.checkedAt,latestSourcePublishedAt:result.latestSourcePublishedAt,
         latestSourceUpdatedAt:result.latestSourceUpdatedAt,groupsFetched:result.groupsFetched,
+        pagesFetched:result.pagesFetched,uniqueGroups:result.uniqueGroups,latestArticles:result.latestArticles,
         totalGroups:result.totalGroups,maxGroups:result.maxGroups,truncated:result.truncated,message:result.message,
       }
     } catch (error) {

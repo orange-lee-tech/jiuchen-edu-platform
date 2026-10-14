@@ -9,6 +9,7 @@ import { STAGE_DEFINITIONS, getStageDefinition } from '../domain/classroom.js'
 import { mayViewStudent, mayViewTeacher } from '../domain/read-only-access.js'
 import { resolveSessionUser } from '../services/session.js'
 import { loadClassroom } from './classroom-workspace.js'
+import {parseReadOnlyTarget,readOnlySubject,issueReadOnlyCapability} from '../services/read-only-context.js'
 
 type DB = Extract<DatabaseContext,{configured:true}>
 
@@ -29,6 +30,15 @@ export async function authorizedStudent(
  * No /me owner override and no write/AI/payment endpoint accepts the target ID.
  */
 export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:DatabaseContext) {
+  app.get<{Querystring:{kind:string;id:string}}>('/me/read-only/context',async(request,reply)=>{
+    if(String(request.headers.authorization||'').startsWith('Bearer ro.'))return reply.code(403).send({ok:false,error:'read_only_write_forbidden'})
+    if(!database.configured)return reply.code(503).send({ok:false,error:'database_not_configured'})
+    const operator=await resolveSessionUser(request,database)
+    if(!operator)return reply.code(401).send({ok:false,error:'unauthorized'})
+    const target=parseReadOnlyTarget(request.query.kind+':'+request.query.id)!
+    const subject=await readOnlySubject(database,operator,target)
+    return {ok:true,readOnly:true,subject:{...subject,userId:undefined},operatorUserId:operator.userId,...issueReadOnlyCapability(operator,target)}
+  })
   app.get<{Params:{studentId:string};Querystring:{stage?:string;only?:string}}>(
     '/me/read-only/students/:studentId',async(request,reply)=>{
       if(!database.configured)return reply.code(503).send({ok:false,error:'database_not_configured'})

@@ -12,6 +12,7 @@ import {
   type AssessmentKnowledgeSource,
   type AssessmentModelProvider,
   type AssessmentRetriever,
+  type AssessmentRuntime,
 } from './assessment-runtime.js'
 
 const input = {
@@ -868,6 +869,74 @@ test('assessment runtime does not sanitize target coverage mismatches', async ()
     (error: unknown) =>
       error instanceof AssessmentEvidenceReferenceError &&
       error.message === 'assessment_target_coverage_invalid',
+  )
+  assert.equal(repairs, 1)
+})
+
+test('documented award with empty strengths gets one evidence-backed repair', async () => {
+  const assessment = { ...input, competitions: [{ name: '校内赛事', award: '一等奖' }] }
+  const emptyOutput = {
+    profileSummary: '用户提供了获奖记录。',
+    strengths: [],
+    risks: [],
+    targetAssessments: [{
+      schoolName: '目标大学', tier: 'insufficient_data',
+      rationale: '缺少目标院校的官方依据。', gapItems: [], actions: [],
+      evidenceRefs: ['input:target:1'],
+    }],
+    recommendedActions: [], similarCases: [], uncertainties: [],
+    disclaimer: '本评估仅供规划参考。',
+  }
+  let repairs = 0
+  const runtime: AssessmentRuntime = {
+    retriever: { async retrieve() { return { version: 'empty-v1', evidence: [] } } },
+    provider: {
+      provider: 'mock', model: 'mock', isConfigured: () => true,
+      async analyze() { return emptyOutput },
+      async repair({ validationError }) {
+        repairs += 1
+        assert.equal(validationError, 'assessment_strengths_missing_for_documented_achievement')
+        return { ...emptyOutput, strengths: [{
+          title: '有可核实的获奖经历',
+          detail: '用户记录了一项校内赛事一等奖，具体竞争水平仍需核实。',
+          evidenceRefs: ['input:competition:1'],
+        }] }
+      },
+    },
+  }
+  const result = await executeAssessment(runtime, assessment)
+  assert.equal(repairs, 1)
+  assert.equal(result.output.strengths.length, 1)
+  assert.deepEqual(result.output.strengths[0].evidenceRefs, ['input:competition:1'])
+})
+
+test('documented achievement cannot be persisted as a successful empty-strength report', async () => {
+  const assessment = { ...input, research: [{ title: '校内研究项目', output: '完成项目报告' }] }
+  const emptyOutput = {
+    profileSummary: '用户提供了科研产出。',
+    strengths: [],
+    risks: [],
+    targetAssessments: [{
+      schoolName: '目标大学', tier: 'insufficient_data',
+      rationale: '缺少目标院校的官方依据。', gapItems: [], actions: [],
+      evidenceRefs: ['input:target:1'],
+    }],
+    recommendedActions: [], similarCases: [], uncertainties: [],
+    disclaimer: '本评估仅供规划参考。',
+  }
+  let repairs = 0
+  const runtime: AssessmentRuntime = {
+    retriever: { async retrieve() { return { version: 'empty-v1', evidence: [] } } },
+    provider: {
+      provider: 'mock', model: 'mock', isConfigured: () => true,
+      async analyze() { return emptyOutput },
+      async repair() { repairs += 1; return emptyOutput },
+    },
+  }
+  await assert.rejects(
+    executeAssessment(runtime, assessment),
+    (error: unknown) => error instanceof AssessmentEvidenceReferenceError &&
+      error.message === 'assessment_strengths_missing',
   )
   assert.equal(repairs, 1)
 })

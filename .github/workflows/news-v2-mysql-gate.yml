@@ -1,0 +1,167 @@
+name: News V2 isolated MySQL migration gate
+
+on:
+  push:
+    branches:
+      - 'p1/**'
+    paths:
+      - '.github/workflows/news-v2-mysql-gate.yml'
+      - 'services/api/src/db/upgrade-news-v2.ts'
+      - 'services/api/src/db/news-v2-schema-contract.ts'
+      - 'services/api/package.json'
+      - 'services/api/package-lock.json'
+  pull_request:
+    paths:
+      - '.github/workflows/news-v2-mysql-gate.yml'
+      - 'services/api/src/db/upgrade-news-v2.ts'
+      - 'services/api/src/db/news-v2-schema-contract.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local_test_only
+          MYSQL_DATABASE: jiuchen_news_v2_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -plocal_test_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      # Disposable GitHub Actions container only; NEVER point at production.
+      DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_news_v2_ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+      - name: Install exact API dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Prepare legacy base tables and known rows in disposable database
+        run: |
+          node --input-type=module <<'JS'
+          import mysql from 'mysql2/promise'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            await db.query(`CREATE TABLE users (
+              id VARCHAR(36) PRIMARY KEY
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`)
+            await db.query(`CREATE TABLE news_posts (
+              id VARCHAR(36) PRIMARY KEY,
+              title VARCHAR(255) NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`)
+            await db.query("INSERT INTO users(id) VALUES ('00000000-0000-4000-8000-000000000001')")
+            await db.query("INSERT INTO news_posts(id,title) VALUES ('00000000-0000-4000-8000-000000000002','legacy_keep')")
+          } finally { await db.end() }
+          JS
+      - name: Diagnose base ID schema contract without secrets
+        run: |
+          node --input-type=module <<'JS'
+          import mysql from 'mysql2/promise'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            const [rows] = await db.query(`SELECT t.table_name AS tableName,t.engine,
+              c.data_type AS dataType,c.character_maximum_length AS maxLength,
+              c.is_nullable AS nullableFlag,c.character_set_name AS characterSet,
+              c.collation_name AS collationName
+              FROM information_schema.tables t JOIN information_schema.columns c
+              ON c.table_schema=t.table_schema AND c.table_name=t.table_name AND c.column_name='id'
+              WHERE t.table_schema=DATABASE() AND t.table_name IN ('news_posts','users')`)
+            console.log('BASE_ID_SCHEMA_METADATA', JSON.stringify(rows))
+          } finally { await db.end() }
+          JS
+      - name: Run migration first time
+        run: npm run db:upgrade:news-v2
+      - name: Run migration second time - must be idempotent
+        run: npm run db:upgrade:news-v2
+      - name: Compile contract for independent verification
+        run: npm run build
+      - name: Validate all seven tables and existing data survive
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          import { inspectNewsV2Schema, validateNewsV2SchemaSnapshot } from './dist/db/news-v2-schema-contract.js'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            const snapshot = await inspectNewsV2Schema(db)
+            const issues = validateNewsV2SchemaSnapshot(snapshot)
+            assert.deepEqual(issues, [], 'News V2 columns, indexes and FKs must match contract')
+            assert.equal(snapshot.tables.length, 7)
+            const [rows] = await db.query("SELECT title FROM news_posts WHERE id='00000000-0000-4000-8000-000000000002'")
+            assert.equal(rows.length, 1)
+            assert.equal(rows[0].title, 'legacy_keep')
+            const [users] = await db.query("SELECT id FROM users WHERE id='00000000-0000-4000-8000-000000000001'")
+            assert.equal(users.length, 1)
+            const userId='00000000-0000-4000-8000-000000000001'
+            const postId='00000000-0000-4000-8000-000000000002'
+            const batchId='00000000-0000-4000-8000-000000000003'
+            const taskId='00000000-0000-4000-8000-000000000004'
+            const auditId='00000000-0000-4000-8000-000000000005'
+            await db.query("INSERT INTO news_display_states(post_id,phase) VALUES (?,'normal')",[postId])
+            await db.query("INSERT INTO news_favorites(user_id,post_id,original_url,title) VALUES (?,?,'https://mp.weixin.qq.com/s/test','legacy_keep')",[userId,postId])
+            await db.query("INSERT INTO news_retirement_batches(id,entered_json,affected_json) VALUES (?,JSON_ARRAY(),JSON_ARRAY())",[batchId])
+            await db.query("INSERT INTO news_retirement_tasks(id,batch_id,post_id,state,updated_by) VALUES (?,?,?,'todo',?)",[taskId,batchId,postId,userId])
+            await db.query("INSERT INTO news_retirement_reads(batch_id,user_id) VALUES (?,?)",[batchId,userId])
+            await db.query("INSERT INTO news_task_audit(id,task_id,actor_id,from_state,to_state) VALUES (?,?,?,'todo','acknowledged')",[auditId,taskId,userId])
+            await db.query("INSERT INTO news_sync_runs(id,status,fetched) VALUES ('00000000-0000-4000-8000-000000000006','checked',1)")
+            const [favorites] = await db.query('SELECT title FROM news_favorites WHERE user_id=? AND post_id=?',[userId,postId])
+            assert.equal(favorites[0]?.title,'legacy_keep')
+            const [tasks] = await db.query('SELECT state FROM news_retirement_tasks WHERE id=?',[taskId])
+            assert.equal(tasks[0]?.state,'todo')
+            await db.query("UPDATE news_retirement_tasks SET state='acknowledged' WHERE id=?",[taskId])
+            const [after] = await db.query('SELECT state FROM news_retirement_tasks WHERE id=?',[taskId])
+            assert.equal(after[0]?.state,'acknowledged')
+            await assert.rejects(
+              db.query("INSERT INTO news_favorites(user_id,post_id,original_url,title) VALUES ('00000000-0000-4000-8000-999999999999',?,'https://mp.weixin.qq.com/s/test','invalid')",[postId]),
+              error => error.code==='ER_NO_REFERENCED_ROW_2',
+              'favorites must reject nonexistent users'
+            )
+            await assert.rejects(
+              db.query("INSERT INTO news_retirement_tasks(id,batch_id,post_id) VALUES ('00000000-0000-4000-8000-000000000007',?,?)",['00000000-0000-4000-8000-999999999999',postId]),
+              error => error.code==='ER_NO_REFERENCED_ROW_2',
+              'tasks must reject nonexistent retirement batches'
+            )
+            console.log('NEWS_V2_REAL_MYSQL_RELATIONS_PASS: favorites, tasks, reads, audit, transitions, sync rows and FK negatives')
+            console.log('NEWS_V2_REAL_MYSQL_GATE_PASS: twice migrated; schema contract and legacy rows preserved')
+          } finally { await db.end() }
+          JS
+      - name: Backup and restore the disposable seven-table fixture
+        run: |
+          # Synthetic CI database only; no production URL or dataset.
+          export MYSQL_PWD=local_test_only
+          mysqldump -h127.0.0.1 -uroot --single-transaction --set-gtid-purged=OFF --no-tablespaces jiuchen_news_v2_ci > "$RUNNER_TEMP/news-v2-backup.sql"
+          mysql -h127.0.0.1 -uroot -e 'CREATE DATABASE jiuchen_news_v2_restore_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+          mysql -h127.0.0.1 -uroot jiuchen_news_v2_restore_ci < "$RUNNER_TEMP/news-v2-backup.sql"
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          import {inspectNewsV2Schema,validateNewsV2SchemaSnapshot} from './dist/db/news-v2-schema-contract.js'
+          const source=await mysql.createConnection(process.env.DATABASE_URL)
+          const restored=await mysql.createConnection('mysql://root:local_test_only@127.0.0.1:3306/jiuchen_news_v2_restore_ci')
+          const order={users:'id',news_posts:'id',news_display_states:'post_id',news_favorites:'user_id,post_id',news_retirement_batches:'id',news_retirement_tasks:'id',news_retirement_reads:'batch_id,user_id',news_task_audit:'id',news_sync_runs:'id'}
+          try {
+            assert.deepEqual(validateNewsV2SchemaSnapshot(await inspectNewsV2Schema(restored)),[])
+            for(const [table,pk] of Object.entries(order)){
+              const [before]=await source.query(`SELECT * FROM ${table} ORDER BY ${pk}`)
+              const [after]=await restored.query(`SELECT * FROM ${table} ORDER BY ${pk}`)
+              assert.deepEqual(after,before,table+' restored schema/data must match')
+            }
+            console.log('DISPOSABLE_NEWS_BACKUP_RESTORE_PASS (not production backup or structure replica)')
+          } finally {await source.end();await restored.end()}
+          JS

@@ -1,4 +1,5 @@
 import Fastify from 'fastify'
+import {registerReadOnlyWriteGuard} from './services/read-only-context.js'
 import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -12,6 +13,7 @@ import { registerTeacherRoutes } from './routes/teacher.js'
 import { registerIdentityRoutes } from './routes/identity.js'
 import { registerMobileAdminRoutes } from './routes/mobile-admin.js'
 import { registerNewsRoutes } from './routes/news.js'
+import { registerNewsV2Routes } from './routes/news-v2.js'
 import { registerAssessmentRoutes } from './routes/assessments.js'
 import { registerProductRoutes } from './routes/products.js'
 import { registerBrandRoutes } from './routes/brand.js'
@@ -38,6 +40,7 @@ export function buildApp(env: AppEnv) {
   })
 
   const database = createDatabaseContext(env)
+  registerReadOnlyWriteGuard(app)
   const assessmentRuntime = createAssessmentRuntimeFromEnv(env)
   const assessmentImport = createAssessmentImportService(env)
   const scheduleAI = createScheduleAIProvider(env)
@@ -214,7 +217,8 @@ export function buildApp(env: AppEnv) {
   registerIdentityRoutes(app, database)
   registerTeacherRoutes(app, database)
   registerMobileAdminRoutes(app, database, env)
-  registerNewsRoutes(app, database)
+  registerNewsRoutes(app, database, env)
+  if (env.NEWS_V2_ENABLED) registerNewsV2Routes(app, database)
   registerAssessmentRoutes(
     app,
     database,

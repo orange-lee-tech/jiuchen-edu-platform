@@ -3,6 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import type { FastifyRequest } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
 import { internalIds, userSessions, users } from '../db/schema.js'
+import {applyReadOnlyContext,getReadOnlyCapability} from './read-only-context.js'
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
@@ -45,6 +46,8 @@ export async function resolveSessionUser(
 
   const token = readBearerToken(request)
   if (!token) return null
+  const capability=token.startsWith('ro.')?getReadOnlyCapability(token):null
+  if(token.startsWith('ro.')&&!capability)return null
 
   const [row] = await database.db
     .select({
@@ -61,7 +64,7 @@ export async function resolveSessionUser(
     .leftJoin(internalIds, eq(internalIds.userId, users.id))
     .where(
       and(
-        eq(userSessions.tokenHash, hashToken(token)),
+        capability?eq(userSessions.id,capability.operatorSessionId):eq(userSessions.tokenHash, hashToken(token)),
         isNull(userSessions.revokedAt),
         eq(users.status, 'active'),
       ),
@@ -72,7 +75,8 @@ export async function resolveSessionUser(
     return null
   }
 
-  return row
+  if(capability&&row.userId!==capability.operatorUserId)return null
+  return applyReadOnlyContext(request,database,row,capability?.target)
 }
 
 export async function revokeCurrentSession(

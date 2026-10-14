@@ -13,18 +13,10 @@ if (!database.configured) {
 try {
   const result = await syncOfficialAccountPosts(database, env)
   console.log(
-    `✓ official account sync complete: total=${result.total}, created=${result.created}, updated=${result.updated}`,
+    `${result.failed || result.truncated ? 'PARTIAL' : 'CHECKED'} official account sync: total=${result.total}, created=${result.created}, updated=${result.updated}, unchanged=${result.unchanged}, failed=${result.failed}, truncated=${result.truncated}`,
   )
 
-  for (const post of result.posts.slice(0, 10)) {
-    console.log(
-      [
-        post.publishedAt?.toISOString() ?? '-',
-        post.title,
-        post.articleUrl ?? '-',
-      ].join('\t'),
-    )
-  }
+  if(result.failed||result.truncated)process.exitCode=2
 } finally {
   await database.pool.end()
 }

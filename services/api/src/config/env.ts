@@ -46,6 +46,7 @@ const envSchema = z.object({
   WECHAT_APP_SECRET: optionalNonEmptyString,
   WECHAT_OA_APP_ID: optionalNonEmptyString,
   WECHAT_OA_APP_SECRET: optionalNonEmptyString,
+  NEWS_V2_ENABLED: optionalBoolean,
   WECHAT_PAY_MCH_ID: optionalNonEmptyString,
   WECHAT_PAY_API_V3_KEY: optionalNonEmptyString,
   WECHAT_PAY_MERCHANT_SERIAL_NO: optionalNonEmptyString,

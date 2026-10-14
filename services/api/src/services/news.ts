@@ -7,6 +7,7 @@ import {
   scanOfficialAccountPosts,
   type OfficialAccountPost,
 } from './official-account.js'
+import { recordNewsSync, reconcileNewsWindow, withNewsLock } from './news-v2-store.js'
 
 export type NewsPostContent = {
   html: string | null
@@ -14,7 +15,8 @@ export type NewsPostContent = {
   contentSourceUrl: string | null
   sourceUpdatedAt: string | null
   sourceCreatedAt: string | null
-  publicationTimeSource: 'explicit_publish_time' | 'unverified'
+  publicationTimeSource: 'explicit_publish_time' | 'admin_verified_publish_record' | 'unverified'
+  mediaType?: 'article' | 'video'
 }
 
 export function normalizeNewsTags(value: unknown) {
@@ -38,9 +40,11 @@ export function normalizeNewsContent(value: unknown): NewsPostContent {
 
   const record = value as Record<string, unknown>
   return {
+    mediaType:record.mediaType==='video'?'video':'article',
     sourceUpdatedAt: typeof record.sourceUpdatedAt==='string'?record.sourceUpdatedAt:null,
     sourceCreatedAt: typeof record.sourceCreatedAt==='string'?record.sourceCreatedAt:null,
-    publicationTimeSource: record.publicationTimeSource==='explicit_publish_time'?'explicit_publish_time':'unverified',
+    publicationTimeSource: record.publicationTimeSource==='explicit_publish_time'?'explicit_publish_time':
+      record.publicationTimeSource==='admin_verified_publish_record'?'admin_verified_publish_record':'unverified',
     html: typeof record.html === 'string' && record.html.trim()
       ? record.html
       : null,
@@ -85,15 +89,28 @@ export async function upsertOfficialAccountPosts(
 }
 
 export async function syncOfficialAccountPosts(database:DatabaseContext&{configured:true},env:AppEnv){
-  const scan=await scanOfficialAccountPosts(env)
-  const result=await upsertOfficialAccountPosts(database,scan.posts)
-  return {...result,...scan,message:result.failed?'部分文章同步失败':result.created===0?'已检查，暂无新文章':'同步检查完成'}
+  return withNewsLock(database.pool,async connection=>{
+    try{
+      const scan=await scanOfficialAccountPosts(env)
+      const result=await upsertOfficialAccountPosts(database,scan.posts)
+      let window=null
+      const incomplete=Boolean(result.failed || scan.truncated)
+      if(env.NEWS_V2_ENABLED&&!incomplete)window=await reconcileNewsWindow(connection)
+      if(env.NEWS_V2_ENABLED)await recordNewsSync(database.pool,{status:incomplete?'partial':'checked',fetched:result.total,created:result.created,updated:result.updated,failed:result.failed,
+        latestSourceTime:scan.latestSourceUpdatedAt,errorCode:incomplete?'news_sync_incomplete':null})
+      return {...result,...scan,window,message:incomplete?'检查未完整，已保留原展示窗口':result.created===0?'已检查，暂无新文章':'同步检查完成'}
+    }catch(error){
+      if(env.NEWS_V2_ENABLED)try{await recordNewsSync(database.pool,{status:'failed',fetched:0,created:0,updated:0,failed:1,latestSourceTime:null,errorCode:'official_source_or_storage_failed'})}catch{}
+      throw error
+    }
+  })
 }
 
 /** Legacy timestamps were populated from update_time, so do not label them as publication time. */
 export function newsTimeView(row:{source:string;publishedAt:Date|null;contentJson?:unknown}){
   const content=normalizeNewsContent(row.contentJson)
-  const verified=row.source==='manual'||content.publicationTimeSource==='explicit_publish_time'
+  const verified=row.source==='manual'||content.publicationTimeSource==='explicit_publish_time'||
+    content.publicationTimeSource==='admin_verified_publish_record'
   return {publishedAt:verified?row.publishedAt:null,sourceUpdatedAt:content.sourceUpdatedAt??(!verified?row.publishedAt?.toISOString()??null:null),
     publicationTimeSource:row.source==='manual'?'manual':content.publicationTimeSource}
 }
@@ -143,6 +160,7 @@ export async function listActiveNewsPosts(
   return rows.map((row) => ({
     ...row,
     ...newsTimeView(row),
+    mediaType:normalizeNewsContent(row.contentJson).mediaType,
     contentJson: undefined, tagsJson: undefined,
     tags: normalizeNewsTags(row.tagsJson),
   }))

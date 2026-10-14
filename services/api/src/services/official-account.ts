@@ -113,6 +113,7 @@ export type OfficialAccountPost = {
     sourceUpdatedAt: string | null
     sourceCreatedAt: string | null
     publicationTimeSource: 'explicit_publish_time' | 'unverified'
+    mediaType?: 'article' | 'video'
   }
 }
 
@@ -120,6 +121,8 @@ export type OfficialAccountScan = {
   posts: OfficialAccountPost[]; checkedAt: string; groupsFetched: number;
   totalGroups: number | null; truncated: boolean; maxGroups: number;
   latestSourcePublishedAt: string | null; latestSourceUpdatedAt: string | null;
+  pagesFetched: number; uniqueGroups: number;
+  latestArticles: Array<{title:string;articleUrl:string|null;sourceUpdatedAt:string|null;publishedAt:string|null}>;
 }
 function sourceDate(value: number | undefined): Date | null {
   if(!value || !Number.isFinite(value) || value<=0)return null
@@ -133,6 +136,8 @@ export async function scanOfficialAccountPosts(env: AppEnv, maxGroups=200): Prom
   url.searchParams.set('access_token',token)
   const posts:OfficialAccountPost[]=[]
   const seen=new Set<string>()
+  const seenGroups=new Set<string>()
+  let pagesFetched=0
   let contentBytes=0
   let groupsFetched=0,totalGroups:number|null=null,finished=false
   while(groupsFetched<maxGroups){
@@ -142,9 +147,12 @@ export async function scanOfficialAccountPosts(env: AppEnv, maxGroups=200): Prom
     const payload=await response.json() as BatchGetResponse
     if(!response.ok||payload.errcode)throw new Error(payload.errcode?'official_account_publish_'+payload.errcode:'official_account_publish_failed')
     if(!Array.isArray(payload.item))throw new Error('official_account_invalid_publish_response')
+    pagesFetched++
     if(typeof payload.total_count==='number')totalGroups=payload.total_count
     for(const item of payload.item){
       if(!item.article_id)throw new Error('official_account_missing_article_id')
+      if(seenGroups.has(item.article_id))throw new Error('official_account_pagination_duplicate_group')
+      seenGroups.add(item.article_id)
       // Only an explicit publication timestamp is treated as publication time.
       // update_time/create_time are kept separately, never silently relabeled.
       const publishedAt=sourceDate(item.publish_time??item.content?.publish_time)
@@ -162,6 +170,7 @@ export async function scanOfficialAccountPosts(env: AppEnv, maxGroups=200): Prom
           coverUrl:normalizeRemoteUrl(article.thumb_url),articleUrl:normalizeRemoteUrl(article.url),publishedAt,
           content:{html:normalizePublishedHtml(article.content),author:article.author?.trim()||null,
             contentSourceUrl:normalizeRemoteUrl(article.content_source_url),sourceUpdatedAt,sourceCreatedAt,
+            mediaType:/<video\b|<iframe\b[^>]*(?:video|vid=)|video_iframe/i.test(article.content||'')?'video':'article',
             publicationTimeSource:publishedAt?'explicit_publish_time':'unverified'}})
       })
     }
@@ -176,7 +185,10 @@ export async function scanOfficialAccountPosts(env: AppEnv, maxGroups=200): Prom
     }
   }
   const latest=(values:Array<string|null>)=>values.filter((v):v is string=>Boolean(v)).sort().at(-1)??null
-  return {posts,checkedAt:new Date().toISOString(),groupsFetched,totalGroups,maxGroups,truncated:!finished,
+  const latestArticles=[...posts].sort((a,b)=>(b.publishedAt?.toISOString()||b.content.sourceUpdatedAt||'')
+    .localeCompare(a.publishedAt?.toISOString()||a.content.sourceUpdatedAt||''))
+    .slice(0,3).map(post=>({title:post.title,articleUrl:post.articleUrl,sourceUpdatedAt:post.content.sourceUpdatedAt,publishedAt:post.publishedAt?.toISOString()||null}))
+  return {posts,checkedAt:new Date().toISOString(),groupsFetched,totalGroups,maxGroups,truncated:!finished,pagesFetched,uniqueGroups:seenGroups.size,latestArticles,
     latestSourcePublishedAt:latest(posts.map(p=>p.publishedAt?.toISOString()??null)),
     latestSourceUpdatedAt:latest(posts.map(p=>p.content.sourceUpdatedAt))}
 }
