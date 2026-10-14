@@ -118,7 +118,7 @@ test('verified official fallback is admin-only, URL restricted and idempotent wi
   assert.equal(student.getCalls(),0)
   await student.app.close()
 
-  const writes:Array<{sql:string;params:unknown[]}=[]
+  const writes:Array<{sql:string;params:unknown[]}>=[]
   const state:{stored:{id:string;articleUrl:string;sourceKey:string}|null}={stored:null}
   const connection={
     async beginTransaction(){},async commit(){},async rollback(){},release(){},destroy(){},
