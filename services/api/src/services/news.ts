@@ -15,7 +15,7 @@ export type NewsPostContent = {
   contentSourceUrl: string | null
   sourceUpdatedAt: string | null
   sourceCreatedAt: string | null
-  publicationTimeSource: 'explicit_publish_time' | 'unverified'
+  publicationTimeSource: 'explicit_publish_time' | 'admin_verified_publish_record' | 'unverified'
   mediaType?: 'article' | 'video'
 }
 
@@ -43,7 +43,8 @@ export function normalizeNewsContent(value: unknown): NewsPostContent {
     mediaType:record.mediaType==='video'?'video':'article',
     sourceUpdatedAt: typeof record.sourceUpdatedAt==='string'?record.sourceUpdatedAt:null,
     sourceCreatedAt: typeof record.sourceCreatedAt==='string'?record.sourceCreatedAt:null,
-    publicationTimeSource: record.publicationTimeSource==='explicit_publish_time'?'explicit_publish_time':'unverified',
+    publicationTimeSource: record.publicationTimeSource==='explicit_publish_time'?'explicit_publish_time':
+      record.publicationTimeSource==='admin_verified_publish_record'?'admin_verified_publish_record':'unverified',
     html: typeof record.html === 'string' && record.html.trim()
       ? record.html
       : null,
@@ -108,7 +109,8 @@ export async function syncOfficialAccountPosts(database:DatabaseContext&{configu
 /** Legacy timestamps were populated from update_time, so do not label them as publication time. */
 export function newsTimeView(row:{source:string;publishedAt:Date|null;contentJson?:unknown}){
   const content=normalizeNewsContent(row.contentJson)
-  const verified=row.source==='manual'||content.publicationTimeSource==='explicit_publish_time'
+  const verified=row.source==='manual'||content.publicationTimeSource==='explicit_publish_time'||
+    content.publicationTimeSource==='admin_verified_publish_record'
   return {publishedAt:verified?row.publishedAt:null,sourceUpdatedAt:content.sourceUpdatedAt??(!verified?row.publishedAt?.toISOString()??null:null),
     publicationTimeSource:row.source==='manual'?'manual':content.publicationTimeSource}
 }
