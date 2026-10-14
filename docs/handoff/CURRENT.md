@@ -1,8 +1,8 @@
-# CURRENT — 九辰教育唯一活跃主控交接（2026-10-12 晚）
+# CURRENT — 九辰教育唯一活跃主控交接（2026-10-14 隔离候选收口）
 
 > **这是唯一当前施工入口。** 历史原文已无损归档至 [archive/CURRENT-pre-cleanup-2026-10-12.md](archive/CURRENT-pre-cleanup-2026-10-12.md)。旧交接里的 SHA、日期、未完成清单、阶段禁令与部署描述**不是当前事实或当前授权**；不要再往本文顶部堆积“覆盖说明”。每轮只修订相应表格和 Gate，保留 Git 历史即可。
 >
-> **证据边界**：生产现状为 2026-10-12 已收到的只读 ECS 回执及用户真机确认；不等于本文件写入时重新连接 ECS。GitHub 集成分支已提交的代码不等于 ECS 已部署。Work/Codex 须重新读取 HEAD、CI、生产 active release，禁止根据下列历史 SHA 强行切流。
+> **证据边界**：最新生产active由10月14日用户ECS readlink核实，健康检查127.0.0.1:3100拒绝连接，实际监听待核对；不等于本机重新SSH。GitHub源码不等于部署。当前隔离候选与计费阻断见下表；历史绿灯不代表本候选CI通过。
 
 > **成本审计入口（2026-10-13）**：[ECS + CloudBase + OCR + 百炼经济账与防超支审计](../finance/cloud-cost-audit-2026-10-13.md)。ECS 实际付费及续费金额仍待阿里云订单证据；本文不授权采购、计费开关或生产改动。
 
@@ -21,14 +21,14 @@
 
 | 项目 | 最新可靠证据 | 状态 |
 | --- | --- | --- |
-| 生产 API | 10-13 用户 ECS 实测：Release A `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48` 已 `PROMOTE_OK`，`current` / `approved-release` 均指向该版；`previous-release` 为 `b150d2c5c8720aac8d48fbd0395d8db9c408bc63`；`/health/live` HTTP 200、`/health` database=ok；API ActiveState=active、NRestarts=0，MemoryCurrent=68567040 / MemoryMax=268435456；仍待业务验收 | OBSERVED（不是最新 Git HEAD） |
+| 生产 API | 10-14用户readlink：active `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`、previous `b150d2c5c8720aac8d48fbd0395d8db9c408bc63`；API active/NRestarts0/MemoryCurrent85008384/MemoryMax268435456/CPUQuota500ms/TasksMax64；**127.0.0.1:3100两健康端点连接被拒绝**，旧200不是本轮事实 | ACTIVE SHA OBSERVED / HEALTH BLOCKED：待实际监听 |
 | 课表 | 导入、第一周周一保存、`大四上 → 本周课表` 手机实测 | **DEVICE PASS** |
 | AI 评估 | 用户明确确认草稿→真实运行→结果持久化→历史重开完整链路 | **DEVICE PASS** |
 | 院校图片 | 172 所 WebP 在真机正确显示（用户确认） | **DEVICE PASS** |
 | 客服基础链路 | 已有企业微信人工客服联通；新增上下文复制另验 | BASELINE PASS |
 | 生产评估样本 | 只读 SQL：成功9、失败5、草稿1；9个成功均有 `completed_at` | OBSERVED |
 | 生产账号 | `internal_ids` 32个；存在未认领、已认领未分配和管理员样本，其他角色样本不足 | OBSERVED |
-| 资讯来源 | 微信 `freepublish/batchget` 只读取得40组，无截断；来源更新时间有值但不等于已证实的发表时间 | OBSERVED |
+| 资讯来源 | 10-14同AppID4880db：后台目标10月12日已发表，freepublish两页40组41篇无目标、41篇均入库；首缺口在该官方来源视图之前，不重复抓取、不归因于标签/窗口 | SOURCE GAP CONFIRMED / AUTO_SYNC NOT ACCEPTED |
 | 支付统计 | 生产 `payment_orders`、`credit_ledger_entries`、`credit_reservations` 均缺表 | SOURCE UNAVAILABLE（绝非0） |
 
 依据：[真实数据审计](real-data-audit-2026-10-12.md)、[本轮 Closeout](real-data-closeout-2026-10-12.md)。更早的生产 SHA / bug 日志在历史归档，不再作为现役指令。
@@ -38,7 +38,7 @@
 | 模块 | GitHub / 测试状态 | 生产与验收状态 | 下一动作 |
 | --- | --- | --- | --- |
 | P1 微信体验版 RC | `22f3889` 旧接口兼容及回归；[CI 38357710899](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38357710899) PASS | **CODE/TEST READY FOR UPLOAD；DEVICE PENDING；全功能交付 BLOCKED**（Profile 缺列） | 本人上传体验版后按统一清单验收；Profile 生产 Schema 另案审批 |
-| P1 10-14截图收口（现行候选） | 业务源码`a1541a1`（API`cc918fd`）；API208/208、小程序94/94、typecheck/build PASS；[CI38490779604](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38490779604)、News/Profile MySQL PASS | **CODE/CI PASS / 本批PROD NOT DEPLOYED / DEVICE PENDING / 发布候选BLOCKED**；原四栏不变、恢复五种导出、原生只读上下文、未认领种子隔离、30＋72 | 按[逐项矩阵](p1-acceptance-matrix-2026-10-14.md)与[精确交付/审批/回滚材料](p1-final-experience-closeout-2026-10-13.md)执行；同账号后台已发表但freepublish完整41篇缺目标；补录候选本地API209/209通过，AI优势门槛`dff3c9c`本地API211/211通过（typecheck/build此前通过），元数据断言修复`1d72b01`；GitHub CI/两项MySQL Gate失败且job steps为空；两项均未发布，禁止全集成切流 |
+| P1 当前隔离候选 | 来源集成`35f61d7`；从生产8cc4隔离为`eda525c1a2276af90668849b669e9bce19a4fd7d`、[Draft PR#3](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/3)；候选typecheck/build、215/215 PASS，mini typecheck/95 PASS；无DB冒烟PASS但WindowsRSS超256MiB；同SHA三个Actions失败且steps=null，**账号付款/Actions额度拦截** | **REVIEW ARTIFACT READY / LOCAL PASS / CI BLOCKED / PROD NOT DEPLOYED / DEVICE PENDING**；固定归档已有，不等于可promote。结构/恢复、实际健康、ECS资源仍BLOCKED | [固定SHA/归档/精确审批恢复](p1-isolated-release-review-2026-10-14.md)、[统一真机清单](p1-unified-device-acceptance-2026-10-14.md)、[计费/来源证据](p1-final-ci-and-source-evidence-2026-10-14.md)。只收一次billing解除及ECS只读三脚本回执；不更换qwen3.8-flash，不整树切流 |
 | Profile `enrollment_year` | 单列幂等升级脚本；隔离 MySQL 双次迁移 PASS | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 针对生产的备份+隔离恢复验证+精确DDL审批；不影响其他独立开发 |
 | 资讯同步分页/真实回执/标签公开控制 | `fbf7fda` + `ab6843b`；短页 fail-closed、可信源时间排序；本地通过 | **API DEPLOYED 2026-10-13 / DEVICE & DATA PENDING** | 等新版首次 timer 同步日志与真实后台、学员资讯数据验收；不可因旧日志 total=21 冒称新版验收 |
 | AI 评估后台统计解耦 | 已提交 `9bda1b5`；真实9条成功记录 | **API DEPLOYED / DATA ACCEPTANCE PENDING**；支付数据源缺表 | 核查管理员真实周/月/年评估统计，支付仍显示来源不可用 |

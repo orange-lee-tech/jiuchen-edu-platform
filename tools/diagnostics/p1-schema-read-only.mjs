@@ -7,9 +7,9 @@ let connection
 try{
  const env=process.env
  if(!env.DATABASE_URL&&!(env.DB_HOST&&env.DB_USER&&env.DB_NAME))throw Object.assign(new Error(),{code:'DATABASE_NOT_CONFIGURED'})
- connection=await mysql.createConnection(env.DATABASE_URL?{uri:env.DATABASE_URL,connectTimeout:10000}:{host:env.DB_HOST,port:Number(env.DB_PORT||3306),user:env.DB_USER,password:env.DB_PASSWORD,database:env.DB_NAME,connectTimeout:10000})
+ connection=await mysql.createConnection(env.DATABASE_URL?{uri:env.DATABASE_URL,connectTimeout:10000,dateStrings:true}:{host:env.DB_HOST,port:Number(env.DB_PORT||3306),user:env.DB_USER,password:env.DB_PASSWORD,database:env.DB_NAME,connectTimeout:10000,dateStrings:true})
  await connection.query('START TRANSACTION READ ONLY')
- const [runtime]=await connection.query('SELECT VERSION() AS mysqlVersion,@@session.time_zone AS sessionTimezone')
+ const [runtime]=await connection.query('SELECT VERSION() AS mysqlVersion,@@session.time_zone AS sessionTimezone,@@system_time_zone AS systemTimezone,NOW() AS sessionNow,UTC_TIMESTAMP() AS utcNow')
  const [columns]=await connection.query('SELECT TABLE_NAME AS tableName,COLUMN_NAME AS columnName,COLUMN_TYPE AS columnType,IS_NULLABLE AS nullable,COLLATION_NAME AS collation FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name IN (?) ORDER BY table_name,ordinal_position',[tables])
  const present=new Set(columns.map(row=>row.tableName)),ddl=[]
  for(const table of tables)if(present.has(table)){

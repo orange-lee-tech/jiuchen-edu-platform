@@ -22,8 +22,8 @@ const files=rows.map(row=>{
  return {path:name,blob:match[2],mode:match[1]}
 })
 mkdirSync(out,{recursive:true})
-const archive=join(out,'jiuchen-api-'+sha+'.tar.gz')
-git('archive','--format=tar.gz','--output='+archive,sha,'--',...paths)
+const archive=join(out,'jiuchen-api-'+sha+'-readonly.tar.gz')
+git('-c','tar.umask=0022','archive','--format=tar.gz','--output='+archive,sha,'--',...paths)
 const compressed=readFileSync(archive),tar=gunzipSync(compressed,{maxOutputLength:64*1024*1024})
 const expected=new Set(files.map(file=>file.path)),found=new Set()
 for(let offset=0;offset+512<=tar.length;){
@@ -31,8 +31,10 @@ for(let offset=0;offset+512<=tar.length;){
  const str=(a,b)=>header.subarray(a,b).toString().replace(/\0.*$/s,'')
  const name=[str(345,500),str(0,100)].filter(Boolean).join('/'),kind=str(156,157)
  const size=parseInt(str(124,136).trim()||'0',8)
+ const mode=parseInt(str(100,108).trim()||'0',8)
  if(!Number.isSafeInteger(size)||size<0||offset+512+size>tar.length)throw new Error('invalid_tar_size')
  if(name.startsWith('/')||/^[A-Za-z]:|\\/.test(name)||name.split('/').includes('..'))throw new Error('unsafe_tar_path')
+ if(['0','','5'].includes(kind)&&(mode&0o022))throw new Error('group_or_world_writable_archive_entry')
  if(kind==='0'||kind===''){
   if(!expected.has(name)||found.has(name))throw new Error('unexpected_or_duplicate_archive_file')
   found.add(name)

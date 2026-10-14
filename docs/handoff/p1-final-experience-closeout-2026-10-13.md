@@ -2,6 +2,8 @@
 
 ## 真实版本与范围
 
+**当前发布入口已推进到隔离候选**：本轮实际集成HEAD35f61d7；生产源8cc4已由最新ECS回执核实；候选`eda525c1a2276af90668849b669e9bce19a4fd7d`、归档/校验/清单和Draft PR#3已经生成。本地候选215/215、typecheck/build通过；CI付款/额度拒绝启动，实际监听/健康、结构恢复、ECS资源及真机仍BLOCKED/PENDING。执行只看[本轮精确发布审查](p1-isolated-release-review-2026-10-14.md)与[统一真机清单](p1-unified-device-acceptance-2026-10-14.md)，下方初始18eb311及a1541a1结果为前一批历史，不作为现候选版本。前一批“没有候选/归档”已过期；本轮不改历史报告、不切流、不DDL。
+
 - 初始／同步基线：`18eb311b78ced1d1b69e5fa23360f31ce2bf937f`；安全pull已执行，Already up to date。
 - 最终业务源码：`a1541a118b69728979258d479162ddcaddbad649`；API源码验证点为`cc918fd65785f77d176610054812b10559b7f3c7`，其后API无改动。后续交接／诊断提交不是另一份业务构建。
 - 生产已知active：`8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`；rollback：`b150d2c5c8720aac8d48fbd0395d8db9c408bc63`，依据用户10月13日回执，非本轮实时SSH核查。Release A已生产，用户报告ECS治理完成，本轮未执行或重新审计治理。
