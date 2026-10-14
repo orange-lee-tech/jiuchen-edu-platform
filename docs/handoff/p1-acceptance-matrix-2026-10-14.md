@@ -16,7 +16,7 @@
 | R02 | 四栏冻结 | 学员首页／规划／机会／我的；教师管理员原四栏 | app.json/tabBar无改动 | 四栏／旧路由回归PASS | 无导航扩容 | 待验 |
 | R03 | 双重只读 | 所有写入、审核、支付、AI运行、OCR导入服务端403；无越权读取 | 短期固定目标只读凭证＋全局写入拒绝 | 写入／越权／撤权负例PASS | API待发布 | 待验 |
 | R04 | 我的退出 | 客服下方退出只读查看，返回原工作台，清空目标上下文 | 已实现 | 退出／迟到响应PASS | 小程序待发布 | 待验 |
-| A01 | 图5：优势空与其他分析冲突 | 核对保存output到页面／各导出字段；不从风险编造优势 | 核心结论补齐；空strengths不推断无优势；历史模型原因未解决 | 映射回归PASS | 历史样本离线核验PARKED，不改Runtime | 待验 |
+| A01 | 图5：优势空与其他分析冲突，核心业务缺陷 | 脱敏核对生产成功记录的输入信号、保存strengths与证据数量；再查原始生成／修复／过滤环节，不从风险编造优势 | 报告映射已修；Schema与提示允许空优势、证据过滤可删条目；新增只读聚合诊断，根因待样本 | 映射回归PASS；语义质量尚无回归 | P0 DATA PENDING：ECS只读回执；运行时修复需先定根因并单独验收 | 待验 |
 | A02 | 图5：编号孤立行 | 对应论据旁“参考案例JCC…”内联展开来源；无关联隐藏 | 已实现可靠关联内联引用 | 编号负例PASS | 小程序待发布 | 待验 |
 | E01 | Markdown／Word／PDF／图片 | 同份保存input/output；姓名缺失提示、ID、导出日期 | 五个选项已恢复；PDF为图像型不可选文字 | 全文／OOXML／PDF回归PASS；合成PDF4页渲染检查 | 纯客户端，待微信发布 | 待真实Word分页／文件下载 |
 | E02 | 摘要分享图 | 说明适合转发，仅摘要；完整内容可另导出 | 已命名并解释用途 | 导出回归PASS | 小程序待发布 | 待相册 |
@@ -79,3 +79,16 @@ node --experimental-strip-types --env-file=/etc/jiuchen-api/production.env \
 ## 阶段6最终门槛
 
 业务源码`a1541a118b69728979258d479162ddcaddbad649`的CI `38490779604`、News MySQL `38490779887`、Profile MySQL `38490779609`均PASS。API208/208、typecheck/build通过，小程序typecheck通过；最后增加诊断覆盖负例后全量95/95。普通学生四栏和app.json未改；学堂缺地点显示“地点：暂无”，只读首页不提示可运行AI。资源／备份／生产只读回执／微信真机未验；精确范围、依赖、执行与回滚材料见 [最终交接](p1-final-experience-closeout-2026-10-13.md)。本轮未制作可切流隔离包，发布候选BLOCKED，不伪报READY。
+
+## 10月14日核心质量复核
+
+A01提升为P0数据质量调查。`tools/diagnostics/assessment-strength-read-only.mjs` 从现役库只读最多100条成功评估，仅输出空优势数量、匿名样本键、完成时间、各结构数组数量与输入信号布尔值；不输出姓名、原文、用户ID、模型输出正文。现行 `assessmentOutputSchema` 允许空 `strengths`，系统提示词亦允许空数组，证据引用保守过滤可移除条目；这些是已核实的代码路径，**尚非生产样本根因**。使用该回执定位目标记录后再做最小脱敏离线对照；不自动改历史评估或重复调用付费模型。
+
+在ECS既有授权账户下，复制该诊断文件至 `/opt/jiuchen-api/staging/diagnostics/` 后执行：
+
+```bash
+cd /opt/jiuchen-api/current/services/api
+node --env-file=/etc/jiuchen-api/production.env /opt/jiuchen-api/staging/diagnostics/assessment-strength-read-only.mjs
+```
+
+N03视频目标是标题、封面、摘要及真实服务号视频原链接的跳转；不开发小程序内播放。独立视频样本仅用于验证链接字段与真机打开。
