@@ -40,3 +40,13 @@
 - [下载Artifact](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38893319990/artifacts/12042896920)，有效期至2026-10-17 19:25北京时间；同包manifest.json保留文件清单。可按固定SHA和现有脚本重建。
 - REVIEW_ARTIFACT_READY / FIXED_SOURCE_TEST_PASS / PROD_NOT_DEPLOYED / DEVICE_PENDING。
 - 后继仍包含既有AI quality v3；单文件修复没有改变其独立审批边界。
+
+## 20:12 ECS 实测回执（用户终端）
+- incoming归档本地及ECS SHA256均匹配ae1db0fa1ee8af35881a0f1a09b4d7fd47134a2707e56d25ee2fcc1f2798ddc2；162项manifest及Git blob核验PASS。
+- staging：/opt/jiuchen-api/staging/verify-e5908185b3b460a04a8102b7e2a30b663623ac30-20261016-200602。
+- 默认全局Node24导致最初前提检查退出，无构建。现役独立Node为/opt/jiuchen-api/runtime/node-v22.23.3-linux-x64/bin/node。
+- 首轮临时构建384MiB cgroup/256MiB V8 heap，typecheck堆OOM，exit134；未进入冒烟。改用临时构建512MiB cgroup/384MiB heap，Node22.23.3 typecheck/build PASS，耗时88秒；未放宽生产API限制。215测试沿用本地Runner精确候选结果，未冒称ECS全量测试通过。
+- systemd239 / cgroup v1，短任务退出后unit被回收；事后MemoryMax=infinity不是运行时限额证据。改为同一cgroup内读取memory.limit_in_bytes并强制断言268435456，执行无凭据/无DB、160MiB堆、loopback随机端口冒烟。
+- 用户回执ECS_KERNEL_256M_NO_DB_SMOKE_PASS，Result=success/exit0，4.899秒；内核MemoryPeak72585216 bytes（约69.2MiB），memory.failcnt前后0，under_oom0/oom_kill0。
+- 仅代表256MiB内基础启动/健康请求通过，不代表AI/数据库/真实并发资源验收。实际API仍8cc4，未读取生产环境文件、未迁移、未promote、未改官网或Docker。
+- 下一关：生产备份及隔离恢复、完整相关结构复刻、精确DDL/API（含AI quality v3）范围确认和真机验收。productionBackupRestored保持false。
