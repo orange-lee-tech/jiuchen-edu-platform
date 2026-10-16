@@ -35,12 +35,12 @@
 
 ## 2. 当前模块 Gate（最新）
 
-**2026-10-16 验证恢复**：用户截图确认 Actions 2000分钟耗尽、额外预算$0、应付$0；个人本地 Runner 已注册且 Idle。新增[固定候选本地验证入口](p1-local-runner-recovery-2026-10-16.md)，保持候选 `eda525c1…` 不变；实际三个 Gate 结果 PENDING，旧云端失败记录仍保留。生产操作边界不变。
+**2026-10-16 验证恢复**：用户截图确认 Actions 2000分钟耗尽、额外预算$0、应付$0；个人本地 Runner 已注册且 Idle。新增[固定候选本地验证入口](p1-local-runner-recovery-2026-10-16.md)，保持候选 `eda525c1…` 不变；API typecheck/215测试/build、News临时MySQL、Profile临时MySQL均已有本地PASS；旧小程序快照TS2783仍FAIL，整体workflow非PASS；旧云端失败记录保留。生产操作边界不变。
 
 | 模块 | GitHub / 测试状态 | 生产与验收状态 | 下一动作 |
 | --- | --- | --- | --- |
 | P1 微信体验版 RC | `22f3889` 旧接口兼容及回归；[CI 38357710899](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38357710899) PASS | **CODE/TEST READY FOR UPLOAD；DEVICE PENDING；全功能交付 BLOCKED**（Profile 缺列） | 本人上传体验版后按统一清单验收；Profile 生产 Schema 另案审批 |
-| P1 当前隔离候选 | 来源集成`35f61d7`；从生产8cc4隔离为`eda525c1a2276af90668849b669e9bce19a4fd7d`、[Draft PR#3](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/3)；候选typecheck/build、215/215 PASS，mini typecheck/95 PASS；无DB冒烟PASS但WindowsRSS超256MiB；旧云端三个Actions步骤前失败；10-16截图证实额度耗尽/预算$0；本地Runner首轮已实际执行，小程序快照TS2783 FAIL；API/DB待独立回执 | **REVIEW ARTIFACT READY / SELF-HOSTED CI IN VALIDATION / PROD NOT DEPLOYED / DEVICE PENDING**；固定归档已有，不等于可promote。现役实际健康已通过；生产结构/恢复、候选ECS资源仍BLOCKED | [固定SHA/归档/精确审批恢复](p1-isolated-release-review-2026-10-14.md)、[统一真机清单](p1-unified-device-acceptance-2026-10-14.md)、[计费/来源证据](p1-final-ci-and-source-evidence-2026-10-14.md)。沿用已收10-16三脚本回执，改用本地Runner恢复候选验证；不更换qwen3.8-flash，不整树切流 |
+| P1 当前隔离候选 | 来源集成`35f61d7`；从生产8cc4隔离为`eda525c1a2276af90668849b669e9bce19a4fd7d`、[Draft PR#3](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/3)；候选历史本机typecheck/build、215/215 PASS及mini历史回执；最新Linux复验以本行后述结果为准；无DB冒烟PASS但WindowsRSS超256MiB；旧云端三个Actions步骤前失败；10-16截图证实额度耗尽/预算$0；本地Runner实跑：API typecheck/215测试/build PASS；News/Profile临时MySQL（含双次迁移及测试库恢复）PASS；小程序快照TS2783 FAIL | **REVIEW ARTIFACT READY / SELF-HOSTED CI IN VALIDATION / PROD NOT DEPLOYED / DEVICE PENDING**；固定归档已有，不等于可promote。现役实际健康已通过；生产结构/恢复、候选ECS资源仍BLOCKED | [固定SHA/归档/精确审批恢复](p1-isolated-release-review-2026-10-14.md)、[统一真机清单](p1-unified-device-acceptance-2026-10-14.md)、[计费/来源证据](p1-final-ci-and-source-evidence-2026-10-14.md)。沿用已收10-16三脚本回执，改用本地Runner恢复候选验证；不更换qwen3.8-flash，不整树切流 |
 | Profile `enrollment_year` | 单列幂等升级脚本；隔离 MySQL 双次迁移 PASS | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 针对生产的备份+隔离恢复验证+精确DDL审批；不影响其他独立开发 |
 | 资讯同步分页/真实回执/标签公开控制 | `fbf7fda` + `ab6843b`；短页 fail-closed、可信源时间排序；本地通过 | **API DEPLOYED 2026-10-13 / DEVICE & DATA PENDING** | 等新版首次 timer 同步日志与真实后台、学员资讯数据验收；不可因旧日志 total=21 冒称新版验收 |
 | AI 评估后台统计解耦 | 已提交 `9bda1b5`；真实9条成功记录 | **API DEPLOYED / DATA ACCEPTANCE PENDING**；支付数据源缺表 | 核查管理员真实周/月/年评估统计，支付仍显示来源不可用 |

@@ -48,3 +48,12 @@
 - Profile job 116856811046：截至本轮查询queued，尚无结果。
 - 需要用户保持本地Runner/代理在线，并提供Runner控制台近期输出以排查排队/连接；不盲目重跑全套。
 - 旧云端CI/News/Profile仍可能被PR事件触发并在步骤前受额度拦截；本批只新增候选本地入口，未完成日常三工作流全面迁移。不得声称所有未来CI均已本地化。
+
+## 15:21 更新：网络恢复后单项重跑
+- 用户Runner控制台07:07:41Z记录SSL连接失败；07:08:47Z将原News job记为Abandoned。GitHub原News job显示Checkout失败，两种回执均保留。没有关闭TLS校验。
+- 用户所贴计费拦截属于旧云端run 38865463762/job116857152938，labels=[ubuntu-latest]、steps=[]，与本地验证run不同。
+- Profile首次执行job116856811046于07:15:25Z SUCCESS，固定候选SHA校验、双次迁移、旧行/入学年份读写及临时库备份恢复均PASS。
+- 因后续Profile已成功连接并完成，判断网络已经恢复；只请求重跑原News job116855528980，未修改源码或测试要求。平台同时重跑下游Profile，属于依赖重跑行为。
+- News重跑job116860342198于07:21:02Z完成全部断言，job SUCCESS。真实输出：NEWS_V2_REAL_MYSQL_RELATIONS_PASS / NEWS_V2_REAL_MYSQL_GATE_PASS / DISPOSABLE_NEWS_BACKUP_RESTORE_PASS。
+- 因此，固定候选API类型/215测试/构建、News临时MySQL及Profile临时MySQL已有实际PASS证据；旧小程序快照类型检查仍FAIL，整套workflow不能标PASS。
+- 后续需当前前端独立验证或修复后继候选、生产结构复刻与备份恢复、ECS资源验收、精确范围审批；未部署。
