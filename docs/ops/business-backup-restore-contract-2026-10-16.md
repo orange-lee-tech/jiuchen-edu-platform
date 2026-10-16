@@ -1,6 +1,6 @@
 # 甲方管理员本地备份与选择性恢复合同
 
-2026-10-16 用户确认。当前为接口范围与验收合同；脚本尚未交付，未执行备份或恢复。
+2026-10-16 用户确认。工具首批代码已交付，现场备份/恢复尚未验收。
 
 ## 操作与交付
 甲方管理员在其电脑上定期手动执行。无个人Mac、常驻Runner、云付费备份或24小时在线电脑依赖。工具提供备份下载、校验、恢复计划、选择性上传与恢复接口；维护文档和演练随交付补齐。
@@ -36,3 +36,9 @@ ECS无mysql/mysqldump客户端；须确定隔离工具路径。官网入口、NP
 - shared一级目录cases/tmp/previous-release；cases列为保留业务资料，tmp不默认长期备份，previous-release作为版本元数据。
 - ECS已有/usr/bin/openssl，未安装MySQL客户端。下一步核查管理员WSL现有MySQL客户端，评估经SSH隧道在管理员侧执行官方一致性导出；不默认向ECS安装数据库或另起数据库容器。
 - NPM配置数据库类型及一致性导出工具待核；未确定前入口备份不能标complete。当前只完成盘点与合同，下载/恢复脚本仍待实现验证。
+
+## 工具施工回执（本批）
+
+[维护工具与操作说明](../../tools/maintenance/README.md)：已实现doctor、backup、plan、stage、rehearse-db。6项本地合成测试通过，未运行生产备份、MySQL容器或生产覆盖。SQLite工具已确认存在；管理员WSL已确认mysql/mysqldump/openssl存在。
+
+每代含管理员必读及用户资料/密钥分类，所有组件认证加密。stage只上传所选组件至私有隔离目录，不覆盖现役。外部持久对象、网站附属数据及外部配置依赖仍未闭合，fullBusinessCoverage=false；不启用清理旧代。生产选择性覆盖适配尚未完成，不把接口代码通过写成备份模块验收通过。下一次现场动作：doctor→backup --pin→rehearse-db；不重复既有源码Gate或无数据库冒烟。
