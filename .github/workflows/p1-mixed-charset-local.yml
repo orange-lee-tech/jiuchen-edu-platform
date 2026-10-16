@@ -1,0 +1,375 @@
+name: P1 mixed charset migration verification
+run-name: P1 mixed charset patch - local verification
+
+# Push bootstrap works without changing the default branch.
+on:
+  push:
+    branches: [p1/foundation]
+    paths: ['.github/workflows/p1-mixed-charset-local.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p1-mixed-charset-local
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  verify:
+    runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: 449d7472adff884401e375703364384bf0c65034
+          persist-credentials: false
+
+      - name: Apply proposed migration patch in disposable checkout
+        working-directory: .
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path("services/api/src/db/upgrade-news-v2.ts")
+          s = p.read_text()
+          replacements = [["String(row.nullableFlag).toUpperCase() !== 'NO' || String(row.characterSet).toLowerCase() !== 'utf8mb4'","String(row.nullableFlag).toUpperCase() !== 'NO' ||\n    !['utf8mb3', 'utf8mb4'].includes(String(row.characterSet).toLowerCase()) ||\n    !/^[a-zA-Z0-9_]+$/.test(String(row.collationName))"],["  const collations = new Set(base.map((row) => String(row.collationName)))\n  const baseCollation = [...collations][0] ?? ''\n  if (collations.size !== 1 || !/^[a-zA-Z0-9_]+$/.test(baseCollation)) {\n    throw new Error('news_v2_base_id_collation_mismatch')\n  }","  const userBase = base.find((row) => row.tableName === 'users')!\n  const postBase = base.find((row) => row.tableName === 'news_posts')!\n  // Existing tables are never converted. Each FK column matches its own target.\n  const userIdType = `VARCHAR(36) CHARACTER SET ${userBase.characterSet} COLLATE ${userBase.collationName}`\n  const postIdType = `VARCHAR(36) CHARACTER SET ${postBase.characterSet} COLLATE ${postBase.collationName}`\n  const baseCollation = String(postBase.collationName)\n  const baseCharset = String(postBase.characterSet)"],["DEFAULT CHARACTER SET utf8mb4 COLLATE ${baseCollation}","DEFAULT CHARACTER SET ${baseCharset} COLLATE ${baseCollation}"],["post_id VARCHAR(36)","post_id ${postIdType}"],["user_id VARCHAR(36)","user_id ${userIdType}"],["updated_by VARCHAR(36)","updated_by ${userIdType}"],["actor_id VARCHAR(36)","actor_id ${userIdType}"]]
+          for before, after in replacements:
+              assert before in s, before
+              s = s.replace(before, after)
+          p.write_text(s)
+          print("PATCH_APPLIED_FOR_VALIDATION_ONLY")
+          PY
+      - name: Verify exact candidate SHA
+        working-directory: .
+        run: |
+          test "$(git rev-parse HEAD)" = "449d7472adff884401e375703364384bf0c65034"
+          echo "TESTED_CANDIDATE=449d7472adff884401e375703364384bf0c65034"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install, test and build API
+        if: ${{ !cancelled() }}
+        working-directory: services/api
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Record candidate and harness result
+        if: always()
+        working-directory: .
+        env:
+          CHECK_RESULT: ${{ job.status }}
+        run: |
+          printf 'Candidate: `449d7472adff884401e375703364384bf0c65034`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
+
+  mysql-gate:
+    needs: verify
+    if: ${{ !cancelled() }}
+    runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local_test_only
+          MYSQL_DATABASE: jiuchen_news_v2_ci
+        ports:
+          - 127.0.0.1:3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -plocal_test_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      # Disposable GitHub Actions container only; NEVER point at production.
+      DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_news_v2_ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 449d7472adff884401e375703364384bf0c65034
+          persist-credentials: false
+      - name: Apply proposed migration patch in disposable checkout
+        working-directory: .
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path("services/api/src/db/upgrade-news-v2.ts")
+          s = p.read_text()
+          replacements = [["String(row.nullableFlag).toUpperCase() !== 'NO' || String(row.characterSet).toLowerCase() !== 'utf8mb4'","String(row.nullableFlag).toUpperCase() !== 'NO' ||\n    !['utf8mb3', 'utf8mb4'].includes(String(row.characterSet).toLowerCase()) ||\n    !/^[a-zA-Z0-9_]+$/.test(String(row.collationName))"],["  const collations = new Set(base.map((row) => String(row.collationName)))\n  const baseCollation = [...collations][0] ?? ''\n  if (collations.size !== 1 || !/^[a-zA-Z0-9_]+$/.test(baseCollation)) {\n    throw new Error('news_v2_base_id_collation_mismatch')\n  }","  const userBase = base.find((row) => row.tableName === 'users')!\n  const postBase = base.find((row) => row.tableName === 'news_posts')!\n  // Existing tables are never converted. Each FK column matches its own target.\n  const userIdType = `VARCHAR(36) CHARACTER SET ${userBase.characterSet} COLLATE ${userBase.collationName}`\n  const postIdType = `VARCHAR(36) CHARACTER SET ${postBase.characterSet} COLLATE ${postBase.collationName}`\n  const baseCollation = String(postBase.collationName)\n  const baseCharset = String(postBase.characterSet)"],["DEFAULT CHARACTER SET utf8mb4 COLLATE ${baseCollation}","DEFAULT CHARACTER SET ${baseCharset} COLLATE ${baseCollation}"],["post_id VARCHAR(36)","post_id ${postIdType}"],["user_id VARCHAR(36)","user_id ${userIdType}"],["updated_by VARCHAR(36)","updated_by ${userIdType}"],["actor_id VARCHAR(36)","actor_id ${userIdType}"]]
+          for before, after in replacements:
+              assert before in s, before
+              s = s.replace(before, after)
+          p.write_text(s)
+          print("PATCH_APPLIED_FOR_VALIDATION_ONLY")
+          PY
+      - name: Verify exact candidate SHA
+        working-directory: .
+        run: |
+          test "$(git rev-parse HEAD)" = "449d7472adff884401e375703364384bf0c65034"
+          echo "TESTED_CANDIDATE=449d7472adff884401e375703364384bf0c65034"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install exact API dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Prepare legacy base tables and known rows in disposable database
+        run: |
+          node --input-type=module <<'JS'
+          import mysql from 'mysql2/promise'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            await db.query(`CREATE TABLE users (
+              id VARCHAR(36) PRIMARY KEY
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci`)
+            await db.query(`CREATE TABLE news_posts (
+              id VARCHAR(36) PRIMARY KEY,
+              title VARCHAR(255) NOT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`)
+            await db.query("INSERT INTO users(id) VALUES ('00000000-0000-4000-8000-000000000001')")
+            await db.query("INSERT INTO news_posts(id,title) VALUES ('00000000-0000-4000-8000-000000000002','legacy_keep')")
+          } finally { await db.end() }
+          JS
+      - name: Diagnose base ID schema contract without secrets
+        run: |
+          node --input-type=module <<'JS'
+          import mysql from 'mysql2/promise'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            const [rows] = await db.query(`SELECT t.table_name AS tableName,t.engine,
+              c.data_type AS dataType,c.character_maximum_length AS maxLength,
+              c.is_nullable AS nullableFlag,c.character_set_name AS characterSet,
+              c.collation_name AS collationName
+              FROM information_schema.tables t JOIN information_schema.columns c
+              ON c.table_schema=t.table_schema AND c.table_name=t.table_name AND c.column_name='id'
+              WHERE t.table_schema=DATABASE() AND t.table_name IN ('news_posts','users')`)
+            console.log('BASE_ID_SCHEMA_METADATA', JSON.stringify(rows))
+          } finally { await db.end() }
+          JS
+      - name: Run migration first time
+        run: npm run db:upgrade:news-v2
+      - name: Run migration second time - must be idempotent
+        run: npm run db:upgrade:news-v2
+      - name: Compile contract for independent verification
+        run: npm run build
+      - name: Validate all seven tables and existing data survive
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          import { inspectNewsV2Schema, validateNewsV2SchemaSnapshot } from './dist/db/news-v2-schema-contract.js'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            const snapshot = await inspectNewsV2Schema(db)
+            const issues = validateNewsV2SchemaSnapshot(snapshot)
+            assert.deepEqual(issues, [], 'News V2 columns, indexes and FKs must match contract')
+            assert.equal(snapshot.tables.length, 7)
+            const [fkCharsets] = await db.query(`SELECT k.table_name,k.column_name,c.character_set_name AS childCharset,c.collation_name AS childCollation,p.character_set_name AS parentCharset,p.collation_name AS parentCollation FROM information_schema.key_column_usage k JOIN information_schema.columns c ON c.table_schema=k.table_schema AND c.table_name=k.table_name AND c.column_name=k.column_name JOIN information_schema.columns p ON p.table_schema=k.referenced_table_schema AND p.table_name=k.referenced_table_name AND p.column_name=k.referenced_column_name WHERE k.table_schema=DATABASE() AND k.referenced_table_name IS NOT NULL`)
+            assert.equal(fkCharsets.length, 12)
+            for (const row of fkCharsets) {
+              assert.equal(row.childCharset,row.parentCharset)
+              assert.equal(row.childCollation,row.parentCollation)
+            }
+            const [baseCharsets] = await db.query("SELECT table_name AS name,character_set_name AS charset,collation_name AS collation FROM information_schema.columns WHERE table_schema=DATABASE() AND column_name='id' AND table_name IN ('users','news_posts')")
+            assert.equal(baseCharsets.find(row=>row.name==='users').charset,'utf8mb3')
+            assert.equal(baseCharsets.find(row=>row.name==='news_posts').charset,'utf8mb4')
+            console.log('MIXED_CHARSET_FOREIGN_KEYS_PASS; existing base charsets preserved')
+            const [rows] = await db.query("SELECT title FROM news_posts WHERE id='00000000-0000-4000-8000-000000000002'")
+            assert.equal(rows.length, 1)
+            assert.equal(rows[0].title, 'legacy_keep')
+            const [users] = await db.query("SELECT id FROM users WHERE id='00000000-0000-4000-8000-000000000001'")
+            assert.equal(users.length, 1)
+            const userId='00000000-0000-4000-8000-000000000001'
+            const postId='00000000-0000-4000-8000-000000000002'
+            const batchId='00000000-0000-4000-8000-000000000003'
+            const taskId='00000000-0000-4000-8000-000000000004'
+            const auditId='00000000-0000-4000-8000-000000000005'
+            await db.query("INSERT INTO news_display_states(post_id,phase) VALUES (?,'normal')",[postId])
+            await db.query("INSERT INTO news_favorites(user_id,post_id,original_url,title) VALUES (?,?,'https://mp.weixin.qq.com/s/test','legacy_keep')",[userId,postId])
+            await db.query("INSERT INTO news_retirement_batches(id,entered_json,affected_json) VALUES (?,JSON_ARRAY(),JSON_ARRAY())",[batchId])
+            await db.query("INSERT INTO news_retirement_tasks(id,batch_id,post_id,state,updated_by) VALUES (?,?,?,'todo',?)",[taskId,batchId,postId,userId])
+            await db.query("INSERT INTO news_retirement_reads(batch_id,user_id) VALUES (?,?)",[batchId,userId])
+            await db.query("INSERT INTO news_task_audit(id,task_id,actor_id,from_state,to_state) VALUES (?,?,?,'todo','acknowledged')",[auditId,taskId,userId])
+            await db.query("INSERT INTO news_sync_runs(id,status,fetched) VALUES ('00000000-0000-4000-8000-000000000006','checked',1)")
+            const [favorites] = await db.query('SELECT title FROM news_favorites WHERE user_id=? AND post_id=?',[userId,postId])
+            assert.equal(favorites[0]?.title,'legacy_keep')
+            const [tasks] = await db.query('SELECT state FROM news_retirement_tasks WHERE id=?',[taskId])
+            assert.equal(tasks[0]?.state,'todo')
+            await db.query("UPDATE news_retirement_tasks SET state='acknowledged' WHERE id=?",[taskId])
+            const [after] = await db.query('SELECT state FROM news_retirement_tasks WHERE id=?',[taskId])
+            assert.equal(after[0]?.state,'acknowledged')
+            await assert.rejects(
+              db.query("INSERT INTO news_favorites(user_id,post_id,original_url,title) VALUES ('00000000-0000-4000-8000-999999999999',?,'https://mp.weixin.qq.com/s/test','invalid')",[postId]),
+              error => error.code==='ER_NO_REFERENCED_ROW_2',
+              'favorites must reject nonexistent users'
+            )
+            await assert.rejects(
+              db.query("INSERT INTO news_retirement_tasks(id,batch_id,post_id) VALUES ('00000000-0000-4000-8000-000000000007',?,?)",['00000000-0000-4000-8000-999999999999',postId]),
+              error => error.code==='ER_NO_REFERENCED_ROW_2',
+              'tasks must reject nonexistent retirement batches'
+            )
+            console.log('NEWS_V2_REAL_MYSQL_RELATIONS_PASS: favorites, tasks, reads, audit, transitions, sync rows and FK negatives')
+            console.log('NEWS_V2_REAL_MYSQL_GATE_PASS: twice migrated; schema contract and legacy rows preserved')
+          } finally { await db.end() }
+          JS
+      - name: Backup and restore the disposable seven-table fixture
+        run: |
+          # Synthetic CI database only; no production URL or dataset.
+          export MYSQL_PWD=local_test_only
+          mysqldump -h127.0.0.1 -uroot --single-transaction --set-gtid-purged=OFF --no-tablespaces jiuchen_news_v2_ci > "$RUNNER_TEMP/news-v2-backup.sql"
+          mysql -h127.0.0.1 -uroot -e 'CREATE DATABASE jiuchen_news_v2_restore_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+          mysql -h127.0.0.1 -uroot jiuchen_news_v2_restore_ci < "$RUNNER_TEMP/news-v2-backup.sql"
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          import {inspectNewsV2Schema,validateNewsV2SchemaSnapshot} from './dist/db/news-v2-schema-contract.js'
+          const source=await mysql.createConnection(process.env.DATABASE_URL)
+          const restored=await mysql.createConnection('mysql://root:local_test_only@127.0.0.1:3306/jiuchen_news_v2_restore_ci')
+          const order={users:'id',news_posts:'id',news_display_states:'post_id',news_favorites:'user_id,post_id',news_retirement_batches:'id',news_retirement_tasks:'id',news_retirement_reads:'batch_id,user_id',news_task_audit:'id',news_sync_runs:'id'}
+          try {
+            assert.deepEqual(validateNewsV2SchemaSnapshot(await inspectNewsV2Schema(restored)),[])
+            for(const [table,pk] of Object.entries(order)){
+              const [before]=await source.query(`SELECT * FROM ${table} ORDER BY ${pk}`)
+              const [after]=await restored.query(`SELECT * FROM ${table} ORDER BY ${pk}`)
+              assert.deepEqual(after,before,table+' restored schema/data must match')
+            }
+            console.log('DISPOSABLE_NEWS_BACKUP_RESTORE_PASS (not production backup or structure replica)')
+          } finally {await source.end();await restored.end()}
+          JS
+      - name: Record candidate and harness result
+        if: always()
+        working-directory: .
+        env:
+          CHECK_RESULT: ${{ job.status }}
+        run: |
+          printf 'Candidate: `449d7472adff884401e375703364384bf0c65034`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
+
+  profile-gate:
+    needs: mysql-gate
+    if: ${{ !cancelled() }}
+    runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local_test_only
+          MYSQL_DATABASE: jiuchen_profile_ci
+        ports: ['127.0.0.1:3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -plocal_test_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_profile_ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 449d7472adff884401e375703364384bf0c65034
+          persist-credentials: false
+      - name: Apply proposed migration patch in disposable checkout
+        working-directory: .
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path("services/api/src/db/upgrade-news-v2.ts")
+          s = p.read_text()
+          replacements = [["String(row.nullableFlag).toUpperCase() !== 'NO' || String(row.characterSet).toLowerCase() !== 'utf8mb4'","String(row.nullableFlag).toUpperCase() !== 'NO' ||\n    !['utf8mb3', 'utf8mb4'].includes(String(row.characterSet).toLowerCase()) ||\n    !/^[a-zA-Z0-9_]+$/.test(String(row.collationName))"],["  const collations = new Set(base.map((row) => String(row.collationName)))\n  const baseCollation = [...collations][0] ?? ''\n  if (collations.size !== 1 || !/^[a-zA-Z0-9_]+$/.test(baseCollation)) {\n    throw new Error('news_v2_base_id_collation_mismatch')\n  }","  const userBase = base.find((row) => row.tableName === 'users')!\n  const postBase = base.find((row) => row.tableName === 'news_posts')!\n  // Existing tables are never converted. Each FK column matches its own target.\n  const userIdType = `VARCHAR(36) CHARACTER SET ${userBase.characterSet} COLLATE ${userBase.collationName}`\n  const postIdType = `VARCHAR(36) CHARACTER SET ${postBase.characterSet} COLLATE ${postBase.collationName}`\n  const baseCollation = String(postBase.collationName)\n  const baseCharset = String(postBase.characterSet)"],["DEFAULT CHARACTER SET utf8mb4 COLLATE ${baseCollation}","DEFAULT CHARACTER SET ${baseCharset} COLLATE ${baseCollation}"],["post_id VARCHAR(36)","post_id ${postIdType}"],["user_id VARCHAR(36)","user_id ${userIdType}"],["updated_by VARCHAR(36)","updated_by ${userIdType}"],["actor_id VARCHAR(36)","actor_id ${userIdType}"]]
+          for before, after in replacements:
+              assert before in s, before
+              s = s.replace(before, after)
+          p.write_text(s)
+          print("PATCH_APPLIED_FOR_VALIDATION_ONLY")
+          PY
+      - name: Verify exact candidate SHA
+        working-directory: .
+        run: |
+          test "$(git rev-parse HEAD)" = "449d7472adff884401e375703364384bf0c65034"
+          echo "TESTED_CANDIDATE=449d7472adff884401e375703364384bf0c65034"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Create legacy user profile row in disposable MySQL
+        run: |
+          node --input-type=module <<'JS'
+          import mysql from 'mysql2/promise'
+          const db=await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            await db.query(`CREATE TABLE user_profiles (
+              id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL,
+              university VARCHAR(160) NULL, major VARCHAR(160) NULL,
+              current_grade VARCHAR(40) NULL,
+              gpa_text VARCHAR(80) NULL, rank_text VARCHAR(80) NULL,
+              created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`)
+            await db.query("INSERT INTO user_profiles(id,user_id,university,current_grade,gpa_text) VALUES ('00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002','legacy_university','大四上','3.80')")
+          } finally {await db.end()}
+          JS
+      - name: First migration creates only enrollment_year
+        run: npm run db:upgrade:enrollment-year
+      - name: Repeated migration is safe
+        run: npm run db:upgrade:enrollment-year
+      - name: Validate profile contract and retained old values
+        run: |
+          npm run db:check:profile
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          const db=await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            const [rows]=await db.query("SELECT university,current_grade,gpa_text,enrollment_year FROM user_profiles WHERE id='00000000-0000-4000-8000-000000000001'")
+            assert.equal(rows.length,1)
+            assert.equal(rows[0].university,'legacy_university')
+            assert.equal(rows[0].current_grade,'大四上')
+            assert.equal(rows[0].gpa_text,'3.80')
+            assert.equal(rows[0].enrollment_year,null)
+            await db.query("UPDATE user_profiles SET enrollment_year=2023 WHERE id='00000000-0000-4000-8000-000000000001'")
+            const [again]=await db.query("SELECT enrollment_year FROM user_profiles WHERE id='00000000-0000-4000-8000-000000000001'")
+            assert.equal(again[0].enrollment_year,2023)
+            console.log('PROFILE_REAL_MYSQL_GATE_PASS: idempotent upgrade, legacy fields and enrollment year roundtrip')
+          } finally {await db.end()}
+          JS
+      - name: Backup and restore the disposable profile fixture
+        run: |
+          export MYSQL_PWD=local_test_only
+          mysqldump -h127.0.0.1 -uroot --single-transaction --set-gtid-purged=OFF --no-tablespaces jiuchen_profile_ci > "$RUNNER_TEMP/profile-backup.sql"
+          mysql -h127.0.0.1 -uroot -e 'CREATE DATABASE jiuchen_profile_restore_ci CHARACTER SET utf8mb4'
+          mysql -h127.0.0.1 -uroot jiuchen_profile_restore_ci < "$RUNNER_TEMP/profile-backup.sql"
+          DATABASE_URL=mysql://root:local_test_only@127.0.0.1:3306/jiuchen_profile_restore_ci npm run db:check:profile
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          const source=await mysql.createConnection(process.env.DATABASE_URL)
+          const restored=await mysql.createConnection('mysql://root:local_test_only@127.0.0.1:3306/jiuchen_profile_restore_ci')
+          try {
+            const [before]=await source.query('SELECT * FROM user_profiles ORDER BY id')
+            const [after]=await restored.query('SELECT * FROM user_profiles ORDER BY id')
+            assert.deepEqual(after,before)
+            console.log('DISPOSABLE_PROFILE_BACKUP_RESTORE_PASS (not production backup or structure replica)')
+          } finally {await source.end();await restored.end()}
+          JS
+      - name: Record candidate and harness result
+        if: always()
+        working-directory: .
+        env:
+          CHECK_RESULT: ${{ job.status }}
+        run: |
+          printf 'Candidate: `449d7472adff884401e375703364384bf0c65034`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
