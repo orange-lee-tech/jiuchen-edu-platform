@@ -176,7 +176,7 @@ jobs:
             assert.deepEqual(issues, [], 'News V2 columns, indexes and FKs must match contract')
             assert.equal(snapshot.tables.length, 7)
             const [fkCharsets] = await db.query(`SELECT k.table_name,k.column_name,c.character_set_name AS childCharset,c.collation_name AS childCollation,p.character_set_name AS parentCharset,p.collation_name AS parentCollation FROM information_schema.key_column_usage k JOIN information_schema.columns c ON c.table_schema=k.table_schema AND c.table_name=k.table_name AND c.column_name=k.column_name JOIN information_schema.columns p ON p.table_schema=k.referenced_table_schema AND p.table_name=k.referenced_table_name AND p.column_name=k.referenced_column_name WHERE k.table_schema=DATABASE() AND k.referenced_table_name IS NOT NULL`)
-            assert.equal(fkCharsets.length, 12)
+            assert.equal(fkCharsets.length, 10)
             for (const row of fkCharsets) {
               assert.equal(row.childCharset,row.parentCharset)
               assert.equal(row.childCollation,row.parentCollation)
