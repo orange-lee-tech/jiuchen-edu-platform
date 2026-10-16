@@ -4,6 +4,8 @@ import argparse
 import getpass
 import hashlib
 import json
+import re
+import ipaddress
 import os
 from pathlib import Path, PurePosixPath
 import secrets
@@ -140,13 +142,44 @@ else{o={host:e.DB_HOST,port:e.DB_PORT||3306,user:e.DB_USER,password:e.DB_PASSWOR
 if(!o.host||!o.user||!o.database||o.password===undefined)throw Error('incomplete');
 process.stdout.write(JSON.stringify(o))"""
 
+class ConfigError(ValueError):
+    """Only fixed, credential-free messages may be used here."""
+
+
+def validate_db_config(db):
+    for field in ['host', 'user', 'password', 'database']:
+        if not isinstance(db.get(field), str) or any(ord(c) < 32 or ord(c) == 127 for c in db[field]):
+            raise ConfigError('DB_CONFIG_INVALID_' + field.upper())
+    if not all(db[k] for k in ['host', 'user', 'database']):
+        raise ConfigError('DB_CONFIG_REQUIRED_FIELD_EMPTY')
+    # Database names are passed as separate argv values, never interpolated into SQL.
+    # MySQL database names commonly contain hyphens (including CloudBase names).
+    if len(db['database']) > 64 or not re.fullmatch(r'[\w$-]+', db['database']):
+        raise ConfigError('DB_DATABASE_NAME_UNSUPPORTED')
+    if db['database'].startswith('-'):
+        raise ConfigError('DB_DATABASE_NAME_OPTION_PREFIX')
+    host = db['host']
+    try:
+        address = ipaddress.ip_address(host.strip('[]'))
+        host = '[' + str(address) + ']' if address.version == 6 else str(address)
+    except ValueError:
+        if not re.fullmatch(r'[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?', host) or '..' in host:
+            raise ConfigError('DB_HOST_UNSUPPORTED')
+    try:
+        port = int(db['port'])
+        if not 1 <= port <= 65535:
+            raise ValueError()
+    except (KeyError, ValueError, TypeError):
+        raise ConfigError('DB_PORT_INVALID')
+    return dict(db, host=host, port=port)
+
+
 def mysql_config(remote, temp):
     r = remote.run(['/usr/bin/env', '-i', '/opt/jiuchen-api/runtime/node-v22.23.3-linux-x64/bin/node', '-e', DB_JS], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-    db = json.loads(r.stdout)
-    if not all(isinstance(db[k], str) and '\n' not in db[k] and '\r' not in db[k] for k in ['host','user','password','database']):
-        raise ValueError('Unsupported database configuration')
-    if not db['database'].replace('_', '').isalnum() or not db['host'].replace('.', '').replace('-', '').isalnum():
-        raise ValueError('Unsupported database or host identifier')
+    try:
+        db = validate_db_config(json.loads(r.stdout))
+    except json.JSONDecodeError:
+        raise ConfigError('DB_CONFIG_PROJECTION_NOT_JSON')
     with socket.socket() as s:
         s.bind(('127.0.0.1', 0))
         port = s.getsockname()[1]
@@ -182,26 +215,63 @@ api.jcb、website.jcb 也可能包含内置个人资料或历史配置。
 本工具只证明文件下载和认证完整，不代表数据库恢复或完整业务恢复已经演练。
 '''
 
+def write_receipt(generation, receipt):
+    pending = generation / 'receipt.pending'
+    pending.write_text(json.dumps(receipt, ensure_ascii=False, indent=2))
+    os.replace(pending, generation / 'receipt.json')
+
 def backup(args):
     root = Path(args.output).expanduser().resolve()
     root.mkdir(mode=0o700, parents=True, exist_ok=True)
     # Require Linux permissions, e.g. WSL ext4. Windows-mounted public Desktop is unsuitable.
     if str(root).startswith('/mnt/'):
         raise ValueError('Use WSL home directory, not a Windows-mounted shared folder')
-    password = getpass.getpass('新备份密码（至少12字符）：')
-    if len(password) < 12 or getpass.getpass('再次输入：') != password:
-        raise ValueError('Passphrase mismatch or too short')
-    generation = root / (time.strftime('%Y%m%d-%H%M%S', time.gmtime()) + '-' + secrets.token_hex(3))
-    generation.mkdir(mode=0o700)
-    (generation / '管理员必读.txt').write_text(NOTICE)
-    receipt = {'format': 1, 'createdUtc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-               'downloadVerified': False, 'productionBackupRestored': False,
-               'fullBusinessCoverage': False, 'coveragePending': ['external persistent objects', 'website additional database/dependencies', 'live business-file consistency'], 'components': {}}
+    resume = getattr(args, 'resume_latest', False)
+    if resume:
+        candidates = sorted(p for p in root.iterdir() if not p.is_symlink() and p.is_dir() and (p / 'PARTIAL').is_file() and (p / 'receipt.json').is_file())
+        if not candidates:
+            raise ConfigError('NO_PARTIAL_BACKUP_TO_RESUME')
+        generation = candidates[-1]
+        receipt = json.loads((generation / 'receipt.json').read_text())
+        if receipt.get('downloadVerified') or receipt.get('format') != 1:
+            raise ConfigError('INVALID_PARTIAL_RECEIPT')
+        password = getpass.getpass('输入上次未完成备份的原密码：')
+        print('续传目录：' + str(generation), flush=True)
+    else:
+        password = getpass.getpass('新备份密码（至少12字符）：')
+        if len(password) < 12 or getpass.getpass('再次输入：') != password:
+            raise ConfigError('BACKUP_PASSWORD_MISMATCH_OR_TOO_SHORT')
+        generation = root / (time.strftime('%Y%m%d-%H%M%S', time.gmtime()) + '-' + secrets.token_hex(3))
+        generation.mkdir(mode=0o700)
+        (generation / '管理员必读.txt').write_text(NOTICE)
+        receipt = {'format': 1, 'createdUtc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                   'downloadVerified': False, 'productionBackupRestored': False,
+                   'fullBusinessCoverage': False, 'coveragePending': ['external persistent objects', 'website additional database/dependencies', 'live business-file consistency'], 'components': {}}
+    (generation / 'PARTIAL').touch()
+    write_receipt(generation, receipt)
     try:
         with tempfile.TemporaryDirectory(prefix='jiuchen-') as temp:
+            # Verify retained components before opening SSH. A wrong password stops here.
+            for component in receipt['components']:
+                if component not in LABELS:
+                    raise ConfigError('UNKNOWN_PARTIAL_COMPONENT')
+                source = generation / (component + '.jcb')
+                if digest(source) != receipt['components'][component]['sha256']:
+                    raise ConfigError('RETAINED_COMPONENT_CHECKSUM_MISMATCH')
+                restored = Path(temp) / 'retained'
+                decrypt(source, restored, password)
+                if component != 'database':
+                    validate_tar(restored)
+                restored.unlink()
+                print('已验证，复用：' + component, flush=True)
+            if resume:
+                receipt['resumedUtc'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+                receipt['coveragePending'] = sorted(set(receipt.get('coveragePending', []) + ['resumed components captured at different times']))
             remote = Remote(args.host, temp)
             try:
                 for component in LABELS:
+                    if component in receipt['components']:
+                        continue
                     print('备份：' + component + ' / ' + LABELS[component], flush=True)
                     plain = Path(temp) / 'component'
                     if component == 'database':
@@ -219,10 +289,12 @@ def backup(args):
                     check.unlink()
                     plain.unlink()
                     receipt['components'][component] = {'sha256': digest(encrypted), 'bytes': encrypted.stat().st_size, 'containsSensitiveData': component != 'runtime', 'description': LABELS[component]}
+                    write_receipt(generation, receipt)
             finally:
                 remote.close()
         receipt['downloadVerified'] = True
-        (generation / 'receipt.json').write_text(json.dumps(receipt, ensure_ascii=False, indent=2))
+        write_receipt(generation, receipt)
+        (generation / 'PARTIAL').unlink(missing_ok=True)
         if args.pin:
             (generation / 'PIN').touch()
         # Coverage incomplete => retain all existing successful backups. No automatic deletion.
@@ -230,7 +302,7 @@ def backup(args):
         print('完整业务覆盖与隔离恢复尚待验证；本次不自动清理旧备份。')
     except (Exception, KeyboardInterrupt):
         (generation / 'PARTIAL').touch()
-        (generation / 'receipt.json').write_text(json.dumps(receipt, ensure_ascii=False, indent=2))
+        write_receipt(generation, receipt)
         raise
 
 def select(args, receipt):
@@ -340,7 +412,7 @@ def main():
     sub = p.add_subparsers(dest='command', required=True)
     r = sub.add_parser('rehearse-db'); r.add_argument('--backup', required=True)
     d = sub.add_parser('doctor'); d.add_argument('--host', required=True)
-    b = sub.add_parser('backup'); b.add_argument('--host', required=True); b.add_argument('--output', required=True); b.add_argument('--pin', action='store_true')
+    b = sub.add_parser('backup'); b.add_argument('--host', required=True); b.add_argument('--output', required=True); b.add_argument('--pin', action='store_true'); b.add_argument('--resume-latest', action='store_true')
     for name in ['plan', 'stage']:
         s = sub.add_parser(name); s.add_argument('--backup', required=True); s.add_argument('--scope', choices=SCOPES, required=True); s.add_argument('--components', required=True)
         if name == 'stage':
@@ -369,5 +441,5 @@ if __name__ == '__main__':
         sys.exit(130)
     except Exception as exc:
         # Do not echo subprocess stderr, credentials, source paths or production payloads.
-        print('FAILED: ' + type(exc).__name__ + '；已停止。保留现役服务，勿重复覆盖。', file=sys.stderr)
+        print('FAILED: ' + (str(exc) if isinstance(exc, ConfigError) else type(exc).__name__) + '；已停止。保留现役服务，勿重复覆盖。', file=sys.stderr)
         sys.exit(1)
