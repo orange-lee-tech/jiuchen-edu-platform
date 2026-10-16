@@ -35,6 +35,8 @@
 
 ## 2. 当前模块 Gate（最新）
 
+**2026-10-16 验证恢复**：用户截图确认 Actions 2000分钟耗尽、额外预算$0、应付$0；个人本地 Runner 已注册且 Idle。新增[固定候选本地验证入口](p1-local-runner-recovery-2026-10-16.md)，保持候选 `eda525c1…` 不变；实际三个 Gate 结果 PENDING，旧云端失败记录仍保留。生产操作边界不变。
+
 | 模块 | GitHub / 测试状态 | 生产与验收状态 | 下一动作 |
 | --- | --- | --- | --- |
 | P1 微信体验版 RC | `22f3889` 旧接口兼容及回归；[CI 38357710899](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38357710899) PASS | **CODE/TEST READY FOR UPLOAD；DEVICE PENDING；全功能交付 BLOCKED**（Profile 缺列） | 本人上传体验版后按统一清单验收；Profile 生产 Schema 另案审批 |
