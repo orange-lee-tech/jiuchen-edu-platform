@@ -40,3 +40,11 @@
 - Node22.23.3安装成功、固定SHA断言成功。小程序typecheck在schools/data.ts:632报TS2783：address/addressSource重复定义；这是候选快照真实代码FAIL，不是计费/网络FAIL。
 - 两个DB job因第一版needs依赖被skipped。一次受控修正仅调整harness独立检查条件，原检查命令不变，候选源码不变；随后再跑一次。
 - 集成分支当前schools/data.ts已采用末尾显式address/addressSource回退，没有候选快照的重复字段；固定候选为API-only发布包，其历史前端typecheck失败仍需保留，不冒称全树CI PASS。当前小程序发布源码需要独立验证，不能以API归档替代。
+
+## 第二轮实际回执
+- [run 38864486844](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38864486844)，harness 3b94ed2501c2714e66b591c57ba6486f194ab1f1，checkout候选eda525c1断言成功。
+- verify：小程序快照TS2783 FAIL；导航回归PASS；管理端typecheck/build PASS；API typecheck、215/215 tests、build PASS。整体verify仍FAIL。
+- News mysql-gate：实际本地执行，Checkout步骤FAIL，迁移步骤未执行；具体日志下载暂返回BlobNotFound，错误原因待原始日志。不能归因为数据库测试失败。
+- Profile job 116856811046：截至本轮查询queued，尚无结果。
+- 需要用户保持本地Runner/代理在线，并提供Runner控制台近期输出以排查排队/连接；不盲目重跑全套。
+- 旧云端CI/News/Profile仍可能被PR事件触发并在步骤前受额度拦截；本批只新增候选本地入口，未完成日常三工作流全面迁移。不得声称所有未来CI均已本地化。
