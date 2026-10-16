@@ -48,9 +48,11 @@ jobs:
           npm run typecheck
 
       - name: Verify native navigation and session regressions
+        if: ${{ !cancelled() }}
         run: node --test tools/testing/miniprogram-navigation.test.cjs tools/testing/school-catalog.test.cjs
 
       - name: Install and build admin
+        if: ${{ !cancelled() }}
         working-directory: apps/admin
         run: |
           npm install
@@ -58,6 +60,7 @@ jobs:
           npm run build
 
       - name: Install, test and build API
+        if: ${{ !cancelled() }}
         working-directory: services/api
         run: |
           npm install
@@ -74,6 +77,7 @@ jobs:
 
   mysql-gate:
     needs: verify
+    if: ${{ !cancelled() }}
     runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
     timeout-minutes: 25
     services:
@@ -233,6 +237,7 @@ jobs:
 
   profile-gate:
     needs: mysql-gate
+    if: ${{ !cancelled() }}
     runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
     timeout-minutes: 25
     services:

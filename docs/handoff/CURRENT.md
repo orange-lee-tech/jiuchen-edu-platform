@@ -2,7 +2,7 @@
 
 > **这是唯一当前施工入口。** 历史原文已无损归档至 [archive/CURRENT-pre-cleanup-2026-10-12.md](archive/CURRENT-pre-cleanup-2026-10-12.md)。旧交接里的 SHA、日期、未完成清单、阶段禁令与部署描述**不是当前事实或当前授权**；不要再往本文顶部堆积“覆盖说明”。每轮只修订相应表格和 Gate，保留 Git 历史即可。
 >
-> **证据边界**：最新生产active由10月14日用户ECS readlink核实，健康检查127.0.0.1:3100拒绝连接，实际监听待核对；不等于本机重新SSH。GitHub源码不等于部署。当前隔离候选与计费阻断见下表；历史绿灯不代表本候选CI通过。
+> **证据边界**：10月16日用户ECS三项只读日志确认active仍为8cc4、实际监听172.25.80.203:3100，两个健康端点成功、database=ok。此前127.0.0.1拒绝连接属于检查地址不匹配。本机未SSH；GitHub源码不等于部署。固定候选本地Runner验证见下表，历史绿灯不代表本候选通过。
 
 > **成本审计入口（2026-10-13）**：[ECS + CloudBase + OCR + 百炼经济账与防超支审计](../finance/cloud-cost-audit-2026-10-13.md)。ECS 实际付费及续费金额仍待阿里云订单证据；本文不授权采购、计费开关或生产改动。
 
@@ -21,7 +21,7 @@
 
 | 项目 | 最新可靠证据 | 状态 |
 | --- | --- | --- |
-| 生产 API | 10-14用户readlink：active `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`、previous `b150d2c5c8720aac8d48fbd0395d8db9c408bc63`；API active/NRestarts0/MemoryCurrent85008384/MemoryMax268435456/CPUQuota500ms/TasksMax64；**127.0.0.1:3100两健康端点连接被拒绝**，旧200不是本轮事实 | ACTIVE SHA OBSERVED / HEALTH BLOCKED：待实际监听 |
+| 生产 API | 10-16用户三项预检：active `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`、previous `b150d2c5c8720aac8d48fbd0395d8db9c408bc63`；active/NRestarts0/MemoryCurrent88322048/MemoryMax268435456；实际监听 `172.25.80.203:3100`，live/health通过、database=ok；ECS可用内存969MiB、磁盘22GiB | ACTIVE / HEALTH PASS（仅现役基础健康，非候选资源或业务验收） |
 | 课表 | 导入、第一周周一保存、`大四上 → 本周课表` 手机实测 | **DEVICE PASS** |
 | AI 评估 | 用户明确确认草稿→真实运行→结果持久化→历史重开完整链路 | **DEVICE PASS** |
 | 院校图片 | 172 所 WebP 在真机正确显示（用户确认） | **DEVICE PASS** |
@@ -40,7 +40,7 @@
 | 模块 | GitHub / 测试状态 | 生产与验收状态 | 下一动作 |
 | --- | --- | --- | --- |
 | P1 微信体验版 RC | `22f3889` 旧接口兼容及回归；[CI 38357710899](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38357710899) PASS | **CODE/TEST READY FOR UPLOAD；DEVICE PENDING；全功能交付 BLOCKED**（Profile 缺列） | 本人上传体验版后按统一清单验收；Profile 生产 Schema 另案审批 |
-| P1 当前隔离候选 | 来源集成`35f61d7`；从生产8cc4隔离为`eda525c1a2276af90668849b669e9bce19a4fd7d`、[Draft PR#3](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/3)；候选typecheck/build、215/215 PASS，mini typecheck/95 PASS；无DB冒烟PASS但WindowsRSS超256MiB；同SHA三个Actions失败且steps=null，**账号付款/Actions额度拦截** | **REVIEW ARTIFACT READY / LOCAL PASS / CI BLOCKED / PROD NOT DEPLOYED / DEVICE PENDING**；固定归档已有，不等于可promote。结构/恢复、实际健康、ECS资源仍BLOCKED | [固定SHA/归档/精确审批恢复](p1-isolated-release-review-2026-10-14.md)、[统一真机清单](p1-unified-device-acceptance-2026-10-14.md)、[计费/来源证据](p1-final-ci-and-source-evidence-2026-10-14.md)。只收一次billing解除及ECS只读三脚本回执；不更换qwen3.8-flash，不整树切流 |
+| P1 当前隔离候选 | 来源集成`35f61d7`；从生产8cc4隔离为`eda525c1a2276af90668849b669e9bce19a4fd7d`、[Draft PR#3](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/3)；候选typecheck/build、215/215 PASS，mini typecheck/95 PASS；无DB冒烟PASS但WindowsRSS超256MiB；旧云端三个Actions步骤前失败；10-16截图证实额度耗尽/预算$0；本地Runner首轮已实际执行，小程序快照TS2783 FAIL；API/DB待独立回执 | **REVIEW ARTIFACT READY / SELF-HOSTED CI IN VALIDATION / PROD NOT DEPLOYED / DEVICE PENDING**；固定归档已有，不等于可promote。现役实际健康已通过；生产结构/恢复、候选ECS资源仍BLOCKED | [固定SHA/归档/精确审批恢复](p1-isolated-release-review-2026-10-14.md)、[统一真机清单](p1-unified-device-acceptance-2026-10-14.md)、[计费/来源证据](p1-final-ci-and-source-evidence-2026-10-14.md)。沿用已收10-16三脚本回执，改用本地Runner恢复候选验证；不更换qwen3.8-flash，不整树切流 |
 | Profile `enrollment_year` | 单列幂等升级脚本；隔离 MySQL 双次迁移 PASS | **BLOCKED**：生产列确实不存在，`GET /me/profile` 曾500 | 针对生产的备份+隔离恢复验证+精确DDL审批；不影响其他独立开发 |
 | 资讯同步分页/真实回执/标签公开控制 | `fbf7fda` + `ab6843b`；短页 fail-closed、可信源时间排序；本地通过 | **API DEPLOYED 2026-10-13 / DEVICE & DATA PENDING** | 等新版首次 timer 同步日志与真实后台、学员资讯数据验收；不可因旧日志 total=21 冒称新版验收 |
 | AI 评估后台统计解耦 | 已提交 `9bda1b5`；真实9条成功记录 | **API DEPLOYED / DATA ACCEPTANCE PENDING**；支付数据源缺表 | 核查管理员真实周/月/年评估统计，支付仍显示来源不可用 |

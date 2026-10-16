@@ -13,7 +13,7 @@
 新增 `.github/workflows/p1-fixed-candidate-local.yml`。只在该文件推送到 p1/foundation 时自动启动；不新增 PR 自动触发；提供 workflow_dispatch，按钮可用性受默认分支是否包含工作流影响。本轮使用 push 启动，后续从本次 run 重跑。
 - 固定检出 `eda525c1a2276af90668849b669e9bce19a4fd7d`，并逐 job 断言 HEAD。
 - 工作流本身属于集成分支的 harness SHA；被测源码 SHA 是 eda525c1，分别记载。
-- 依次执行 verify → mysql-gate → profile-gate；上游失败时下游 skipped。
+- 依次执行 verify → mysql-gate → profile-gate；独立检查使用 !cancelled()，前项失败仍继续后项；取消运行才停止。主CI中的导航、管理端、API阶段同样独立执行；任何失败仍将verify标为failure。
 - 三个 job 只匹配 self-hosted / Linux / X64 / orangeleetec-local-linux，没有云端回退。
 - 从候选自身的三个工作流逐项移植检查命令，保持测试/迁移/备份恢复命令完全一致。
 - 不启用 npm 云缓存；checkout 不持久化凭据；contents:read。
@@ -34,3 +34,9 @@
 5. 形成精确发布审批包，之后按受控 promote 与统一微信真机清单收口。
 
 生产运行与构建执行地点不同：本地 Runner 负责验证，ECS继续承载官网及API。现有生产审批边界沿用 CURRENT。
+
+## 首次运行与受控修正
+- [run 38864129484](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38864129484)，harness f5e4e4e，实际Runner orangeleetech-wsl-local。
+- Node22.23.3安装成功、固定SHA断言成功。小程序typecheck在schools/data.ts:632报TS2783：address/addressSource重复定义；这是候选快照真实代码FAIL，不是计费/网络FAIL。
+- 两个DB job因第一版needs依赖被skipped。一次受控修正仅调整harness独立检查条件，原检查命令不变，候选源码不变；随后再跑一次。
+- 集成分支当前schools/data.ts已采用末尾显式address/addressSource回退，没有候选快照的重复字段；固定候选为API-only发布包，其历史前端typecheck失败仍需保留，不冒称全树CI PASS。当前小程序发布源码需要独立验证，不能以API归档替代。
