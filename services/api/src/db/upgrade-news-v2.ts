@@ -16,23 +16,27 @@ try {
     WHERE t.table_schema=DATABASE() AND t.table_name IN ('news_posts','users')`)
   if (base.length !== 2 || base.some((row) => String(row.engineName).toUpperCase() !== 'INNODB' ||
     String(row.dataType).toLowerCase() !== 'varchar' || Number(row.maxLength) !== 36 ||
-    String(row.nullableFlag).toUpperCase() !== 'NO' || String(row.characterSet).toLowerCase() !== 'utf8mb4')) {
+    String(row.nullableFlag).toUpperCase() !== 'NO' ||
+    !['utf8mb3', 'utf8mb4'].includes(String(row.characterSet).toLowerCase()) ||
+    !/^[a-zA-Z0-9_]+$/.test(String(row.collationName)))) {
     throw new Error('news_v2_base_schema_not_ready')
   }
-  const collations = new Set(base.map((row) => String(row.collationName)))
-  const baseCollation = [...collations][0] ?? ''
-  if (collations.size !== 1 || !/^[a-zA-Z0-9_]+$/.test(baseCollation)) {
-    throw new Error('news_v2_base_id_collation_mismatch')
-  }
+  const userBase = base.find((row) => row.tableName === 'users')!
+  const postBase = base.find((row) => row.tableName === 'news_posts')!
+  // Existing tables are never converted. Each FK column matches its own target.
+  const userIdType = `VARCHAR(36) CHARACTER SET ${userBase.characterSet} COLLATE ${userBase.collationName}`
+  const postIdType = `VARCHAR(36) CHARACTER SET ${postBase.characterSet} COLLATE ${postBase.collationName}`
+  const baseCollation = String(postBase.collationName)
+  const baseCharset = String(postBase.characterSet)
   const preflightIssues = validateNewsV2SchemaSnapshot(await inspectNewsV2Schema(db), { allowMissingTables: true })
   if (preflightIssues.length) throw new Error('news_v2_incompatible_existing_schema:' + preflightIssues.join('|'))
 
   // Match the existing FK target collation instead of assuming a server-wide
   // utf8mb4 default. The value comes from information_schema and is allowlisted.
-  const tableOptions = `ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE ${baseCollation}`
+  const tableOptions = `ENGINE=InnoDB DEFAULT CHARACTER SET ${baseCharset} COLLATE ${baseCollation}`
   const statements = [
     `CREATE TABLE IF NOT EXISTS news_display_states (
-      post_id VARCHAR(36) PRIMARY KEY,
+      post_id ${postIdType} PRIMARY KEY,
       phase ENUM('normal','buffering','retired','source_invalid') NOT NULL,
       buffered_at TIMESTAMP NULL, retire_at TIMESTAMP NULL,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -40,7 +44,7 @@ try {
       CONSTRAINT fk_news_display_post FOREIGN KEY(post_id) REFERENCES news_posts(id)
     ) ${tableOptions}`,
     `CREATE TABLE IF NOT EXISTS news_favorites (
-      user_id VARCHAR(36) NOT NULL, post_id VARCHAR(36) NOT NULL,
+      user_id ${userIdType} NOT NULL, post_id ${postIdType} NOT NULL,
       original_url TEXT NOT NULL, title VARCHAR(255) NOT NULL,
       source_time TIMESTAMP NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY(user_id,post_id), KEY idx_news_fav_user_time(user_id,created_at),
@@ -53,9 +57,9 @@ try {
     ) ${tableOptions}`,
     `CREATE TABLE IF NOT EXISTS news_retirement_tasks (
       id VARCHAR(36) PRIMARY KEY, batch_id VARCHAR(36) NOT NULL,
-      post_id VARCHAR(36) NOT NULL,
+      post_id ${postIdType} NOT NULL,
       state ENUM('todo','acknowledged','doing','feedback') NOT NULL DEFAULT 'todo',
-      note TEXT NULL, updated_by VARCHAR(36) NULL,
+      note TEXT NULL, updated_by ${userIdType} NULL,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       UNIQUE KEY uq_news_task_batch_post(batch_id,post_id),
       KEY idx_news_task_state(state,updated_at),
@@ -64,7 +68,7 @@ try {
       CONSTRAINT fk_news_task_actor FOREIGN KEY(updated_by) REFERENCES users(id)
     ) ${tableOptions}`,
     `CREATE TABLE IF NOT EXISTS news_retirement_reads (
-      batch_id VARCHAR(36) NOT NULL, user_id VARCHAR(36) NOT NULL,
+      batch_id VARCHAR(36) NOT NULL, user_id ${userIdType} NOT NULL,
       read_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY(batch_id,user_id),
       CONSTRAINT fk_news_read_batch FOREIGN KEY(batch_id) REFERENCES news_retirement_batches(id),
@@ -72,7 +76,7 @@ try {
     ) ${tableOptions}`,
     `CREATE TABLE IF NOT EXISTS news_task_audit (
       id VARCHAR(36) PRIMARY KEY, task_id VARCHAR(36) NOT NULL,
-      actor_id VARCHAR(36) NOT NULL, from_state VARCHAR(20) NOT NULL,
+      actor_id ${userIdType} NOT NULL, from_state VARCHAR(20) NOT NULL,
       to_state VARCHAR(20) NOT NULL, note TEXT NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       KEY idx_news_task_audit_task_time(task_id,created_at),
