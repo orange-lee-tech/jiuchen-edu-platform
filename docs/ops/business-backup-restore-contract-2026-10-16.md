@@ -28,3 +28,11 @@ SQL使用可靠官方客户端/一致性导出，明确InnoDB、触发器/视图
 ## 当前缺口
 ECS无mysql/mysqldump客户端；须确定隔离工具路径。官网入口、NPM持久化挂载及数据库类型、CloudBase持久对象、网站附属数据库待只读核实。
 现有候选e5908185已通过代码/临时数据库验证及ECS受限无DB冒烟；生产备份隔离恢复仍未通过，不用备份合同代替该Gate。
+
+## 20:33 现场路径回执
+- 官网current解析到/www/wwwroot/jiuchen-releases/20260809-115206-2fecbaf0，实际22MiB；需备份真实目标及current指向，不只归档符号链接。
+- 宿主nginx主配置/etc/nginx/nginx.conf，prefix=/usr/share/nginx；包含的站点配置/证书路径还需由配置依赖解析核对，不打印配置秘密。
+- NPM容器nginx-app：/clouddream/nginx-proxy-manage/letsencrypt→/etc/letsencrypt；/clouddream/nginx-proxy-manage/data→/data；自定义/app/index.js来自/clouddream/nginx-proxy-manage/app/index.js，必须保留该定制覆盖文件及版本信息。
+- shared一级目录cases/tmp/previous-release；cases列为保留业务资料，tmp不默认长期备份，previous-release作为版本元数据。
+- ECS已有/usr/bin/openssl，未安装MySQL客户端。下一步核查管理员WSL现有MySQL客户端，评估经SSH隧道在管理员侧执行官方一致性导出；不默认向ECS安装数据库或另起数据库容器。
+- NPM配置数据库类型及一致性导出工具待核；未确定前入口备份不能标complete。当前只完成盘点与合同，下载/恢复脚本仍待实现验证。
