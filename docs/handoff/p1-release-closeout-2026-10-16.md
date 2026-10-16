@@ -30,6 +30,13 @@
 - 更正后的38892084356：API typecheck/213 tests/build、News混合字符集关系/双次迁移/临时恢复、Profile临时门禁全部PASS。
 - 源码修复提交：4d9d429164e29e409f2cb1d8c27276b3dfd69efc。
 - 后继隔离API：e5908185b3b460a04a8102b7e2a30b663623ac30，分支codex/p1-isolated-api-2026-10-16；对比旧eda仅upgrade-news-v2.ts一个文件。
-- 精确后继候选验证：[38893179855](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38893179855)，本记录创建时RUNNING，不能引用集成213测试替代候选215测试。
-- 后继归档：[38893319990](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38893319990)，本记录创建时QUEUED；完成后以实际manifest/SHA256为准，旧eda归档不能用于发布新SHA。
+- 精确后继候选验证：[38893179855](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38893179855)，最终verify（API typecheck/215测试/build）、mysql-gate（混合字符集七表及恢复）、profile-gate全部SUCCESS。
+- 后继归档：[38893319990](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38893319990)，SUCCESS；产物p1-api-e5908185-readonly，162文件、302752 bytes。旧eda归档不能用于发布新SHA。
 - 新增验证/归档入口只在自身workflow文件push或手动触发，固定SHA、不自动部署；仍有旧PR云端workflow在额度准入前失败，不反复重跑。
+
+## 已生成交付包
+- 文件：jiuchen-api-e5908185b3b460a04a8102b7e2a30b663623ac30-readonly.tar.gz。
+- SHA256：ae1db0fa1ee8af35881a0f1a09b4d7fd47134a2707e56d25ee2fcc1f2798ddc2。
+- [下载Artifact](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/38893319990/artifacts/12042896920)，有效期至2026-10-17 19:25北京时间；同包manifest.json保留文件清单。可按固定SHA和现有脚本重建。
+- REVIEW_ARTIFACT_READY / FIXED_SOURCE_TEST_PASS / PROD_NOT_DEPLOYED / DEVICE_PENDING。
+- 后继仍包含既有AI quality v3；单文件修复没有改变其独立审批边界。
