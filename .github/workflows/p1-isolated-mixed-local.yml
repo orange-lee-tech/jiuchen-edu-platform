@@ -1,5 +1,5 @@
 name: P1 isolated release verification
-run-name: P1 e5908185 - isolated release verification
+run-name: P1 283aaf15 - integrated API gate
 
 # Push bootstrap works without changing the default branch.
 on:
@@ -21,7 +21,6 @@ defaults:
 
 jobs:
   verify:
-    if: github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
     timeout-minutes: 25
 
@@ -29,14 +28,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: e5908185b3b460a04a8102b7e2a30b663623ac30
+          ref: 283aaf15fc0047f100028eee547a5581c3f8c047
           persist-credentials: false
 
       - name: Verify exact candidate SHA
         working-directory: .
         run: |
-          test "$(git rev-parse HEAD)" = "e5908185b3b460a04a8102b7e2a30b663623ac30"
-          echo "TESTED_CANDIDATE=e5908185b3b460a04a8102b7e2a30b663623ac30"
+          test "$(git rev-parse HEAD)" = "283aaf15fc0047f100028eee547a5581c3f8c047"
+          echo "TESTED_CANDIDATE=283aaf15fc0047f100028eee547a5581c3f8c047"
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -56,7 +55,7 @@ jobs:
         env:
           CHECK_RESULT: ${{ job.status }}
         run: |
-          printf 'Candidate: `e5908185b3b460a04a8102b7e2a30b663623ac30`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Candidate: `283aaf15fc0047f100028eee547a5581c3f8c047`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
 
   mysql-gate:
     needs: verify
@@ -85,13 +84,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: e5908185b3b460a04a8102b7e2a30b663623ac30
+          ref: 283aaf15fc0047f100028eee547a5581c3f8c047
           persist-credentials: false
       - name: Verify exact candidate SHA
         working-directory: .
         run: |
-          test "$(git rev-parse HEAD)" = "e5908185b3b460a04a8102b7e2a30b663623ac30"
-          echo "TESTED_CANDIDATE=e5908185b3b460a04a8102b7e2a30b663623ac30"
+          test "$(git rev-parse HEAD)" = "283aaf15fc0047f100028eee547a5581c3f8c047"
+          echo "TESTED_CANDIDATE=283aaf15fc0047f100028eee547a5581c3f8c047"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -226,7 +225,7 @@ jobs:
         env:
           CHECK_RESULT: ${{ job.status }}
         run: |
-          printf 'Candidate: `e5908185b3b460a04a8102b7e2a30b663623ac30`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Candidate: `283aaf15fc0047f100028eee547a5581c3f8c047`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
 
   profile-gate:
     needs: mysql-gate
@@ -253,13 +252,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: e5908185b3b460a04a8102b7e2a30b663623ac30
+          ref: 283aaf15fc0047f100028eee547a5581c3f8c047
           persist-credentials: false
       - name: Verify exact candidate SHA
         working-directory: .
         run: |
-          test "$(git rev-parse HEAD)" = "e5908185b3b460a04a8102b7e2a30b663623ac30"
-          echo "TESTED_CANDIDATE=e5908185b3b460a04a8102b7e2a30b663623ac30"
+          test "$(git rev-parse HEAD)" = "283aaf15fc0047f100028eee547a5581c3f8c047"
+          echo "TESTED_CANDIDATE=283aaf15fc0047f100028eee547a5581c3f8c047"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -331,11 +330,10 @@ jobs:
         env:
           CHECK_RESULT: ${{ job.status }}
         run: |
-          printf 'Candidate: `e5908185b3b460a04a8102b7e2a30b663623ac30`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Candidate: `283aaf15fc0047f100028eee547a5581c3f8c047`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
 
   commercial-gate:
-    # One fixed-candidate migration gate on the self-hosted runner.
-    # The workflow file push runs only this job; older verified jobs remain manual.
+    # Synthetic utf8mb3 commercial schema and restore, isolated from production.
     if: github.event_name == 'push'
     runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
     timeout-minutes: 25
@@ -359,13 +357,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: e5908185b3b460a04a8102b7e2a30b663623ac30
+          ref: 283aaf15fc0047f100028eee547a5581c3f8c047
           persist-credentials: false
       - name: Verify exact candidate SHA
         working-directory: .
         run: |
-          test "$(git rev-parse HEAD)" = "e5908185b3b460a04a8102b7e2a30b663623ac30"
-          echo "TESTED_CANDIDATE=e5908185b3b460a04a8102b7e2a30b663623ac30"
+          test "$(git rev-parse HEAD)" = "283aaf15fc0047f100028eee547a5581c3f8c047"
+          echo "TESTED_CANDIDATE=283aaf15fc0047f100028eee547a5581c3f8c047"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -459,4 +457,4 @@ jobs:
         env:
           CHECK_RESULT: ${{ job.status }}
         run: |
-          printf 'Candidate: e5908185b3b460a04a8102b7e2a30b663623ac30\nCommercial gate: %s\nRunner: %s\n' "$CHECK_RESULT" "$RUNNER_NAME" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Candidate: 283aaf15fc0047f100028eee547a5581c3f8c047\nCommercial gate: %s\nRunner: %s\n' "$CHECK_RESULT" "$RUNNER_NAME" >> "$GITHUB_STEP_SUMMARY"

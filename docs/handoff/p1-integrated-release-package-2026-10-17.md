@@ -1,6 +1,6 @@
 # P1 整包发布施工图与一次性验收（2026-10-17）
 
-状态：**代码接线已准备；前端新候选的类型检查、微信体验版、生产表、商户、真机均待实际回执。** 本页是本轮唯一整包验收入口；不授予生产 DDL、切流、收费开关、跨身份扩权或微信正式发布权限。固定 API 候选 `e5908185b3b460a04a8102b7e2a30b663623ac30`；前端基线 `449d7472adff884401e375703364384bf0c65034`，本轮前端源码候选为 `1e3f22e57b7eeff817fddd389915a7c5da15dd0e`，不能沿用 449 的测试回执。现役 API 最后观测 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`。
+状态：**代码接线已准备；前端新候选的类型检查、微信体验版、生产表、商户、真机均待实际回执。** 本页是本轮唯一整包验收入口；不授予生产 DDL、切流、收费开关、跨身份扩权或微信正式发布权限。原已验证 API `e5908185b3b460a04a8102b7e2a30b663623ac30`；整包 API/前端候选 `283aaf15fc0047f100028eee547a5581c3f8c047`（整组 Gate 待回执）；前端基线 `449d7472adff884401e375703364384bf0c65034`，本轮前端源码候选也为 `283aaf15fc0047f100028eee547a5581c3f8c047`，不能沿用 449 的测试回执。现役 API 最后观测 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`。
 
 ## 工程地图与依赖
 
@@ -34,7 +34,13 @@
 
 1. 本轮先做公众号受控入口与来源修正、角色和商业跨模块审计；前端以新 SHA 跑 typecheck/导航/资讯回归。现役和固定候选证据不回填新 SHA。
 2. 生产最小可恢复点与相关结构隔离演练一旦通过，分别申请 Profile 单列、News 七表、商业四表。备份系统的长期区间化和三代轮换排在业务最后；数据库写入前的最小恢复门槛不能后移。
-3. API e590 含 AI quality v3、跨身份只读和 News V2；这些与程序切流/开关各自要范围确认。付款需官方商户准入及回调查询/发货/退款契约，不以源码“有接口”放行。
+3. API 新候选继承 e590 的 AI quality v3、跨身份只读和 News V2；这些与程序切流/开关各自要范围确认。付款需官方商户准入及回调查询/发货/退款契约，不以源码“有接口”放行。
 4. 人员、商户和手机一次会话按上表集中验收。缺样本写 DATA PENDING；缺商户/生产表写 BLOCKED；发布前统一复核，不把无 DB 冒烟或代码测试称为真机通过。
 
-现有 Actions 入口：[P1 固定候选隔离验证](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/workflows/p1-isolated-mixed-local.yml)、[前端本地 Runner 验证](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/workflows/p1-frontend-release-local.yml)。这些工作流历史运行固定旧 SHA；工作流已针对 `1e3f22e5` 固定前端源码，运行结果仍待回执并记录运行 ID，避免误用旧绿灯。
+现有 Actions 入口：[P1 固定候选隔离验证](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/workflows/p1-isolated-mixed-local.yml)、[前端本地 Runner 验证](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/workflows/p1-frontend-release-local.yml)。这些工作流历史运行固定旧 SHA；工作流已针对 `283aaf15` 固定整包源码，运行结果仍待回执并记录运行 ID，避免误用旧绿灯。
+
+## 10 月 17 日商业隔离 Gate 更正
+
+旧 e590 的 [商业 Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39029785435) **FAIL**：四张表在合成 MySQL8/utf8mb3 中建立成功，六个外键被数据库列出，但 `credit-payment-schema-contract.ts` 未对 information_schema 元数据列做显式别名，mysql2 行键是大写列名，检查器读成 `undefined`，误判全部合同列/索引/外键。283aaf15 包含稳定别名、映射修正及前端日期断言更新；修复后必须用同一固定候选的 MySQL Gate 复测双次迁移、合同与合成恢复。旧失败不可改写成 PASS，修复也不证明生产可恢复。
+
+首次新前端 1e3f22e5 的 [Runner 验证](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031334958)：typecheck PASS，94/95 回归 PASS；失败项仍断言旧的“发布时间：”字样，已在 283aaf15 更新为真实日期标签与补录确认行为。新 SHA 的整包 Gates 尚待回执。

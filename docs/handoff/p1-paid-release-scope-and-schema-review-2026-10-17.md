@@ -1,6 +1,6 @@
 # P1 完整收费版：固定候选、Profile 与商业 Schema 审查包（2026-10-17）
 
-状态：**审查就绪；生产 DDL / 收费启用 / API 切流 / 微信正式发布均未授权、未执行**。本页仅用源码与既有回执缩小下一步，不把单元测试当成商户验收。接手先读 [CURRENT](CURRENT.md) 和 [正式发布缺口](p1-release-open-items-2026-10-17.md)。真实数据库结构、商户控制台和新真机结果仍须现场核对。
+更新（2026-10-17）：旧 e590 商业 Gate [39029785435](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39029785435) 失败：四表建立后，检查器未给 information_schema 字段显式别名，误读元数据。整包修复候选 283aaf15fc0047f100028eee547a5581c3f8c047 待整组 Gate；原文中的“Gate 待取回”和 e590 作为收费发布候选的判断已过时，按 [整包施工图](p1-integrated-release-package-2026-10-17.md)执行。\n\n状态：**审查就绪；生产 DDL / 收费启用 / API 切流 / 微信正式发布均未授权、未执行**。本页仅用源码与既有回执缩小下一步，不把单元测试当成商户验收。接手先读 [CURRENT](CURRENT.md) 和 [正式发布缺口](p1-release-open-items-2026-10-17.md)。真实数据库结构、商户控制台和新真机结果仍须现场核对。
 
 ## 一、固定对象与实际差异
 
