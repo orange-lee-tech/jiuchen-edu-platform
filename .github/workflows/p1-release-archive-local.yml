@@ -13,13 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: e5908185b3b460a04a8102b7e2a30b663623ac30
+          ref: 283aaf15fc0047f100028eee547a5581c3f8c047
           fetch-depth: 0
           path: release-source
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
-          ref: 449d7472adff884401e375703364384bf0c65034
+          ref: 283aaf15fc0047f100028eee547a5581c3f8c047
           path: release-tools
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -28,12 +28,12 @@ jobs:
       - name: Verify and package immutable source
         shell: bash
         run: |
-          test "$(git -C release-source rev-parse HEAD)" = "e5908185b3b460a04a8102b7e2a30b663623ac30"
-          node release-tools/tools/release/package-isolated-api.mjs release-source e5908185b3b460a04a8102b7e2a30b663623ac30 "$RUNNER_TEMP/p1-e5908185-archive" | tee "$RUNNER_TEMP/p1-e5908185-summary.txt"
-          cat "$RUNNER_TEMP/p1-e5908185-summary.txt" >> "$GITHUB_STEP_SUMMARY"
+          test "$(git -C release-source rev-parse HEAD)" = "283aaf15fc0047f100028eee547a5581c3f8c047"
+          node release-tools/tools/release/package-isolated-api.mjs release-source 283aaf15fc0047f100028eee547a5581c3f8c047 "$RUNNER_TEMP/p1-283aaf15-archive" | tee "$RUNNER_TEMP/p1-283aaf15-summary.txt"
+          cat "$RUNNER_TEMP/p1-283aaf15-summary.txt" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: p1-api-e5908185-readonly
-          path: ${{ runner.temp }}/p1-e5908185-archive/
-          retention-days: 1
+          name: p1-api-283aaf15-readonly
+          path: ${{ runner.temp }}/p1-283aaf15-archive/
+          retention-days: 7
           if-no-files-found: error
