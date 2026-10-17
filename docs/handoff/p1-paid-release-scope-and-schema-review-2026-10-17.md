@@ -39,9 +39,9 @@
 | `credit_reservations` | 评估执行中的额度占用 | `assessment_id` 唯一；用户与评估外键 |
 | `payment_notifications` | 已验证通知/查询入账去重 | `notification_id` 唯一；不存原始敏感载荷 |
 
-生产先前只证实前三表缺失；第四表状态待只读查询。迁移依赖 `users` 和 `assessments` 的主键类型/索引及 InnoDB 外键兼容。既有生产 utf8mb3/utf8mb4 混合；脚本未指定显式字符集，须在复刻生产默认字符集/排序规则后验外键及 schema checker，不可直接根据干净 MySQL8 Gate 推断生产可建表。此脚本也只读取 `DATABASE_URL`。
+2026-10-17 19:38（北京时间）用户在现役 ECS 执行只读元数据查询：四张商业表全部缺失，`users`、`assessments`、`user_profiles` 均为 InnoDB / `utf8mb3_general_ci`，父表 `id` 均为 `varchar(36)`、`utf8mb3_general_ci`。`user_profiles` 其余合同列存在且类型/可空性符合当前脚本预期，唯一缺 `enrollment_year`。仅看元数据，未导出行。数据库默认字符集、父表索引和环境注入方式仍未在本次回执显示。迁移依赖 `users` 和 `assessments` 的主键类型/索引及 InnoDB 外键兼容。既有生产 utf8mb3/utf8mb4 混合；脚本未指定显式字符集；若数据库默认值不是父表的 `utf8mb3_general_ci`，新表外键列可能继承不兼容的字符集/排序规则。MySQL 对字符型外键要求父子列的字符集及排序规则相同。须先只读核对数据库默认值与父表主键索引；若不匹配，修正迁移并用新 SHA 完成混合字符集隔离 Gate，不得直接运行既有迁移。即使默认值匹配，仍需结构复刻及 schema checker，不能仅凭干净 MySQL8 Gate 推断生产可建表。此脚本也只读取 `DATABASE_URL`。
 
-本包批准前：只读检查四表状态、父表 DDL/字符集、既有评估数据量；在隔离库双次执行四表脚本与 `db:check:credit-payment`、模拟发放/充值/扣减和备份恢复；确认最小可恢复点。**四表审批不含 Profile 或 News DDL，也不自动启用 CREDIT/虚拟支付开关。** 已存在同名但结构不兼容的表会被 `IF NOT EXISTS` 跳过，须以 checker 失败停止，不得强行覆盖。
+本包批准前：只读检查四表状态（已确认全缺）、数据库默认字符集和父表主键索引/外键条件、既有评估数据量；在隔离库双次执行四表脚本与 `db:check:credit-payment`、模拟发放/充值/扣减和备份恢复；确认最小可恢复点。**四表审批不含 Profile 或 News DDL，也不自动启用 CREDIT/虚拟支付开关。** 已存在同名但结构不兼容的表会被 `IF NOT EXISTS` 跳过，须以 checker 失败停止，不得强行覆盖。
 
 ## 五、待现场完成的顺序与回执
 
