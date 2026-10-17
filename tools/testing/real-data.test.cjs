@@ -15,6 +15,7 @@ test('news dates use Beijing time and distinguish verified publications from leg
  assert.match(newsPublicationLabel({source:'manual',publishedAt:'2026-10-11T16:00:01Z'},true),/2026-10-12 00:00:01/)
  assert.match(newsPublicationLabel({source:'wechat_official',publishedAt:'2026-09-25T01:00:02Z'}),/发表时间待核实.*来源更新/)
  assert.equal(newsPublicationLabel({source:'wechat_official',publishedAt:null}),'发表时间待核实')
+ assert.equal(newsPublicationLabel({source:'wechat_official',publishedAt:'2026-10-12T05:00:00Z',publicationTimeSource:'admin_verified_publish_record'}),'发表：2026-10-12')
 })
 
 test('read-only article diagnostic never infers absence from incomplete or legacy scan coverage',()=>{
@@ -61,12 +62,32 @@ test('news cards expose source date, keep every category and defer favorites unt
  const detail=fs.readFileSync(path.join(root,'pages/news-detail/news-detail.wxml'),'utf8')
  const source=fs.readFileSync(path.join(root,'pages/news/news.ts'),'utf8')
  assert.match(listing,/来源：\{\{featured.sourceLabel\}\}/)
- assert.match(listing,/发布时间：\{\{featured.dateLabel\}\}/)
+ assert.match(listing,/class="featured-meta">\{\{featured.dateLabel\}\}<\/text>/)
  assert.match(listing,/!loading && !featured.id/)
  assert.match(source,/return tags\s*\n/)
  assert.match(detail,/bindtap="onUnavailableFavorite"/)
  assert.match(detail,/favoriteBusy \|\| !favoritesReady/)
  assert.match(detail,/\{\{favoriteError\}\}/)
+})
+test('verified official intake requires V2 and explicit operator confirmation',()=>{
+ let modal=null
+ const storage=new Map(),wx={showModal:option=>{modal=option},showToast:()=>{},
+   getStorageSync:key=>storage.get(key),setStorageSync:(key,value)=>storage.set(key,value),removeStorageSync:key=>storage.delete(key)}
+ const load=loadModules(wx)
+ load('utils/auth').saveAuthResult({ok:true,user:{id:'00000000-0000-4000-8000-000000000001',role:'admin'},agreement:{type:'user_terms',version:'test',accepted:true},session:{token:'synthetic',expiresAt:'2099-01-01'},businessIdentity:null})
+ load('pages/admin/admin');const page=load.page()
+ page.onVerifiedOfficialToggle()
+ assert.equal(page.data.verifiedFormOpen,false)
+ page.data.newsV2Enabled=true
+ page.onVerifiedOfficialToggle()
+ assert.equal(page.data.verifiedFormOpen,true)
+ page.data.verifiedDraft={title:'合成公众号文章',articleUrl:'https://mp.weixin.qq.com/s/synthetic',
+   summary:'',coverUrl:'',date:'2026-10-12',time:'13:00',tags:'推免,院校',mediaType:'article'}
+ page.onVerifiedOfficialSubmit()
+ assert.match(modal.content,/管理员核实补录/)
+ assert.match(modal.content,/2026-10-12 13:00/)
+ const admin=fs.readFileSync(path.join(root,'pages/admin/admin.wxml'),'utf8')
+ assert.match(admin,/item.publicationTimeSource === 'admin_verified_publish_record' \? '管理员核实原文'/)
 })
 test('Release A news response only reads the old public endpoint',async()=>{
  const requests=[],wx={request:o=>requests.push(o),getStorageSync:()=>null}
