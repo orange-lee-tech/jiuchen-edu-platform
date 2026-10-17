@@ -39,9 +39,9 @@
 | `credit_reservations` | 评估执行中的额度占用 | `assessment_id` 唯一；用户与评估外键 |
 | `payment_notifications` | 已验证通知/查询入账去重 | `notification_id` 唯一；不存原始敏感载荷 |
 
-2026-10-17 19:38（北京时间）用户在现役 ECS 执行只读元数据查询：四张商业表全部缺失，`users`、`assessments`、`user_profiles` 均为 InnoDB / `utf8mb3_general_ci`，父表 `id` 均为 `varchar(36)`、`utf8mb3_general_ci`。`user_profiles` 其余合同列存在且类型/可空性符合当前脚本预期，唯一缺 `enrollment_year`。仅看元数据，未导出行。数据库默认字符集、父表索引和环境注入方式仍未在本次回执显示。迁移依赖 `users` 和 `assessments` 的主键类型/索引及 InnoDB 外键兼容。既有生产 utf8mb3/utf8mb4 混合；脚本未指定显式字符集；若数据库默认值不是父表的 `utf8mb3_general_ci`，新表外键列可能继承不兼容的字符集/排序规则。MySQL 对字符型外键要求父子列的字符集及排序规则相同。须先只读核对数据库默认值与父表主键索引；若不匹配，修正迁移并用新 SHA 完成混合字符集隔离 Gate，不得直接运行既有迁移。即使默认值匹配，仍需结构复刻及 schema checker，不能仅凭干净 MySQL8 Gate 推断生产可建表。此脚本也只读取 `DATABASE_URL`。
+2026-10-17 19:38（北京时间）用户在现役 ECS 执行只读元数据查询：四张商业表全部缺失，`users`、`assessments`、`user_profiles` 均为 InnoDB / `utf8mb3_general_ci`，父表 `id` 均为 `varchar(36)`、`utf8mb3_general_ci`。`user_profiles` 其余合同列存在且类型/可空性符合当前脚本预期，唯一缺 `enrollment_year`。仅看元数据，未导出行。19:41 第二次只读回执确认数据库默认 `utf8mb3_general_ci`，`users.id` 与 `assessments.id` 均为 PRIMARY 唯一主键，现役使用 `DATABASE_URL`。因此现有商业迁移脚本在**该字符集/外键前提上**无需改动固定候选 SHA；仍需真实 MySQL 隔离执行和 schema checker。迁移依赖 `users` 和 `assessments` 的主键类型/索引及 InnoDB 外键兼容。既有生产 utf8mb3/utf8mb4 混合；脚本未指定显式字符集；若数据库默认值不是父表的 `utf8mb3_general_ci`，新表外键列可能继承不兼容的字符集/排序规则。MySQL 对字符型外键要求父子列的字符集及排序规则相同。本次只读核对已确认数据库默认值与两个父表 id 排序规则、主键索引一致；字符集疑点解除。现有固定候选未变，已在既有 `p1-isolated-mixed-local.yml` 增加仅该文件 push 时运行的 `commercial-gate`，固定 checkout e590，使用一次性 MySQL8 和生产相同的 `utf8mb3_general_ci` 默认值，核双次建表、六外键/负例、四表合同及合成数据转储恢复。该 Gate 的工作流提交为 `6e0d01db1c37792b8db710901b06b83948cbdf2f`，运行结果尚未取得，故 TEST PENDING；它仍不是同版 Cynos 的完整生产结构复刻或生产备份。此脚本也只读取 `DATABASE_URL`。
 
-本包批准前：只读检查四表状态（已确认全缺）、数据库默认字符集和父表主键索引/外键条件、既有评估数据量；在隔离库双次执行四表脚本与 `db:check:credit-payment`、模拟发放/充值/扣减和备份恢复；确认最小可恢复点。**四表审批不含 Profile 或 News DDL，也不自动启用 CREDIT/虚拟支付开关。** 已存在同名但结构不兼容的表会被 `IF NOT EXISTS` 跳过，须以 checker 失败停止，不得强行覆盖。
+本包批准前：只读检查四表状态（已确认全缺）、数据库默认字符集和父表主键索引/外键条件（本轮只读已确认）、既有评估数据量；在隔离库双次执行四表脚本与 `db:check:credit-payment`、模拟发放/充值/扣减和备份恢复；确认最小可恢复点。**四表审批不含 Profile 或 News DDL，也不自动启用 CREDIT/虚拟支付开关。** 已存在同名但结构不兼容的表会被 `IF NOT EXISTS` 跳过，须以 checker 失败停止，不得强行覆盖。
 
 ## 五、待现场完成的顺序与回执
 
