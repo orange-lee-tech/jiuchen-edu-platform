@@ -42,7 +42,7 @@ function toCard(post: NewsPost): NewsCard {
     id: post.id,
     title: post.title,
     summary: post.summary ?? '',
-    sourceLabel: post.source === 'manual' ? '九辰编辑' : '九辰教育服务号',
+    sourceLabel: post.source === 'manual' ? '九辰编辑' : post.publicationTimeSource === 'admin_verified_publish_record' ? '九辰教育服务号 · 管理员核实原文' : '九辰教育服务号',
     dateLabel: newsPublicationLabel(post),
     tags: post.tags,
     primaryTag: post.tags[0] || '未分类',

@@ -3,6 +3,7 @@ import { authorizePage, safeBack } from '../../utils/navigation'
 import { filterInternalIds, internalIdView, ID_FILTERS } from '../../utils/admin-id-view'
 import {
   bindAdminInternalId,
+  addVerifiedOfficialPost,
   createAdminAssignment,
   createAdminInternalId,
   deleteAdminAssignment,
@@ -110,6 +111,9 @@ Page({
     newsSyncSummary:'',
     newsSyncHistory:'',
     newsV2Enabled:false,
+    verifiedFormOpen:false,
+    mediaChoices:['图文','视频原文'],
+    verifiedDraft:{title:'',articleUrl:'',summary:'',coverUrl:'',date:'',time:'',tags:'',mediaType:'article' as 'article'|'video'},
     retirementTasks:[] as Array<NewsRetirementTask&{retireLabel:string;sourceLabel:string}>,
     unreadRetirementBatches:[] as NewsRetirementBatch[],
     retirementError:'',
@@ -509,6 +513,64 @@ Page({
         }
       },
     })
+  },
+
+  onVerifiedOfficialToggle(){
+    if(!this.data.newsV2Enabled || this.data.actionLoading)return
+    this.setData({verifiedFormOpen:!this.data.verifiedFormOpen})
+  },
+  onVerifiedOfficialInput(event:WechatMiniprogram.Input){
+    const key=String(event.currentTarget.dataset.key)
+    if(!['title','articleUrl','summary','coverUrl','tags'].includes(key))return
+    this.setData({['verifiedDraft.'+key]:event.detail.value})
+  },
+  onVerifiedOfficialDate(event:WechatMiniprogram.CustomEvent<{value:string}>){
+    this.setData({'verifiedDraft.date':event.detail.value})
+  },
+  onVerifiedOfficialTime(event:WechatMiniprogram.CustomEvent<{value:string}>){
+    this.setData({'verifiedDraft.time':event.detail.value})
+  },
+  onVerifiedOfficialMedia(event:WechatMiniprogram.CustomEvent<{value:string}>){
+    this.setData({'verifiedDraft.mediaType':event.detail.value==='1'?'video':'article'})
+  },
+  onVerifiedOfficialSubmit(){
+    if(this.data.actionLoading || !this.data.newsV2Enabled || getSavedAuthResult()?.user.role!=='admin')return
+    const draft=this.data.verifiedDraft
+    const title=draft.title.trim(), articleUrl=draft.articleUrl.trim()
+    const tags=[...new Set(draft.tags.split(/[,，]/).map(tag=>tag.trim()).filter(Boolean))]
+    if(!title || !/^https:\/\/mp\.weixin\.qq\.com\//i.test(articleUrl) ||
+       !draft.date || !draft.time || !tags.length || tags.length>8){
+      wx.showToast({title:'请填写官方原文、发表时间及1至8个分类',icon:'none'})
+      return
+    }
+    const publishedAt=draft.date+'T'+draft.time+':00+08:00'
+    wx.showModal({
+      title:'核对公众号发表记录',
+      content:'请确认后台已发表：'+title+'\n北京时间：'+draft.date+' '+draft.time+
+        '\n原文：'+articleUrl+'\n这是管理员核实补录，不代表自动同步已修复。',
+      confirmText:'确认补录',cancelText:'继续核对',
+      success:result=>{if(result.confirm)void this.saveVerifiedOfficial({
+        title,articleUrl,publishedAt,tags,summary:draft.summary.trim()||null,
+        coverUrl:draft.coverUrl.trim()||null,mediaType:draft.mediaType,
+      })},
+    })
+  },
+  async saveVerifiedOfficial(post:Parameters<typeof addVerifiedOfficialPost>[0]){
+    if(this.data.actionLoading || !this.data.newsV2Enabled)return
+    try{
+      this.setData({actionLoading:true})
+      const result=await addVerifiedOfficialPost(post)
+      this.setData({verifiedFormOpen:false,
+        verifiedDraft:{title:'',articleUrl:'',summary:'',coverUrl:'',date:'',time:'',tags:'',mediaType:'article'}})
+      wx.showToast({title:result.created?'核实文章已补录':'该原文已存在，未重复新增',icon:'none'})
+      await this.loadData()
+    }catch(error){
+      const code=error instanceof Error?error.message:''
+      const title=code.includes('verified_official_title_conflict')?'同标题不同原文，请核对链接':
+        code.includes('verified_official_url_conflict')?'原文链接冲突，请联系维护人员':
+        friendlyRequestError(error,'补录失败，请核对字段及服务端状态')
+      wx.showToast({title,icon:'none',duration:3000})
+    }finally{this.setData({actionLoading:false})}
   },
 
   onNewsSort(){

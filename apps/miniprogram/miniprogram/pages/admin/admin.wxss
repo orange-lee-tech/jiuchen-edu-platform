@@ -79,3 +79,8 @@ button::after { border:0; }
 .readonly-go{flex:none;color:#087e75;font-size:21rpx;font-weight:750;}
 
 .admin-quick-return{display:block;padding:14rpx 4rpx;margin:-8rpx 0 20rpx;color:#206881;font-size:23rpx;font-weight:750;}
+
+.verified-form{margin-top:18rpx;border-top:1rpx solid #d8dee6;padding-top:12rpx;}
+.verified-label{display:block;margin-top:16rpx;font-size:24rpx;font-weight:700;color:#30465c;}
+.verified-date{display:flex;gap:12rpx;}
+.verified-date picker{flex:1;min-width:0;}

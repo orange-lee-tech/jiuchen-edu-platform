@@ -7,7 +7,7 @@ export function beijingNewsTime(value:string|null|undefined,full=false):string {
     (full?` ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}（北京时间）`:'')
 }
 export function newsPublicationLabel(post:{source:string;publishedAt:string|null;sourceUpdatedAt?:string|null;publicationTimeSource?:string},full=false):string {
-  const verified=post.source==='manual'||post.publicationTimeSource==='explicit_publish_time'
+  const verified=post.source==='manual'||post.publicationTimeSource==='explicit_publish_time'||post.publicationTimeSource==='admin_verified_publish_record'
   if(verified&&post.publishedAt)return '发表：'+beijingNewsTime(post.publishedAt,full)
   const updated=post.sourceUpdatedAt||(!verified?post.publishedAt:null)
   return '发表时间待核实'+(updated?' · 来源更新：'+beijingNewsTime(updated,full):'')

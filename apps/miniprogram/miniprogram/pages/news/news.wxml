@@ -84,7 +84,7 @@
       <view class="news-card-footer">
         <view class="article-tags"><text wx:for="{{featured.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text></view>
         <text class="featured-meta">来源：{{featured.sourceLabel}}</text>
-        <text class="featured-meta">发布时间：{{featured.dateLabel}}</text>
+        <text class="featured-meta">{{featured.dateLabel}}</text>
       </view>
     </view>
   </view>
@@ -120,7 +120,7 @@
         <view class="news-card-footer">
           <view class="article-tags"><text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text><text wx:if="{{item.tags.length === 0}}" class="article-tag muted">未分类</text></view>
           <text class="article-meta">来源：{{item.sourceLabel}}</text>
-          <text class="article-meta">发布时间：{{item.dateLabel}}</text>
+          <text class="article-meta">{{item.dateLabel}}</text>
         </view>
       </view>
     </view>

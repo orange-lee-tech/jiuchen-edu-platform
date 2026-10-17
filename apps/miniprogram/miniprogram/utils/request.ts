@@ -665,7 +665,7 @@ export type AdminNewsPost = {
   tags: string[]
   publishedAt: string | null
   sourceUpdatedAt?: string | null
-  publicationTimeSource?: 'manual' | 'explicit_publish_time' | 'unverified'
+  publicationTimeSource?: 'manual' | 'explicit_publish_time' | 'admin_verified_publish_record' | 'unverified'
   source: 'manual' | 'wechat_official'
   status: 'active' | 'hidden'
 }
@@ -779,6 +779,10 @@ export type NewsSyncResult={synced:number;created:number;updated:number;unchange
   errors:Array<{sourceKey:string;reason:string}>;checkedAt:string;latestSourcePublishedAt:string|null;
   latestSourceUpdatedAt:string|null;groupsFetched:number;totalGroups:number|null;maxGroups:number;truncated:boolean;message:string;
   pagesFetched?:number;uniqueGroups?:number;latestArticles?:Array<{title:string;articleUrl:string|null;sourceUpdatedAt:string|null;publishedAt:string|null}>}
+export type VerifiedOfficialPost = { title:string;articleUrl:string;summary:string|null;coverUrl:string|null;publishedAt:string;tags:string[];mediaType:'article'|'video' }
+export async function addVerifiedOfficialPost(post:VerifiedOfficialPost):Promise<{id:string;created:boolean}>{
+  return request('/me/admin/news/verified-official','POST',post as unknown as WechatMiniprogram.IAnyObject)
+}
 export async function syncOfficialAccountNews():Promise<NewsSyncResult>{
   return request<{ok:true}&NewsSyncResult>('/me/admin/news/sync','POST',{})
 }
@@ -903,7 +907,7 @@ export type NewsPost = {
   tags: string[]
   publishedAt: string | null
   sourceUpdatedAt?: string | null
-  publicationTimeSource?: 'manual' | 'explicit_publish_time' | 'unverified'
+  publicationTimeSource?: 'manual' | 'explicit_publish_time' | 'admin_verified_publish_record' | 'unverified'
   source: 'manual' | 'wechat_official'
   retireAt?:string|null
 }

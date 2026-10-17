@@ -206,6 +206,29 @@
       <text wx:if="{{newsSyncSummary}}" class="card-note" user-select="true">{{newsSyncSummary}}</text>
       <text wx:if="{{newsSyncHistory}}" class="card-note" user-select="true">{{newsSyncHistory}}</text>
     </view>
+    <view wx:if="{{newsV2Enabled}}" class="card">
+      <text class="card-title">核实公众号原文补录</text>
+      <text class="card-note">仅用于同账号后台确认已发表、但接口未返回的文章。必须核对真实原文链接与北京时间；补录保留人工来源，不算自动同步成功。</text>
+      <button class="mini" bindtap="onVerifiedOfficialToggle">{{verifiedFormOpen ? '收起补录' : '核实并补录原文'}}</button>
+      <view wx:if="{{verifiedFormOpen}}" class="verified-form">
+        <text class="verified-label">原文标题</text>
+        <input class="input" value="{{verifiedDraft.title}}" data-key="title" bindinput="onVerifiedOfficialInput" maxlength="255" placeholder="与公众号后台发表记录逐字核对" />
+        <text class="verified-label">微信原文链接</text>
+        <input class="input" value="{{verifiedDraft.articleUrl}}" data-key="articleUrl" bindinput="onVerifiedOfficialInput" placeholder="https://mp.weixin.qq.com/..." />
+        <text class="verified-label">发表时间（北京时间）</text>
+        <view class="verified-date">
+          <picker mode="date" value="{{verifiedDraft.date}}" bindchange="onVerifiedOfficialDate"><view class="picker-field">{{verifiedDraft.date || '选择发表日期'}}</view></picker>
+          <picker mode="time" value="{{verifiedDraft.time}}" bindchange="onVerifiedOfficialTime"><view class="picker-field">{{verifiedDraft.time || '选择发表时刻'}}</view></picker>
+        </view>
+        <text class="verified-label">分类（必填，逗号分隔，最多8个）</text>
+        <input class="input" value="{{verifiedDraft.tags}}" data-key="tags" bindinput="onVerifiedOfficialInput" placeholder="例如：推免，院校" />
+        <text class="verified-label">摘要与封面（可选）</text>
+        <input class="input" value="{{verifiedDraft.summary}}" data-key="summary" bindinput="onVerifiedOfficialInput" maxlength="1000" placeholder="后台实际摘要；没有则留空" />
+        <input class="input" value="{{verifiedDraft.coverUrl}}" data-key="coverUrl" bindinput="onVerifiedOfficialInput" placeholder="微信图片链接；没有则留空" />
+        <picker range="{{mediaChoices}}" value="{{verifiedDraft.mediaType === 'video' ? 1 : 0}}" bindchange="onVerifiedOfficialMedia"><view class="picker-field">{{verifiedDraft.mediaType === 'video' ? '视频原文（跳转公众号）' : '图文原文'}}</view></picker>
+        <button class="primary" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="onVerifiedOfficialSubmit">核对后提交补录</button>
+      </view>
+    </view>
 
     <view class="card">
       <text class="card-title">已同步内容与标签 · 待分类 {{pendingClassificationCount}} 篇</text>
@@ -216,7 +239,7 @@
           <text class="row-title">{{item.title}}</text>
           <text class="row-desc">{{item.dateLabel}}</text>
           <text wx:if="{{item.lifecycleLabel}}" class="row-desc">{{item.lifecycleLabel}}</text>
-          <text class="row-desc">{{item.source === 'wechat_official' ? '服务号同步' : '手动'}} · {{item.status === 'active' ? '已发布' : '已隐藏'}}</text>
+          <text class="row-desc">{{item.source === 'wechat_official' ? (item.publicationTimeSource === 'admin_verified_publish_record' ? '管理员核实原文' : '服务号同步') : '九辰编辑'}} · {{item.status === 'active' ? '已发布' : '已隐藏'}}</text>
           <view class="tag-list">
             <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="tag-chip">{{tag}}</text>
             <text wx:if="{{item.tags.length === 0}}" class="tag-empty">未分类</text>

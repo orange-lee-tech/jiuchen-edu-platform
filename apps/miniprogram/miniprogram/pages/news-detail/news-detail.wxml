@@ -12,7 +12,7 @@
         <text wx:if="{{post.tags.length === 0}}" class="tag muted">未分类</text>
       </view>
       <text class="article-title">{{post.title}}</text>
-      <text class="article-meta">{{post.source === 'wechat_official' ? '九辰教育服务号' : '九辰编辑'}}{{dateLabel ? ' · ' + dateLabel : ''}}{{post.content.author ? ' · ' + post.content.author : ''}}</text>
+      <text class="article-meta">{{post.source === 'wechat_official' ? (post.publicationTimeSource === 'admin_verified_publish_record' ? '九辰教育服务号 · 管理员核实原文' : '九辰教育服务号') : '九辰编辑'}}{{dateLabel ? ' · ' + dateLabel : ''}}{{post.content.author ? ' · ' + post.content.author : ''}}</text>
       <text wx:if="{{post.summary}}" class="article-summary">{{post.summary}}</text>
       <button wx:if="{{post.favoritesEnabled}}" class="favorite-action" loading="{{favoriteBusy}}" disabled="{{favoriteBusy || !favoritesReady}}" bindtap="onToggleFavorite">{{favorited ? '已收藏 · 取消收藏' : '收藏原文'}}</button>
       <text wx:if="{{favoriteError}}" class="favorite-note">{{favoriteError}}</text>
