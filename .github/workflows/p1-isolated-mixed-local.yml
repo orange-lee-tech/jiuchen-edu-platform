@@ -21,6 +21,7 @@ defaults:
 
 jobs:
   verify:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
     timeout-minutes: 25
 
@@ -331,3 +332,131 @@ jobs:
           CHECK_RESULT: ${{ job.status }}
         run: |
           printf 'Candidate: `e5908185b3b460a04a8102b7e2a30b663623ac30`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
+
+  commercial-gate:
+    # One fixed-candidate migration gate on the self-hosted runner.
+    # The workflow file push runs only this job; older verified jobs remain manual.
+    if: github.event_name == 'push'
+    runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local_test_only
+          MYSQL_DATABASE: jiuchen_commercial_ci
+        ports: ['127.0.0.1:3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -plocal_test_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_commercial_ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: e5908185b3b460a04a8102b7e2a30b663623ac30
+          persist-credentials: false
+      - name: Verify exact candidate SHA
+        working-directory: .
+        run: |
+          test "$(git rev-parse HEAD)" = "e5908185b3b460a04a8102b7e2a30b663623ac30"
+          echo "TESTED_CANDIDATE=e5908185b3b460a04a8102b7e2a30b663623ac30"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install and build fixed API
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Prepare synthetic production-compatible parent IDs
+        run: |
+          node --input-type=module <<'JS'
+          import mysql from 'mysql2/promise'
+          const db=await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            await db.query('ALTER DATABASE jiuchen_commercial_ci CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci')
+            await db.query('CREATE TABLE users (id VARCHAR(36) PRIMARY KEY) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci')
+            await db.query('CREATE TABLE assessments (id VARCHAR(36) PRIMARY KEY) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci')
+            await db.query("INSERT INTO users(id) VALUES ('00000000-0000-4000-8000-000000000001')")
+            await db.query("INSERT INTO assessments(id) VALUES ('00000000-0000-4000-8000-000000000002')")
+          } finally { await db.end() }
+          JS
+      - name: Create four tables twice and check schema
+        run: |
+          npm run db:upgrade:credit-payment
+          npm run db:upgrade:credit-payment
+          npm run db:check:credit-payment
+      - name: Verify real MySQL foreign keys, unique keys and retained records
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          const db=await mysql.createConnection(process.env.DATABASE_URL)
+          const user='00000000-0000-4000-8000-000000000001'
+          const assessment='00000000-0000-4000-8000-000000000002'
+          const order='00000000-0000-4000-8000-000000000003'
+          try {
+            const [fks]=await db.query(`SELECT k.table_name,k.column_name,
+              child.character_set_name AS childCharset,child.collation_name AS childCollation,
+              parent.character_set_name AS parentCharset,parent.collation_name AS parentCollation
+              FROM information_schema.key_column_usage k
+              JOIN information_schema.columns child
+                ON child.table_schema=k.table_schema AND child.table_name=k.table_name AND child.column_name=k.column_name
+              JOIN information_schema.columns parent
+                ON parent.table_schema=k.referenced_table_schema
+               AND parent.table_name=k.referenced_table_name AND parent.column_name=k.referenced_column_name
+              WHERE k.table_schema=DATABASE() AND k.referenced_table_name IS NOT NULL
+                AND k.table_name IN ('payment_orders','credit_ledger_entries','credit_reservations')`)
+            assert.equal(fks.length,6)
+            for(const row of fks){
+              assert.equal(row.childCharset,'utf8mb3')
+              assert.equal(row.childCharset,row.parentCharset)
+              assert.equal(row.childCollation,row.parentCollation)
+            }
+            await db.query("INSERT INTO payment_orders(id,user_id,out_trade_no,amount_fen,credit_amount) VALUES (?,?,?,190,1)",[order,user,'JCGATE123456'])
+            await db.query("INSERT INTO credit_ledger_entries(id,user_id,type,delta,payment_order_id,idempotency_key) VALUES ('00000000-0000-4000-8000-000000000004',?,'payment_grant',1,?,'payment-grant:JCGATE123456')",[user,order])
+            await db.query("INSERT INTO credit_reservations(id,user_id,assessment_id,amount,expires_at) VALUES ('00000000-0000-4000-8000-000000000005',?,?,1,DATE_ADD(NOW(), INTERVAL 15 MINUTE))",[user,assessment])
+            await db.query("INSERT INTO payment_notifications(id,notification_id,payload_hash) VALUES ('00000000-0000-4000-8000-000000000006','gate-notice','synthetic-hash')")
+            await assert.rejects(
+              db.query("INSERT INTO payment_orders(id,user_id,out_trade_no,amount_fen,credit_amount) VALUES ('00000000-0000-4000-8000-000000000007','00000000-0000-4000-8000-999999999999','JCBAD123',190,1)"),
+              e=>e.code==='ER_NO_REFERENCED_ROW_2')
+            await assert.rejects(
+              db.query("INSERT INTO payment_notifications(id,notification_id,payload_hash) VALUES ('00000000-0000-4000-8000-000000000008','gate-notice','synthetic-hash')"),
+              e=>e.code==='ER_DUP_ENTRY')
+            console.log('COMMERCIAL_MYSQL_RELATIONS_PASS: six utf8mb3 FKs, synthetic rows, negative FK and uniqueness')
+          } finally { await db.end() }
+          JS
+      - name: Restore synthetic commercial database and compare
+        run: |
+          export MYSQL_PWD=local_test_only
+          mysqldump -h127.0.0.1 -uroot --single-transaction --set-gtid-purged=OFF --no-tablespaces jiuchen_commercial_ci > "$RUNNER_TEMP/commercial-backup.sql"
+          mysql -h127.0.0.1 -uroot -e 'CREATE DATABASE jiuchen_commercial_restore_ci CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci'
+          mysql -h127.0.0.1 -uroot jiuchen_commercial_restore_ci < "$RUNNER_TEMP/commercial-backup.sql"
+          DATABASE_URL=mysql://root:local_test_only@127.0.0.1:3306/jiuchen_commercial_restore_ci npm run db:check:credit-payment
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          const source=await mysql.createConnection(process.env.DATABASE_URL)
+          const restore=await mysql.createConnection('mysql://root:local_test_only@127.0.0.1:3306/jiuchen_commercial_restore_ci')
+          const tables=['users','assessments','payment_orders','credit_ledger_entries','credit_reservations','payment_notifications']
+          try {
+            for(const table of tables){
+              const [before]=await source.query(`SELECT * FROM \`${table}\` ORDER BY id`)
+              const [after]=await restore.query(`SELECT * FROM \`${table}\` ORDER BY id`)
+              assert.deepEqual(after,before,table)
+            }
+            console.log('SYNTHETIC_COMMERCIAL_RESTORE_PASS (not production backup or full schema replica)')
+          } finally {await source.end();await restore.end()}
+          JS
+      - name: Record fixed candidate result
+        if: always()
+        working-directory: .
+        env:
+          CHECK_RESULT: ${{ job.status }}
+        run: |
+          printf 'Candidate: e5908185b3b460a04a8102b7e2a30b663623ac30\nCommercial gate: %s\nRunner: %s\n' "$CHECK_RESULT" "$RUNNER_NAME" >> "$GITHUB_STEP_SUMMARY"
