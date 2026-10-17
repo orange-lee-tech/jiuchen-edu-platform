@@ -104,6 +104,38 @@ class MaintenanceTests(unittest.TestCase):
             self.assertFalse((generation/'PARTIAL').exists())
             self.assertTrue((generation/'PIN').exists())
 
+    def test_database_errors_reveal_codes_not_credentials(self):
+        import subprocess
+        cases=[(b"ERROR 1045 (28000): Access denied for user 'secret-user'@'secret-host'",'MYSQL_ERROR_1045'),
+               (b"mysqldump: Got error: 1227: secret database",'MYSQL_ERROR_1227'),
+               (b"unknown variable ssl-mode=REQUIRED secret-marker",'CLIENT_OPTION_UNSUPPORTED'),
+               (b"Connection timed out secret-host",'TIMEOUT')]
+        for stderr, code in cases:
+            err=m.db_failure('TEST_STEP',subprocess.CompletedProcess([],1,stderr=stderr))
+            self.assertEqual(str(err),'TEST_STEP:'+code)
+            self.assertNotIn('secret',str(err))
+
+    def test_docker_client_mounts_only_configuration_and_keeps_tls(self):
+        args=m.mysql_command('docker','mysqldump',Path('/synthetic/mysql.cnf'),['--single-transaction','synthetic-db'])
+        self.assertIn('--pull=never',args)
+        self.assertIn('--network=host',args)
+        self.assertIn('--read-only',args)
+        self.assertEqual(args[args.index('--entrypoint')+1],'mysqldump')
+        self.assertIn('--defaults-extra-file=/run/jiuchen.cnf',args)
+        self.assertFalse(any('ssl-mode=DISABLED' in x for x in args))
+        self.assertEqual(sum(x=='--mount' for x in args),1)
+
+    def test_mariadb_client_uses_existing_image_without_pull(self):
+        import subprocess
+        from unittest.mock import patch
+        def run(args,**kwargs):
+            if args[0] in ['mysql','mysqldump']:
+                return subprocess.CompletedProcess(args,0,stdout=b'mysql Ver 15.1 Distrib 10.11-MariaDB',stderr=b'')
+            self.assertEqual(args,['docker','image','inspect','mysql:8.0'])
+            return subprocess.CompletedProcess(args,0,stdout=b'',stderr=b'')
+        with patch.object(m.subprocess,'run',side_effect=run),patch('builtins.print'):
+            self.assertEqual(m.mysql_backend(),'docker')
+
     def test_remote_source_python36_syntax(self):
         import ast
         ast.parse((m.HERE/'remote_snapshot.py').read_text(), feature_version=(3,6))

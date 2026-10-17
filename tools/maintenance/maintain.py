@@ -122,7 +122,7 @@ class Remote:
             raise ValueError('Invalid SSH destination')
         self.host = host
         self.socket = str(Path(temp) / 'ssh.sock')
-        self.base = ['ssh', '-S', self.socket, '-o', 'ControlMaster=auto', '-o', 'ControlPersist=120', host]
+        self.base = ['ssh', '-S', self.socket, '-o', 'ConnectTimeout=15', '-o', 'ConnectionAttempts=1', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=2', '-o', 'ControlMaster=auto', '-o', 'ControlPersist=120', host]
         call(self.base + ['true'])
     def run(self, args, **kwargs):
         return call(self.base + [shlex.join(args)], **kwargs)
@@ -145,6 +145,67 @@ process.stdout.write(JSON.stringify(o))"""
 class ConfigError(ValueError):
     """Only fixed, credential-free messages may be used here."""
 
+
+def db_failure(stage, result):
+    # Classify in memory; never echo stderr, SQL, credentials, hostnames or argv.
+    detail = (result.stderr or b'').decode('utf-8', errors='replace') if isinstance(result.stderr, bytes) else (result.stderr or '')
+    lower = detail.lower()
+    code = re.search(r'(?:error\s*:?|got error\s*:)\s*(\d{4})\b', detail, re.I)
+    if code:
+        reason = 'MYSQL_ERROR_' + code.group(1)
+    elif 'unknown option' in lower or 'unknown variable' in lower:
+        reason = 'CLIENT_OPTION_UNSUPPORTED'
+    elif 'permission denied' in lower:
+        reason = 'ACCESS_DENIED'
+    elif 'timed out' in lower or 'timeout' in lower:
+        reason = 'TIMEOUT'
+    elif result.returncode == 255:
+        reason = 'SSH_TRANSPORT_FAILED'
+    else:
+        reason = 'EXIT_' + str(result.returncode)
+    return ConfigError(stage + ':' + reason)
+
+
+def db_run(stage, args, **kwargs):
+    print('DB_STEP=' + stage, flush=True)
+    try:
+        result = subprocess.run(args, stderr=subprocess.PIPE, **kwargs)
+    except FileNotFoundError:
+        raise ConfigError(stage + ':CLIENT_NOT_INSTALLED')
+    except subprocess.TimeoutExpired:
+        raise ConfigError(stage + ':TIMEOUT')
+    if result.returncode:
+        raise db_failure(stage, result)
+    return result
+
+
+def mysql_backend():
+    supported = True
+    for program in ['mysql', 'mysqldump']:
+        try:
+            result = subprocess.run([program, '--no-defaults', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=15)
+            version = result.stdout.decode('utf-8', errors='replace')
+            supported = supported and result.returncode == 0 and 'mariadb' not in version.lower() and bool(re.search(r'\b(?:Ver|Distrib)\s+8\.', version))
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            supported = False
+    if supported:
+        print('DB_CLIENT_BACKEND=local-mysql8', flush=True)
+        return 'local'
+    # Use only the pre-existing WSL image as an ephemeral client, not a DB server.
+    # No image download, daemon/network change or ECS Docker operation.
+    db_run('LOCAL_MYSQL8_IMAGE', ['docker', 'image', 'inspect', 'mysql:8.0'], stdout=subprocess.DEVNULL, timeout=20)
+    print('DB_CLIENT_BACKEND=existing-docker-mysql8-client', flush=True)
+    return 'docker'
+
+
+def mysql_command(backend, program, cnf, options):
+    if backend == 'local':
+        return [program, '--defaults-extra-file=' + str(cnf)] + options
+    return ['docker', 'run', '--rm', '--pull=never', '--network=host', '--read-only',
+            '--cap-drop=ALL', '--security-opt=no-new-privileges', '--pids-limit=64',
+            '--memory=256m', '--cpus=1', '--mount',
+            'type=bind,source=' + str(cnf) + ',target=/run/jiuchen.cnf,readonly',
+            '--entrypoint', program, 'mysql:8.0', '--defaults-extra-file=/run/jiuchen.cnf'] + options
 
 def validate_db_config(db):
     for field in ['host', 'user', 'password', 'database']:
@@ -175,7 +236,11 @@ def validate_db_config(db):
 
 
 def mysql_config(remote, temp):
-    r = remote.run(['/usr/bin/env', '-i', '/opt/jiuchen-api/runtime/node-v22.23.3-linux-x64/bin/node', '-e', DB_JS], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    print('DB_STEP=REMOTE_CONFIG_READ', flush=True)
+    try:
+        r = remote.run(['/usr/bin/env', '-i', '/opt/jiuchen-api/runtime/node-v22.23.3-linux-x64/bin/node', '-e', DB_JS], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as exc:
+        raise db_failure('REMOTE_CONFIG_READ', exc)
     try:
         db = validate_db_config(json.loads(r.stdout))
     except json.JSONDecodeError:
@@ -183,7 +248,7 @@ def mysql_config(remote, temp):
     with socket.socket() as s:
         s.bind(('127.0.0.1', 0))
         port = s.getsockname()[1]
-    call(['ssh', '-S', remote.socket, '-O', 'forward', '-L', '127.0.0.1:%s:%s:%s' % (port, db['host'], int(db['port'])), remote.host], stdout=subprocess.DEVNULL)
+    db_run('SSH_TUNNEL_CREATE', ['ssh', '-S', remote.socket, '-O', 'forward', '-L', '127.0.0.1:%s:%s:%s' % (port, db['host'], int(db['port'])), remote.host], stdout=subprocess.DEVNULL, timeout=20)
     path = Path(temp) / 'mysql.cnf'
     def quote(v):
         return '"' + str(v).replace('\\', '\\\\').replace('"', '\\"') + '"'
@@ -191,18 +256,42 @@ def mysql_config(remote, temp):
     path.chmod(0o600)
     return path, db['database']
 
-def dump_database(remote, temp, target):
-    cnf, db = mysql_config(remote, temp)
-    # Never accept non-transactional tables as a consistent live snapshot.
+def database_connection_check(backend, cnf, db):
     query = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE' AND (engine IS NULL OR engine<>'InnoDB');"
-    r = call(['mysql', '--defaults-extra-file=' + str(cnf), '--batch', '--skip-column-names', db, '-e', query], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    r = db_run('MYSQL_CONNECT_AND_ENGINE_CHECK', mysql_command(backend, 'mysql', cnf,
+        ['--connect-timeout=15', '--batch', '--skip-column-names', '-e', query, db]), stdout=subprocess.PIPE, timeout=45)
     if r.stdout.strip() != b'0':
-        raise RuntimeError('Non-InnoDB source: controlled consistency procedure required')
-    with open(target, 'xb') as out:
-        call(['mysqldump', '--defaults-extra-file=' + str(cnf), '--single-transaction', '--quick', '--routines', '--events', '--triggers', '--hex-blob', '--no-tablespaces', '--set-gtid-purged=OFF', '--column-statistics=0', '--default-character-set=utf8mb4', db], stdout=out, stderr=subprocess.DEVNULL)
-    if target.stat().st_size == 0:
-        raise RuntimeError('Empty SQL backup')
-    cnf.unlink()
+        raise ConfigError('MYSQL_ENGINE_CHECK:NON_INNODB_REQUIRES_CONSISTENCY_PLAN')
+
+
+def dump_database(remote, temp, target):
+    backend = mysql_backend()
+    cnf, db = mysql_config(remote, temp)
+    try:
+        database_connection_check(backend, cnf, db)
+        with open(target, 'xb') as out:
+            db_run('MYSQLDUMP_FULL_EXPORT', mysql_command(backend, 'mysqldump', cnf,
+                ['--connect-timeout=15', '--single-transaction', '--quick', '--routines', '--events', '--triggers', '--hex-blob', '--no-tablespaces', '--set-gtid-purged=OFF', '--column-statistics=0', '--default-character-set=utf8mb4', db]), stdout=out)
+        if target.stat().st_size == 0:
+            raise ConfigError('MYSQLDUMP_FULL_EXPORT:EMPTY_OUTPUT')
+    finally:
+        cnf.unlink(missing_ok=True)
+
+
+def db_check(args):
+    backend = mysql_backend()
+    with tempfile.TemporaryDirectory(prefix='jiuchen-db-check-') as temp:
+        remote = Remote(args.host, temp)
+        try:
+            cnf, db = mysql_config(remote, temp)
+            try:
+                database_connection_check(backend, cnf, db)
+            finally:
+                cnf.unlink(missing_ok=True)
+        finally:
+            remote.close()
+    print('DB_READONLY_CONNECTION_CHECK_PASS')
+    print('Only connectivity and table-engine checks passed; export permissions and restore are not yet verified.')
 
 NOTICE = '''此目录含加密的生产资料，请妥善管理。
 database.jcb：用户档案、课表、评估等数据库个人资料。
@@ -411,6 +500,7 @@ def main():
     p = argparse.ArgumentParser(description='九辰管理员备份与救火工具（WSL）')
     sub = p.add_subparsers(dest='command', required=True)
     r = sub.add_parser('rehearse-db'); r.add_argument('--backup', required=True)
+    dc = sub.add_parser('db-check'); dc.add_argument('--host', required=True)
     d = sub.add_parser('doctor'); d.add_argument('--host', required=True)
     b = sub.add_parser('backup'); b.add_argument('--host', required=True); b.add_argument('--output', required=True); b.add_argument('--pin', action='store_true'); b.add_argument('--resume-latest', action='store_true')
     for name in ['plan', 'stage']:
@@ -420,6 +510,8 @@ def main():
     args = p.parse_args()
     if args.command == 'backup':
         backup(args)
+    elif args.command == 'db-check':
+        db_check(args)
     elif args.command == 'rehearse-db':
         rehearse(args)
     elif args.command == 'doctor':
