@@ -6,7 +6,7 @@
 
 | 对象 | 最后可靠证据 | 当前判定 |
 | --- | --- | --- |
-| 集成分支 | 2026-10-17 本页核对前 p1/foundation 为 911605885550a1cbed4474f5ba1242c55e6f6ba7；近期仅维护工具和文档提交。读者需重新读取实际 HEAD | HEAD 是工程状态，不是生产 SHA |
+| 集成分支 | p1/foundation 为移动工程分支；本次交接审核基于 24db375fe3383129ce78e162a1359d37bd44112f 的代码树并有后续文档提交。读者需重新读取实际 HEAD | HEAD 是工程状态，不是生产 SHA |
 | 现役 API | 10-16 用户 ECS 回执 active 8cc4bb85ffdf3e86e7a13a89d119f1b110491e48，previous b150d2c5c8720aac8d48fbd0395d8db9c408bc63；172.25.80.203:3100 的 live/health 200、database=ok | 最后观察时健康；无 10-17 新部署证据 |
 | 前端候选 | 449d7472adff884401e375703364384bf0c65034；本地 Runner run 38891917207 类型检查及 95/95 回归 PASS | TEST PASS，微信上传/本轮真机未证实 |
 | 后继隔离 API | e5908185b3b460a04a8102b7e2a30b663623ac30；run 38893179855 API typecheck/215测试/build、News/Profile 临时 MySQL Gate 均 PASS；归档 SHA256 ae1db0fa1ee8af35881a0f1a09b4d7fd47134a2707e56d25ee2fcc1f2798ddc2 已在 ECS staging 验证 | CODE/TEST PASS；PROD NOT DEPLOYED |
