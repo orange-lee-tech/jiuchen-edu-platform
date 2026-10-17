@@ -1,6 +1,8 @@
 # P1 完整收费版：固定候选、Profile 与商业 Schema 审查包（2026-10-17）
 
-更新（2026-10-17）：旧 e590 商业 Gate [39029785435](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39029785435) 失败：四表建立后，检查器未给 information_schema 字段显式别名，误读元数据。整包修复候选 283aaf15fc0047f100028eee547a5581c3f8c047 待整组 Gate；原文中的“Gate 待取回”和 e590 作为收费发布候选的判断已过时，按 [整包施工图](p1-integrated-release-package-2026-10-17.md)执行。\n\n状态：**审查就绪；生产 DDL / 收费启用 / API 切流 / 微信正式发布均未授权、未执行**。本页仅用源码与既有回执缩小下一步，不把单元测试当成商户验收。接手先读 [CURRENT](CURRENT.md) 和 [正式发布缺口](p1-release-open-items-2026-10-17.md)。真实数据库结构、商户控制台和新真机结果仍须现场核对。
+更新（2026-10-17）：旧 e590 商业 Gate [39029785435](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39029785435) 失败：四表建立后，检查器未给 information_schema 字段显式别名，误读元数据。整包修复候选 283aaf15fc0047f100028eee547a5581c3f8c047 的 [39031514966](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514966) 已通过 verify/News/Profile/商业合成 Gate；原文中的“Gate 待取回”和 e590 作为收费发布候选的判断已过时，按 [整包施工图](p1-integrated-release-package-2026-10-17.md)执行。
+
+状态：**审查就绪；生产 DDL / 收费启用 / API 切流 / 微信正式发布均未授权、未执行**。本页仅用源码与既有回执缩小下一步，不把单元测试当成商户验收。接手先读 [CURRENT](CURRENT.md) 和 [正式发布缺口](p1-release-open-items-2026-10-17.md)。真实数据库结构、商户控制台和新真机结果仍须现场核对。
 
 ## 一、固定对象与实际差异
 
@@ -39,7 +41,7 @@
 | `credit_reservations` | 评估执行中的额度占用 | `assessment_id` 唯一；用户与评估外键 |
 | `payment_notifications` | 已验证通知/查询入账去重 | `notification_id` 唯一；不存原始敏感载荷 |
 
-2026-10-17 19:38（北京时间）用户在现役 ECS 执行只读元数据查询：四张商业表全部缺失，`users`、`assessments`、`user_profiles` 均为 InnoDB / `utf8mb3_general_ci`，父表 `id` 均为 `varchar(36)`、`utf8mb3_general_ci`。`user_profiles` 其余合同列存在且类型/可空性符合当前脚本预期，唯一缺 `enrollment_year`。仅看元数据，未导出行。19:41 第二次只读回执确认数据库默认 `utf8mb3_general_ci`，`users.id` 与 `assessments.id` 均为 PRIMARY 唯一主键，现役使用 `DATABASE_URL`。因此现有商业迁移脚本在**该字符集/外键前提上**无需改动固定候选 SHA；仍需真实 MySQL 隔离执行和 schema checker。迁移依赖 `users` 和 `assessments` 的主键类型/索引及 InnoDB 外键兼容。既有生产 utf8mb3/utf8mb4 混合；脚本未指定显式字符集；若数据库默认值不是父表的 `utf8mb3_general_ci`，新表外键列可能继承不兼容的字符集/排序规则。MySQL 对字符型外键要求父子列的字符集及排序规则相同。本次只读核对已确认数据库默认值与两个父表 id 排序规则、主键索引一致；字符集疑点解除。现有固定候选未变，已在既有 `p1-isolated-mixed-local.yml` 增加仅该文件 push 时运行的 `commercial-gate`，固定 checkout e590，使用一次性 MySQL8 和生产相同的 `utf8mb3_general_ci` 默认值，核双次建表、六外键/负例、四表合同及合成数据转储恢复。该 Gate 的工作流提交为 `6e0d01db1c37792b8db710901b06b83948cbdf2f`，运行结果尚未取得，故 TEST PENDING；它仍不是同版 Cynos 的完整生产结构复刻或生产备份。此脚本也只读取 `DATABASE_URL`。
+2026-10-17 19:38（北京时间）用户在现役 ECS 执行只读元数据查询：四张商业表全部缺失，`users`、`assessments`、`user_profiles` 均为 InnoDB / `utf8mb3_general_ci`，父表 `id` 均为 `varchar(36)`、`utf8mb3_general_ci`。`user_profiles` 其余合同列存在且类型/可空性符合当前脚本预期，唯一缺 `enrollment_year`。仅看元数据，未导出行。19:41 第二次只读回执确认数据库默认 `utf8mb3_general_ci`，`users.id` 与 `assessments.id` 均为 PRIMARY 唯一主键，现役使用 `DATABASE_URL`。因此现有商业迁移脚本在**该字符集/外键前提上**无需改动固定候选 SHA；仍需真实 MySQL 隔离执行和 schema checker。迁移依赖 `users` 和 `assessments` 的主键类型/索引及 InnoDB 外键兼容。既有生产 utf8mb3/utf8mb4 混合；脚本未指定显式字符集；若数据库默认值不是父表的 `utf8mb3_general_ci`，新表外键列可能继承不兼容的字符集/排序规则。MySQL 对字符型外键要求父子列的字符集及排序规则相同。本次只读核对已确认数据库默认值与两个父表 id 排序规则、主键索引一致；字符集疑点解除。现有固定候选未变，已在既有 `p1-isolated-mixed-local.yml` 增加仅该文件 push 时运行的 `commercial-gate`，固定 checkout e590，使用一次性 MySQL8 和生产相同的 `utf8mb3_general_ci` 默认值，核双次建表、六外键/负例、四表合同及合成数据转储恢复。该 Gate 的初始工作流提交 `6e0d01db1c37792b8db710901b06b83948cbdf2f` 在 [39029785435](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39029785435) 因检查器字段映射失败；整包候选 `283aaf15` 修复后在 [39031514966](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514966) 完成四表双次迁移、合同、六外键、负例及合成备份恢复 PASS。它仍不是完整生产结构复刻或生产备份。此脚本也只读取 `DATABASE_URL`。
 
 本包批准前：只读检查四表状态（已确认全缺）、数据库默认字符集和父表主键索引/外键条件（本轮只读已确认）、既有评估数据量；在隔离库双次执行四表脚本与 `db:check:credit-payment`、模拟发放/充值/扣减和备份恢复；确认最小可恢复点。**四表审批不含 Profile 或 News DDL，也不自动启用 CREDIT/虚拟支付开关。** 已存在同名但结构不兼容的表会被 `IF NOT EXISTS` 跳过，须以 checker 失败停止，不得强行覆盖。
 

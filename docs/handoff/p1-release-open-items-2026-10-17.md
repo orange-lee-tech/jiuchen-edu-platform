@@ -1,5 +1,7 @@
 # 小程序正式发布闭环：未完成项与建议顺序（2026-10-17）
 
+更新：整包候选 `283aaf15fc0047f100028eee547a5581c3f8c047` 的 [前端运行](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514964) 类型检查/96回归 PASS，[API/Gates](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514966) 类型检查/213测试/build 和 News/Profile/商业合成 MySQL Gate PASS。下文 e590/449 是旧候选历史证据；正式生产和真机仍 PENDING。参见[整包施工图](p1-integrated-release-package-2026-10-17.md)。
+
 本页供决定首发范围，不授予生产 DDL、切流、收费、微信发布权限。事实依据见 [CURRENT](CURRENT.md)、[候选验证](p1-release-closeout-2026-10-16.md)、[真机清单](p1-unified-device-acceptance-2026-10-14.md)。排序按业务价值；第7项虽放在最后讨论，凡触发生产数据库写入仍先满足可恢复点。
 
 ## 1. 冻结“首发”的含义和候选

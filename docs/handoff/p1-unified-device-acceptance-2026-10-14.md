@@ -1,5 +1,7 @@
 # P1 统一真机验收 — 固定版本／依赖／步骤
 
+2026-10-17 最新整包候选为 `283aaf15fc0047f100028eee547a5581c3f8c047`：前端 [39031514964](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514964) 类型检查/96回归 PASS，API [39031514966](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514966) typecheck/213测试/build、News/Profile/商业临时库 Gate PASS。未上传微信、未生产 DDL、未切流、未真机。按 [整包施工图](p1-integrated-release-package-2026-10-17.md)一次性记录。以下 e590/449 为历史候选。
+
 截至2026-10-17可参考的后继API隔离候选为 e5908185b3b460a04a8102b7e2a30b663623ac30，前端固定测试点为 449d7472adff884401e375703364384bf0c65034；分别有固定SHA测试回执，尚未作为配对版本在生产/微信真机验收。旧 eda525c1 候选和 35f61d7 集成点仅是历史来源。[当前决策与门槛](CURRENT.md)优先于本清单。project.config.json 本地保留，不进入Git或API归档。
 
 **使用边界**：有限范围的体验版可先验证与现役 API 兼容的旧功能；凡涉及 Profile 缺列、News V2 七表/开关、商业表和新 API 的全功能承诺，需要完成各自生产门槛后才能标通过。正式发布还需按最终前后端 SHA 核对、审批与统一真机回执。本表未取得新候选 DEVICE PASS；应急补录不能记为 AUTO_SYNC PASS。R01–R05 为扩权候选，必须在授权范围明确后测试，不能视为已准许上线。
