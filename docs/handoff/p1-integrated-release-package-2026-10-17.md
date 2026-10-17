@@ -1,6 +1,6 @@
 # P1 整包发布施工图与一次性验收（2026-10-17）
 
-状态：**代码接线已准备；前端新候选的类型检查、微信体验版、生产表、商户、真机均待实际回执。** 本页是本轮唯一整包验收入口；不授予生产 DDL、切流、收费开关、跨身份扩权或微信正式发布权限。固定 API 候选 `e5908185b3b460a04a8102b7e2a30b663623ac30`；前端基线 `449d7472adff884401e375703364384bf0c65034`，本轮前端改动另形成新 SHA，不能沿用 449 的测试回执。现役 API 最后观测 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`。
+状态：**代码接线已准备；前端新候选的类型检查、微信体验版、生产表、商户、真机均待实际回执。** 本页是本轮唯一整包验收入口；不授予生产 DDL、切流、收费开关、跨身份扩权或微信正式发布权限。固定 API 候选 `e5908185b3b460a04a8102b7e2a30b663623ac30`；前端基线 `449d7472adff884401e375703364384bf0c65034`，本轮前端源码候选为 `1e3f22e57b7eeff817fddd389915a7c5da15dd0e`，不能沿用 449 的测试回执。现役 API 最后观测 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`。
 
 ## 工程地图与依赖
 
@@ -37,4 +37,4 @@
 3. API e590 含 AI quality v3、跨身份只读和 News V2；这些与程序切流/开关各自要范围确认。付款需官方商户准入及回调查询/发货/退款契约，不以源码“有接口”放行。
 4. 人员、商户和手机一次会话按上表集中验收。缺样本写 DATA PENDING；缺商户/生产表写 BLOCKED；发布前统一复核，不把无 DB 冒烟或代码测试称为真机通过。
 
-现有 Actions 入口：[P1 固定候选隔离验证](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/workflows/p1-isolated-mixed-local.yml)、[前端本地 Runner 验证](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/workflows/p1-frontend-release-local.yml)。这些工作流历史运行固定旧 SHA；本轮新前端需另一次精确候选验证并记录运行 ID，避免误用旧绿灯。
+现有 Actions 入口：[P1 固定候选隔离验证](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/workflows/p1-isolated-mixed-local.yml)、[前端本地 Runner 验证](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/workflows/p1-frontend-release-local.yml)。这些工作流历史运行固定旧 SHA；工作流已针对 `1e3f22e5` 固定前端源码，运行结果仍待回执并记录运行 ID，避免误用旧绿灯。

@@ -1,5 +1,5 @@
 name: P1 frontend release verification
-run-name: P1 frontend 449d7472 - local verification
+run-name: P1 frontend 1e3f22e5 - integrated release verification
 
 on:
   push:
@@ -25,12 +25,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 449d7472adff884401e375703364384bf0c65034
+          ref: 1e3f22e57b7eeff817fddd389915a7c5da15dd0e
           persist-credentials: false
       - name: Verify exact frontend source
         run: |
-          test "$(git rev-parse HEAD)" = "449d7472adff884401e375703364384bf0c65034"
-          echo "TESTED_FRONTEND=449d7472adff884401e375703364384bf0c65034"
+          test "$(git rev-parse HEAD)" = "1e3f22e57b7eeff817fddd389915a7c5da15dd0e"
+          echo "TESTED_FRONTEND=1e3f22e57b7eeff817fddd389915a7c5da15dd0e"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -46,4 +46,4 @@ jobs:
         env:
           CHECK_RESULT: ${{ job.status }}
         run: |
-          printf 'Frontend source: 449d7472adff884401e375703364384bf0c65034\nAPI candidate: eda525c1a2276af90668849b669e9bce19a4fd7d (separately tested)\nResult: %s\nNo production connection, deployment or device acceptance.\n' "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Frontend source: 1e3f22e57b7eeff817fddd389915a7c5da15dd0e\nAPI candidate: e5908185b3b460a04a8102b7e2a30b663623ac30 (separately tested)\nResult: %s\nNo production connection, deployment or device acceptance.\n' "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
