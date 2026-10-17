@@ -2,6 +2,8 @@
 
 Status: **deterministic implementation complete / production schema + external configuration gates required**
 
+2026-10-17 release status: user-proposed commercial parameters from 2026-10-09 are student free 5 runs, guest trial 1 run, RMB 1.9 for one assessment credit and RMB 16.9 for ten. They have not been set as production defaults, charged in production, or verified with a merchant account. Guest identity/eligibility and refund behavior still require product and implementation acceptance. The original no-code-default policy below remains in force; no payment or enforcement flag may be enabled by this note. The main release gate is tracked in [CURRENT](../handoff/CURRENT.md).
+
 ## Scope
 
 This contract covers the deterministic commercial path only:

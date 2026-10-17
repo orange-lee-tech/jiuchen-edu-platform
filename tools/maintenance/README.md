@@ -65,7 +65,7 @@ scope约束：website只能选website；miniprogram能选api/user-files/database
 5. 保留三代算法已有测试，但**尚未接到生产清理**。已知组件覆盖未闭合前不删除旧备份；PIN计入三代。不能把下载成功自动当成可以清掉最后可靠恢复点。
 6. 生产覆盖适配仍需实现并演练：官网不可变目录原子切换与回退；API复用现有approved-release/READY/promote，不绕过它；生产数据导入需核对明确范围、停写和备份后数据损失窗口；共享入口恢复须逐路由审核。当前脚本不会猜测这些操作。
 
-下一现场动作是先运行doctor和首次已知组件备份，再在WSL执行rehearse-db；取得真实结构后复刻迁移与业务回归。全部通过后才进入生产DDL/候选发布审批，不重复现有代码测试和无数据库冒烟。
+该段记录首批工具的验收顺序。最新现场错误与发布优先级以末尾记录及docs/handoff/CURRENT.md为准。
 
 ## 失败续传（v2）
 
@@ -92,3 +92,9 @@ bash start.sh backup --host root@121.40.168.181 --output ~/jiuchen-backups --pin
 本机mysql/mysqldump均为官方8系列时直接使用；否则检查本机已有mysql:8.0镜像，客户端以临时只读容器运行，复用WSL host网络访问SSH本地隧道，只读挂载本次0600凭据配置。禁止自动pull；镜像缺失或Docker未运行即停止。不会启动数据库服务、修改Docker配置或使用ECS Docker。TLS仍为REQUIRED，不通过降低安全性绕过连接故障。需要现场验证该Docker客户端路径；本地仅做命令构造、错误脱敏和后端选择合成测试。
 
 新增3项测试，总计12项通过。只读连接检查不证明mysqldump例程/事件等导出权限，最终以完整导出和隔离恢复回执验收。网络有变化时无需先重配代理或重启WSL，先按检查结果处理。所有既有加密备份继续保留。
+
+## 2026-10-17 现场 SSL 回执与优先级
+
+管理员 v3 db-check：DB_CLIENT_BACKEND=local-mysql8，REMOTE_CONFIG_READ 与 SSH_TUNNEL_CREATE 已执行；MYSQL_CONNECT_AND_ENGINE_CHECK 失败 MYSQL_ERROR_2026。官方 MySQL 错误码为 SSL connection error，尚不能据此判定具体 TLS 协议、证书、代理或网络根因。数据库组件未导出，先前六组件保留PARTIAL；隔离恢复及生产覆盖尚未运行。
+
+备份建设在正式发布业务排序中列末位；生产 DDL 前仍须最小可恢复点。当前不继续反复重跑整代备份、不降低TLS模式、不把其他模块交付卡在工具优化上。对应发布待办见docs/handoff/p1-release-open-items-2026-10-17.md。
