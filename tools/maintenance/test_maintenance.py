@@ -163,6 +163,11 @@ class MaintenanceTests(unittest.TestCase):
             self.assertIn('ssl-mode=DISABLED',path.read_text())
             self.assertTrue(any('EXISTING_PRODUCTION_DB_ROUTE_NO_TLS_EXPLICIT' in str(call)
                                 for call in shown.call_args_list))
+        remote.run.side_effect=[subprocess.CompletedProcess([],0,stdout=json.dumps(config).encode()),
+                                subprocess.CompletedProcess([],0,stdout=json.dumps({'hostHash':'0'*64,'onInterface':False}).encode())]
+        with tempfile.TemporaryDirectory() as temp, patch.object(m,'db_run'), patch.object(m,'mysql_server_has_tls',return_value=False), patch('builtins.print'):
+            with self.assertRaisesRegex(m.ConfigError,'DB_CONFIG_CHANGED_DURING_CHECK'):
+                m.mysql_config(remote,temp,accept_existing_db_route=True)
 
     def test_tls_capable_server_keeps_required_mode(self):
         config={'host':'db.example.test','port':3306,'user':'test-user','password':'secret','database':'test-db'}
