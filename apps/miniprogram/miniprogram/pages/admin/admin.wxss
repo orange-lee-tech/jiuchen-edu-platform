@@ -84,3 +84,5 @@ button::after { border:0; }
 .verified-label{display:block;margin-top:16rpx;font-size:24rpx;font-weight:700;color:#30465c;}
 .verified-date{display:flex;gap:12rpx;}
 .verified-date picker{flex:1;min-width:0;}
+
+.verified-body{box-sizing:border-box;width:100%;min-height:300rpx;padding:20rpx;margin-top:12rpx;line-height:1.6;white-space:pre-wrap;}
