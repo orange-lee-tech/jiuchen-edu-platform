@@ -16,7 +16,8 @@ export type NewsPostContent = {
   sourceUpdatedAt: string | null
   sourceCreatedAt: string | null
   publicationTimeSource: 'explicit_publish_time' | 'admin_verified_publish_record' | 'unverified'
-  mediaType?: 'article' | 'video'
+  mediaType?: 'article' | 'image' | 'video'
+  blocks?: Array<{type:'text';text:string}|{type:'image';url:string}>
 }
 
 export function normalizeNewsTags(value: unknown) {
@@ -34,13 +35,20 @@ export function normalizeNewsContent(value: unknown): NewsPostContent {
       html: null,
       author: null,
       contentSourceUrl: null,
-      sourceUpdatedAt: null, sourceCreatedAt: null, publicationTimeSource: 'unverified',
+      sourceUpdatedAt: null, sourceCreatedAt: null, publicationTimeSource: 'unverified', blocks:[],
     }
   }
 
   const record = value as Record<string, unknown>
   return {
-    mediaType:record.mediaType==='video'?'video':'article',
+    mediaType:record.mediaType==='video'?'video':record.mediaType==='image'?'image':'article',
+    blocks:Array.isArray(record.blocks)?record.blocks.filter((block):block is {type:'text';text:string}|{type:'image';url:string}=>{
+      if(!block || typeof block!=='object' || Array.isArray(block))return false
+      const item=block as Record<string,unknown>
+      return item.type==='text'&&typeof item.text==='string' ||
+        item.type==='image'&&typeof item.url==='string'&&/^https:\/\/mmbiz\.qpic\.cn\//.test(item.url)
+    }).slice(0,100):[],
+
     sourceUpdatedAt: typeof record.sourceUpdatedAt==='string'?record.sourceUpdatedAt:null,
     sourceCreatedAt: typeof record.sourceCreatedAt==='string'?record.sourceCreatedAt:null,
     publicationTimeSource: record.publicationTimeSource==='explicit_publish_time'?'explicit_publish_time':
@@ -66,16 +74,23 @@ export async function upsertOfficialAccountPosts(
   const errors:Array<{sourceKey:string;reason:string}>=[]
   for(const post of posts){
     try {
-      const [existing]=await database.db.select().from(newsPosts).where(eq(newsPosts.sourceKey,post.sourceKey)).limit(1)
+      const [byKey]=await database.db.select().from(newsPosts).where(eq(newsPosts.sourceKey,post.sourceKey)).limit(1)
+      const [byUrl]=byKey||!post.articleUrl?[]:await database.db.select().from(newsPosts)
+        .where(and(eq(newsPosts.source,'wechat_official'),eq(newsPosts.articleUrl,post.articleUrl))).limit(1)
+      const existing=byKey??byUrl
+      const previous=existing?normalizeNewsContent(existing.contentJson):null
+      const contentJson=previous?.blocks?.length && !post.content.html
+        ? {...post.content,blocks:previous.blocks} : post.content
+      const publishedAt=post.publishedAt??(previous?.publicationTimeSource==='admin_verified_publish_record'?existing?.publishedAt??null:null)
       const values={title:post.title,summary:post.summary,coverUrl:post.coverUrl,articleUrl:post.articleUrl,
-        contentJson:post.content,publishedAt:post.publishedAt}
+        contentJson,publishedAt}
       if(existing){
         const identical=existing.title===post.title && existing.summary===post.summary && existing.coverUrl===post.coverUrl &&
-          existing.articleUrl===post.articleUrl && existing.publishedAt?.toISOString()===post.publishedAt?.toISOString() &&
-          JSON.stringify(normalizeNewsContent(existing.contentJson))===JSON.stringify(normalizeNewsContent(post.content))
+          existing.articleUrl===post.articleUrl && existing.publishedAt?.toISOString()===publishedAt?.toISOString() &&
+          JSON.stringify(normalizeNewsContent(existing.contentJson))===JSON.stringify(normalizeNewsContent(contentJson))
         if(identical){unchanged++;continue}
         // Do not change labels or resurrect a deliberately hidden article.
-        await database.db.update(newsPosts).set(values).where(eq(newsPosts.id,existing.id));updated++
+        await database.db.update(newsPosts).set({...values,sourceKey:post.sourceKey}).where(eq(newsPosts.id,existing.id));updated++
       }else{
         await database.db.insert(newsPosts).values({id:randomUUID(),source:'wechat_official',sourceKey:post.sourceKey,
           ...values,tagsJson:[],status:'active'});created++
