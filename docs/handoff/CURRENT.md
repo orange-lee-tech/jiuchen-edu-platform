@@ -14,7 +14,7 @@
 
 ## 2026-10-18 生产只读探针及客服入口审计
 
-管理员在 ECS root 对现役环境执行只读探针：`readOnlyProbe=PASS`、`dbEndpointLoopback=false`、`dbServerTls=disabled`、`dbRequireSecureTransport=OFF`、`dbSessionTlsActive=false`。因此 WSL 备份工具 `ssl-mode=REQUIRED` 与当前服务端能力冲突，解释 `MYSQL_ERROR_2026`；非 loopback 尚不足以判断数据库位于另一台机器。已提交 WSL 维护工具条件通道：先核 MySQL 握手 TLS 位；仅服务端不支持 TLS 且目标是 ECS 本机网卡数字 IP，才通过既有 SSH 隧道临时使用无 TLS MySQL 客户端；异机地址直接停止。**10:00 左右现场 db-check 输出 `DB_STEP=REMOTE_CONFIG_READ`、`DB_STEP=SSH_TUNNEL_CREATE`，随后 `FAILED: DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT`**，证明当前目标不满足同机规则；没有继续连接、导出、恢复或 DDL。下一步只读分类数据库目的地址与 ECS 路由，确定受保护的数据通道；现有六组件 PARTIAL 不是全库备份。[工具说明](../../tools/maintenance/README.md)。
+管理员在 ECS root 对现役环境执行只读探针：`readOnlyProbe=PASS`、`dbEndpointLoopback=false`、`dbServerTls=disabled`、`dbRequireSecureTransport=OFF`、`dbSessionTlsActive=false`。因此 WSL 备份工具 `ssl-mode=REQUIRED` 与当前服务端能力冲突，解释 `MYSQL_ERROR_2026`；非 loopback 尚不足以判断数据库位于另一台机器。已提交 WSL 维护工具条件通道：先核 MySQL 握手 TLS 位；仅服务端不支持 TLS 且目标是 ECS 本机网卡数字 IP，才通过既有 SSH 隧道临时使用无 TLS MySQL 客户端；异机地址默认停止；现另有明确 `--accept-existing-db-route` 一次性选项，见下文。**10:00 左右现场 db-check 输出 `DB_STEP=REMOTE_CONFIG_READ`、`DB_STEP=SSH_TUNNEL_CREATE`，随后 `FAILED: DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT`**，证明当前目标不满足同机规则；没有继续连接、导出、恢复或 DDL。下一步只读分类数据库目的地址与 ECS 路由，确定受保护的数据通道；现有六组件 PARTIAL 不是全库备份。[工具说明](../../tools/maintenance/README.md)。
 
 固定前端 `283aaf15` 源码审计：主页“联系顾问”、我的“联系顾问/联系运营”经 `/auth/me` 刷新身份后打开 `wx.openCustomerServiceChat`；游客明确以未登录身份进入。院校详情先验证会话、取可用资料，复制学校咨询摘要后打开客服；评估结果先核对账号及报告，复制评估摘要后打开客服。产品列表及产品详情（含底部按钮）直接打开同一客服，不复制身份摘要。共同配置为 `runtime.ts` 中企业微信 `corpId` 与 `kfid` URL；客户端只打开会话，不会自动发送，须人工粘贴或主动发送卡片。代码与合成导航测试覆盖部分分支；当前没有固定体验版逐入口打开和客服端实际接收回执。产品入口绕过身份摘要是现有行为，真机记录接收方能否识别咨询来源；若首发要求所有入口都带身份/产品上下文，应另做小范围修复并生成新前端 SHA。
 
@@ -49,7 +49,7 @@
 | 4 | 资讯与官方来源 | 旧 /news 兼容；News V2 七表混合字符集临时迁移/关系回归 PASS，合同为正常30条＋旧文72小时 | 生产七表缺失、开关未启用；10月12目标已在公众号后台发表但不在官方 freepublish 列表；自动来源未通过 | 先决定首发是旧资讯有限范围、可核实原文的受控补录，还是必须完成 V2/自动同步；后两项不得冒充同一个验收 |
 | 5 | 管理员、老师与体验 | 只读统计/身份、客服复制、报告导出等有代码及模拟回归；只读跨身份镜像另有授权边界 | 周/月/年统计、角色样本、首页/课表刷新、客服粘贴、图片/MD/DOCX/PDF 导出在新体验版尚无真机全项回执；部分教师/已分配学员样本缺 | 一次性上传固定前端体验版，按 [真机清单](p1-unified-device-acceptance-2026-10-14.md) 逐项记录 PASS/FAIL/BLOCKED；缺样本记 DATA PENDING，不造数据 |
 | 6 | 受控发布与资源 | 1b8 代码门禁通过；本 SHA ECS 独立构建与无 DB 限额冒烟 PASS | 生产 API 仍是 8cc4；新候选真实 DB/AI 负载、业务健康、回滚、微信提审/正式版均未执行 | 依据最终范围与精确 SHA 单独审批 DDL、API promote、开关和微信版本；ECS 同 256MiB/50%/64 限额下验证真实依赖后切流、真机回归、提交审核 |
-| 7 | 管理员备份与救火 | 组件化加密下载、诊断、计划、隔离上传及隔离 MySQL 演练接口；本地 12 项合成测试 PASS | 10-16 doctor 已知源站全 true；六组件已下载为 PARTIAL。10-17 db-check：本机 MySQL8、SSH 配置读取和隧道建立成功，MySQL_CONNECT_AND_ENGINE_CHECK 返回 ERROR 2026，数据库组件未完成。隔离恢复、全资产覆盖与生产覆盖工具未验收 | 业务排序置末；在任何生产 DDL 前必须解除最小可恢复点门槛。2026 的主要冲突现已定位：WSL 客户端强制 TLS，服务端 `have_ssl=DISABLED`、`require_secure_transport=OFF`，现役 ECS 会话未启用 TLS；数据库地址非 loopback，但尚未判定是否属于本机网卡/容器或另一主机。条件通道代码/15项合成测试已通过，现场同机判断及最小恢复点仍待执行；异机不降级 TLS，不重跑全量备份 |
+| 7 | 管理员备份与救火 | 组件化加密下载、诊断、计划、隔离上传及隔离 MySQL 演练接口；本地 12 项合成测试 PASS | 10-16 doctor 已知源站全 true；六组件已下载为 PARTIAL。10-17 db-check：本机 MySQL8、SSH 配置读取和隧道建立成功，MySQL_CONNECT_AND_ENGINE_CHECK 返回 ERROR 2026，数据库组件未完成。隔离恢复、全资产覆盖与生产覆盖工具未验收 | 业务排序置末；在任何生产 DDL 前必须解除最小可恢复点门槛。2026 的主要冲突现已定位：WSL 客户端强制 TLS，服务端 `have_ssl=DISABLED`、`require_secure_transport=OFF`，现役 ECS 会话未启用 TLS；数据库地址非 loopback，但尚未判定是否属于本机网卡/容器或另一主机。同机通道严格检查后现场失败；另增显式复用现役路径选项及15项合成测试，现场最小恢复点仍待执行，不重跑六组件 |
 
 顺序是业务价值与决策顺序，不是允许跳过安全依赖。当前不能宣称“完整收费上线”“最新资讯自动同步通过”或“全功能正式版通过”。[发布问题逐项分析](p1-release-open-items-2026-10-17.md)解释并行关系、推荐路径和每项验收。News V2 的七表、Profile 单列、商业表与各功能开关是不同审批范围。
 
