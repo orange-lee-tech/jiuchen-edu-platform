@@ -4,7 +4,7 @@
 
 已实现：组件化加密下载、下载后逐项解密比对、资料分类说明、只读故障诊断、选择性恢复计划、选择性上传到 ECS 私有隔离目录、WSL 独立 MySQL 恢复演练接口。
 
-**尚未完成现场验收。没有生产覆盖命令。** 当前接口不切换 current、不导入生产数据库、不修改网站、NPM、环境变量或定时任务。备份模块整体不能标记已验收，也不能据此解除生产迁移 Gate。
+**2026-10-18 现场最小库恢复点通过；没有生产覆盖命令。** 已知七组件加密下载校验成功，管理员 WSL 独立 MySQL8 导入数据库 SQL 后检查出 17 张表，回执 `ISOLATED_SQL_IMPORT_AND_CHECK_PASS`。当前接口不切换 current、不导入生产数据库、不修改网站、NPM、环境变量或定时任务。全资产覆盖、生产级恢复与候选迁移兼容性仍待验。
 
 本地 12 项测试覆盖：加密往返/错误密码/篡改、危险归档、跨业务选择限制、固定恢复点保留、官网真实release归档、Python3.6远程脚本语法。当前开发环境无 MySQL/Docker/SSH 生产连接，真实备份、数据库演练、Linux 权限和网络尚待 WSL 执行。
 
@@ -54,7 +54,11 @@ bash start.sh rehearse-db --backup "$backup"
 
 scope约束：website只能选website；miniprogram能选api/user-files/database/runtime；共享secrets/entry必须显式选择all。即使选择all，也只处理指定components，不自动全选。计划显示默认保留项。
 
-隔离库演练仅证明SQL成功导入和mysqlcheck通过，不证明与源库逐行等价、迁移通过或业务通过。导出时要求基表都是InnoDB；禁止同时做DDL。使用官方mysqldump单事务、触发器/事件/例程/视图支持、二进制十六进制导出；权限不足或不支持参数即失败，不静默缺项。经SSH转发连接数据库，DB密码只在管理员进程内和0600临时配置中；TLS选择以末尾的 2026-10-18 条件通道规则为准。
+隔离库演练仅证明SQL成功导入及至少一张表可见，不证明与源库逐行等价、迁移通过或业务通过。导出时要求基表都是InnoDB；禁止同时做DDL。使用官方mysqldump单事务、触发器/事件/例程/视图支持、二进制十六进制导出；权限不足或不支持参数即失败，不静默缺项。经SSH转发连接数据库，DB密码只在管理员进程内和0600临时配置中；TLS选择以末尾的 2026-10-18 条件通道规则为准。
+
+## 2026-10-18 现场回执
+
+`KNOWN_COMPONENTS_DOWNLOAD_VERIFIED`、`DATABASE_DOWNLOAD_VERIFIED`、`ISOLATED_SQL_IMPORT_AND_CHECK_PASS` 均已由管理员回传；导入表数 17，`productionWrites=false`、`businessAcceptance=false`。备份位于管理员 WSL 的 `/home/orangelee-tech/jiuchen-backups/20261016-134131-cf772f`，需与密码分开管理。演练仅做 SQL 导入和表数检查，已移除冗余 `mysqlcheck`；修正版用 `DB_STEP` 标识失败环节，且容器清理不掩盖原错误。源码本地 17 项测试 PASS。此前本页末尾的“待现场导出/恢复”均为历史记录，以本段与 [CURRENT](../../docs/handoff/CURRENT.md) 为准。
 
 ## 覆盖与保留的未完成验收项
 
