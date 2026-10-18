@@ -1,6 +1,12 @@
 # CURRENT — 九辰教育唯一活跃交接（2026-10-18）
 
-**当前现场执行入口：** [858aa6a5 十月资讯候选执行与验收](p1-public-pages-release-execution-2026-10-18.md)。新固定 ECS staging 脚本 SHA-256 `f4936b0466748523366e9236b940eed13ee64cbec0ab8c7261cd4168d8c3aed9`；新 release 准备脚本 SHA-256 `bacad470d98ede2f51d00c05bb22d41484d74cef39797b4043de55b509f461d7`。均已过 `bash -n`，尚未在 ECS 执行。旧云端 CI 三任务在步骤前失败，不替代自托管本 SHA 的四项成功。
+**当前现场执行入口：** [858aa6a5 十月资讯候选执行与验收](p1-public-pages-release-execution-2026-10-18.md)。新固定 ECS staging 脚本 SHA-256 `f4936b0466748523366e9236b940eed13ee64cbec0ab8c7261cd4168d8c3aed9`；新 release 准备脚本 SHA-256 `bacad470d98ede2f51d00c05bb22d41484d74cef39797b4043de55b509f461d7`。staging 已在 ECS 通过；release 准备尚未执行。旧云端 CI 三任务在步骤前失败，不替代自托管本 SHA 的四项成功。
+
+## 2026-10-19 00:03 CST：858aa6a5 ECS 隔离验收回执
+
+- 用户现场日志“粘贴的文本 (1)(20261018-160345).txt”：固定 API 归档及 staging 脚本均 SHA-256 OK，`ARCHIVE_MANIFEST_AND_BLOBS_PASS`；隔离目录 `/opt/jiuchen-api/staging/verify-858aa6a5bebbdb88346c6282f691b4976886b935-20261018-160058-287910`。ECS Node 22 typecheck/build `ECS_TYPECHECK_AND_BUILD_PASS`，独立 systemd unit result=success/status=0。
+- 内核 cgroup 256 MiB、CPU 50%、TasksMax 64 下，无数据库的 30 次 `/health` 请求成功；`memoryPeakBytes=77303808`、`memoryFailcnt=0`，`ECS_KERNEL_256M_NO_DB_SMOKE_PASS`，最后 `ECS_CANDIDATE_STAGING_PASS`、`ECS_STAGING_GATE_PASS`。现役 `current` 仍是 `/opt/jiuchen-api/releases/8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`。这不是生产数据库/AI/商户负载、四篇内容入库、真机或上线通过。
+- 下一步只执行本候选固定 [release 准备脚本](../../ops/ecs/prepare-public-pages-release-20261018.sh)；尚无 `RELEASE_PREPARED` 回执，不允许将旧 `50e7` 准备目录当作本候选。发布切流、News V2 开关及四篇生产写入分别待精确范围批准。
 
 ## 2026-10-18 23:45 CST：四页真实来源与新隔离 API 候选
 
