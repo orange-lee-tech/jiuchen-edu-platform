@@ -29,3 +29,26 @@ test('unclassified detail is blocked for anonymous/student but server-authentica
   await app.close()
  }
 })
+
+test('official source reuses verified URL and preserves image blocks when source body is absent',async()=>{
+ const url='https://mp.weixin.qq.com/s/synthetic-gallery'
+ const verified={html:null,author:null,contentSourceUrl:null,sourceUpdatedAt:null,sourceCreatedAt:null,
+   publicationTimeSource:'admin_verified_publish_record' as const,mediaType:'image' as const,
+   blocks:[{type:'image' as const,url:'https://mmbiz.qpic.cn/mmbiz_png/test/640'}]}
+ const existing={id:'verified-id',title:'贴图样本',summary:null,coverUrl:null,articleUrl:url,publishedAt:new Date('2026-10-12T05:00:00Z'),
+   sourceKey:'admin-verified:synthetic',source:'wechat_official',contentJson:verified,tagsJson:['竞赛'],status:'active'}
+ let selects=0,updated:Record<string,unknown>|null=null
+ const db={select(){return {from(){return this},where(){return this},async limit(){return ++selects===1?[]:[existing]}}},
+   update(){return {set(value:Record<string,unknown>){updated=value;return {async where(){}}}}}}
+ const database={configured:true,db} as unknown as DatabaseContext&{configured:true}
+ const post:OfficialAccountPost={sourceKey:'official-new-id:0',title:existing.title,summary:null,coverUrl:null,
+   articleUrl:url,publishedAt:null,content:{html:null,author:null,contentSourceUrl:null,sourceUpdatedAt:null,
+     sourceCreatedAt:null,publicationTimeSource:'unverified'}}
+ const result=await upsertOfficialAccountPosts(database,[post])
+ assert.equal(result.updated,1)
+ assert.equal(result.created,0)
+ assert.equal(updated?.sourceKey,post.sourceKey)
+ assert.deepEqual((updated?.contentJson as {blocks:unknown}).blocks,verified.blocks)
+ assert.equal((updated?.contentJson as {mediaType:string}).mediaType,'image')
+ assert.equal((updated?.publishedAt as Date).toISOString(),existing.publishedAt.toISOString())
+})
