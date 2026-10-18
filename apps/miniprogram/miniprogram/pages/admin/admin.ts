@@ -112,8 +112,8 @@ Page({
     newsSyncHistory:'',
     newsV2Enabled:false,
     verifiedFormOpen:false,
-    mediaChoices:['图文','视频原文'],
-    verifiedDraft:{title:'',articleUrl:'',summary:'',coverUrl:'',date:'',time:'',tags:'',mediaType:'article' as 'article'|'video'},
+    mediaChoices:['图文','贴图','视频原文'],
+    verifiedDraft:{title:'',articleUrl:'',summary:'',coverUrl:'',date:'',time:'',tags:'',body:'',mediaType:'article' as 'article'|'image'|'video'},
     retirementTasks:[] as Array<NewsRetirementTask&{retireLabel:string;sourceLabel:string}>,
     unreadRetirementBatches:[] as NewsRetirementBatch[],
     retirementError:'',
@@ -521,7 +521,7 @@ Page({
   },
   onVerifiedOfficialInput(event:WechatMiniprogram.Input){
     const key=String(event.currentTarget.dataset.key)
-    if(!['title','articleUrl','summary','coverUrl','tags'].includes(key))return
+    if(!['title','articleUrl','summary','coverUrl','tags','body'].includes(key))return
     this.setData({['verifiedDraft.'+key]:event.detail.value})
   },
   onVerifiedOfficialDate(event:WechatMiniprogram.CustomEvent<{value:string}>){
@@ -531,27 +531,29 @@ Page({
     this.setData({'verifiedDraft.time':event.detail.value})
   },
   onVerifiedOfficialMedia(event:WechatMiniprogram.CustomEvent<{value:string}>){
-    this.setData({'verifiedDraft.mediaType':event.detail.value==='1'?'video':'article'})
+    this.setData({'verifiedDraft.mediaType':event.detail.value==='2'?'video':event.detail.value==='1'?'image':'article'})
   },
   onVerifiedOfficialSubmit(){
     if(this.data.actionLoading || !this.data.newsV2Enabled || getSavedAuthResult()?.user.role!=='admin')return
     const draft=this.data.verifiedDraft
-    const title=draft.title.trim(), articleUrl=draft.articleUrl.trim()
+    const title=draft.title.trim(), articleUrl=draft.articleUrl.trim(),body=draft.body.trim()
     const tags=[...new Set(draft.tags.split(/[,，]/).map(tag=>tag.trim()).filter(Boolean))]
     if(!title || !/^https:\/\/mp\.weixin\.qq\.com\//i.test(articleUrl) ||
-       !draft.date || !draft.time || !tags.length || tags.length>8){
-      wx.showToast({title:'请填写官方原文、发表时间及1至8个分类',icon:'none'})
+       Boolean(draft.date)!==Boolean(draft.time) || !tags.length || tags.length>8 ||
+       (draft.mediaType!=='video' && !body) || (draft.mediaType==='video' && Boolean(body))){
+      wx.showToast({title:'请核对原文、站内内容及分类',icon:'none'})
       return
     }
-    const publishedAt=draft.date+'T'+draft.time+':00+08:00'
+    const publishedAt=draft.date&&draft.time?draft.date+'T'+draft.time+':00+08:00':null
     wx.showModal({
       title:'核对公众号发表记录',
-      content:'请确认后台已发表：'+title+'\n北京时间：'+draft.date+' '+draft.time+
-        '\n原文：'+articleUrl+'\n这是管理员核实补录，不代表自动同步已修复。',
+      content:'请确认后台已发表：'+title+'\n时间：'+(draft.date?draft.date+' '+draft.time:'待核实')+
+        '\n类型：'+(draft.mediaType==='image'?'贴图':draft.mediaType==='video'?'视频':'图文')+
+        '\n原文：'+articleUrl+'\n补录不代表自动同步已修复。',
       confirmText:'确认补录',cancelText:'继续核对',
       success:result=>{if(result.confirm)void this.saveVerifiedOfficial({
         title,articleUrl,publishedAt,tags,summary:draft.summary.trim()||null,
-        coverUrl:draft.coverUrl.trim()||null,mediaType:draft.mediaType,
+        coverUrl:draft.coverUrl.trim()||null,mediaType:draft.mediaType,body,
       })},
     })
   },
@@ -561,7 +563,7 @@ Page({
       this.setData({actionLoading:true})
       const result=await addVerifiedOfficialPost(post)
       this.setData({verifiedFormOpen:false,
-        verifiedDraft:{title:'',articleUrl:'',summary:'',coverUrl:'',date:'',time:'',tags:'',mediaType:'article'}})
+        verifiedDraft:{title:'',articleUrl:'',summary:'',coverUrl:'',date:'',time:'',tags:'',body:'',mediaType:'article'}})
       wx.showToast({title:result.created?'核实文章已补录':'该原文已存在，未重复新增',icon:'none'})
       await this.loadData()
     }catch(error){
