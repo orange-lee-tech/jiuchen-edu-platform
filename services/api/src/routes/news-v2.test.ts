@@ -183,7 +183,7 @@ test('verified image post keeps ordered images and accepts unknown publication t
   }
   const app=adminFixture('admin-image',{async getConnection(){return connection}})
   const payload={title:'贴图样本',articleUrl:'https://mp.weixin.qq.com/s/synthetic-gallery',publishedAt:null,
-    tags:['竞赛'],mediaType:'image',body:'说明文字\\nhttps://mmbiz.qpic.cn/mmbiz_png/test/640\\n第二段'}
+    tags:['竞赛'],mediaType:'image',body:'说明文字\nhttps://mmbiz.qpic.cn/mmbiz_png/test/640\n第二段'}
   const response=await app.inject({method:'POST',url:'/me/admin/news/verified-official',
     headers:{authorization:'Bearer synthetic'},payload})
   assert.equal(response.statusCode,200)
