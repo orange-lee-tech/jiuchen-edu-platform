@@ -6,6 +6,7 @@ umask 077
 
 sha=50e7fe3d7f93a347dfdc4af0675992690eb01e6f
 digest=64f58071e86fcdf292810a82314117148232a5fd64ccd38d4a730635c288fe6d
+expected_current=8cc4bb85ffdf3e86e7a13a89d119f1b110491e48
 base=/opt/jiuchen-api
 incoming="$base/staging/incoming/$sha"
 archive="$incoming/jiuchen-api-$sha-readonly.tar.gz"
@@ -29,7 +30,7 @@ id jiuchen-api >/dev/null 2>&1 || die 'jiuchen-api service user missing'
 [[ ! -e "$target" && ! -L "$target" ]] || die 'release target already exists; inspect, do not overwrite'
 [[ $(systemctl is-active jiuchen-api.service) == active ]] || die 'production API inactive; inspect first'
 before=$(readlink -f "$base/current")
-[[ "$before" == "$base/releases/"* ]] || die 'production current outside releases'
+[[ "$before" == "$base/releases/$expected_current" ]] || die 'production current differs from last verified release'
 available=$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)
 [[ "$available" =~ ^[0-9]+$ && "$available" -ge 870400 ]] || die 'less than 850 MiB available'
 printf '%s  %s\n' "$digest" "$archive" | sha256sum -c - || die 'archive digest mismatch'
