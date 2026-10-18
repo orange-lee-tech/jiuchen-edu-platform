@@ -4,6 +4,8 @@
 
 更新（2026-10-17）：旧 e590 商业 Gate [39029785435](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39029785435) 失败：四表建立后，检查器未给 information_schema 字段显式别名，误读元数据。整包修复候选 283aaf15fc0047f100028eee547a5581c3f8c047 的 [39031514966](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514966) 已通过 verify/News/Profile/商业合成 Gate；原文中的“Gate 待取回”和 e590 作为收费发布候选的判断已过时，按 [整包施工图](p1-integrated-release-package-2026-10-17.md)执行。
 
+**2026-10-18 真实备份结构回执：** 管理员从已校验的 WSL 加密备份解密，在隔离 MySQL8 中恢复 17 张生产来源表，固定 `1b8ae8b3` API 归档，Profile 单列、News 七表、商业四表升级和重复执行、相应合同检查均通过，最终 28 表，`production_writes=false`。本页下方 10 月 17 日的“尚须真实结构复刻／隔离执行”已由该回执完成；仍未执行生产 DDL、业务读写、商户实付或真机验收。固定前端仍为 `283aaf15`。公众号 10 月缺文的自动来源适配未解决，若首发必须显示新稿，只能在核实原文后使用受控补录并明确来源。
+
 状态：**审查就绪；生产 DDL / 收费启用 / API 切流 / 微信正式发布均未授权、未执行**。本页仅用源码与既有回执缩小下一步，不把单元测试当成商户验收。接手先读 [CURRENT](CURRENT.md) 和 [正式发布缺口](p1-release-open-items-2026-10-17.md)。真实数据库结构、商户控制台和新真机结果仍须现场核对。
 
 ## 一、固定对象与实际差异
