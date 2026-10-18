@@ -1,6 +1,8 @@
 # 小程序正式发布闭环：未完成项与建议顺序（2026-10-17）
 
-更新：整包候选 `283aaf15fc0047f100028eee547a5581c3f8c047` 的 [前端运行](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514964) 类型检查/96回归 PASS，[API/Gates](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514966) 类型检查/213测试/build 和 News/Profile/商业合成 MySQL Gate PASS。下文 e590/449 是旧候选历史证据；正式生产和真机仍 PENDING。参见[整包施工图](p1-integrated-release-package-2026-10-17.md)。
+**2026-10-18 发布候选更正：** 前端固定 SHA 为 `283aaf15fc0047f100028eee547a5581c3f8c047`，隔离 API 固定 SHA 为 `1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7`。API 是现役 `8cc4bb85` 的后代、在 e590 上仅修复商业 schema 检查器；集成提交 `283aaf15fc0047f100028eee547a5581c3f8c047` 的 API 测试通过，但归档器因不满足生产祖先约束拒绝它，不能把它作为 API 发布包。新 API 的固定验证：[39083488661](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661)（verify/News/Profile/商业四项成功）。下文凡称“283a 整包 API 候选”仅为 10 月 17 日代码测试历史，不是当前可归档 API。生产部署、DDL、商户和真机仍待实际验收。 固定隔离 API 的四项门禁 [39083488661](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661) PASS（Node22 typecheck、215/215、build，News/Profile/商业临时 MySQL）；[归档 39083622604](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083622604) PASS，内层 tar.gz SHA-256 `98279923d783889caa87deb815d3828d53266a84a7be081714188a71f1fc1fb8`，仅供审查。详情：[配对候选回执](p1-paired-release-candidates-2026-10-18.md)。
+
+更新：前端固定 `283aaf15fc0047f100028eee547a5581c3f8c047` 的 [前端运行](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514964) 类型检查/96回归 PASS，隔离 API `1b8ae8b3` [API/Gates](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661) 类型检查/215测试/build 和 News/Profile/商业合成 MySQL Gate PASS。下文 e590/449 是旧候选历史证据；正式生产和真机仍 PENDING。参见[整包施工图](p1-integrated-release-package-2026-10-17.md)。
 
 本页供决定首发范围，不授予生产 DDL、切流、收费、微信发布权限。事实依据见 [CURRENT](CURRENT.md)、[候选验证](p1-release-closeout-2026-10-16.md)、[真机清单](p1-unified-device-acceptance-2026-10-14.md)。排序按业务价值；第7项虽放在最后讨论，凡触发生产数据库写入仍先满足可恢复点。
 
@@ -35,7 +37,7 @@
 
 ## 5. 管理端、老师与手机体验
 
-已有真实学员课表、评估与172张院校图片的历史真机 PASS。新前端固定点通过类型检查/95项回归，但新首页、资料、老师/管理员四栏、身份/统计、客服复制后手动发送、报告普通图/长图/水印及 Markdown/Word/PDF 实际打开还需真机。支付来源缺表应显示不可用。部分已分配学员/老师真实样本尚缺，按 DATA PENDING 记录。
+已有真实学员课表、评估与172张院校图片的历史真机 PASS。新前端固定点通过类型检查/96项回归，但新首页、资料、老师/管理员四栏、身份/统计、客服复制后手动发送、报告普通图/长图/水印及 Markdown/Word/PDF 实际打开还需真机。支付来源缺表应显示不可用。部分已分配学员/老师真实样本尚缺，按 DATA PENDING 记录。
 
 建议用固定前端和明确匹配的 API 能力上传一次体验版，按统一清单集中验收，失败只修对应模块。跨身份只读镜像不是普通管理员查看权限的自然延伸，需要独立批准和负例；若首发不承诺，避免把这项样本缺口拖住基础四栏发布。coaching/growth 表缺失的页面必须核对实际路由；首发承诺则补结构与验收，未承诺则从正式可用清单中移出，不做假数据页面。
 

@@ -1,6 +1,8 @@
 # P1 整包发布施工图与一次性验收（2026-10-17）
 
-状态：**固定候选代码/本地 Runner PASS；微信体验版、生产表、商户、真机均待实际回执。** 本页是本轮唯一整包验收入口；不授予生产 DDL、切流、收费开关、跨身份扩权或微信正式发布权限。原已验证 API `e5908185b3b460a04a8102b7e2a30b663623ac30`；整包 API/前端候选 `283aaf15fc0047f100028eee547a5581c3f8c047`（整组隔离 Gate PASS）；前端基线 `449d7472adff884401e375703364384bf0c65034`，本轮前端源码候选也为 `283aaf15fc0047f100028eee547a5581c3f8c047`，不能沿用 449 的测试回执。现役 API 最后观测 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`。
+**2026-10-18 发布候选更正：** 前端固定 SHA 为 `283aaf15fc0047f100028eee547a5581c3f8c047`，隔离 API 固定 SHA 为 `1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7`。API 是现役 `8cc4bb85` 的后代、在 e590 上仅修复商业 schema 检查器；集成提交 `283aaf15fc0047f100028eee547a5581c3f8c047` 的 API 测试通过，但归档器因不满足生产祖先约束拒绝它，不能把它作为 API 发布包。新 API 的固定验证：[39083488661](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661)（verify/News/Profile/商业四项成功）。下文凡称“283a 整包 API 候选”仅为 10 月 17 日代码测试历史，不是当前可归档 API。生产部署、DDL、商户和真机仍待实际验收。 固定隔离 API 的四项门禁 [39083488661](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661) PASS（Node22 typecheck、215/215、build，News/Profile/商业临时 MySQL）；[归档 39083622604](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083622604) PASS，内层 tar.gz SHA-256 `98279923d783889caa87deb815d3828d53266a84a7be081714188a71f1fc1fb8`，仅供审查。详情：[配对候选回执](p1-paired-release-candidates-2026-10-18.md)。
+
+状态：**固定候选代码/本地 Runner PASS；微信体验版、生产表、商户、真机均待实际回执。** 本页是本轮唯一整包验收入口；不授予生产 DDL、切流、收费开关、跨身份扩权或微信正式发布权限。原已验证 API `e5908185b3b460a04a8102b7e2a30b663623ac30`；当前 API 发布候选 `1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7`（整组隔离 Gate PASS），前端候选 `283aaf15fc0047f100028eee547a5581c3f8c047`；前端基线 `449d7472adff884401e375703364384bf0c65034`，本轮前端源码候选也为 `283aaf15fc0047f100028eee547a5581c3f8c047`，不能沿用 449 的测试回执。现役 API 最后观测 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`。
 
 ## 工程地图与依赖
 
