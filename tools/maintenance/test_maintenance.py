@@ -130,6 +130,24 @@ class MaintenanceTests(unittest.TestCase):
         self.assertFalse(any('ssl-mode=DISABLED' in x for x in args))
         self.assertEqual(sum(x=='--mount' for x in args),1)
 
+    def test_dump_uses_mysqldump_options_and_cleans_config(self):
+        with tempfile.TemporaryDirectory() as temp:
+            config=Path(temp)/'mysql.cnf'; config.write_text('[client]\n')
+            output=Path(temp)/'database.sql'
+            def fake_run(stage, args, **kwargs):
+                self.assertEqual(stage,'MYSQLDUMP_FULL_EXPORT')
+                self.assertNotIn('--connect-timeout=15',args)
+                for required in ['--single-transaction','--quick','--routines','--events',
+                                 '--triggers','--hex-blob','--no-tablespaces','--set-gtid-purged=OFF']:
+                    self.assertIn(required,args)
+                kwargs['stdout'].write(b'-- synthetic SQL')
+            with patch.object(m,'mysql_backend',return_value='local'), \
+                 patch.object(m,'mysql_config',return_value=(config,'synthetic-db')), \
+                 patch.object(m,'database_connection_check'), patch.object(m,'db_run',side_effect=fake_run):
+                m.dump_database(None,temp,output)
+            self.assertFalse(config.exists())
+            self.assertTrue(output.stat().st_size)
+
     def test_mysql_greeting_tls_bit_and_malformed_packets(self):
         greeting = b'\x0a8.0.0\x00' + b'1234' + b'12345678' + b'\x00'
         self.assertFalse(m.mysql_greeting_has_tls(greeting+b'\x00\x00'))
