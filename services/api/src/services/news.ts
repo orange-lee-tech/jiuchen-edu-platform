@@ -86,7 +86,7 @@ export async function upsertOfficialAccountPosts(
       const values={title:post.title,summary:post.summary,coverUrl:post.coverUrl,articleUrl:post.articleUrl,
         contentJson,publishedAt}
       if(existing){
-        const identical=existing.title===post.title && existing.summary===post.summary && existing.coverUrl===post.coverUrl &&
+        const identical=existing.sourceKey===post.sourceKey && existing.title===post.title && existing.summary===post.summary && existing.coverUrl===post.coverUrl &&
           existing.articleUrl===post.articleUrl && existing.publishedAt?.toISOString()===publishedAt?.toISOString() &&
           JSON.stringify(normalizeNewsContent(existing.contentJson))===JSON.stringify(normalizeNewsContent(contentJson))
         if(identical){unchanged++;continue}
