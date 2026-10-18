@@ -8,9 +8,15 @@
 
 **ECS 固定候选第 1 关（2026-10-18）：** [完整归档回执](p1-paired-release-candidates-2026-10-18.md)记录 `STAGING_UPLOAD_AND_CHECK_PASS`，随后本 SHA `1b8ae8b3` 在唯一 staging 目录取得 `ARCHIVE_MANIFEST_AND_BLOBS_PASS`、`ECS_TYPECHECK_AND_BUILD_PASS`、`ECS_CANDIDATE_STAGING_PASS`；构建与 256 MiB／50% CPU／64 tasks 无 DB 冒烟 systemd 均 success/status 0，现役 `current` 仍为 `8cc4`。真实 DB/AI 负载、生产恢复点、DDL、切流及新体验版真机仍待验。长期备份优化列末位。
 
-**商户更新（用户 2026-10-18 回执）：** 虚拟支付和微信支付均已开通。所附截图展示虚拟支付基本配置页及一个 AppID 关联页；截图没有呈现 OfferID、两档道具 ID/价格、现网/沙箱 AppKey、生产配置状态、订单查询/发货/退款或真实交易。因此删除“尚未开通”的待办，保留“配置接线与实付验收”门槛。AI 评估次数购买走源码中的虚拟支付 `mode=goods` 和 `wx.requestVirtualPayment`；旧 JSAPI 下单端点仍返回 503，普通微信支付开通不自动使这条充值链可用。密钥只在受限生产环境配置，仓库/聊天/日志只记录存在性与脱敏标识。
+**商户更新（用户 2026-10-18 回执）：** 虚拟支付和微信支付均已开通。ECS root 只读生产环境探针返回 `WECHAT_VIRTUAL_PAY_APP_KEY/OFFER_ID/PRODUCT_ONE/PRODUCT_TEN` 与 `CREDIT_FREE_GRANT_VERSION/AMOUNT` 均未配置，`WECHAT_VIRTUAL_PAY_ENABLED/PRODUCTION_APPROVED`、`CREDIT_ENFORCEMENT_ENABLED`、`NEWS_V2_ENABLED` 均未设为明确布尔值。因此当前生产充值与 News V2 仍不能用。所附截图展示虚拟支付基本配置页及一个 AppID 关联页；截图没有呈现 OfferID、两档道具 ID/价格、现网/沙箱 AppKey、生产配置状态、订单查询/发货/退款或真实交易。因此删除“尚未开通”的待办，保留“配置接线与实付验收”门槛。AI 评估次数购买走源码中的虚拟支付 `mode=goods` 和 `wx.requestVirtualPayment`；旧 JSAPI 下单端点仍返回 503，普通微信支付开通不自动使这条充值链可用。密钥只在受限生产环境配置，仓库/聊天/日志只记录存在性与脱敏标识。
 
 **资讯停在 9 月的定位边界：** 10 月 12 日《中南大学保研看什么？成绩、综测与学院细则》已在同账号后台发表，但固定账号的 `freepublish/batchget` 完整两页仅返回 40 组 41 篇且无此目标；因此该篇缺失发生在自动同步的官方来源视图之前，不是分页、入库、标签或日期排序造成的。页面其他可能的新稿还受到现役 `GET /news` 的“状态 active 且标签非空”过滤；尚无所有 9 月以后稿件的逐篇源端→库→列表对照，不能把整个截止现象武断归为单一原因。数据分析 `getarticlesummary` 返回 47009，永久图文素材 0；自动来源适配**未解决**。管理员核实原链接的受控补录入口已有前端/API 代码，但生产 V2 七表缺失、开关未启用，尚不能用它交付最新文章，更不能称自动同步通过。
+
+## 2026-10-18 生产只读探针及客服入口审计
+
+管理员在 ECS root 对现役环境执行只读探针：`readOnlyProbe=PASS`、`dbEndpointLoopback=false`、`dbServerTls=disabled`、`dbRequireSecureTransport=OFF`、`dbSessionTlsActive=false`。因此 WSL 备份工具 `ssl-mode=REQUIRED` 与当前服务端能力冲突，解释 `MYSQL_ERROR_2026`；非 loopback 尚不足以判断数据库位于另一台机器。需对数据库地址与 ECS 本机网卡/路由做只读同机性判断，再决定如何取得最小可恢复点，且不得把已有六组件 PARTIAL 当全库备份。
+
+固定前端 `283aaf15` 源码审计：主页“联系顾问”、我的“联系顾问/联系运营”经 `/auth/me` 刷新身份后打开 `wx.openCustomerServiceChat`；游客明确以未登录身份进入。院校详情先验证会话、取可用资料，复制学校咨询摘要后打开客服；评估结果先核对账号及报告，复制评估摘要后打开客服。产品列表及产品详情（含底部按钮）直接打开同一客服，不复制身份摘要。共同配置为 `runtime.ts` 中企业微信 `corpId` 与 `kfid` URL；客户端只打开会话，不会自动发送，须人工粘贴或主动发送卡片。代码与合成导航测试覆盖部分分支；当前没有固定体验版逐入口打开和客服端实际接收回执。产品入口绕过身份摘要是现有行为，真机记录接收方能否识别咨询来源；若首发要求所有入口都带身份/产品上下文，应另做小范围修复并生成新前端 SHA。
 
 ## 当前版本与已经证实的事实
 
@@ -37,7 +43,7 @@
 | 4 | 资讯与官方来源 | 旧 /news 兼容；News V2 七表混合字符集临时迁移/关系回归 PASS，合同为正常30条＋旧文72小时 | 生产七表缺失、开关未启用；10月12目标已在公众号后台发表但不在官方 freepublish 列表；自动来源未通过 | 先决定首发是旧资讯有限范围、可核实原文的受控补录，还是必须完成 V2/自动同步；后两项不得冒充同一个验收 |
 | 5 | 管理员、老师与体验 | 只读统计/身份、客服复制、报告导出等有代码及模拟回归；只读跨身份镜像另有授权边界 | 周/月/年统计、角色样本、首页/课表刷新、客服粘贴、图片/MD/DOCX/PDF 导出在新体验版尚无真机全项回执；部分教师/已分配学员样本缺 | 一次性上传固定前端体验版，按 [真机清单](p1-unified-device-acceptance-2026-10-14.md) 逐项记录 PASS/FAIL/BLOCKED；缺样本记 DATA PENDING，不造数据 |
 | 6 | 受控发布与资源 | 1b8 代码门禁通过；本 SHA ECS 独立构建与无 DB 限额冒烟 PASS | 生产 API 仍是 8cc4；新候选真实 DB/AI 负载、业务健康、回滚、微信提审/正式版均未执行 | 依据最终范围与精确 SHA 单独审批 DDL、API promote、开关和微信版本；ECS 同 256MiB/50%/64 限额下验证真实依赖后切流、真机回归、提交审核 |
-| 7 | 管理员备份与救火 | 组件化加密下载、诊断、计划、隔离上传及隔离 MySQL 演练接口；本地 12 项合成测试 PASS | 10-16 doctor 已知源站全 true；六组件已下载为 PARTIAL。10-17 db-check：本机 MySQL8、SSH 配置读取和隧道建立成功，MySQL_CONNECT_AND_ENGINE_CHECK 返回 ERROR 2026，数据库组件未完成。隔离恢复、全资产覆盖与生产覆盖工具未验收 | 业务排序置末；在任何生产 DDL 前必须解除最小可恢复点门槛。2026 表示客户端 SSL 连接错误，具体 TLS 原因未知，不重试完整备份或擅自降级 TLS |
+| 7 | 管理员备份与救火 | 组件化加密下载、诊断、计划、隔离上传及隔离 MySQL 演练接口；本地 12 项合成测试 PASS | 10-16 doctor 已知源站全 true；六组件已下载为 PARTIAL。10-17 db-check：本机 MySQL8、SSH 配置读取和隧道建立成功，MySQL_CONNECT_AND_ENGINE_CHECK 返回 ERROR 2026，数据库组件未完成。隔离恢复、全资产覆盖与生产覆盖工具未验收 | 业务排序置末；在任何生产 DDL 前必须解除最小可恢复点门槛。2026 的主要冲突现已定位：WSL 客户端强制 TLS，服务端 `have_ssl=DISABLED`、`require_secure_transport=OFF`，现役 ECS 会话未启用 TLS；数据库地址非 loopback，但尚未判定是否属于本机网卡/容器或另一主机。先只读判明网络拓扑，制定一次性最小恢复点方案；不盲目降低 TLS 或重跑全量备份 |
 
 顺序是业务价值与决策顺序，不是允许跳过安全依赖。当前不能宣称“完整收费上线”“最新资讯自动同步通过”或“全功能正式版通过”。[发布问题逐项分析](p1-release-open-items-2026-10-17.md)解释并行关系、推荐路径和每项验收。News V2 的七表、Profile 单列、商业表与各功能开关是不同审批范围。
 
