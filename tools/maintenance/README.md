@@ -93,6 +93,16 @@ bash start.sh backup --host root@121.40.168.181 --output ~/jiuchen-backups --pin
 
 新增3项测试，总计12项通过。只读连接检查不证明mysqldump例程/事件等导出权限，最终以完整导出和隔离恢复回执验收。网络有变化时无需先重配代理或重启WSL，先按检查结果处理。所有既有加密备份继续保留。
 
+## 2026-10-18 最小恢复点条件通道（现场仍待验）
+
+生产 root 只读探针证实：当前 MySQL `have_ssl=DISABLED`、`require_secure_transport=OFF`、当前会话无 TLS；现有 WSL 官方 MySQL8 客户端强制 `ssl-mode=REQUIRED`，所以报 `MYSQL_ERROR_2026`。`dbEndpointLoopback=false` 不足以判定是否为 ECS 同机内网 IP。此修改只在管理员 WSL 的 `maintain.py`，不会修改生产库服务、TLS 配置、ECS 或活动 API。
+
+新工具先经现有 SSH ControlMaster 建立 WSL `127.0.0.1` 到 ECS 数据库地址的加密隧道；只读解析 MySQL 握手能力位。若服务端支持 TLS，继续 `ssl-mode=REQUIRED`。若不支持 TLS，则在 ECS 使用现役配置中的同一地址重新核对：必须是数字 IP 且精确属于 ECS 本机网卡，比较地址哈希防止两次配置读取不一致；通过才对本次 WSL→ECS SSH 隧道内的 MySQL 客户端设 `ssl-mode=DISABLED`。其他地址返回 `DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT`，不发送数据库账号或数据。由此只涵盖 ECS 本机 DB 端点；如果是另一个主机，需单独建立端到端加密方案。
+
+管理员从本分支下载最新 `tools/maintenance/maintain.py` 校验 SHA 后替换 WSL 工具目录，先执行 `bash start.sh db-check --host root@121.40.168.181`，期待 `DB_TRANSPORT=SSH_TUNNEL_TO_ECS_LOCAL_INTERFACE` 与 `DB_READONLY_CONNECTION_CHECK_PASS`。再用原备份密码 `backup --resume-latest` 只补 database；成功后执行 `rehearse-db` 并记录隔离恢复回执。未取得现场回执前，`productionBackupRestored=false`，不进行生产 DDL。完整备份和隔离演练可能需要管理员现场等待，长线区间化仍后置。
+
+本地 `python3 -m unittest discover -s tools/maintenance -p test_maintenance.py` 15/15 PASS；Python 编译及内嵌 ECS Node 检查器语法 PASS。合成测试覆盖握手 TLS 位、同机允许、异机拒绝、TLS 可用时强制连接。它们不代表现场连库或恢复成功。
+
 ## 2026-10-17 现场 SSL 回执与优先级
 
 管理员 v3 db-check：DB_CLIENT_BACKEND=local-mysql8，REMOTE_CONFIG_READ 与 SSH_TUNNEL_CREATE 已执行；MYSQL_CONNECT_AND_ENGINE_CHECK 失败 MYSQL_ERROR_2026。官方 MySQL 错误码为 SSL connection error，尚不能据此判定具体 TLS 协议、证书、代理或网络根因。数据库组件未导出，先前六组件保留PARTIAL；隔离恢复及生产覆盖尚未运行。
