@@ -142,6 +142,17 @@ else{o={host:e.DB_HOST,port:e.DB_PORT||3306,user:e.DB_USER,password:e.DB_PASSWOR
 if(!o.host||!o.user||!o.database||o.password===undefined)throw Error('incomplete');
 process.stdout.write(JSON.stringify(o))"""
 
+# This runs on the ECS and returns only a hash and a boolean. A DB address on a
+# local ECS interface has no off-host DB leg after the administrator's SSH tunnel.
+DB_LOCAL_INTERFACE_JS = """process.loadEnvFile('/etc/jiuchen-api/production.env');
+const e=process.env,crypto=require('node:crypto'),net=require('node:net'),os=require('node:os');
+const h=e.DATABASE_URL?new URL(e.DATABASE_URL).hostname:e.DB_HOST;
+if(!h)process.exit(2);
+const host=h.replace(/^\\[|\\]$/g,'');
+const hash=crypto.createHash('sha256').update(h).digest('hex');
+const local=new Set(Object.values(os.networkInterfaces()).flat().filter(Boolean).map(x=>x.address));
+process.stdout.write(JSON.stringify({hostHash:hash,onInterface:!!net.isIP(host)&&local.has(host)}))"""
+
 class ConfigError(ValueError):
     """Only fixed, credential-free messages may be used here."""
 
@@ -235,6 +246,50 @@ def validate_db_config(db):
     return dict(db, host=host, port=port)
 
 
+def mysql_greeting_has_tls(packet):
+    # MySQL protocol v10 handshake: lower two capability bytes follow the
+    # NUL-terminated version, connection id, salt and filler. CLIENT_SSL=0x0800.
+    if not packet or packet[0] != 10:
+        raise ConfigError('DB_TLS_GREETING_INVALID')
+    end = packet.find(b'\0', 1)
+    capability = end + 1 + 4 + 8 + 1
+    if end < 0 or len(packet) < capability + 2:
+        raise ConfigError('DB_TLS_GREETING_INVALID')
+    return bool(int.from_bytes(packet[capability:capability + 2], 'little') & 0x0800)
+
+
+def mysql_server_has_tls(port):
+    try:
+        with socket.create_connection(('127.0.0.1', port), timeout=10) as connection:
+            connection.settimeout(10)
+            def take(size):
+                data = bytearray()
+                while len(data) < size:
+                    part = connection.recv(size - len(data))
+                    if not part:
+                        raise ConfigError('DB_TLS_GREETING_TRUNCATED')
+                    data.extend(part)
+                return bytes(data)
+            header = take(4)
+            length = int.from_bytes(header[:3], 'little')
+            if not 20 <= length <= 4096:
+                raise ConfigError('DB_TLS_GREETING_INVALID')
+            return mysql_greeting_has_tls(take(length))
+    except (OSError, socket.timeout):
+        raise ConfigError('DB_TLS_GREETING_UNAVAILABLE')
+
+
+def db_on_ecs_interface(remote, db):
+    try:
+        result = remote.run(['/usr/bin/env', '-i', '/opt/jiuchen-api/runtime/node-v22.23.3-linux-x64/bin/node',
+                             '-e', DB_LOCAL_INTERFACE_JS], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        answer = json.loads(result.stdout)
+        return (answer['hostHash'] == hashlib.sha256(db['host'].encode()).hexdigest()
+                and answer['onInterface'] is True)
+    except (subprocess.CalledProcessError, ValueError, KeyError, TypeError):
+        raise ConfigError('DB_LOCAL_INTERFACE_CHECK_FAILED')
+
+
 def mysql_config(remote, temp):
     print('DB_STEP=REMOTE_CONFIG_READ', flush=True)
     try:
@@ -252,7 +307,15 @@ def mysql_config(remote, temp):
     path = Path(temp) / 'mysql.cnf'
     def quote(v):
         return '"' + str(v).replace('\\', '\\\\').replace('"', '\\"') + '"'
-    path.write_text('[client]\nprotocol=tcp\nhost=127.0.0.1\nport=%s\nuser=%s\npassword=%s\nssl-mode=REQUIRED\n' % (port, quote(db['user']), quote(db['password'])))
+    if mysql_server_has_tls(port):
+        mode = 'REQUIRED'
+        print('DB_TRANSPORT=MYSQL_TLS_REQUIRED', flush=True)
+    else:
+        if not db_on_ecs_interface(remote, db):
+            raise ConfigError('DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT')
+        mode = 'DISABLED'
+        print('DB_TRANSPORT=SSH_TUNNEL_TO_ECS_LOCAL_INTERFACE', flush=True)
+    path.write_text('[client]\nprotocol=tcp\nhost=127.0.0.1\nport=%s\nuser=%s\npassword=%s\nssl-mode=%s\n' % (port, quote(db['user']), quote(db['password']), mode))
     path.chmod(0o600)
     return path, db['database']
 
