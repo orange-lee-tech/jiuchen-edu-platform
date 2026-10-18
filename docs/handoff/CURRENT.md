@@ -7,6 +7,7 @@
 - 固定前端源码 `51ea8775de74581289617cf1428ba4165775c1e0`（`p1/foundation` 的快照）；固定隔离 API `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`（`codex/p1-news-content-isolated-2026-10-18`）。API 是生产 `8cc4bb85` 的后代，只在旧隔离候选 `1b8ae8b3` 上增加五个资讯相关文件。**不要从移动分支 HEAD 归档 API**。
 - 本地 Node 22.23.3：隔离 API typecheck、217/217 测试、build PASS；前端小程序 typecheck、导航/目录/导出/真实数据 96/96 PASS。镜像缺失的二进制图标已从仓库原样补齐；旧的 53/54 只是临时镜像不完整。`tools/testing/real-data.test.cjs` 已与正文必填合同对齐。这个结果不替代自托管 Runner、ECS、生产数据库和微信真机。
 - 精确候选自托管运行：[隔离 API Gate 39111190229](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190229) PASS（verify、commercial-gate、mysql-gate、profile-gate 四任务成功），[前端 Gate 39111190252](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190252) PASS，[API 归档 39111190239](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190239) PASS。内层 tar.gz SHA-256 `64f58071e86fcdf292810a82314117148232a5fd64ccd38d4a730635c288fe6d`；只读制品不是生产切流批准。
+- [固定 ECS staging 验收脚本](../../ops/ecs/verify-news-content-staging-20261018.sh) SHA-256 `b9d3d966ceaf3ebf6508e4744046a0f9b04fd9a28ac1843a9cf833ce2ceb6b88`，已过 `bash -n`；它只校验新归档和 blobs、隔离构建及 256 MiB／50%／64 tasks 无数据库冒烟，要求上传到以新 SHA 命名的 staging 目录。尚未在 ECS 实跑；运行回执须另记。
 - 首发真实内容仍缺：四条已给短链以及 10 月 12 日中南大学稿在现有官方 `freepublish/batchget` 及生产库未命中；其中《10月竞赛清单来啦～》经后台确认属于「贴图」。需由同一服务号运营提供并核实原始正文、图片顺序和原链接；仅有截图／短链不能生成完整站内阅读。现有自动来源**尚不能覆盖贴图**，管理员受控补录是当前可验收的首发路径，自动覆盖另记未通过。
 - 生产三组 DDL 已执行，最小加密备份及隔离导入演练完成；生产 API 切流、News V2 预热／启用、真实商户接线和支付、四角色及资讯/客服真机、微信提审与正式发布均无通过回执。需要在这些实际验收后更新 CODE / TEST / DEPLOY / DEVICE，不得沿用旧候选绿灯。
 
