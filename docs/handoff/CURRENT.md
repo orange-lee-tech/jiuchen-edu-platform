@@ -1,14 +1,16 @@
 # CURRENT — 九辰教育唯一活跃交接（2026-10-18）
 
+**当前现场执行入口：** [858aa6a5 十月资讯候选执行与验收](p1-public-pages-release-execution-2026-10-18.md)。新固定 ECS staging 脚本 SHA-256 `f4936b0466748523366e9236b940eed13ee64cbec0ab8c7261cd4168d8c3aed9`；新 release 准备脚本 SHA-256 `bacad470d98ede2f51d00c05bb22d41484d74cef39797b4043de55b509f461d7`。均已过 `bash -n`，尚未在 ECS 执行。旧云端 CI 三任务在步骤前失败，不替代自托管本 SHA 的四项成功。
+
 ## 2026-10-18 23:45 CST：四页真实来源与新隔离 API 候选
 
 - 用户上传的匿名公开网页 ZIP `jiuchen-public-pages-v2-20261018-233541.zip`（SHA-256 `173e2e75f860549d5a01bfa30af6aa4d9b55ab8b36931c49bbe1c08e98018704`），四页均 HTTP 200、同服务号 biz `MzY5MTM2ODk5NA==`；页面 `ori_send_time` 与可见 `create_time` 对应。两篇图文的 `js_content` 含全文及 2／3 张正文图片；两篇「贴图」的 `picture_page_info_list` 含顺序 7／1 张，描述文字另存。标题、时间和图片数由 `tools/news/prepare-public-pages.py` 只读提取，输出私有 JSON，原 HTML 与全文不进 Git／聊天；未写生产库。
-- 固定隔离 API 候选改为 `858aa6a5bebbdb88346c6282f691b4976886b935`，只增加微信实际使用的 `https://mmecoa.qpic.cn/` 图片域名白名单、对应归一化、用四页公开源生成可审查内容的脚本与回归。Node 22 本地 typecheck、218/218 API 测试、build 和四页内容/账号/图片顺序校验 PASS；新的自托管 Gate 与只读归档以该 SHA 触发，结果待核。原 `50e7fe3d` 的 Gate、归档、ECS staging 和 release 准备均属旧候选证据；现役 `8cc4bb85` 未变，旧准备目录不准直接切流。
+- 固定隔离 API 候选改为 `858aa6a5bebbdb88346c6282f691b4976886b935`，只增加微信实际使用的 `https://mmecoa.qpic.cn/` 图片域名白名单、对应归一化、用四页公开源生成可审查内容的脚本与回归。本工作环境 Node 24.19.0 typecheck、218/218 API 测试、build 和四页内容/账号/图片顺序校验 PASS；[自托管固定 Gate 39141950531](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39141950531) 四项 verify／commercial／mysql／profile 全部 PASS；[只读归档 39141950607](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39141950607/artifacts/12142425584) PASS。归档内层 SHA-256 `0c316a8582a56c61c89bc8081b0669167b31baee85e0b5f1361bcda7bc089180`，manifest 与 162 Git blobs 本地复核 PASS。四份真实内容负载在模拟管理员 API 合同中通过，无生产写入。原 `50e7fe3d` 的 Gate、归档、ECS staging 和 release 准备均属旧候选证据；现役 `8cc4bb85` 未变，旧准备目录不准直接切流。
 - 四篇页面已具备站内内容数据，不代表十月全量自动同步恢复；10 月 12 日《中南大学保研看什么？》仍无原文 URL。生产资讯写入、News V2 开关、API 切流、图片在微信真机可加载、客服、角色、商户和正式发布仍待分别验收。源端 `freepublish/batchget` 对这几条短链的缺席尚未从根本上变成全自动发现能力。
 
 页首记录当前可执行状态，后文保留取证时间线。完整收费版为正式交付目标，生产收费尚未验收；[固定候选与独立 DDL 审查包](p1-paid-release-scope-and-schema-review-2026-10-17.md)是历史审查材料，新的固定配对见下节。旧日期的计划、候选 SHA、绿灯和“下一步”不自动成为今天的授权。接手先读 CONSTITUTION.md → AGENTS.md → 本页 → 对应专项文档；涉及 ECS 再读 ops/ecs/AGENTS.md。
 
-## 最新发布配对与阻断（2026-10-18，优先于下方历史时间线）
+## 50e7 前一配对验证史（已被页首 858aa6a5 取代）
 
 - 固定前端源码 `51ea8775de74581289617cf1428ba4165775c1e0`（`p1/foundation` 的快照）；固定隔离 API `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`（`codex/p1-news-content-isolated-2026-10-18`）。API 是生产 `8cc4bb85` 的后代，只在旧隔离候选 `1b8ae8b3` 上增加五个资讯相关文件。**不要从移动分支 HEAD 归档 API**。
 - 本地 Node 22.23.3：隔离 API typecheck、217/217 测试、build PASS；前端小程序 typecheck、导航/目录/导出/真实数据 96/96 PASS。镜像缺失的二进制图标已从仓库原样补齐；旧的 53/54 只是临时镜像不完整。`tools/testing/real-data.test.cjs` 已与正文必填合同对齐。这个结果不替代自托管 Runner、ECS、生产数据库和微信真机。
