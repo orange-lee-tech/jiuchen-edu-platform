@@ -148,6 +148,33 @@ class MaintenanceTests(unittest.TestCase):
             self.assertFalse(config.exists())
             self.assertTrue(output.stat().st_size)
 
+    def test_rehearsal_reports_import_failure_and_cleans_its_container(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp); password='synthetic-rehearsal-password'
+            sql=root/'synthetic.sql'; sql.write_text('CREATE TABLE synthetic (id INT);')
+            encrypted=root/'database.jcb'; m.encrypt(sql,encrypted,password)
+            (root/'receipt.json').write_text(json.dumps({'downloadVerified':True,
+                'components':{'database':{'sha256':m.digest(encrypted)}}}))
+            stages=[]
+            def fake_db_run(stage,args,**kwargs):
+                stages.append(stage)
+                if stage=='REHEARSAL_SQL_IMPORT':
+                    raise m.ConfigError('REHEARSAL_SQL_IMPORT:MYSQL_ERROR_1227')
+                return subprocess.CompletedProcess(args,0,stdout=b'')
+            def fake_subprocess(args,**kwargs):
+                if args[:3]==['docker','exec',args[2]]:
+                    return subprocess.CompletedProcess(args,0)
+                self.assertEqual(args[:4],['docker','rm','-f','-v'])
+                return subprocess.CompletedProcess(args,0)
+            with patch.object(m.getpass,'getpass',return_value=password), \
+                 patch.object(m,'db_run',side_effect=fake_db_run), \
+                 patch.object(m.subprocess,'run',side_effect=fake_subprocess), \
+                 patch('builtins.print'):
+                with self.assertRaisesRegex(m.ConfigError,'REHEARSAL_SQL_IMPORT:MYSQL_ERROR_1227'):
+                    m.rehearse(SimpleNamespace(backup=str(root)))
+            self.assertIn('REHEARSAL_CONTAINER_START',stages)
+            self.assertIn('REHEARSAL_SQL_IMPORT',stages)
+
     def test_mysql_greeting_tls_bit_and_malformed_packets(self):
         greeting = b'\x0a8.0.0\x00' + b'1234' + b'12345678' + b'\x00'
         self.assertFalse(m.mysql_greeting_has_tls(greeting+b'\x00\x00'))
