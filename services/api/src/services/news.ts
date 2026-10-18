@@ -80,7 +80,8 @@ export async function upsertOfficialAccountPosts(
       const existing=byKey??byUrl
       const previous=existing?normalizeNewsContent(existing.contentJson):null
       const contentJson=previous?.blocks?.length && !post.content.html
-        ? {...post.content,blocks:previous.blocks} : post.content
+        ? {...post.content,blocks:previous.blocks,mediaType:previous.mediaType,
+            publicationTimeSource:previous.publicationTimeSource} : post.content
       const publishedAt=post.publishedAt??(previous?.publicationTimeSource==='admin_verified_publish_record'?existing?.publishedAt??null:null)
       const values={title:post.title,summary:post.summary,coverUrl:post.coverUrl,articleUrl:post.articleUrl,
         contentJson,publishedAt}
