@@ -2,6 +2,8 @@
 
 本页只记当前可执行状态。完整收费版为正式交付目标，生产收费尚未验收；[固定候选与独立 DDL 审查包](p1-paid-release-scope-and-schema-review-2026-10-17.md)用于下一轮现场核对。历史事实保留在 Git 历史和下列专项文档中，旧日期的计划、候选 SHA、绿灯和“下一步”不自动成为今天的授权。接手先读 CONSTITUTION.md → AGENTS.md → 本页 → 对应专项文档；涉及 ECS 再读 ops/ecs/AGENTS.md。
 
+**2026-10-18 集中切换执行单：** [生产切换与一次性真机验收](p1-production-cutover-plan-2026-10-18.md) 已按固定 API／前端、已通过的三组 DDL 和标题级资讯证据写成五道门。现役旧 timer 虽可成功同步，但固定代码仅在 `NEWS_V2_ENABLED=true` 且完整扫描时调和展示状态；因此 V2 切换前须经单独审定的隔离维护命令预热，再核公开窗口非空。这个命令会写资讯数据，仍未执行；API 切流、付费开关、体验版与真机也未执行。八条产品资料不得被批量打标充当十月新稿。
+
 **2026-10-18 13:56 资讯标题级核对：** 只读 `OCTOBER_SOURCE_CATALOG` 9 行中，4 篇九辰产品手册／介绍的旧链接与另 4 篇同主题新链接，加一篇《不入党、不进学生会，会影响保研吗？》；这些记录仅有 `sourceUpdatedAt=2026-10-17`，不是可核实的 10 月发表时间。`TARGET_TITLE_IN_DATABASE=[]`，10 月 12 日《中南大学保研看什么？成绩、综测与学院细则》仍缺源。故上一段“9 篇被标签过滤”只解释这 9 条已入库记录不能展示，**不能解释用户观察到的 10 月新稿系统性缺失**；不得把产品资料批量打标推到资讯首页。首发需针对已发表但接口缺失的真实新稿取得后台标题／原链接／北京时间，走固定候选的管理员核实补录；独立追踪自动来源接口缺口，不记自动同步 PASS。
 
 **2026-10-18 生产 DDL 实测：** 用户在 ECS root 运行固定 `1b8ae8b3` staging 代码，`PRODUCTION_DDL_PRECHECK_PASS`，随后 `PROFILE_UPGRADE`／`PROFILE_CHECK`、`NEWS_UPGRADE`、`COMMERCIAL_UPGRADE`／`COMMERCIAL_CHECK` 逐项 PASS；Profile `ready=true`、商业四表 `ok=true, issues=[]`，News 返回 `NEWS_V2_SCHEMA_READY`，最终 `THREE_PRODUCTION_DDL_SCOPES_PASS`、`API_CURRENT_UNCHANGED`。这三组结构现已存在；生产 API 仍为 `8cc4bb85`，News V2、收费开关与商户仍未启用。**资讯分层证据：** 现役 timer 11:27 CST active，近期同步成功；固定候选只读源端完整扫描 45/45 组、3 页，其中按 `publish_time` 或来源 `update_time` 归月有 10 月 9 篇、9 月 9 篇、8 月 8 篇、7 月 20 篇，最新来源更新时间 `2026-10-17T08:20:03Z`，所有来源真实发表时间仍未给出。生产 `news_posts` 的 10 月来源月份 9 篇均 active、**标签 0/9**；现役 `/news` 排除无标签内容，因此这 9 条无法公开展示；标题级核对表明多数是产品资料，见上一段。不能把来源更新时间当发表时间。10 月 12 日目标明确未入库；需核实真实新稿原链接、受控补录，并另行解决源端自动覆盖。News V2 空状态需先由固定候选同步/调和再启用公开窗口。
