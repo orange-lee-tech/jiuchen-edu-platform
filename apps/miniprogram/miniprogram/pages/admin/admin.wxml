@@ -208,14 +208,14 @@
     </view>
     <view wx:if="{{newsV2Enabled}}" class="card">
       <text class="card-title">核实公众号原文补录</text>
-      <text class="card-note">仅用于同账号后台确认已发表、但接口未返回的文章。必须核对真实原文链接与北京时间；补录保留人工来源，不算自动同步成功。</text>
+      <text class="card-note">仅用于同账号后台已发表、但接口未返回的图文或贴图。核对原文链接，并导入完整正文或原始图片；发表时间不能核实可留空。补录不算自动同步成功。</text>
       <button class="mini" bindtap="onVerifiedOfficialToggle">{{verifiedFormOpen ? '收起补录' : '核实并补录原文'}}</button>
       <view wx:if="{{verifiedFormOpen}}" class="verified-form">
         <text class="verified-label">原文标题</text>
         <input class="input" value="{{verifiedDraft.title}}" data-key="title" bindinput="onVerifiedOfficialInput" maxlength="255" placeholder="与公众号后台发表记录逐字核对" />
         <text class="verified-label">微信原文链接</text>
         <input class="input" value="{{verifiedDraft.articleUrl}}" data-key="articleUrl" bindinput="onVerifiedOfficialInput" placeholder="https://mp.weixin.qq.com/..." />
-        <text class="verified-label">发表时间（北京时间）</text>
+        <text class="verified-label">发表时间（北京时间，可留空；日期与时刻须同时填写）</text>
         <view class="verified-date">
           <picker mode="date" value="{{verifiedDraft.date}}" bindchange="onVerifiedOfficialDate"><view class="picker-field">{{verifiedDraft.date || '选择发表日期'}}</view></picker>
           <picker mode="time" value="{{verifiedDraft.time}}" bindchange="onVerifiedOfficialTime"><view class="picker-field">{{verifiedDraft.time || '选择发表时刻'}}</view></picker>
@@ -225,7 +225,10 @@
         <text class="verified-label">摘要与封面（可选）</text>
         <input class="input" value="{{verifiedDraft.summary}}" data-key="summary" bindinput="onVerifiedOfficialInput" maxlength="1000" placeholder="后台实际摘要；没有则留空" />
         <input class="input" value="{{verifiedDraft.coverUrl}}" data-key="coverUrl" bindinput="onVerifiedOfficialInput" placeholder="微信图片链接；没有则留空" />
-        <picker range="{{mediaChoices}}" value="{{verifiedDraft.mediaType === 'video' ? 1 : 0}}" bindchange="onVerifiedOfficialMedia"><view class="picker-field">{{verifiedDraft.mediaType === 'video' ? '视频原文（跳转公众号）' : '图文原文'}}</view></picker>
+        <picker range="{{mediaChoices}}" value="{{verifiedDraft.mediaType === 'video' ? 2 : verifiedDraft.mediaType === 'image' ? 1 : 0}}" bindchange="onVerifiedOfficialMedia"><view class="picker-field">{{verifiedDraft.mediaType === 'video' ? '视频原文（跳转公众号）' : verifiedDraft.mediaType === 'image' ? '贴图（站内图片）' : '图文（站内阅读）'}}</view></picker>
+        <text wx:if="{{verifiedDraft.mediaType !== 'video'}}" class="verified-label">站内内容（必填）</text>
+        <text wx:if="{{verifiedDraft.mediaType !== 'video'}}" class="card-note">每行一段文字或一张图片的完整 https://mmbiz.qpic.cn/ 链接，按公众号原稿顺序填写。贴图至少一张图片；勿填原文网页链接。</text>
+        <textarea wx:if="{{verifiedDraft.mediaType !== 'video'}}" class="input verified-body" value="{{verifiedDraft.body}}" data-key="body" bindinput="onVerifiedOfficialInput" maxlength="30000" placeholder="正文第一段&#10;https://mmbiz.qpic.cn/..." />
         <button class="primary" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="onVerifiedOfficialSubmit">核对后提交补录</button>
       </view>
     </view>
