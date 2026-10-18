@@ -5,6 +5,9 @@ import tempfile
 import tarfile
 import unittest
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+import hashlib
+import subprocess
 import maintain as m
 
 class MaintenanceTests(unittest.TestCase):
@@ -124,6 +127,42 @@ class MaintenanceTests(unittest.TestCase):
         self.assertIn('--defaults-extra-file=/run/jiuchen.cnf',args)
         self.assertFalse(any('ssl-mode=DISABLED' in x for x in args))
         self.assertEqual(sum(x=='--mount' for x in args),1)
+
+    def test_mysql_greeting_tls_bit_and_malformed_packets(self):
+        greeting = b'\x0a8.0.0\x00' + b'1234' + b'12345678' + b'\x00'
+        self.assertFalse(m.mysql_greeting_has_tls(greeting+b'\x00\x00'))
+        self.assertTrue(m.mysql_greeting_has_tls(greeting+b'\x00\x08'))
+        for packet in [b'', b'\x09bad\x00', greeting+b'\x00']:
+            with self.assertRaises(m.ConfigError): m.mysql_greeting_has_tls(packet)
+
+    def test_no_tls_only_allowed_at_same_ecs_interface(self):
+        config={'host':'172.25.80.203','port':3306,'user':'test-user',
+                'password':'secret-synthetic','database':'test-db'}
+        remote=MagicMock(host='synthetic-ssh',socket='/tmp/synthetic.sock')
+        expected_hash=hashlib.sha256(config['host'].encode()).hexdigest()
+        remote.run.side_effect=[subprocess.CompletedProcess([],0,stdout=json.dumps(config).encode()),
+                                subprocess.CompletedProcess([],0,stdout=json.dumps({'hostHash':expected_hash,'onInterface':True}).encode())]
+        with tempfile.TemporaryDirectory() as temp, patch.object(m,'db_run'), patch.object(m,'mysql_server_has_tls',return_value=False), patch('builtins.print'):
+            path,db=m.mysql_config(remote,temp)
+            self.assertEqual(db,'test-db')
+            self.assertIn('ssl-mode=DISABLED',path.read_text())
+            self.assertEqual(path.stat().st_mode & 0o777,0o600)
+            self.assertIn('password="secret-synthetic"',path.read_text())
+        remote.run.side_effect=[subprocess.CompletedProcess([],0,stdout=json.dumps(config).encode()),
+                                subprocess.CompletedProcess([],0,stdout=json.dumps({'hostHash':expected_hash,'onInterface':False}).encode())]
+        with tempfile.TemporaryDirectory() as temp, patch.object(m,'db_run'), patch.object(m,'mysql_server_has_tls',return_value=False), patch('builtins.print'):
+            with self.assertRaisesRegex(m.ConfigError,'DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT'):
+                m.mysql_config(remote,temp)
+            self.assertFalse((Path(temp)/'mysql.cnf').exists())
+
+    def test_tls_capable_server_keeps_required_mode(self):
+        config={'host':'db.example.test','port':3306,'user':'test-user','password':'secret','database':'test-db'}
+        remote=MagicMock(host='synthetic-ssh',socket='/tmp/synthetic.sock')
+        remote.run.return_value=subprocess.CompletedProcess([],0,stdout=json.dumps(config).encode())
+        with tempfile.TemporaryDirectory() as temp, patch.object(m,'db_run'), patch.object(m,'mysql_server_has_tls',return_value=True), patch('builtins.print'):
+            path,_=m.mysql_config(remote,temp)
+            self.assertIn('ssl-mode=REQUIRED',path.read_text())
+            self.assertEqual(remote.run.call_count,1)
 
     def test_mariadb_client_uses_existing_image_without_pull(self):
         import subprocess
