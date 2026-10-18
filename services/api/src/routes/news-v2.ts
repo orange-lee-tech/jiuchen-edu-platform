@@ -12,6 +12,26 @@ function isOfficialUrl(value:string){
   try { const url=new URL(value);return url.protocol==='https:'&&url.hostname==='mp.weixin.qq.com' } catch { return false }
 }
 
+function isOfficialImageUrl(value:string){
+  try {
+    const url=new URL(value)
+    return url.protocol==='https:' && url.hostname==='mmbiz.qpic.cn'
+  } catch { return false }
+}
+
+type VerifiedBlock = {type:'text';text:string}|{type:'image';url:string}
+function parseVerifiedBody(body:string):VerifiedBlock[]{
+  const lines=body.split(/\r?\n/).map(line=>line.trim()).filter(Boolean)
+  if(lines.length>100)throw new Error('verified_official_body_too_long')
+  return lines.map(line=>{
+    if(/^https?:\/\//i.test(line)){
+      if(!isOfficialImageUrl(line))throw new Error('verified_official_image_url_invalid')
+      return {type:'image',url:line}
+    }
+    return {type:'text',text:line}
+  })
+}
+
 const verifiedOfficialPost = z.object({
   title: z.string().trim().min(1).max(255),
   articleUrl: z.string().trim().url().refine(isOfficialUrl),
@@ -22,10 +42,19 @@ const verifiedOfficialPost = z.object({
   }).nullable().optional(),
   publishedAt: z.string().refine(value =>
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
-    Number.isFinite(Date.parse(value))),
+    Number.isFinite(Date.parse(value))).nullable(),
+  body: z.string().trim().max(30000).default(''),
   tags: z.array(z.string().trim().min(1).max(40)).min(1).max(8),
-  mediaType: z.enum(['article', 'video']).default('article'),
-}).strict()
+  mediaType: z.enum(['article', 'image', 'video']).default('article'),
+}).strict().superRefine((post,ctx)=>{
+  let blocks:VerifiedBlock[]
+  try { blocks=parseVerifiedBody(post.body) }
+  catch {ctx.addIssue({code:'custom',message:'invalid_body',path:['body']});return}
+  if(post.mediaType==='image' && !blocks.some(block=>block.type==='image') ||
+     post.mediaType==='article' && blocks.length===0 ||
+     post.mediaType==='video' && blocks.length!==0)
+    ctx.addIssue({code:'custom',message:'body_required_or_unexpected',path:['body']})
+})
 
 function canonicalOfficialUrl(value: string) {
   const url = new URL(value)
@@ -54,7 +83,8 @@ export function registerNewsV2Routes(app:FastifyInstance,database:DatabaseContex
     const post=parsed.data
     const articleUrl=canonicalOfficialUrl(post.articleUrl)
     const sourceKey='admin-verified:'+createHash('sha256').update(articleUrl).digest('hex')
-    const publishedAt=new Date(post.publishedAt).toISOString()
+    const publishedAt=post.publishedAt?new Date(post.publishedAt).toISOString():null
+    const blocks=parseVerifiedBody(post.body)
     const tags=[...new Set(post.tags)]
     const id=randomUUID()
     let existingId:string|null=null
@@ -79,8 +109,8 @@ export function registerNewsV2Routes(app:FastifyInstance,database:DatabaseContex
           [id,sourceKey,post.title,post.summary??null,post.coverUrl??null,articleUrl,
             JSON.stringify({html:null,author:null,contentSourceUrl:null,sourceUpdatedAt:null,
               sourceCreatedAt:null,publicationTimeSource:'admin_verified_publish_record',
-              mediaType:post.mediaType,verifiedBy:user.userId,verifiedAt:new Date().toISOString()}),
-            JSON.stringify(tags),publishedAt.slice(0,19).replace('T',' ')])
+              mediaType:post.mediaType,blocks,verifiedBy:user.userId,verifiedAt:new Date().toISOString()}),
+            JSON.stringify(tags),publishedAt?.slice(0,19).replace('T',' ')??null])
       }))
       return {ok:true,id:existingId??id,created:!existingId,window}
     }catch(error){
