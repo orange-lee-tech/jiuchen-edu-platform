@@ -1,6 +1,16 @@
 # CURRENT — 九辰教育唯一活跃交接（2026-10-18）
 
-本页只记当前可执行状态。完整收费版为正式交付目标，生产收费尚未验收；[固定候选与独立 DDL 审查包](p1-paid-release-scope-and-schema-review-2026-10-17.md)用于下一轮现场核对。历史事实保留在 Git 历史和下列专项文档中，旧日期的计划、候选 SHA、绿灯和“下一步”不自动成为今天的授权。接手先读 CONSTITUTION.md → AGENTS.md → 本页 → 对应专项文档；涉及 ECS 再读 ops/ecs/AGENTS.md。
+页首记录当前可执行状态，后文保留取证时间线。完整收费版为正式交付目标，生产收费尚未验收；[固定候选与独立 DDL 审查包](p1-paid-release-scope-and-schema-review-2026-10-17.md)是历史审查材料，新的固定配对见下节。旧日期的计划、候选 SHA、绿灯和“下一步”不自动成为今天的授权。接手先读 CONSTITUTION.md → AGENTS.md → 本页 → 对应专项文档；涉及 ECS 再读 ops/ecs/AGENTS.md。
+
+## 最新发布配对与阻断（2026-10-18，优先于下方历史时间线）
+
+- 固定前端源码 `51ea8775de74581289617cf1428ba4165775c1e0`（`p1/foundation` 的快照）；固定隔离 API `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`（`codex/p1-news-content-isolated-2026-10-18`）。API 是生产 `8cc4bb85` 的后代，只在旧隔离候选 `1b8ae8b3` 上增加五个资讯相关文件。**不要从移动分支 HEAD 归档 API**。
+- 本地 Node 22.23.3：隔离 API typecheck、217/217 测试、build PASS；前端小程序 typecheck、导航/目录/导出/真实数据 96/96 PASS。镜像缺失的二进制图标已从仓库原样补齐；旧的 53/54 只是临时镜像不完整。`tools/testing/real-data.test.cjs` 已与正文必填合同对齐。这个结果不替代自托管 Runner、ECS、生产数据库和微信真机。
+- 精确候选自托管运行：[隔离 API Gate 39111190229](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190229) PASS（verify、commercial-gate、mysql-gate、profile-gate 四任务成功），[前端 Gate 39111190252](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190252) PASS，[API 归档 39111190239](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190239) PASS。内层 tar.gz SHA-256 `64f58071e86fcdf292810a82314117148232a5fd64ccd38d4a730635c288fe6d`；只读制品不是生产切流批准。
+- 首发真实内容仍缺：四条已给短链以及 10 月 12 日中南大学稿在现有官方 `freepublish/batchget` 及生产库未命中；其中《10月竞赛清单来啦～》经后台确认属于「贴图」。需由同一服务号运营提供并核实原始正文、图片顺序和原链接；仅有截图／短链不能生成完整站内阅读。现有自动来源**尚不能覆盖贴图**，管理员受控补录是当前可验收的首发路径，自动覆盖另记未通过。
+- 生产三组 DDL 已执行，最小加密备份及隔离导入演练完成；生产 API 切流、News V2 预热／启用、真实商户接线和支付、四角色及资讯/客服真机、微信提审与正式发布均无通过回执。需要在这些实际验收后更新 CODE / TEST / DEPLOY / DEVICE，不得沿用旧候选绿灯。
+
+以下为按时间保留的取证过程；其中 `283a`／`1b8` 的“固定候选”“下一步”和当时的未通过项均是历史状态，以本节为准。
 
 **2026-10-18 资讯站内阅读施工（代码完成、未部署）：** 在 `p1/foundation` 已扩展管理员核实补录为文章文字/图片顺序块、贴图图片组、视频原链，发表时间可空，限制图片为 `https://mmbiz.qpic.cn/`，角色/原文 URL 校验保持；小程序详情页呈现顺序文字/图片、图片预览和原链收藏。News V2 无日期稿使用创建时间参与窗口排序，但页面不伪称发表时间；官方同步按相同原文 URL 复用核实记录 ID、保留人工图片内容/时间来源，避免空正文覆盖。现有自动接口仍只扫描 `freepublish/batchget` 图文，**没有取得贴图官方自动接口证明**；贴图及接口漏稿须先由运营从同账号后台核实原始文字/图片与链接后导入，不能只补链接。原四条短链的真实站内正文/图片仍未提供或写库。服务号自动覆盖、生产 API/开关、体验版真机尚未通过。当地镜像已额外安装 Node v22.23.3，并用该版本运行 API typecheck、215/215 测试、build 全 PASS；小程序 typecheck PASS（本机 Node 24）；相关正文阅读静态回归 2/2。全导航在当地镜像为 53/54，唯一失败因镜像未包含仓库二进制图标而报 ENOENT，不计完整导航 Gate。固定新候选 SHA 后仍需自托管门禁与微信真机复验。新代码范围及证据详见[资讯拓扑审查](p1-news-topology-first-principles-2026-10-18.md)。
 

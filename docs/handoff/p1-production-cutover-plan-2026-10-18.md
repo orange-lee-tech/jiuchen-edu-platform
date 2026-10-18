@@ -2,24 +2,26 @@
 
 本页是下一次现场工作的单一执行顺序。事实状态请先读 [CURRENT](CURRENT.md)。本页是审查和交接，不是已执行回执；需要将每关输出和时间补到 CURRENT，不把准备工作写成 PASS。
 
-**本页资讯门槛更正（14:49 之后）：** 用户要求服务号图文在小程序内读完整正文，收藏只保存原文 URL 且从收藏可跳原文。固定 1b8 的管理员 URL 补录写入 `html:null`，不能作为图文站内阅读 PASS；无日期入口修复也不能单独解开这个门槛。先按[资讯拓扑审查](p1-news-topology-first-principles-2026-10-18.md)验证真正正文的来源和统一入库，再在一组真稿上测试站内正文／图片／收藏。下文的原文打开检查是收藏链的验收，不能代替正文验收。
+**最新固定配对（2026-10-18）：** 前端 `51ea8775de74581289617cf1428ba4165775c1e0`，隔离 API `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`。旧 `283a`／`1b8` 的 ECS 工作区、旧归档和旧 Gate 均为历史证据，禁止直接用于本轮发布。新 API [归档 39111190239](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190239) PASS，内层 SHA-256 `64f58071e86fcdf292810a82314117148232a5fd64ccd38d4a730635c288fe6d`；[API Gate 39111190229](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190229) 四任务 PASS，[前端 Gate 39111190252](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190252) PASS。新归档尚未送达 ECS，未做新候选 ECS 隔离构建／有 DB 冒烟，更未生产切流。运营四条短链仍缺可核实的完整站内正文与图片；至少一条属于后台「贴图」，现有自动源不覆盖，不能用链接卡替代站内阅读。
+
+**资讯门槛：** 用户要求服务号图文在小程序内读完整正文，收藏只保存原文 URL 且从收藏可跳原文。旧 `1b8` 的 URL 补录写入 `html:null`；新候选要求管理员核实正文/图片顺序块，发表时间允许未知。先按[资讯拓扑审查](p1-news-topology-first-principles-2026-10-18.md)取得真实正文来源，再在真稿上测试站内正文／图片／收藏。原文打开检查是收藏链的验收，不能代替正文验收。
 
 ## 固定对象与已通过门槛
 
 | 对象 | 固定值／回执 |
 | --- | --- |
 | 当前 API | `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`，切换前现场再核 |
-| 待发布 API | `1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7` |
-| API 内层归档 SHA-256 | `98279923d783889caa87deb815d3828d53266a84a7be081714188a71f1fc1fb8` |
-| ECS 传输 | `/opt/jiuchen-api/staging/incoming/1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7/`；SHA、manifest 和 Git blobs 已校验 |
-| ECS 隔离工作区 | `/opt/jiuchen-api/staging/verify-1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7-20261018-013849-4193193`，含诊断时另建文件，不能整体复制为正式 release |
-| 小程序前端 | `283aaf15fc0047f100028eee547a5581c3f8c047`，96/96、typecheck PASS；尚未上传微信体验版 |
+| 待发布 API | `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`，生产后代；隔离 Gate 四任务 PASS |
+| API 内层归档 SHA-256 | `64f58071e86fcdf292810a82314117148232a5fd64ccd38d4a730635c288fe6d`，只读制品 |
+| ECS 传输 | 新归档尚未上传；旧 `1b8` staging 包不得代替本 SHA |
+| ECS 隔离工作区 | 尚未建立新 SHA 的工作区；旧 `1b8` 工作区含诊断文件，不得整体复制为正式 release |
+| 小程序前端 | `51ea8775de74581289617cf1428ba4165775c1e0`，96/96、Node22 typecheck 与自托管 Gate PASS；尚未上传微信体验版 |
 | 数据库 | 管理员 WSL 加密备份 `20261016-134131-cf772f`，17 表隔离导入；真实结构副本三组迁移和重复执行通过，生产 Profile／News／商业三组 DDL 与 checker 通过 |
-| 资源 | 固定 API 在 ECS 构建与无 DB 256 MiB／50% CPU／64 tasks 冒烟通过；真实 DB／AI 负载仍待验 |
+| 资源 | 旧 `1b8` 在 ECS 构建与无 DB 256 MiB／50% CPU／64 tasks 冒烟通过；新 `50e7` 的 ECS 构建及真实 DB／AI 负载仍待验 |
 
 ## 2026-10-18 14:15 收到的四篇候选原文
 
-下表的标题和链接由运营方提供。微信原文页面在本工作环境不可读取，**没有独立核实发表日期、公众号归属、页面内容或链接在真机的打开结果**；发表日期不是启动补录的前置人工输入。这四条均为 `OPERATOR_SUPPLIED_PENDING_VERIFICATION`，尚未写入生产库。先核标题、九辰账号归属和原文可开；若后台自然提供发表时间，照实记录。发表时间缺失不再要求运营逐篇补报：允许以 NULL 保存、在客户端显示“发表时间待核实”，但固定 1b8 的现有管理员补录接口仍强制 publishedAt；须先完成并验证可空时间的受控入口或一次性维护命令，不能向该接口填写猜测日期。若标题或 URL 已在库，先核重复／冲突，不硬插新行。标签为拟填建议，实际由运营确认。
+下表的标题和链接由运营方提供。微信原文页面在本工作环境不可读取，**没有独立核实发表日期、公众号归属、页面内容或链接在真机的打开结果**；发表日期不是启动补录的前置人工输入。这四条均为 `OPERATOR_SUPPLIED_PENDING_VERIFICATION`，尚未写入生产库。先核标题、九辰账号归属和原文可开，取得后台对应的原始文字及图片顺序；若后台自然提供发表时间，照实记录。新候选允许发表时间为 NULL，在客户端显示“发表时间待核实”，不可填猜测时间。若标题或 URL 已在库，先核重复／冲突；标签由运营确认。正文/图片不得只用短链代替。
 
 | 标题（按用户原文，第二条待核完整标点） | 原文 | 建议分类 | 北京时间发表记录 |
 | --- | --- | --- | --- |
@@ -33,8 +35,8 @@
 ## 一次现场的五道门
 
 1. **只读现场基线。** 记录北京时间、现役 API SHA、`jiuchen-api.service` 状态、live／ready、网站源站、资讯当前可见条数和既有客服入口；核对加密备份可解、旧 release 保留、生产三组表 checker。只记脱敏状态。失败时保持现役，不再继续切换。
-2. **准备纯净不可变 release。** 从已校验的固定归档重新解包构建，不复制上表 staging 中的临时 `.mjs` 文件；核 manifest/blobs、SHA、Node22、固定依赖及 build。release `/opt/jiuchen-api/releases/1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7` 须 root:root、真实文件和目录不可被 group/world 写、`COMMIT_SHA` 精确匹配；以 `jiuchen-api` 身份验证可遍历、读取并 `node --check`。此时不改 `current`。不得把生产配置载入 staging 的 `buildApp` 冒烟：它的 onReady 可能启动评估后台工作者。
-3. **资讯数据窗口。** 从运营方已给的四条原文 URL 与标题入手，核链接、公众号归属及重复项；有后台发表记录则照实填，无记录则走经验证的可空时间路径（现有固定候选管理员接口不支持，不能假装已可用）。已知 10 月 12 日目标未在 45 组来源／生产库中。不得用 10 月 17 日 `sourceUpdatedAt` 推断发表日期，不给八条产品资料批量打标签。现役 timer 可运行，但旧版不会准备 V2 展示状态。待明确批准这次生产资讯数据写入后，以固定 API 的独立维护命令、仅在该命令的环境中设置 `NEWS_V2_ENABLED=true` 执行完整 `syncOfficialAccountPosts`；它会 upsert 官方来源记录、调用 `reconcileNewsWindow` 写入展示状态及必要的退场任务／批次和 sync run。需要完整扫描、`failed=0`、`truncated=false`、公开可见窗口非空且真稿站内正文可读，再推进。此命令只创建数据库上下文，不启动 HTTP app 或后台评估 worker。若核实的真实新稿缺官方接口，待新 API 上线后由管理员 `/me/admin/news/verified-official` 逐篇补录、明确分类，再查公开 `/news`；补录和自动来源恢复分别记账。
+2. **准备纯净不可变 release。** 下载本页新 `50e7` 归档并在本地核内层哈希，上传到以新 SHA 命名的 ECS staging；校验 manifest/blobs、SHA、Node22、固定依赖及 build。release `/opt/jiuchen-api/releases/50e7fe3d7f93a347dfdc4af0675992690eb01e6f` 须 root:root、真实文件和目录不可被 group/world 写、`COMMIT_SHA` 精确匹配；以 `jiuchen-api` 身份验证可遍历、读取并 `node --check`。此时不改 `current`。不得把生产配置载入 staging 的 `buildApp` 冒烟：它的 onReady 可能启动评估后台工作者。
+3. **资讯数据窗口。** 从四条运营原文和 10 月 12 日目标稿入手，核链接、同账号归属、正文/图片及重复项；发表时间未知时保持 NULL。不得用 10 月 17 日 `sourceUpdatedAt` 推断发表日期，不给八条产品资料批量打标签。现役 timer 可运行，但旧版不会准备 V2 展示状态。待明确批准这次生产资讯数据写入后，以固定 API 的独立维护命令、仅在该命令的环境中设置 `NEWS_V2_ENABLED=true` 执行完整 `syncOfficialAccountPosts`；它会 upsert 官方来源记录、调用 `reconcileNewsWindow` 写入展示状态及必要的退场任务／批次和 sync run。需要完整扫描、`failed=0`、`truncated=false`、公开可见窗口非空且真稿站内正文可读，再推进。此命令只创建数据库上下文，不启动 HTTP app 或后台评估 worker。缺失官方接口的稿件需由管理员在新 API 的 `/me/admin/news/verified-official` 输入核实的全文或图片 URL 顺序块、原链接和分类；补录与自动来源恢复分别记账。
 4. **受控 API 切换。** 对固定 SHA 单独审定上线范围：此 API 包含 AI quality v3／跨身份只读，不能靠默认关闭 News 或付费开关剔除这些代码。root 核对 `/etc/jiuchen-api/approved-release` 与 `/opt/jiuchen-api/staging/READY` 的确切 SHA，调用既有 `ops/ecs/jiuchen-promote`；仅此发布器切换 `current`、重启 `jiuchen-api.service` 并检查 live／ready，失败自动尝试回旧 release。配置文件 root 只读，禁止打印密钥。News V2 的生产开关单独确认；切换后立刻用公共身份核 `/news` 非空、原有文章及真稿，认证后核 Profile 读写／权限，网站健康不受影响。在既有 256 MiB、50% CPU、64 tasks 下记录真实 DB 和评估负载；OOM 或业务失败，先停后续验收并按旧 SHA 回退；增量表保留，不能倒灌旧备份覆盖新用户数据。
 5. **一次微信体验版会话。** 固定前端 SHA 上传体验版并记微信版本号，先验公开资讯（至少两篇新图文可站内读正文与图片、收藏后的对应原文可开）、游客／学员／老师／管理员客服入口及客服端实际收信；再验新旧学员四栏／资料保存重开／课表／评估，老师已分配与未分配、管理员直接复用原生学员／老师 UI 的只读模式与写入负例。接着核真实赠送次数、充值取消／成功／重复通知、扣次与退款或补偿、后台周月年金额统计；只在商户 OfferID、AppKey、两个商品 ID／价格、赠送版本与回调／订单查询等生产接线核准后开启实付及额度强制，密钥不贴聊天或 Git。官网与 API 均健康、用户可用链路 PASS 后再进入微信提审／正式发布。截图只留脱敏证据位置。
 
@@ -52,4 +54,4 @@
 - 虚拟支付 OfferID、两档商品 ID／价格、AppKey 及生产状态只在受限 ECS 配置，不通过聊天发送密钥；现场回传键是否存在、脱敏商品标识、真机交易结果。
 - 体验版操作者及四角色测试账号、客服端接收人、真实旧学员与老师分配样本；个人资料／会话票据不进 Git。
 
-状态：**执行单已准备；无日期补录的受控入口尚待实现／验证；生产资讯预热、API 切流、支付启用、微信体验版上传、真机、正式发布均尚未执行。**
+状态：**新候选静态与隔离数据库 Gate／归档 PASS；无日期和站内正文的受控入口已通过代码测试。新归档上传、ECS 独立验证、真实稿件资料、生产资讯预热、API 切流、支付启用、微信体验版上传、真机、正式发布均尚未执行。**
