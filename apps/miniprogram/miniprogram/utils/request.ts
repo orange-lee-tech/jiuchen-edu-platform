@@ -779,7 +779,7 @@ export type NewsSyncResult={synced:number;created:number;updated:number;unchange
   errors:Array<{sourceKey:string;reason:string}>;checkedAt:string;latestSourcePublishedAt:string|null;
   latestSourceUpdatedAt:string|null;groupsFetched:number;totalGroups:number|null;maxGroups:number;truncated:boolean;message:string;
   pagesFetched?:number;uniqueGroups?:number;latestArticles?:Array<{title:string;articleUrl:string|null;sourceUpdatedAt:string|null;publishedAt:string|null}>}
-export type VerifiedOfficialPost = { title:string;articleUrl:string;summary:string|null;coverUrl:string|null;publishedAt:string;tags:string[];mediaType:'article'|'video' }
+export type VerifiedOfficialPost = { title:string;articleUrl:string;summary:string|null;coverUrl:string|null;publishedAt:string|null;tags:string[];mediaType:'article'|'image'|'video';body:string }
 export async function addVerifiedOfficialPost(post:VerifiedOfficialPost):Promise<{id:string;created:boolean}>{
   return request('/me/admin/news/verified-official','POST',post as unknown as WechatMiniprogram.IAnyObject)
 }
@@ -898,7 +898,7 @@ export async function bindAdminInternalId(
 
 
 export type NewsPost = {
-  mediaType?: 'article' | 'video'
+  mediaType?: 'article' | 'image' | 'video'
   id: string
   title: string
   summary: string | null
@@ -915,8 +915,9 @@ export type NewsPost = {
 export type NewsPostDetail = NewsPost & {
   favoritesEnabled?:boolean
   content: {
-    mediaType?: 'article' | 'video'
+    mediaType?: 'article' | 'image' | 'video'
     html: string | null
+    blocks?: Array<{type:'text';text:string}|{type:'image';url:string}>
     author: string | null
     contentSourceUrl: string | null
   }
