@@ -26,7 +26,7 @@
 
 **2026-10-18 最小恢复点实测：** 原 PARTIAL 的 website、api、runtime、user-files、secrets、entry 六项已复验并复用；数据库全量 SQL 导出完成，加密包通过下载校验（`KNOWN_COMPONENTS_DOWNLOAD_VERIFIED`、`DATABASE_DOWNLOAD_VERIFIED`）。管理员 WSL 使用既有 `mysql:8.0` 镜像在隔离容器中解密、导入、检查表数，回执 `ISOLATED_SQL_IMPORT_AND_CHECK_PASS`、`tables=17`、`productionWrites=false`、`businessAcceptance=false`。备份目录 `/home/orangelee-tech/jiuchen-backups/20261016-134131-cf772f`；不向 GitHub 上传资料。此证据解除“尚无可导入业务库备份”的阻断；仍未证明生产备份已在生产环境恢复、逐行等价、官网/CloudBase 全资产覆盖或候选迁移兼容。恢复演练工具 `a43c497b` 本地 17 项合成测试 PASS。下一关在这份真实结构副本中逐项验证 Profile、News、商业迁移，分别确定生产 DDL 范围；长期备份优化仍列发布后。
 
-**真实结构迁移一次性演练准备（2026-10-18）：** [固定脚本](../../tools/maintenance/p1-real-schema-rehearsal-20261018.sh) SHA-256 `efee8b1b5c43440e77da5935078f2fe03bba087d5fba7186f05bad4a535185b3`，只在管理员 WSL 创建临时 MySQL8，解密已验证的业务备份、恢复 17 表，固定取 ECS staging 的 API `1b8ae8b3` 归档并验证 SHA-256 `98279923...`。按 Profile 单列、News 七表、商业四表顺序执行两次迁移和合同检查，目标 28 表；退出清理临时容器和明文。脚本仅通过 `bash -n` 静态语法检查，尚无管理员现场运行回执；不得将它写成生产迁移 PASS。若 WSL 缺 Node22 或 npm，先现场处理，不在 ECS 全局安装。官方资讯来源缺文、商户配置、四角色真机仍分别待验。
+**真实结构迁移一次性演练准备（2026-10-18）：** [固定脚本](../../tools/maintenance/p1-real-schema-rehearsal-20261018.sh) SHA-256 `52388984af56c13b4ce48dd760e1caa7df430ebcfa913b68ac250ee94c31dddc`，只在管理员 WSL 创建临时 MySQL8，解密已验证的业务备份、恢复 17 表，固定取 ECS staging 的 API `1b8ae8b3` 归档并验证 SHA-256 `98279923...`。按 Profile 单列、News 七表、商业四表顺序执行两次迁移和合同检查，目标 28 表；退出清理临时容器和明文。脚本仅通过 `bash -n` 静态语法检查，尚无管理员现场运行回执；不得将它写成生产迁移 PASS。若 WSL 缺 Node22 或 npm，先现场处理，不在 ECS 全局安装。官方资讯来源缺文、商户配置、四角色真机仍分别待验。
 
 ## 当前版本与已经证实的事实
 
