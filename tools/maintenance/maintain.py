@@ -290,7 +290,7 @@ def db_on_ecs_interface(remote, db):
         raise ConfigError('DB_LOCAL_INTERFACE_CHECK_FAILED')
 
 
-def mysql_config(remote, temp):
+def mysql_config(remote, temp, accept_existing_db_route=False):
     print('DB_STEP=REMOTE_CONFIG_READ', flush=True)
     try:
         r = remote.run(['/usr/bin/env', '-i', '/opt/jiuchen-api/runtime/node-v22.23.3-linux-x64/bin/node', '-e', DB_JS], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -312,9 +312,12 @@ def mysql_config(remote, temp):
         print('DB_TRANSPORT=MYSQL_TLS_REQUIRED', flush=True)
     else:
         if not db_on_ecs_interface(remote, db):
-            raise ConfigError('DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT')
+            if not accept_existing_db_route:
+                raise ConfigError('DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT')
+            print('DB_TRANSPORT=EXISTING_PRODUCTION_DB_ROUTE_NO_TLS_EXPLICIT', flush=True)
+        else:
+            print('DB_TRANSPORT=SSH_TUNNEL_TO_ECS_LOCAL_INTERFACE', flush=True)
         mode = 'DISABLED'
-        print('DB_TRANSPORT=SSH_TUNNEL_TO_ECS_LOCAL_INTERFACE', flush=True)
     path.write_text('[client]\nprotocol=tcp\nhost=127.0.0.1\nport=%s\nuser=%s\npassword=%s\nssl-mode=%s\n' % (port, quote(db['user']), quote(db['password']), mode))
     path.chmod(0o600)
     return path, db['database']
@@ -327,9 +330,9 @@ def database_connection_check(backend, cnf, db):
         raise ConfigError('MYSQL_ENGINE_CHECK:NON_INNODB_REQUIRES_CONSISTENCY_PLAN')
 
 
-def dump_database(remote, temp, target):
+def dump_database(remote, temp, target, accept_existing_db_route=False):
     backend = mysql_backend()
-    cnf, db = mysql_config(remote, temp)
+    cnf, db = mysql_config(remote, temp, accept_existing_db_route)
     try:
         database_connection_check(backend, cnf, db)
         with open(target, 'xb') as out:
@@ -346,7 +349,7 @@ def db_check(args):
     with tempfile.TemporaryDirectory(prefix='jiuchen-db-check-') as temp:
         remote = Remote(args.host, temp)
         try:
-            cnf, db = mysql_config(remote, temp)
+            cnf, db = mysql_config(remote, temp, args.accept_existing_db_route)
             try:
                 database_connection_check(backend, cnf, db)
             finally:
@@ -427,7 +430,7 @@ def backup(args):
                     print('备份：' + component + ' / ' + LABELS[component], flush=True)
                     plain = Path(temp) / 'component'
                     if component == 'database':
-                        dump_database(remote, temp, plain)
+                        dump_database(remote, temp, plain, getattr(args, 'accept_existing_db_route', False))
                     else:
                         with open(plain, 'xb') as out:
                             remote.agent('snapshot', component, stdout=out)
@@ -564,8 +567,10 @@ def main():
     sub = p.add_subparsers(dest='command', required=True)
     r = sub.add_parser('rehearse-db'); r.add_argument('--backup', required=True)
     dc = sub.add_parser('db-check'); dc.add_argument('--host', required=True)
+    dc.add_argument('--accept-existing-db-route', action='store_true')
     d = sub.add_parser('doctor'); d.add_argument('--host', required=True)
     b = sub.add_parser('backup'); b.add_argument('--host', required=True); b.add_argument('--output', required=True); b.add_argument('--pin', action='store_true'); b.add_argument('--resume-latest', action='store_true')
+    b.add_argument('--accept-existing-db-route', action='store_true')
     for name in ['plan', 'stage']:
         s = sub.add_parser(name); s.add_argument('--backup', required=True); s.add_argument('--scope', choices=SCOPES, required=True); s.add_argument('--components', required=True)
         if name == 'stage':
