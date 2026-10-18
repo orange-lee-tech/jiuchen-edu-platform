@@ -54,7 +54,7 @@ bash start.sh rehearse-db --backup "$backup"
 
 scope约束：website只能选website；miniprogram能选api/user-files/database/runtime；共享secrets/entry必须显式选择all。即使选择all，也只处理指定components，不自动全选。计划显示默认保留项。
 
-隔离库演练仅证明SQL成功导入和mysqlcheck通过，不证明与源库逐行等价、迁移通过或业务通过。导出时要求基表都是InnoDB；禁止同时做DDL。使用官方mysqldump单事务、触发器/事件/例程/视图支持、二进制十六进制导出；权限不足或不支持参数即失败，不静默缺项。经SSH转发连接云库，DB密码只在管理员进程内和0600临时配置中，MySQL连接强制加密。
+隔离库演练仅证明SQL成功导入和mysqlcheck通过，不证明与源库逐行等价、迁移通过或业务通过。导出时要求基表都是InnoDB；禁止同时做DDL。使用官方mysqldump单事务、触发器/事件/例程/视图支持、二进制十六进制导出；权限不足或不支持参数即失败，不静默缺项。经SSH转发连接数据库，DB密码只在管理员进程内和0600临时配置中；TLS选择以末尾的 2026-10-18 条件通道规则为准。
 
 ## 覆盖与保留的未完成验收项
 
@@ -89,7 +89,7 @@ bash start.sh backup --host root@121.40.168.181 --output ~/jiuchen-backups --pin
 
 新增只读入口：`bash start.sh db-check --host root@121.40.168.181`。依次输出客户端后端、REMOTE_CONFIG_READ、SSH_TUNNEL_CREATE、MYSQL_CONNECT_AND_ENGINE_CHECK。备份继续输出MYSQLDUMP_FULL_EXPORT。故障只输出固定阶段名、MySQL数字错误码或TIMEOUT/CLIENT_OPTION_UNSUPPORTED/SSH_TRANSPORT_FAILED，不输出原始stderr、连接串、用户名、主机或SQL数据。SSH增加连接与保活时限。
 
-本机mysql/mysqldump均为官方8系列时直接使用；否则检查本机已有mysql:8.0镜像，客户端以临时只读容器运行，复用WSL host网络访问SSH本地隧道，只读挂载本次0600凭据配置。禁止自动pull；镜像缺失或Docker未运行即停止。不会启动数据库服务、修改Docker配置或使用ECS Docker。TLS仍为REQUIRED，不通过降低安全性绕过连接故障。需要现场验证该Docker客户端路径；本地仅做命令构造、错误脱敏和后端选择合成测试。
+本机mysql/mysqldump均为官方8系列时直接使用；否则检查本机已有mysql:8.0镜像，客户端以临时只读容器运行，复用WSL host网络访问SSH本地隧道，只读挂载本次0600凭据配置。禁止自动pull；镜像缺失或Docker未运行即停止。不会启动数据库服务、修改Docker配置或使用ECS Docker。该 v3 历史版本仅支持 TLS REQUIRED；2026-10-18 新增条件通道规则见下文。需要现场验证该Docker客户端路径；本地仅做命令构造、错误脱敏和后端选择合成测试。
 
 新增3项测试，总计12项通过。只读连接检查不证明mysqldump例程/事件等导出权限，最终以完整导出和隔离恢复回执验收。网络有变化时无需先重配代理或重启WSL，先按检查结果处理。所有既有加密备份继续保留。
 
@@ -107,4 +107,4 @@ bash start.sh backup --host root@121.40.168.181 --output ~/jiuchen-backups --pin
 
 管理员 v3 db-check：DB_CLIENT_BACKEND=local-mysql8，REMOTE_CONFIG_READ 与 SSH_TUNNEL_CREATE 已执行；MYSQL_CONNECT_AND_ENGINE_CHECK 失败 MYSQL_ERROR_2026。官方 MySQL 错误码为 SSL connection error，尚不能据此判定具体 TLS 协议、证书、代理或网络根因。数据库组件未导出，先前六组件保留PARTIAL；隔离恢复及生产覆盖尚未运行。
 
-备份建设在正式发布业务排序中列末位；生产 DDL 前仍须最小可恢复点。当前不继续反复重跑整代备份、不降低TLS模式、不把其他模块交付卡在工具优化上。对应发布待办见docs/handoff/p1-release-open-items-2026-10-17.md。
+备份建设在正式发布业务排序中列末位；生产 DDL 前仍须最小可恢复点。此段为 2026-10-17 的历史决策；2026-10-18 已增设仅限 ECS 本机数据库地址的条件通道，不重跑整代备份。对应发布待办见docs/handoff/p1-release-open-items-2026-10-17.md。
