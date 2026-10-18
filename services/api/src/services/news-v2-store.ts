@@ -31,7 +31,7 @@ export async function reconcileNewsWindow(connection: mysql.PoolConnection, now 
     if(mutate)await mutate()
     const [posts] = await connection.query<mysql.RowDataPacket[]>(`SELECT id, status,
       JSON_LENGTH(tags_json) AS tagCount,
-      COALESCE(JSON_UNQUOTE(JSON_EXTRACT(content_json,'$.sourceUpdatedAt')), DATE_FORMAT(published_at,'%Y-%m-%dT%H:%i:%sZ')) AS sortTime
+      COALESCE(JSON_UNQUOTE(JSON_EXTRACT(content_json,'$.sourceUpdatedAt')), DATE_FORMAT(published_at,'%Y-%m-%dT%H:%i:%sZ'), DATE_FORMAT(created_at,'%Y-%m-%dT%H:%i:%sZ')) AS sortTime
       FROM news_posts WHERE source='wechat_official' ORDER BY id`)
     const [previous] = await connection.query<mysql.RowDataPacket[]>(`SELECT post_id AS postId,phase,
       DATE_FORMAT(buffered_at,'%Y-%m-%dT%H:%i:%sZ') AS bufferedAt,
@@ -75,7 +75,7 @@ export async function listNewsV2(pool:mysql.Pool, includeUnclassified=false){
     FROM news_posts n LEFT JOIN news_display_states s ON s.post_id=n.id
     WHERE n.status='active' AND (n.source='manual' OR s.phase IN ('normal','buffering')) AND (? OR JSON_LENGTH(n.tags_json)>0)
     ORDER BY CASE WHEN n.source='manual' OR s.phase='normal' THEN 0 ELSE 1 END,
-      COALESCE(JSON_UNQUOTE(JSON_EXTRACT(n.content_json,'$.sourceUpdatedAt')),DATE_FORMAT(n.published_at,'%Y-%m-%dT%H:%i:%sZ')) DESC,n.id ASC LIMIT 100`,[includeUnclassified?1:0])
+      COALESCE(JSON_UNQUOTE(JSON_EXTRACT(n.content_json,'$.sourceUpdatedAt')),DATE_FORMAT(n.published_at,'%Y-%m-%dT%H:%i:%sZ'),DATE_FORMAT(n.created_at,'%Y-%m-%dT%H:%i:%sZ')) DESC,n.id ASC LIMIT 100`,[includeUnclassified?1:0])
   return rows
 }
 
