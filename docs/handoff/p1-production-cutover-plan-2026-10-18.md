@@ -2,7 +2,9 @@
 
 本页是下一次现场工作的单一执行顺序。事实状态请先读 [CURRENT](CURRENT.md)。本页是审查和交接，不是已执行回执；需要将每关输出和时间补到 CURRENT，不把准备工作写成 PASS。
 
-**最新固定配对（2026-10-18）：** 前端 `51ea8775de74581289617cf1428ba4165775c1e0`，隔离 API `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`。旧 `283a`／`1b8` 的 ECS 工作区、旧归档和旧 Gate 均为历史证据，禁止直接用于本轮发布。新 API [归档 39111190239](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190239) PASS，内层 SHA-256 `64f58071e86fcdf292810a82314117148232a5fd64ccd38d4a730635c288fe6d`；[API Gate 39111190229](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190229) 四任务 PASS，[前端 Gate 39111190252](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190252) PASS。[固定 ECS staging 验收脚本](../../ops/ecs/verify-news-content-staging-20261018.sh) SHA-256 `cf88bdd43839b5f9a9aee05b0c0c3f6593c34c1c0db751c064b2df145dd21de4`，`bash -n` PASS。新归档尚未送达 ECS，未做新候选 ECS 隔离构建／有 DB 冒烟，更未生产切流。运营四条短链仍缺可核实的完整站内正文与图片；至少一条属于后台「贴图」，现有自动源不覆盖，不能用链接卡代替站内阅读。
+**最新固定配对（2026-10-18）：** 前端 `51ea8775de74581289617cf1428ba4165775c1e0`，隔离 API `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`。旧 `283a`／`1b8` 的 ECS 工作区、旧归档和旧 Gate 均为历史证据，禁止直接用于本轮发布。新 API [归档 39111190239](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190239) PASS，内层 SHA-256 `64f58071e86fcdf292810a82314117148232a5fd64ccd38d4a730635c288fe6d`；[API Gate 39111190229](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190229) 四任务 PASS，[前端 Gate 39111190252](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190252) PASS。[固定 ECS staging 验收脚本](../../ops/ecs/verify-news-content-staging-20261018.sh) SHA-256 `cf88bdd43839b5f9a9aee05b0c0c3f6593c34c1c0db751c064b2df145dd21de4`，`bash -n` PASS。新归档和隔离构建/无数据库冒烟已在 ECS 通过；有 DB 负载与生产切流仍未执行。运营四条短链仍缺可核实的完整站内正文与图片；至少一条属于后台「贴图」，现有自动源不覆盖，不能用链接卡代替站内阅读。
+
+**23:01 CST staging 回执更新：** 新归档已上传并复核双哈希、manifest 与 Git blobs。新 SHA 的 ECS typecheck/build、256 MiB／50% CPU／64 tasks 无数据库冒烟 PASS，内核内存峰值 `78,573,568 bytes`、failcnt 0；现役仍为 `8cc4bb85`。旧 `1b8` 制品和工作区继续只作历史证据。新候选真实数据库、AI 负载与生产切流仍待验。
 
 **资讯门槛：** 用户要求服务号图文在小程序内读完整正文，收藏只保存原文 URL 且从收藏可跳原文。旧 `1b8` 的 URL 补录写入 `html:null`；新候选要求管理员核实正文/图片顺序块，发表时间允许未知。先按[资讯拓扑审查](p1-news-topology-first-principles-2026-10-18.md)取得真实正文来源，再在真稿上测试站内正文／图片／收藏。原文打开检查是收藏链的验收，不能代替正文验收。
 
@@ -13,11 +15,11 @@
 | 当前 API | `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`，切换前现场再核 |
 | 待发布 API | `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`，生产后代；隔离 Gate 四任务 PASS |
 | API 内层归档 SHA-256 | `64f58071e86fcdf292810a82314117148232a5fd64ccd38d4a730635c288fe6d`，只读制品 |
-| ECS 传输 | 新归档尚未上传；旧 `1b8` staging 包不得代替本 SHA |
-| ECS 隔离工作区 | 尚未建立新 SHA 的工作区；旧 `1b8` 工作区含诊断文件，不得整体复制为正式 release |
+| ECS 传输 | `/opt/jiuchen-api/staging/incoming/50e7fe3d7f93a347dfdc4af0675992690eb01e6f/`；归档/脚本双哈希、manifest、Git blobs 校验通过 |
+| ECS 隔离工作区 | `/opt/jiuchen-api/staging/verify-50e7fe3d7f93a347dfdc4af0675992690eb01e6f-20261018-145737-266223`；含生成的冒烟文件，不得整体复制为正式 release |
 | 小程序前端 | `51ea8775de74581289617cf1428ba4165775c1e0`，96/96、Node22 typecheck 与自托管 Gate PASS；尚未上传微信体验版 |
 | 数据库 | 管理员 WSL 加密备份 `20261016-134131-cf772f`，17 表隔离导入；真实结构副本三组迁移和重复执行通过，生产 Profile／News／商业三组 DDL 与 checker 通过 |
-| 资源 | 旧 `1b8` 在 ECS 构建与无 DB 256 MiB／50% CPU／64 tasks 冒烟通过；新 `50e7` 的 ECS 构建及真实 DB／AI 负载仍待验 |
+| 资源 | 新 `50e7` ECS typecheck/build 与无 DB 256 MiB／50% CPU／64 tasks 冒烟 PASS，峰值 `78,573,568 bytes`、failcnt 0；真实 DB／AI 负载仍待验 |
 
 ## 2026-10-18 14:15 收到的四篇候选原文
 
@@ -54,4 +56,4 @@
 - 虚拟支付 OfferID、两档商品 ID／价格、AppKey 及生产状态只在受限 ECS 配置，不通过聊天发送密钥；现场回传键是否存在、脱敏商品标识、真机交易结果。
 - 体验版操作者及四角色测试账号、客服端接收人、真实旧学员与老师分配样本；个人资料／会话票据不进 Git。
 
-状态：**新候选静态与隔离数据库 Gate／归档 PASS；无日期和站内正文的受控入口已通过代码测试。新归档上传、ECS 独立验证、真实稿件资料、生产资讯预热、API 切流、支付启用、微信体验版上传、真机、正式发布均尚未执行。**
+状态：**新候选静态与隔离数据库 Gate／归档、ECS 隔离构建及无数据库资源冒烟 PASS；无日期和站内正文的受控入口已通过代码测试。真实稿件资料、生产资讯预热、API 切流、支付启用、微信体验版上传、真机、正式发布均尚未执行。**
