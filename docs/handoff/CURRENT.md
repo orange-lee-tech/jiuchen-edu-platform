@@ -1,6 +1,11 @@
 # CURRENT — 九辰教育唯一活跃交接（2026-10-18）
 
-**当前现场执行入口：** [858aa6a5 十月资讯候选执行与验收](p1-public-pages-release-execution-2026-10-18.md)。新固定 ECS staging 脚本 SHA-256 `f4936b0466748523366e9236b940eed13ee64cbec0ab8c7261cd4168d8c3aed9`；新 release 准备脚本 SHA-256 `bacad470d98ede2f51d00c05bb22d41484d74cef39797b4043de55b509f461d7`。staging 已在 ECS 通过；release 准备尚未执行。旧云端 CI 三任务在步骤前失败，不替代自托管本 SHA 的四项成功。
+**当前现场执行入口：** [858aa6a5 十月资讯候选执行与验收](p1-public-pages-release-execution-2026-10-18.md)。新固定 ECS staging 脚本 SHA-256 `f4936b0466748523366e9236b940eed13ee64cbec0ab8c7261cd4168d8c3aed9`；新 release 准备脚本 SHA-256 `bacad470d98ede2f51d00c05bb22d41484d74cef39797b4043de55b509f461d7`。staging 和 release 准备均已在 ECS 通过；现役未切换。旧云端 CI 三任务在步骤前失败，不替代自托管本 SHA 的四项成功。
+
+## 2026-10-19 00:09 CST：858aa6a5 release 目录准备回执
+
+- 用户现场回执：固定 `prepare-public-pages-release-20261018.sh` 与 API 归档双 SHA-256 OK；`ARCHIVE_MANIFEST_AND_BLOBS_PASS`、Node 22 typecheck/build `RELEASE_TYPECHECK_AND_BUILD_PASS`、`RELEASE_LINK_BOUNDARY_PASS`；独立 unit `jiuchen-release-build-1792339637-290223.service` success/status 0。
+- `RELEASE_PREPARED=/opt/jiuchen-api/releases/858aa6a5bebbdb88346c6282f691b4976886b935`，`PRODUCTION_CURRENT_UNCHANGED=/opt/jiuchen-api/releases/8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`。未写 READY/approved-release、未重启服务、未改生产库。下一门是精确版本/功能范围审查与单独生产切换批准；News V2 开关、四篇内容写入、支付配置、真机及正式发布仍分项待验。
 
 ## 2026-10-19 00:03 CST：858aa6a5 ECS 隔离验收回执
 
