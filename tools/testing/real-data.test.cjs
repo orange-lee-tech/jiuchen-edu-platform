@@ -82,9 +82,9 @@ test('verified official intake requires V2 and explicit operator confirmation',(
  page.onVerifiedOfficialToggle()
  assert.equal(page.data.verifiedFormOpen,true)
  page.data.verifiedDraft={title:'合成公众号文章',articleUrl:'https://mp.weixin.qq.com/s/synthetic',
-   summary:'',coverUrl:'',date:'2026-10-12',time:'13:00',tags:'推免,院校',mediaType:'article'}
+   summary:'',coverUrl:'',date:'2026-10-12',time:'13:00',tags:'推免,院校',body:'核实后的站内正文',mediaType:'article'}
  page.onVerifiedOfficialSubmit()
- assert.match(modal.content,/管理员核实补录/)
+ assert.match(modal.content,/请确认后台已发表/)
  assert.match(modal.content,/2026-10-12 13:00/)
  const admin=fs.readFileSync(path.join(root,'pages/admin/admin.wxml'),'utf8')
  assert.match(admin,/item.publicationTimeSource === 'admin_verified_publish_record' \? '管理员核实原文'/)
