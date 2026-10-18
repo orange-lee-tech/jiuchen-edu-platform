@@ -26,6 +26,10 @@
 
 业务讨论将长期备份优化排在最后；任何生产 DDL 仍先取得最小可恢复点和隔离恢复证据。手机兼容与现役功能可先验，受缺列/缺表影响的功能写 BLOCKED，不用模拟结果替代真实业务。
 
+## ECS 只读 staging 验证入口
+
+[固定 SHA 脚本](../../ops/ecs/verify-isolated-staging-readonly.sh)仅接受已上传的 `1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7` 归档；脚本自身 SHA-256 `6d08ec40ac436dc67c8cf04e6fa25286d7f2e397eb93f7dac6c70faa32d89461`。管理员先将脚本下载到 Windows 并校验，再上传至同一 `incoming/<SHA>/`；ECS 使用 `bash <script>` 执行。它在唯一 staging 目录校验每个 Git blob，Node 22 下以单独 transient unit 限额构建、执行无 DB 30 次健康冒烟并由内核 cgroup 核验 256 MiB／50% CPU／64 tasks。运行前要求当前服务 active、可用内存至少 850 MiB；运行后核对 `current` 未改变。不会读取生产 env、执行 DDL 或切流。该脚本已本地通过 Bash/Node 语法、合成归档合法与篡改拒绝检查；**ECS 本 SHA 实际运行结果仍待回执**。
+
 ## 发布前仍需完成
 
 1. 根据确定的首发业务边界，明确 AI quality v3、News V2、跨身份只读、充值与次数/统计是否在同批范围；完成商户虚拟支付资格、官方合同和退款/发货/对账验证。代码存在不等于商户可用。
