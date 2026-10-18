@@ -24,7 +24,7 @@
 
 维护工具已新增显式 `--accept-existing-db-route` 选项：WSL→ECS 采用 SSH；ECS→DB 暂时复用现役 API 的无 MySQL TLS 路由，回执如实标记，不称端到端加密。无此选项维持拒绝；有 TLS 的服务端仍使用 TLS。本轮只需复用六组件 PARTIAL、补一份全量业务 SQL 到管理员 WSL 加密目录并在隔离 MySQL8 演练；ECS 40 GB 属共享磁盘空间，不作为长期备份仓。现场 `db-check` 已返回 `DB_READONLY_CONNECTION_CHECK_PASS`，使用 `DB_TRANSPORT=EXISTING_PRODUCTION_DB_ROUTE_NO_TLS_EXPLICIT`；六组件已在原 PARTIAL 中逐项解密复验。数据库 `MYSQL_CONNECT_AND_ENGINE_CHECK` 成功，但首次完整导出在 `MYSQLDUMP_FULL_EXPORT:CLIENT_OPTION_UNSUPPORTED` 停止，原因是工具误把 `mysql` 的 `--connect-timeout=15` 传给 `mysqldump`。修正版 `60f8b331` 已移除此参数，本地 16 项测试通过。现场仍须续传数据库、校验加密包并在隔离 MySQL8 导入后，才形成最小恢复点；生产 DDL 门槛不变。[工具步骤](../../tools/maintenance/README.md)。长期区间化与缓存优化发布后再做；不能对个人历史数据做有损特征提取冒充可恢复备份。
 
-## 当前版本与已经证实的事实
+\n**2026-10-18 管理员备份回执：** 原 PARTIAL 的 website、api、runtime、user-files、secrets、entry 六项已复验并复用；数据库全量导出完成，回执为 `KNOWN_COMPONENTS_DOWNLOAD_VERIFIED` 与 `DATABASE_DOWNLOAD_VERIFIED`，备份目录 `/home/orangelee-tech/jiuchen-backups/20261016-134131-cf772f`，本地加密校验通过。随后独立 MySQL 恢复演练在输入备份密码后只报 `CalledProcessError`，失败子步骤未被旧脚本披露；**不能记录为隔离恢复通过，也不影响现役服务**。工具 `a43c497b` 增加步骤标记、错误代码分类与清理错误隔离，并将演练简化为 SQL 导入及表数检查，本地 17 项测试通过。下一步仅重跑 `rehearse-db`，不再重下备份；若再失败，依据 `DB_STEP` 与脱敏 `FAILED` 精准修复。长期备份管理仍后置，生产 DDL 前保留可恢复性门槛。\n\n## 当前版本与已经证实的事实
 
 | 对象 | 最后可靠证据 | 当前判定 |
 | --- | --- | --- |
