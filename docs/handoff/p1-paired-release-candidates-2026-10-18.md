@@ -28,7 +28,7 @@
 
 ## ECS 只读 staging 验证入口
 
-[固定 SHA 脚本](../../ops/ecs/verify-isolated-staging-readonly.sh)仅接受已上传的 `1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7` 归档；脚本自身 SHA-256 `6d08ec40ac436dc67c8cf04e6fa25286d7f2e397eb93f7dac6c70faa32d89461`。管理员先将脚本下载到 Windows 并校验，再上传至同一 `incoming/<SHA>/`；ECS 使用 `bash <script>` 执行。它在唯一 staging 目录校验每个 Git blob，Node 22 下以单独 transient unit 限额构建、执行无 DB 30 次健康冒烟并由内核 cgroup 核验 256 MiB／50% CPU／64 tasks。运行前要求当前服务 active、可用内存至少 850 MiB；运行后核对 `current` 未改变。不会读取生产 env、执行 DDL 或切流。该脚本已本地通过 Bash/Node 语法、合成归档合法与篡改拒绝检查；**ECS 本 SHA 实际运行结果仍待回执**。
+[固定 SHA 脚本](../../ops/ecs/verify-isolated-staging-readonly.sh)仅接受已上传的 `1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7` 归档；脚本自身 SHA-256 `d4d0638ad4d5e2b032ee6f0dce1c60c34d5b93be4090ba72cf3040558be97905`。管理员先将脚本下载到 Windows 并校验，再上传至同一 `incoming/<SHA>/`；ECS 使用 `bash <script>` 执行。它在唯一 staging 目录校验每个 Git blob，由专用 jiuchen-deploy 用户在 Node 22 下以单独 transient unit 限额构建、执行无 DB 30 次健康冒烟并由内核 cgroup 核验 256 MiB／50% CPU／64 tasks。运行前要求当前服务 active、可用内存至少 850 MiB；运行后核对 `current` 未改变。不会读取生产 env、执行 DDL 或切流。该脚本已本地通过 Bash/Node 语法、合成归档合法与篡改拒绝检查；**ECS 本 SHA 实际运行结果仍待回执**。
 
 **商户更新（用户 2026-10-18 回执）：** 虚拟支付和微信支付均已开通。所附截图展示虚拟支付基本配置页及一个 AppID 关联页；截图没有呈现 OfferID、两档道具 ID/价格、现网/沙箱 AppKey、生产配置状态、订单查询/发货/退款或真实交易。因此删除“尚未开通”的待办，保留“配置接线与实付验收”门槛。AI 评估次数购买走源码中的虚拟支付 `mode=goods` 和 `wx.requestVirtualPayment`；旧 JSAPI 下单端点仍返回 503，普通微信支付开通不自动使这条充值链可用。密钥只在受限生产环境配置，仓库/聊天/日志只记录存在性与脱敏标识。
 
