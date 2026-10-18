@@ -22,6 +22,8 @@
 
 **四栏与客服／资讯当前边界（2026-10-18）：** 固定前端管理员选择学员或老师后，经只读凭证直接切到现有 `index/classroom/news/profile` 四个原生 Tab；不是另做镜像页。只读状态隐藏资料编辑、课表导入和计划保存入口，计划编辑页输入禁用；通用请求阻止非 GET，固定 API 也按只读凭证限制写入及可读路径。学员计划列表仍有“点击即可编辑／编辑”文字，需在体验版确认不会误导并可作为小范围后续文案修正。客服共用 `wx.openCustomerServiceChat`，代码接线不代表真机能打开或客服端已接收。10 月缺文可由管理员核实原文后受控补录，但自动同步缺口未修复，必须分别记录。生产表、开关、体验版均未启用／验收。
 
+**2026-10-18 生产 DDL 首次现场尝试：未执行。** root 预检完成固定归档 `sha256sum: OK`，随后未出现 `PRODUCTION_DDL_PRECHECK_PASS` 或任何迁移步骤；原因是我方预检误使用 `jiuchen-api` 用户读取 staging，固定隔离构建脚本实际以 `0700` 建目录并 `chown -R jiuchen-deploy`，仅部署用户可进入。用户随后只读资讯诊断在同一不可达目录以 `jiuchen-api` 启动，报 `MODULE_NOT_FOUND`，未连数据库。现役 News timer `ActiveState=active`、11:27 CST 触发，近期服务日志有 `Succeeded`、同步 `total=46, created=0, updated=0`；仅证明任务运行，尚不证明 10 月文章覆盖。修正版应以 `jiuchen-deploy` 运行固定 staging 代码和只读诊断，保留用户已批准的三组 DDL 范围，失败继续停止。
+
 ## 2026-10-18 最小恢复点快速通道
 
 管理员路由探针 `readOnlyRouteProbe=PASS`：数据库主机名解析 1 地址，目的地址分类 `other`，ECS 来源 RFC1918，网络设备经网关。原严格工具 `db-check` 返回 `DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT`；这是安全停止，不是数据库不可用。用户明确要求停止在备份治理细节上反复消耗时间，先获得最小可恢复点，再推进发布。
