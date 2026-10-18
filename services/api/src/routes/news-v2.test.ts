@@ -112,7 +112,7 @@ test('personal favorites are idempotent, owner-scoped and retain original URLs a
 test('verified official fallback is admin-only, URL restricted and idempotent within the 30-item window',async()=>{
   const student=fixture('student')
   const payload={title:'合成保研资讯',articleUrl:'https://mp.weixin.qq.com/s/synthetic-original',
-    publishedAt:'2026-10-12T13:00:00+08:00',tags:['保研'],mediaType:'article'}
+    publishedAt:'2026-10-12T13:00:00+08:00',tags:['保研'],mediaType:'article',body:'合成站内正文'}
   assert.equal((await student.app.inject({method:'POST',url:'/me/admin/news/verified-official',
     headers:{authorization:'Bearer synthetic'},payload})).statusCode,403)
   assert.equal(student.getCalls(),0)
@@ -143,6 +143,14 @@ test('verified official fallback is admin-only, URL restricted and idempotent wi
     assert.equal((await app.inject({method:'POST',url:'/me/admin/news/verified-official',
       headers,payload:{...payload,articleUrl:badUrl}})).statusCode,400)
   }
+  for(const bad of [
+    {...payload,body:''},
+    {...payload,mediaType:'image',body:'只有文字'},
+    {...payload,body:'https://evil.example/image.png'},
+  ]){
+    assert.equal((await app.inject({method:'POST',url:'/me/admin/news/verified-official',
+      headers,payload:bad})).statusCode,400)
+  }
   const first=await app.inject({method:'POST',url:'/me/admin/news/verified-official',headers,payload})
   assert.equal(first.statusCode,200)
   assert.equal(first.json().created,true)
@@ -154,5 +162,35 @@ test('verified official fallback is admin-only, URL restricted and idempotent wi
   assert.equal(writes[0].params[5],payload.articleUrl)
   assert.equal(writes[0].params[8],'2026-10-12 05:00:00')
   assert.equal(JSON.parse(String(writes[0].params[6])).publicationTimeSource,'admin_verified_publish_record')
+  assert.deepEqual(JSON.parse(String(writes[0].params[6])).blocks,[{type:'text',text:'合成站内正文'}])
+  await app.close()
+})
+
+test('verified image post keeps ordered images and accepts unknown publication time',async()=>{
+  const writes:Array<{sql:string;params:unknown[]}>=[] 
+  const connection={
+    async beginTransaction(){},async commit(){},async rollback(){},release(){},destroy(){},
+    async query(sql:string,params:unknown[]=[]){
+      if(sql.includes('GET_LOCK'))return [[{acquired:1}]]
+      if(sql.includes('@@session.time_zone'))return [[{zone:'+00:00'}]]
+      if(sql.includes('SELECT id,article_url AS articleUrl'))return [[]]
+      if(sql.includes("source='wechat_official' AND title=?"))return [[]]
+      if(sql.includes('FROM news_posts WHERE source='))return [[{id:'synthetic',status:'active',tagCount:1,sortTime:'2026-10-18T07:00:00Z'}]]
+      if(sql.includes('FROM news_display_states FOR UPDATE'))return [[]]
+      if(sql.includes('INSERT INTO news_posts'))writes.push({sql,params})
+      return [[]]
+    },
+  }
+  const app=adminFixture('admin-image',{async getConnection(){return connection}})
+  const payload={title:'贴图样本',articleUrl:'https://mp.weixin.qq.com/s/synthetic-gallery',publishedAt:null,
+    tags:['竞赛'],mediaType:'image',body:'说明文字\\nhttps://mmbiz.qpic.cn/mmbiz_png/test/640\\n第二段'}
+  const response=await app.inject({method:'POST',url:'/me/admin/news/verified-official',
+    headers:{authorization:'Bearer synthetic'},payload})
+  assert.equal(response.statusCode,200)
+  const stored=JSON.parse(String(writes[0].params[6]))
+  assert.equal(stored.mediaType,'image')
+  assert.deepEqual(stored.blocks,[{type:'text',text:'说明文字'},
+    {type:'image',url:'https://mmbiz.qpic.cn/mmbiz_png/test/640'},{type:'text',text:'第二段'}])
+  assert.equal(writes[0].params[8],null)
   await app.close()
 })
