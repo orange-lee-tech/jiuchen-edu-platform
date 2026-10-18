@@ -13,6 +13,8 @@ Page({
     post: null as NewsPostDetail | null,
     dateLabel: '',
     readerNodes: [] as ArticleNode[],
+    contentBlocks: [] as NonNullable<NewsPostDetail['content']['blocks']>,
+    bodyImageFailed:false,
     coverFailed: false,
     favorited:false,
     favoriteBusy:false,
@@ -44,6 +46,8 @@ Page({
       this.setData({
         post,
         readerNodes: articleReaderNodes(post.content.html || ''),
+        contentBlocks: post.content.blocks || [],
+        bodyImageFailed:false,
         coverFailed: false,
         dateLabel: newsPublicationLabel(post,true),
       })
@@ -84,6 +88,12 @@ Page({
   },
   onUnavailableFavorite(){wx.showModal({title:'收藏服务尚不可用',content:'当前服务器尚未启用个人收藏。可以先查看公众号原文；收藏记录需服务器升级后才能保存。',showCancel:false})},
   onCoverError() { this.setData({ coverFailed: true }) },
+  onBodyImageError(){this.setData({bodyImageFailed:true})},
+  onPreviewImage(event:WechatMiniprogram.BaseEvent){
+    const current=String(event.currentTarget.dataset.url||'')
+    const urls=this.data.contentBlocks.filter(block=>block.type==='image').map(block=>block.url)
+    if(current&&urls.includes(current))wx.previewImage({current,urls})
+  },
 
   onRetry() {
     if (this.postId) void this.loadPost(this.postId)
