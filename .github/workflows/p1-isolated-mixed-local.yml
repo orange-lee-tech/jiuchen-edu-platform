@@ -1,5 +1,5 @@
 name: P1 isolated release verification
-run-name: P1 50e7fe3d - isolated API gate
+run-name: P1 858aa6a5 - isolated API gate
 
 # Push bootstrap works without changing the default branch.
 on:
@@ -28,14 +28,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: 50e7fe3d7f93a347dfdc4af0675992690eb01e6f
+          ref: 858aa6a5bebbdb88346c6282f691b4976886b935
           persist-credentials: false
 
       - name: Verify exact candidate SHA
         working-directory: .
         run: |
-          test "$(git rev-parse HEAD)" = "50e7fe3d7f93a347dfdc4af0675992690eb01e6f"
-          echo "TESTED_CANDIDATE=50e7fe3d7f93a347dfdc4af0675992690eb01e6f"
+          test "$(git rev-parse HEAD)" = "858aa6a5bebbdb88346c6282f691b4976886b935"
+          echo "TESTED_CANDIDATE=858aa6a5bebbdb88346c6282f691b4976886b935"
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -55,7 +55,7 @@ jobs:
         env:
           CHECK_RESULT: ${{ job.status }}
         run: |
-          printf 'Candidate: `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Candidate: `858aa6a5bebbdb88346c6282f691b4976886b935`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
 
   mysql-gate:
     needs: verify
@@ -84,13 +84,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 50e7fe3d7f93a347dfdc4af0675992690eb01e6f
+          ref: 858aa6a5bebbdb88346c6282f691b4976886b935
           persist-credentials: false
       - name: Verify exact candidate SHA
         working-directory: .
         run: |
-          test "$(git rev-parse HEAD)" = "50e7fe3d7f93a347dfdc4af0675992690eb01e6f"
-          echo "TESTED_CANDIDATE=50e7fe3d7f93a347dfdc4af0675992690eb01e6f"
+          test "$(git rev-parse HEAD)" = "858aa6a5bebbdb88346c6282f691b4976886b935"
+          echo "TESTED_CANDIDATE=858aa6a5bebbdb88346c6282f691b4976886b935"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -225,7 +225,7 @@ jobs:
         env:
           CHECK_RESULT: ${{ job.status }}
         run: |
-          printf 'Candidate: `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Candidate: `858aa6a5bebbdb88346c6282f691b4976886b935`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
 
   profile-gate:
     needs: mysql-gate
@@ -252,13 +252,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 50e7fe3d7f93a347dfdc4af0675992690eb01e6f
+          ref: 858aa6a5bebbdb88346c6282f691b4976886b935
           persist-credentials: false
       - name: Verify exact candidate SHA
         working-directory: .
         run: |
-          test "$(git rev-parse HEAD)" = "50e7fe3d7f93a347dfdc4af0675992690eb01e6f"
-          echo "TESTED_CANDIDATE=50e7fe3d7f93a347dfdc4af0675992690eb01e6f"
+          test "$(git rev-parse HEAD)" = "858aa6a5bebbdb88346c6282f691b4976886b935"
+          echo "TESTED_CANDIDATE=858aa6a5bebbdb88346c6282f691b4976886b935"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -330,7 +330,7 @@ jobs:
         env:
           CHECK_RESULT: ${{ job.status }}
         run: |
-          printf 'Candidate: `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Candidate: `858aa6a5bebbdb88346c6282f691b4976886b935`\n\nHarness: `%s`\n\nRunner: `%s`\n\nJob result: %s\n' "$GITHUB_SHA" "$RUNNER_NAME" "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"
 
   commercial-gate:
     # Synthetic utf8mb3 commercial schema and restore, isolated from production.
@@ -357,13 +357,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 50e7fe3d7f93a347dfdc4af0675992690eb01e6f
+          ref: 858aa6a5bebbdb88346c6282f691b4976886b935
           persist-credentials: false
       - name: Verify exact candidate SHA
         working-directory: .
         run: |
-          test "$(git rev-parse HEAD)" = "50e7fe3d7f93a347dfdc4af0675992690eb01e6f"
-          echo "TESTED_CANDIDATE=50e7fe3d7f93a347dfdc4af0675992690eb01e6f"
+          test "$(git rev-parse HEAD)" = "858aa6a5bebbdb88346c6282f691b4976886b935"
+          echo "TESTED_CANDIDATE=858aa6a5bebbdb88346c6282f691b4976886b935"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -457,4 +457,4 @@ jobs:
         env:
           CHECK_RESULT: ${{ job.status }}
         run: |
-          printf 'Candidate: 50e7fe3d7f93a347dfdc4af0675992690eb01e6f\nCommercial gate: %s\nRunner: %s\n' "$CHECK_RESULT" "$RUNNER_NAME" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Candidate: 858aa6a5bebbdb88346c6282f691b4976886b935\nCommercial gate: %s\nRunner: %s\n' "$CHECK_RESULT" "$RUNNER_NAME" >> "$GITHUB_STEP_SUMMARY"

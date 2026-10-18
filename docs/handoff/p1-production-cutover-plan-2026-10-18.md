@@ -1,5 +1,7 @@
 # P1 生产切换与一次性真机验收执行单（2026-10-18）
 
+**23:45 CST 来源更新：** 四条短链的公开 HTML 已由运营端 `curl.exe` 取回并核同服务号、发表时间、全文与贴图顺序（两篇图文 2／3 图，两篇贴图 7／1 图）。固定 API 新后代 `858aa6a5bebbdb88346c6282f691b4976886b935` 补齐 `mmecoa.qpic.cn` 图片白名单，私有只读内容负载已生成；新 CI/归档与 ECS 门禁待核。以下 `50e7` 归档、准备目录和 SHA 只作为历史通过证据，**不可按旧步骤切流**。生产资讯写入／News V2 启用／API promote 尚未批准或执行。10 月 12 日中南大学稿仍缺 URL；四条补录不等于自动发现全部十月稿。
+
 本页是下一次现场工作的单一执行顺序。事实状态请先读 [CURRENT](CURRENT.md)。本页是审查和交接，不是已执行回执；需要将每关输出和时间补到 CURRENT，不把准备工作写成 PASS。
 
 **最新固定配对（2026-10-18）：** 前端 `51ea8775de74581289617cf1428ba4165775c1e0`，隔离 API `50e7fe3d7f93a347dfdc4af0675992690eb01e6f`。旧 `283a`／`1b8` 的 ECS 工作区、旧归档和旧 Gate 均为历史证据，禁止直接用于本轮发布。新 API [归档 39111190239](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190239) PASS，内层 SHA-256 `64f58071e86fcdf292810a82314117148232a5fd64ccd38d4a730635c288fe6d`；[API Gate 39111190229](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190229) 四任务 PASS，[前端 Gate 39111190252](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39111190252) PASS。[固定 ECS staging 验收脚本](../../ops/ecs/verify-news-content-staging-20261018.sh) SHA-256 `cf88bdd43839b5f9a9aee05b0c0c3f6593c34c1c0db751c064b2df145dd21de4`，`bash -n` PASS。新归档和隔离构建/无数据库冒烟已在 ECS 通过；有 DB 负载与生产切流仍未执行。运营四条短链仍缺可核实的完整站内正文与图片；至少一条属于后台「贴图」，现有自动源不覆盖，不能用链接卡代替站内阅读。

@@ -1,5 +1,11 @@
 # CURRENT — 九辰教育唯一活跃交接（2026-10-18）
 
+## 2026-10-18 23:45 CST：四页真实来源与新隔离 API 候选
+
+- 用户上传的匿名公开网页 ZIP `jiuchen-public-pages-v2-20261018-233541.zip`（SHA-256 `173e2e75f860549d5a01bfa30af6aa4d9b55ab8b36931c49bbe1c08e98018704`），四页均 HTTP 200、同服务号 biz `MzY5MTM2ODk5NA==`；页面 `ori_send_time` 与可见 `create_time` 对应。两篇图文的 `js_content` 含全文及 2／3 张正文图片；两篇「贴图」的 `picture_page_info_list` 含顺序 7／1 张，描述文字另存。标题、时间和图片数由 `tools/news/prepare-public-pages.py` 只读提取，输出私有 JSON，原 HTML 与全文不进 Git／聊天；未写生产库。
+- 固定隔离 API 候选改为 `858aa6a5bebbdb88346c6282f691b4976886b935`，只增加微信实际使用的 `https://mmecoa.qpic.cn/` 图片域名白名单、对应归一化、用四页公开源生成可审查内容的脚本与回归。Node 22 本地 typecheck、218/218 API 测试、build 和四页内容/账号/图片顺序校验 PASS；新的自托管 Gate 与只读归档以该 SHA 触发，结果待核。原 `50e7fe3d` 的 Gate、归档、ECS staging 和 release 准备均属旧候选证据；现役 `8cc4bb85` 未变，旧准备目录不准直接切流。
+- 四篇页面已具备站内内容数据，不代表十月全量自动同步恢复；10 月 12 日《中南大学保研看什么？》仍无原文 URL。生产资讯写入、News V2 开关、API 切流、图片在微信真机可加载、客服、角色、商户和正式发布仍待分别验收。源端 `freepublish/batchget` 对这几条短链的缺席尚未从根本上变成全自动发现能力。
+
 页首记录当前可执行状态，后文保留取证时间线。完整收费版为正式交付目标，生产收费尚未验收；[固定候选与独立 DDL 审查包](p1-paid-release-scope-and-schema-review-2026-10-17.md)是历史审查材料，新的固定配对见下节。旧日期的计划、候选 SHA、绿灯和“下一步”不自动成为今天的授权。接手先读 CONSTITUTION.md → AGENTS.md → 本页 → 对应专项文档；涉及 ECS 再读 ops/ecs/AGENTS.md。
 
 ## 最新发布配对与阻断（2026-10-18，优先于下方历史时间线）

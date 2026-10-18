@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 50e7fe3d7f93a347dfdc4af0675992690eb01e6f
+          ref: 858aa6a5bebbdb88346c6282f691b4976886b935
           fetch-depth: 0
           path: release-source
           persist-credentials: false
@@ -28,12 +28,12 @@ jobs:
       - name: Verify and package immutable source
         shell: bash
         run: |
-          test "$(git -C release-source rev-parse HEAD)" = "50e7fe3d7f93a347dfdc4af0675992690eb01e6f"
-          node release-tools/tools/release/package-isolated-api.mjs release-source 50e7fe3d7f93a347dfdc4af0675992690eb01e6f "$RUNNER_TEMP/p1-50e7fe3d-archive" | tee "$RUNNER_TEMP/p1-50e7fe3d-summary.txt"
-          cat "$RUNNER_TEMP/p1-50e7fe3d-summary.txt" >> "$GITHUB_STEP_SUMMARY"
+          test "$(git -C release-source rev-parse HEAD)" = "858aa6a5bebbdb88346c6282f691b4976886b935"
+          node release-tools/tools/release/package-isolated-api.mjs release-source 858aa6a5bebbdb88346c6282f691b4976886b935 "$RUNNER_TEMP/p1-858aa6a5-archive" | tee "$RUNNER_TEMP/p1-858aa6a5-summary.txt"
+          cat "$RUNNER_TEMP/p1-858aa6a5-summary.txt" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: p1-api-50e7fe3d-readonly
-          path: ${{ runner.temp }}/p1-50e7fe3d-archive/
+          name: p1-api-858aa6a5-readonly
+          path: ${{ runner.temp }}/p1-858aa6a5-archive/
           retention-days: 7
           if-no-files-found: error
