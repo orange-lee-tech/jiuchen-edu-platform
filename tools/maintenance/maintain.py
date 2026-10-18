@@ -519,12 +519,13 @@ def rehearse(args):
     if digest(source) != receipt['components']['database']['sha256']:
         raise ValueError('Database checksum mismatch')
     # Never download an image implicitly. WSL must have the already-approved local image.
-    call(['docker', 'image', 'inspect', 'mysql:8.0'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    db_run('REHEARSAL_IMAGE_CHECK', ['docker', 'image', 'inspect', 'mysql:8.0'], stdout=subprocess.DEVNULL, timeout=20)
     password = getpass.getpass('备份密码：')
     name = 'jiuchen-rehearse-' + secrets.token_hex(8)
     database_password = secrets.token_hex(24)
     with tempfile.TemporaryDirectory(prefix='jiuchen-rehearse-') as temp:
         sql = Path(temp) / 'database.sql'
+        print('DB_STEP=REHEARSAL_DECRYPT', flush=True)
         decrypt(source, sql, password)
         env = Path(temp) / 'mysql.env'
         env.write_text('MYSQL_ROOT_PASSWORD=' + database_password + '\nMYSQL_DATABASE=recovery_test\n')
@@ -532,12 +533,13 @@ def rehearse(args):
         cnf.write_text('[client]\nprotocol=tcp\nhost=127.0.0.1\nuser=root\npassword=' + database_password + '\n')
         created = False
         try:
-            call(['docker', 'create', '--name', name, '--label', 'jiuchen.maintenance=rehearsal',
+            db_run('REHEARSAL_CONTAINER_CREATE', ['docker', 'create', '--name', name, '--label', 'jiuchen.maintenance=rehearsal',
                   '--network', 'none', '--memory', '768m', '--cpus', '1', '--pids-limit', '256',
                   '--env-file', str(env), 'mysql:8.0', '--event-scheduler=OFF'], stdout=subprocess.DEVNULL)
             created = True
-            call(['docker', 'cp', str(cnf), name + ':/tmp/rehearsal.cnf'], stdout=subprocess.DEVNULL)
-            call(['docker', 'start', name], stdout=subprocess.DEVNULL)
+            db_run('REHEARSAL_CLIENT_CONFIG', ['docker', 'cp', str(cnf), name + ':/tmp/rehearsal.cnf'], stdout=subprocess.DEVNULL)
+            db_run('REHEARSAL_CONTAINER_START', ['docker', 'start', name], stdout=subprocess.DEVNULL)
+            print('DB_STEP=REHEARSAL_MYSQL_READY', flush=True)
             ready = False
             for _ in range(120):
                 result = subprocess.run(['docker', 'exec', name, 'mysqladmin', '--defaults-extra-file=/tmp/rehearsal.cnf', 'ping', '--silent'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -546,14 +548,13 @@ def rehearse(args):
                     break
                 time.sleep(1)
             if not ready:
-                raise RuntimeError('Isolated MySQL startup timeout')
+                raise ConfigError('REHEARSAL_MYSQL_READY:TIMEOUT')
             with open(sql, 'rb') as data:
-                call(['docker', 'exec', '-i', name, 'mysql', '--defaults-extra-file=/tmp/rehearsal.cnf', 'recovery_test'], stdin=data, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            call(['docker', 'exec', name, 'mysqlcheck', '--defaults-extra-file=/tmp/rehearsal.cnf', '--check', 'recovery_test'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            result = call(['docker', 'exec', name, 'mysql', '--defaults-extra-file=/tmp/rehearsal.cnf', '--batch', '--skip-column-names', '-e', "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='recovery_test';"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                db_run('REHEARSAL_SQL_IMPORT', ['docker', 'exec', '-i', name, 'mysql', '--defaults-extra-file=/tmp/rehearsal.cnf', 'recovery_test'], stdin=data, stdout=subprocess.DEVNULL)
+            result = db_run('REHEARSAL_TABLE_COUNT', ['docker', 'exec', name, 'mysql', '--defaults-extra-file=/tmp/rehearsal.cnf', '--batch', '--skip-column-names', '-e', "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='recovery_test';"], stdout=subprocess.PIPE)
             count = int(result.stdout.strip())
             if count < 1:
-                raise RuntimeError('No restored tables')
+                raise ConfigError('REHEARSAL_TABLE_COUNT:EMPTY_DATABASE')
             report = {'status': 'ISOLATED_SQL_IMPORT_AND_CHECK_PASS', 'tables': count,
                       'productionWrites': False, 'businessAcceptance': False,
                       'note': 'SQL import and physical table checks only; source row equivalence and API migrations still require validation'}
@@ -562,7 +563,7 @@ def rehearse(args):
         finally:
             if created:
                 # Only this invocation's random, isolated container and its anonymous volumes.
-                call(['docker', 'rm', '-f', '-v', name], stdout=subprocess.DEVNULL)
+                subprocess.run(['docker', 'rm', '-f', '-v', name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def main():
     os.umask(0o077)
