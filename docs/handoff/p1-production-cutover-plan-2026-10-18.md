@@ -6,6 +6,8 @@
 
 **23:01 CST staging 回执更新：** 新归档已上传并复核双哈希、manifest 与 Git blobs。新 SHA 的 ECS typecheck/build、256 MiB／50% CPU／64 tasks 无数据库冒烟 PASS，内核内存峰值 `78,573,568 bytes`、failcnt 0；现役仍为 `8cc4bb85`。旧 `1b8` 制品和工作区继续只作历史证据。新候选真实数据库、AI 负载与生产切流仍待验。
 
+**23:11 CST release 准备回执：** 固定脚本及归档哈希、manifest/Git blobs、限额 typecheck/build、链接边界、服务用户可访问性通过；`RELEASE_PREPARED=/opt/jiuchen-api/releases/50e7fe3d7f93a347dfdc4af0675992690eb01e6f`。`current` 仍为 `8cc4bb85`，未写 READY/approved-release，未重启或切流。
+
 **资讯门槛：** 用户要求服务号图文在小程序内读完整正文，收藏只保存原文 URL 且从收藏可跳原文。旧 `1b8` 的 URL 补录写入 `html:null`；新候选要求管理员核实正文/图片顺序块，发表时间允许未知。先按[资讯拓扑审查](p1-news-topology-first-principles-2026-10-18.md)取得真实正文来源，再在真稿上测试站内正文／图片／收藏。原文打开检查是收藏链的验收，不能代替正文验收。
 
 ## 固定对象与已通过门槛
@@ -37,7 +39,7 @@
 ## 一次现场的五道门
 
 1. **只读现场基线。** 记录北京时间、现役 API SHA、`jiuchen-api.service` 状态、live／ready、网站源站、资讯当前可见条数和既有客服入口；核对加密备份可解、旧 release 保留、生产三组表 checker。只记脱敏状态。失败时保持现役，不再继续切换。
-2. **准备纯净不可变 release。** 归档已到固定 ECS staging 且完整性/隔离构建通过。使用[固定 release 准备脚本](../../ops/ecs/prepare-news-content-release-20261018.sh)，本地 SHA-256 `b66f274f5f91a02149a82612b63e4575cc0e5230110ee932514aa6d289e5631a`，在 ECS root 单独执行；脚本重新校验固定归档/manifest/Git blobs，限额构建，并生成 `/opt/jiuchen-api/releases/50e7fe3d7f93a347dfdc4af0675992690eb01e6f`。要求 root:root、真实文件和目录不可被 group/world 写、`COMMIT_SHA` 精确匹配；以 `jiuchen-api` 身份验证可遍历、读取并 `node --check`，取得 `RELEASE_PREPARED` 与 `PRODUCTION_CURRENT_UNCHANGED` 回执。当前**尚未执行**；准备步骤不改 `current`、READY 或 approved-release。不得把生产配置载入 staging 的 `buildApp` 冒烟：它的 onReady 可能启动评估后台工作者。
+2. **准备纯净不可变 release。** 归档已到固定 ECS staging 且完整性/隔离构建通过。使用[固定 release 准备脚本](../../ops/ecs/prepare-news-content-release-20261018.sh)，本地 SHA-256 `b66f274f5f91a02149a82612b63e4575cc0e5230110ee932514aa6d289e5631a`，在 ECS root 单独执行；脚本重新校验固定归档/manifest/Git blobs，限额构建，并生成 `/opt/jiuchen-api/releases/50e7fe3d7f93a347dfdc4af0675992690eb01e6f`。要求 root:root、真实文件和目录不可被 group/world 写、`COMMIT_SHA` 精确匹配；以 `jiuchen-api` 身份验证可遍历、读取并 `node --check`，取得 `RELEASE_PREPARED` 与 `PRODUCTION_CURRENT_UNCHANGED` 回执。本步已通过；准备步骤不改 `current`、READY 或 approved-release。不得把生产配置载入 staging 的 `buildApp` 冒烟：它的 onReady 可能启动评估后台工作者。
 3. **资讯数据窗口。** 从四条运营原文和 10 月 12 日目标稿入手，核链接、同账号归属、正文/图片及重复项；发表时间未知时保持 NULL。不得用 10 月 17 日 `sourceUpdatedAt` 推断发表日期，不给八条产品资料批量打标签。现役 timer 可运行，但旧版不会准备 V2 展示状态。待明确批准这次生产资讯数据写入后，以固定 API 的独立维护命令、仅在该命令的环境中设置 `NEWS_V2_ENABLED=true` 执行完整 `syncOfficialAccountPosts`；它会 upsert 官方来源记录、调用 `reconcileNewsWindow` 写入展示状态及必要的退场任务／批次和 sync run。需要完整扫描、`failed=0`、`truncated=false`、公开可见窗口非空且真稿站内正文可读，再推进。此命令只创建数据库上下文，不启动 HTTP app 或后台评估 worker。缺失官方接口的稿件需由管理员在新 API 的 `/me/admin/news/verified-official` 输入核实的全文或图片 URL 顺序块、原链接和分类；补录与自动来源恢复分别记账。
 4. **受控 API 切换。** 对固定 SHA 单独审定上线范围：此 API 包含 AI quality v3／跨身份只读，不能靠默认关闭 News 或付费开关剔除这些代码。root 核对 `/etc/jiuchen-api/approved-release` 与 `/opt/jiuchen-api/staging/READY` 的确切 SHA，调用既有 `ops/ecs/jiuchen-promote`；仅此发布器切换 `current`、重启 `jiuchen-api.service` 并检查 live／ready，失败自动尝试回旧 release。配置文件 root 只读，禁止打印密钥。News V2 的生产开关单独确认；切换后立刻用公共身份核 `/news` 非空、原有文章及真稿，认证后核 Profile 读写／权限，网站健康不受影响。在既有 256 MiB、50% CPU、64 tasks 下记录真实 DB 和评估负载；OOM 或业务失败，先停后续验收并按旧 SHA 回退；增量表保留，不能倒灌旧备份覆盖新用户数据。
 5. **一次微信体验版会话。** 固定前端 SHA 上传体验版并记微信版本号，先验公开资讯（至少两篇新图文可站内读正文与图片、收藏后的对应原文可开）、游客／学员／老师／管理员客服入口及客服端实际收信；再验新旧学员四栏／资料保存重开／课表／评估，老师已分配与未分配、管理员直接复用原生学员／老师 UI 的只读模式与写入负例。接着核真实赠送次数、充值取消／成功／重复通知、扣次与退款或补偿、后台周月年金额统计；只在商户 OfferID、AppKey、两个商品 ID／价格、赠送版本与回调／订单查询等生产接线核准后开启实付及额度强制，密钥不贴聊天或 Git。官网与 API 均健康、用户可用链路 PASS 后再进入微信提审／正式发布。截图只留脱敏证据位置。
