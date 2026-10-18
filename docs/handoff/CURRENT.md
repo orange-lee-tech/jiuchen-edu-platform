@@ -24,7 +24,7 @@
 
 维护工具已新增显式 `--accept-existing-db-route` 选项：WSL→ECS 采用 SSH；ECS→DB 暂时复用现役 API 的无 MySQL TLS 路由，回执如实标记，不称端到端加密。无此选项维持拒绝；有 TLS 的服务端仍使用 TLS。本轮只需复用六组件 PARTIAL、补一份全量业务 SQL 到管理员 WSL 加密目录并在隔离 MySQL8 演练；ECS 40 GB 属共享磁盘空间，不作为长期备份仓。现场 `db-check` 已返回 `DB_READONLY_CONNECTION_CHECK_PASS`，使用 `DB_TRANSPORT=EXISTING_PRODUCTION_DB_ROUTE_NO_TLS_EXPLICIT`；六组件已在原 PARTIAL 中逐项解密复验。数据库 `MYSQL_CONNECT_AND_ENGINE_CHECK` 成功，但首次完整导出在 `MYSQLDUMP_FULL_EXPORT:CLIENT_OPTION_UNSUPPORTED` 停止，原因是工具误把 `mysql` 的 `--connect-timeout=15` 传给 `mysqldump`。修正版 `60f8b331` 已移除此参数，本地 16 项测试通过。该次续传问题已由后续修正版解除；最新下载与演练状态见下一段，生产 DDL 门槛不变。[工具步骤](../../tools/maintenance/README.md)。长期区间化与缓存优化发布后再做；不能对个人历史数据做有损特征提取冒充可恢复备份。
 
-**2026-10-18 管理员备份回执：** 原 PARTIAL 的 website、api、runtime、user-files、secrets、entry 六项已复验并复用；数据库全量导出完成，回执为 `KNOWN_COMPONENTS_DOWNLOAD_VERIFIED` 与 `DATABASE_DOWNLOAD_VERIFIED`，备份目录 `/home/orangelee-tech/jiuchen-backups/20261016-134131-cf772f`，本地加密校验通过。随后独立 MySQL 恢复演练在输入备份密码后只报 `CalledProcessError`，失败子步骤未被旧脚本披露；**不能记录为隔离恢复通过，也不影响现役服务**。工具 `a43c497b` 增加步骤标记、错误代码分类与清理错误隔离，并将演练简化为 SQL 导入及表数检查，本地 17 项测试通过。下一步仅重跑 `rehearse-db`，不再重下备份；若再失败，依据 `DB_STEP` 与脱敏 `FAILED` 精准修复。长期备份管理仍后置，生产 DDL 前保留可恢复性门槛。
+**2026-10-18 最小恢复点实测：** 原 PARTIAL 的 website、api、runtime、user-files、secrets、entry 六项已复验并复用；数据库全量 SQL 导出完成，加密包通过下载校验（`KNOWN_COMPONENTS_DOWNLOAD_VERIFIED`、`DATABASE_DOWNLOAD_VERIFIED`）。管理员 WSL 使用既有 `mysql:8.0` 镜像在隔离容器中解密、导入、检查表数，回执 `ISOLATED_SQL_IMPORT_AND_CHECK_PASS`、`tables=17`、`productionWrites=false`、`businessAcceptance=false`。备份目录 `/home/orangelee-tech/jiuchen-backups/20261016-134131-cf772f`；不向 GitHub 上传资料。此证据解除“尚无可导入业务库备份”的阻断；仍未证明生产备份已在生产环境恢复、逐行等价、官网/CloudBase 全资产覆盖或候选迁移兼容。恢复演练工具 `a43c497b` 本地 17 项合成测试 PASS。下一关在这份真实结构副本中逐项验证 Profile、News、商业迁移，分别确定生产 DDL 范围；长期备份优化仍列发布后。
 
 ## 当前版本与已经证实的事实
 
@@ -51,7 +51,7 @@
 | 4 | 资讯与官方来源 | 旧 /news 兼容；News V2 七表混合字符集临时迁移/关系回归 PASS，合同为正常30条＋旧文72小时 | 生产七表缺失、开关未启用；10月12目标已在公众号后台发表但不在官方 freepublish 列表；自动来源未通过 | 先决定首发是旧资讯有限范围、可核实原文的受控补录，还是必须完成 V2/自动同步；后两项不得冒充同一个验收 |
 | 5 | 管理员、老师与体验 | 只读统计/身份、客服复制、报告导出等有代码及模拟回归；只读跨身份镜像另有授权边界 | 周/月/年统计、角色样本、首页/课表刷新、客服粘贴、图片/MD/DOCX/PDF 导出在新体验版尚无真机全项回执；部分教师/已分配学员样本缺 | 一次性上传固定前端体验版，按 [真机清单](p1-unified-device-acceptance-2026-10-14.md) 逐项记录 PASS/FAIL/BLOCKED；缺样本记 DATA PENDING，不造数据 |
 | 6 | 受控发布与资源 | 1b8 代码门禁通过；本 SHA ECS 独立构建与无 DB 限额冒烟 PASS | 生产 API 仍是 8cc4；新候选真实 DB/AI 负载、业务健康、回滚、微信提审/正式版均未执行 | 依据最终范围与精确 SHA 单独审批 DDL、API promote、开关和微信版本；ECS 同 256MiB/50%/64 限额下验证真实依赖后切流、真机回归、提交审核 |
-| 7 | 管理员备份与救火 | 加密下载、诊断、隔离上传及恢复演练接口；工具本地 17 项合成测试 PASS | 2026-10-18 六组件复验复用、业务数据库完整导出，加密下载校验 PASS；隔离 MySQL 恢复演练在子步骤未知的 `CalledProcessError` 停止。全资产覆盖与真实业务恢复仍待验 | 业务排序置末；仅重跑本地 `rehearse-db` 并根据脱敏阶段回执定位。任何生产 DDL 前须取得可恢复性回执；不重下六组件或重新导出全库 |
+| 7 | 管理员备份与救火 | 加密下载、诊断、隔离上传及恢复演练接口；工具本地 17 项合成测试 PASS | 2026-10-18 已知六组件复验复用、数据库全量导出与加密下载 PASS；WSL 独立 MySQL8 导入 17 表 PASS。全资产覆盖、逐行等价与业务级恢复仍待验 | 最小库恢复点成立；以该真实结构副本验证候选迁移，再按独立范围审批生产 DDL。长期版本治理与自动清理后置 |
 
 顺序是业务价值与决策顺序，不是允许跳过安全依赖。当前不能宣称“完整收费上线”“最新资讯自动同步通过”或“全功能正式版通过”。[发布问题逐项分析](p1-release-open-items-2026-10-17.md)解释并行关系、推荐路径和每项验收。News V2 的七表、Profile 单列、商业表与各功能开关是不同审批范围。
 
