@@ -91,7 +91,7 @@ Page({
   onBodyImageError(){this.setData({bodyImageFailed:true})},
   onPreviewImage(event:WechatMiniprogram.BaseEvent){
     const current=String(event.currentTarget.dataset.url||'')
-    const urls=this.data.contentBlocks.filter(block=>block.type==='image').map(block=>block.url)
+    const urls=this.data.contentBlocks.filter((block):block is {type:'image';url:string}=>block.type==='image').map(block=>block.url)
     if(current&&urls.includes(current))wx.previewImage({current,urls})
   },
 
