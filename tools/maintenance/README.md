@@ -103,6 +103,24 @@ bash start.sh backup --host root@121.40.168.181 --output ~/jiuchen-backups --pin
 
 本地 `python3 -m unittest discover -s tools/maintenance -p test_maintenance.py` 15/15 PASS；Python 编译及内嵌 ECS Node 检查器语法 PASS。合成测试覆盖握手 TLS 位、同机允许、异机拒绝、TLS 可用时强制连接。它们不代表现场连库或恢复成功。
 
+## 2026-10-18 快速最小恢复点：现役连接路径显式复用
+
+后续现场 `db-check` 回执为 `DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT`；ECS 只读路由探针报告数据库为主机名、解析一个地址、目的地 `other`、ECS 来源 RFC1918、经网络设备和网关。地址未证实为同机。现役 API 已经在无 MySQL TLS 的此路径读写数据库，不能称 WSL→ECS→DB 全程加密。
+
+用户以尽快获得生产 DDL 前最小恢复点为目标，允许本轮直接复用现役数据库路径。新增**显式** `--accept-existing-db-route`，只对 `db-check` 与 `backup` 生效：WSL→ECS 仍用 SSH 隧道；ECS→DB 沿生产现役路由，MySQL 服务端无 TLS 时客户端临时设 `ssl-mode=DISABLED`，输出 `DB_TRANSPORT=EXISTING_PRODUCTION_DB_ROUTE_NO_TLS_EXPLICIT`。没有此参数时仍拒绝远端无 TLS；服务端支持 TLS 时仍强制 TLS。管理员明知 ECS→DB 段不加密的现有风险，完成本次恢复点后再单独治理生产数据库传输。
+
+在 WSL 下载并 SHA-256 校验本分支最新版 `maintain.py` 后，用原工具目录替换（保留旧文件副本）；依次运行：
+
+```bash
+bash start.sh db-check --host root@121.40.168.181 --accept-existing-db-route
+bash start.sh backup --host root@121.40.168.181 --output ~/jiuchen-backups --pin --resume-latest --accept-existing-db-route
+bash start.sh rehearse-db --backup <上一条打印的完整备份目录>
+```
+
+`backup --resume-latest` 验证并复用原六组件，只补 database；加密备份存于管理员 WSL ext4，ECS 不积累整代明文或长期归档。`rehearse-db` 在 WSL 既有 `mysql:8.0` 镜像中隔离导入并删除临时容器。只有 `KNOWN_COMPONENTS_DOWNLOAD_VERIFIED` 与 `ISOLATED_SQL_IMPORT_AND_CHECK_PASS` 同时出现，才有最小库恢复证据；仍需生产结构迁移的隔离复刻。ECS 约 40 GB 是磁盘，不是 RAM，不将生产数据库长期版本占满共用服务器。
+
+本地 15/15 合成测试及 Python 编译通过；字段现场导出/恢复结果待管理员回执。用户数据不可做有损特征压缩后冒充可恢复备份；本轮使用 MySQL 一致性 SQL 导出，区间化、压缩和缓存优化按发布后维护。
+
 ## 2026-10-17 现场 SSL 回执与优先级
 
 管理员 v3 db-check：DB_CLIENT_BACKEND=local-mysql8，REMOTE_CONFIG_READ 与 SSH_TUNNEL_CREATE 已执行；MYSQL_CONNECT_AND_ENGINE_CHECK 失败 MYSQL_ERROR_2026。官方 MySQL 错误码为 SSL connection error，尚不能据此判定具体 TLS 协议、证书、代理或网络根因。数据库组件未导出，先前六组件保留PARTIAL；隔离恢复及生产覆盖尚未运行。
