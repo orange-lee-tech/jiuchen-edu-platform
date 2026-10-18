@@ -46,7 +46,8 @@ export function normalizeNewsContent(value: unknown): NewsPostContent {
       if(!block || typeof block!=='object' || Array.isArray(block))return false
       const item=block as Record<string,unknown>
       return item.type==='text'&&typeof item.text==='string' ||
-        item.type==='image'&&typeof item.url==='string'&&/^https:\/\/mmbiz\.qpic\.cn\//.test(item.url)
+        item.type==='image'&&typeof item.url==='string'&&
+          /^https:\/\/(?:mmbiz|mmecoa)\.qpic\.cn\//.test(item.url)
     }).slice(0,100):[],
 
     sourceUpdatedAt: typeof record.sourceUpdatedAt==='string'?record.sourceUpdatedAt:null,

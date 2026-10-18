@@ -15,7 +15,8 @@ function isOfficialUrl(value:string){
 function isOfficialImageUrl(value:string){
   try {
     const url=new URL(value)
-    return url.protocol==='https:' && url.hostname==='mmbiz.qpic.cn'
+    return url.protocol==='https:' && ['mmbiz.qpic.cn','mmecoa.qpic.cn'].includes(url.hostname) &&
+      !url.username && !url.password && !url.port
   } catch { return false }
 }
 
@@ -38,7 +39,8 @@ const verifiedOfficialPost = z.object({
   summary: z.string().trim().max(1000).nullable().optional(),
   coverUrl: z.string().trim().url().refine(value => {
     const url = new URL(value)
-    return url.protocol === 'https:' && ['mmbiz.qpic.cn', 'mp.weixin.qq.com'].includes(url.hostname)
+    return isOfficialImageUrl(value) ||
+      url.protocol === 'https:' && url.hostname === 'mp.weixin.qq.com' && !url.username && !url.password && !url.port
   }).nullable().optional(),
   publishedAt: z.string().refine(value =>
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&

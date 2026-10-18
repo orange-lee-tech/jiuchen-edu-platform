@@ -183,14 +183,23 @@ test('verified image post keeps ordered images and accepts unknown publication t
   }
   const app=adminFixture('admin-image',{async getConnection(){return connection}})
   const payload={title:'贴图样本',articleUrl:'https://mp.weixin.qq.com/s/synthetic-gallery',publishedAt:null,
-    tags:['竞赛'],mediaType:'image',body:'说明文字\nhttps://mmbiz.qpic.cn/mmbiz_png/test/640\n第二段'}
+    tags:['竞赛'],mediaType:'image',coverUrl:'https://mmecoa.qpic.cn/mmecoa_png/cover/0',
+    body:'说明文字\nhttps://mmecoa.qpic.cn/mmecoa_png/test/640?wx_fmt=png&from=appmsg\n第二段'}
+  for(const bad of [
+    {...payload,body:'https://mmecoa.qpic.cn.evil.example/img.png'},
+    {...payload,body:'http://mmecoa.qpic.cn/img.png'},
+    {...payload,coverUrl:'https://evil.example/cover.png'},
+  ]){
+    assert.equal((await app.inject({method:'POST',url:'/me/admin/news/verified-official',
+      headers:{authorization:'Bearer synthetic'},payload:bad})).statusCode,400)
+  }
   const response=await app.inject({method:'POST',url:'/me/admin/news/verified-official',
     headers:{authorization:'Bearer synthetic'},payload})
   assert.equal(response.statusCode,200)
   const stored=JSON.parse(String(writes[0].params[6]))
   assert.equal(stored.mediaType,'image')
   assert.deepEqual(stored.blocks,[{type:'text',text:'说明文字'},
-    {type:'image',url:'https://mmbiz.qpic.cn/mmbiz_png/test/640'},{type:'text',text:'第二段'}])
+    {type:'image',url:'https://mmecoa.qpic.cn/mmecoa_png/test/640?wx_fmt=png&from=appmsg'},{type:'text',text:'第二段'}])
   assert.equal(writes[0].params[8],null)
   await app.close()
 })
