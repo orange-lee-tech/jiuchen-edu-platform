@@ -97,7 +97,9 @@ class MaintenanceTests(unittest.TestCase):
             receipt={'format':1,'createdUtc':'synthetic','downloadVerified':False,'components':{'website':{'sha256':m.digest(encrypted)}}}
             (generation/'receipt.json').write_text(json.dumps(receipt)); (generation/'PARTIAL').touch()
             remote=MagicMock()
-            def dump(remote,temp,target): target.write_bytes(b'-- synthetic dump for resume orchestration test only')
+            def dump(remote,temp,target,accept_existing_db_route=False):
+                self.assertFalse(accept_existing_db_route)
+                target.write_bytes(b'-- synthetic dump for resume orchestration test only')
             args=SimpleNamespace(output=str(root),resume_latest=True,host='synthetic-host',pin=True)
             with patch.object(m,'LABELS',{'website':'site','database':'data'}), patch.object(m.getpass,'getpass',return_value=password), patch.object(m,'Remote',return_value=remote), patch.object(m,'dump_database',side_effect=dump), patch('builtins.print'):
                 m.backup(args)
@@ -154,6 +156,13 @@ class MaintenanceTests(unittest.TestCase):
             with self.assertRaisesRegex(m.ConfigError,'DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT'):
                 m.mysql_config(remote,temp)
             self.assertFalse((Path(temp)/'mysql.cnf').exists())
+        remote.run.side_effect=[subprocess.CompletedProcess([],0,stdout=json.dumps(config).encode()),
+                                subprocess.CompletedProcess([],0,stdout=json.dumps({'hostHash':expected_hash,'onInterface':False}).encode())]
+        with tempfile.TemporaryDirectory() as temp, patch.object(m,'db_run'), patch.object(m,'mysql_server_has_tls',return_value=False), patch('builtins.print') as shown:
+            path,_=m.mysql_config(remote,temp,accept_existing_db_route=True)
+            self.assertIn('ssl-mode=DISABLED',path.read_text())
+            self.assertTrue(any('EXISTING_PRODUCTION_DB_ROUTE_NO_TLS_EXPLICIT' in str(call)
+                                for call in shown.call_args_list))
 
     def test_tls_capable_server_keeps_required_mode(self):
         config={'host':'db.example.test','port':3306,'user':'test-user','password':'secret','database':'test-db'}
