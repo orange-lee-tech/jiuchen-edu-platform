@@ -340,7 +340,7 @@ def dump_database(remote, temp, target, accept_existing_db_route=False):
         database_connection_check(backend, cnf, db)
         with open(target, 'xb') as out:
             db_run('MYSQLDUMP_FULL_EXPORT', mysql_command(backend, 'mysqldump', cnf,
-                ['--connect-timeout=15', '--single-transaction', '--quick', '--routines', '--events', '--triggers', '--hex-blob', '--no-tablespaces', '--set-gtid-purged=OFF', '--column-statistics=0', '--default-character-set=utf8mb4', db]), stdout=out)
+                ['--single-transaction', '--quick', '--routines', '--events', '--triggers', '--hex-blob', '--no-tablespaces', '--set-gtid-purged=OFF', '--column-statistics=0', '--default-character-set=utf8mb4', db]), stdout=out)
         if target.stat().st_size == 0:
             raise ConfigError('MYSQLDUMP_FULL_EXPORT:EMPTY_OUTPUT')
     finally:
