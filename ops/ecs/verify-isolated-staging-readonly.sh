@@ -15,6 +15,7 @@ nodebin="$base/runtime/node-v22.23.3-linux-x64/bin/node"
 
 die() { printf 'BLOCKED: %s\n' "$*" >&2; exit 1; }
 [[ $(id -u) -eq 0 ]] || die 'run as root on ECS'
+id jiuchen-deploy >/dev/null 2>&1 || die 'dedicated jiuchen-deploy user missing'
 for cmd in python3 sha256sum systemd-run systemctl npm; do command -v "$cmd" >/dev/null || die "missing $cmd"; done
 [[ -f "$archive" && ! -L "$archive" && -f "$manifest" && ! -L "$manifest" ]] || die 'uploaded archive/manifest missing or linked'
 [[ -x "$nodebin" ]] || die 'pinned Node 22 runtime missing'
@@ -74,13 +75,16 @@ PY
 
 api="$work/services/api"
 [[ -f "$api/package-lock.json" && -f "$api/package.json" ]] || die 'API package files missing'
+chown -R jiuchen-deploy:jiuchen-deploy "$work"
 taskpath="$(dirname "$nodebin"):/usr/local/bin:/usr/bin:/bin"
 stamp="$(date +%s)-$$"
 printf '===== BOUNDED ECS BUILD =====\n'
 build_result=$(systemd-run --unit="jiuchen-stage-build-$stamp" --wait --pipe \
+  -p User=jiuchen-deploy \
   -p MemoryAccounting=yes -p MemoryLimit=768M -p CPUQuota=50% -p TasksMax=128 \
   -p RuntimeMaxSec=900 -p "WorkingDirectory=$api" \
   /usr/bin/env -i PATH="$taskpath" NODE_OPTIONS=--max-old-space-size=512 \
+  npm_config_cache="$work/.npm-cache" \
   /bin/bash -c 'set -euo pipefail; npm ci --no-audit --no-fund; npm run typecheck; npm run build; echo ECS_TYPECHECK_AND_BUILD_PASS' 2>&1) || {
     printf '%s\n' "$build_result"; die 'bounded build failed';
   }
@@ -133,9 +137,11 @@ try{
     databaseConfigured:false}))
 }finally{await app.close()}
 JS
+chown jiuchen-deploy:jiuchen-deploy "$api/staging-smoke.mjs"
 
 printf '===== 256 MiB / 50%% CPU / 64 TASKS SMOKE =====\n'
 smoke_result=$(systemd-run --unit="jiuchen-stage-smoke-$stamp" --wait --pipe \
+  -p User=jiuchen-deploy \
   -p MemoryAccounting=yes -p MemoryLimit=256M -p CPUAccounting=yes -p CPUQuota=50% \
   -p TasksAccounting=yes -p TasksMax=64 -p RuntimeMaxSec=60 -p "WorkingDirectory=$api" \
   /usr/bin/env -i PATH="$taskpath" "$nodebin" --max-old-space-size=160 staging-smoke.mjs 2>&1) || {
