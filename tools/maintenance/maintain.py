@@ -284,8 +284,11 @@ def db_on_ecs_interface(remote, db):
         result = remote.run(['/usr/bin/env', '-i', '/opt/jiuchen-api/runtime/node-v22.23.3-linux-x64/bin/node',
                              '-e', DB_LOCAL_INTERFACE_JS], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         answer = json.loads(result.stdout)
-        return (answer['hostHash'] == hashlib.sha256(db['host'].encode()).hexdigest()
-                and answer['onInterface'] is True)
+        if answer['hostHash'] != hashlib.sha256(db['host'].encode()).hexdigest():
+            raise ConfigError('DB_CONFIG_CHANGED_DURING_CHECK')
+        return answer['onInterface'] is True
+    except ConfigError:
+        raise
     except (subprocess.CalledProcessError, ValueError, KeyError, TypeError):
         raise ConfigError('DB_LOCAL_INTERFACE_CHECK_FAILED')
 
