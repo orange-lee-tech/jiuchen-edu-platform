@@ -11,10 +11,19 @@ python=/home/orangelee-tech/.local/share/jiuchen-maintenance/venv/bin/python3
 maintenance=/home/orangelee-tech/jiuchen-maintenance-20261016
 remote="root@121.40.168.181:/opt/jiuchen-api/staging/incoming/$candidate/jiuchen-api-$candidate-readonly.tar.gz"
 
-for program in docker scp sha256sum tar npm node openssl; do
+for program in docker scp sha256sum tar openssl; do
   command -v "$program" >/dev/null || { echo "BLOCKED: $program is missing"; exit 1; }
 done
 "$python" -c 'import cryptography' || { echo 'BLOCKED: maintenance Python is unavailable'; exit 1; }
+if ! command -v node >/dev/null || [[ $(node -p 'process.versions.node.split(".")[0]') != 22 ]]; then
+  for toolbin in /home/orangelee-tech/actions-runner/_work/_tool/node/22.*/x64/bin; do
+    if [[ -x "$toolbin/node" && -x "$toolbin/npm" ]]; then
+      export PATH="$toolbin:$PATH"
+      break
+    fi
+  done
+fi
+command -v node >/dev/null && command -v npm >/dev/null || { echo 'BLOCKED: WSL Node/npm required'; exit 1; }
 test "$(node -p 'process.versions.node.split(".")[0]')" = 22 || { echo 'BLOCKED: Node 22 required in WSL'; exit 1; }
 test -f "$generation/receipt.json" && test ! -e "$generation/PARTIAL" || { echo 'BLOCKED: verified backup absent'; exit 1; }
 docker image inspect mysql:8.0 >/dev/null
