@@ -15,6 +15,12 @@
 | 现役 API | 最后核实 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`，现场必须重新读 `current` |
 | 前一候选 | `50e7fe3d7f93a347dfdc4af0675992690eb01e6f` 的 staging/release 准备 PASS 只是历史证据 |
 
+## 现场回执（2026-10-19 00:09 CST）
+
+- ECS staging：固定归档/脚本哈希、manifest/Git blobs、Node 22 typecheck/build、256 MiB/50% CPU/64 tasks 无数据库 30 次健康检查通过；cgroup 内存峰值 77,303,808 bytes、failcnt 0；`ECS_STAGING_GATE_PASS`。
+- ECS release：固定准备脚本与归档哈希、manifest/Git blobs、typecheck/build、链接边界及服务用户访问检查通过；`RELEASE_PREPARED=/opt/jiuchen-api/releases/858aa6a5bebbdb88346c6282f691b4976886b935`；现役仍为 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`。未写 READY/approved-release、未切流、未写库。本表下方第 1–3 步为已通过流程，不再重跑。
+- 精确 API 差异相对现役 5 个提交：包含 AI assessment-agent-v3 的规则/校验调整、跨身份只读授权，以及资讯 V2 可选路径；前两项随 API promote 生效，后者需独立开关。生产切换、V2 预热/启用、四篇入库为分项审批；商户接线与实际交易另行验收。
+
 ## 四页内容边界
 
 用户于 23:35 CST 上传的匿名公开页面 ZIP SHA-256 为 `173e2e75f860549d5a01bfa30af6aa4d9b55ab8b36931c49bbe1c08e98018704`。四页同服务号 biz `MzY5MTM2ODk5NA==`；发表秒数 `ori_send_time` 与页面 `create_time` 对应。公开页面内容提取器 [prepare-public-pages.py](../../tools/news/prepare-public-pages.py) 只读生成私有 JSON，实测图文 2/3 张图、贴图 7/1 张图，原次序相符。生成结果 SHA-256 `61a208d3396e0136279ed843a587da0ed1a290f0d7bf1f01746f67a34a651f92`；原 HTML、全文与私有 JSON 不进 Git、Actions 或普通日志。
