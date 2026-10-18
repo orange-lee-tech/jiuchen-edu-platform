@@ -2,15 +2,17 @@
 
 本页只记当前可执行状态。完整收费版为正式交付目标，生产收费尚未验收；[固定候选与独立 DDL 审查包](p1-paid-release-scope-and-schema-review-2026-10-17.md)用于下一轮现场核对。历史事实保留在 Git 历史和下列专项文档中，旧日期的计划、候选 SHA、绿灯和“下一步”不自动成为今天的授权。接手先读 CONSTITUTION.md → AGENTS.md → 本页 → 对应专项文档；涉及 ECS 再读 ops/ecs/AGENTS.md。
 
-**2026-10-18 发布候选更正：** 前端固定 SHA 为 `283aaf15fc0047f100028eee547a5581c3f8c047`，隔离 API 固定 SHA 为 `1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7`。API 是现役 `8cc4bb85` 的后代、在 e590 上仅修复商业 schema 检查器；集成提交 `283aaf15fc0047f100028eee547a5581c3f8c047` 的 API 测试通过，但归档器因不满足生产祖先约束拒绝它，不能把它作为 API 发布包。新 API 的固定验证：[39083488661](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661)（verify/News/Profile/商业四项成功）。下文凡称“283a 整包 API 候选”仅为 10 月 17 日代码测试历史，不是当前可归档 API。生产部署、DDL、商户和真机仍待实际验收。固定隔离 API 的四项门禁 [39083488661](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661) PASS（Node22 typecheck、215/215、build，News/Profile/商业临时 MySQL）；[归档 39083622604](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083622604) PASS，内层 tar.gz SHA-256 `98279923d783889caa87deb815d3828d53266a84a7be081714188a71f1fc1fb8`，仅供审查。详情：[配对候选回执](p1-paired-release-candidates-2026-10-18.md)。
+**2026-10-18 生产 DDL 实测：** 用户在 ECS root 运行固定 `1b8ae8b3` staging 代码，`PRODUCTION_DDL_PRECHECK_PASS`，随后 `PROFILE_UPGRADE`／`PROFILE_CHECK`、`NEWS_UPGRADE`、`COMMERCIAL_UPGRADE`／`COMMERCIAL_CHECK` 逐项 PASS；Profile `ready=true`、商业四表 `ok=true, issues=[]`，News 返回 `NEWS_V2_SCHEMA_READY`，最终 `THREE_PRODUCTION_DDL_SCOPES_PASS`、`API_CURRENT_UNCHANGED`。这三组结构现已存在；生产 API 仍为 `8cc4bb85`，News V2、收费开关与商户仍未启用。**资讯根因新证据：** 现役 timer 11:27 CST active，近期同步成功；固定候选只读源端完整扫描 45/45 组、3 页，其中按 `publish_time` 或来源 `update_time` 归月有 10 月 9 篇、9 月 9 篇、8 月 8 篇、7 月 20 篇，最新来源更新时间 `2026-10-17T08:20:03Z`，所有来源真实发表时间仍未给出。生产 `news_posts` 的 10 月来源月份 9 篇均 active、**标签 0/9**；现役 `/news` 排除无标签内容，因此这一批无法公开展示。之前单篇 10 月 12 日目标缺源仍需按标题逐项核对，不能把“9 篇被过滤”当作全部公众号文章自动覆盖。下一步核对这 9 篇标题与链接，管理员人工分类，按固定候选受控切流并在真机验证展示与原文；News V2 空状态需先由固定候选同步/调和再启用公开窗口。
 
-本轮整包施工和一次性验收入口：[P1 整包发布施工图与一次性验收](p1-integrated-release-package-2026-10-17.md)。2026-10-17 已对公众号资讯/咨询、学员/老师/管理员四栏、充值账本与统计做跨模块审计；前端固定 `283aaf15` [39031514964](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514964) typecheck/96回归 PASS；生产后代隔离 API `1b8ae8b3` [39083488661](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661) typecheck/215测试/build、News/Profile/商业临时 MySQL Gate PASS。旧 e590 商业 Gate 因元数据字段名未别名失败已如实保留；隔离 1b8 的合成库恢复通过。生产 DDL、API 切流、商户与真机仍待验。公众号自动同步差异未解决，备份长期优化列业务最后；生产 DDL 前的最小恢复证据仍必需。
+**2026-10-18 发布候选更正：** 前端固定 SHA 为 `283aaf15fc0047f100028eee547a5581c3f8c047`，隔离 API 固定 SHA 为 `1b8ae8b3c5a1285b84ab6b5f573ca9db5d93d0a7`。API 是现役 `8cc4bb85` 的后代、在 e590 上仅修复商业 schema 检查器；集成提交 `283aaf15fc0047f100028eee547a5581c3f8c047` 的 API 测试通过，但归档器因不满足生产祖先约束拒绝它，不能把它作为 API 发布包。新 API 的固定验证：[39083488661](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661)（verify/News/Profile/商业四项成功）。下文凡称“283a 整包 API 候选”仅为 10 月 17 日代码测试历史，不是当前可归档 API。生产 DDL 已执行并核查；API 部署、商户和真机仍待实际验收。固定隔离 API 的四项门禁 [39083488661](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661) PASS（Node22 typecheck、215/215、build，News/Profile/商业临时 MySQL）；[归档 39083622604](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083622604) PASS，内层 tar.gz SHA-256 `98279923d783889caa87deb815d3828d53266a84a7be081714188a71f1fc1fb8`，仅供审查。详情：[配对候选回执](p1-paired-release-candidates-2026-10-18.md)。
 
-**ECS 固定候选第 1 关（2026-10-18）：** [完整归档回执](p1-paired-release-candidates-2026-10-18.md)记录 `STAGING_UPLOAD_AND_CHECK_PASS`，随后本 SHA `1b8ae8b3` 在唯一 staging 目录取得 `ARCHIVE_MANIFEST_AND_BLOBS_PASS`、`ECS_TYPECHECK_AND_BUILD_PASS`、`ECS_CANDIDATE_STAGING_PASS`；构建与 256 MiB／50% CPU／64 tasks 无 DB 冒烟 systemd 均 success/status 0，现役 `current` 仍为 `8cc4`。真实 DB/AI 负载、生产恢复点、DDL、切流及新体验版真机仍待验。长期备份优化列末位。
+本轮整包施工和一次性验收入口：[P1 整包发布施工图与一次性验收](p1-integrated-release-package-2026-10-17.md)。2026-10-17 已对公众号资讯/咨询、学员/老师/管理员四栏、充值账本与统计做跨模块审计；前端固定 `283aaf15` [39031514964](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39031514964) typecheck/96回归 PASS；生产后代隔离 API `1b8ae8b3` [39083488661](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39083488661) typecheck/215测试/build、News/Profile/商业临时 MySQL Gate PASS。旧 e590 商业 Gate 因元数据字段名未别名失败已如实保留；隔离 1b8 的合成库恢复通过。生产 DDL 已通过；API 切流、商户与真机仍待验。公众号自动同步差异未解决，备份长期优化列业务最后；生产 DDL 前的最小恢复证据仍必需。
+
+**ECS 固定候选第 1 关（2026-10-18）：** [完整归档回执](p1-paired-release-candidates-2026-10-18.md)记录 `STAGING_UPLOAD_AND_CHECK_PASS`，随后本 SHA `1b8ae8b3` 在唯一 staging 目录取得 `ARCHIVE_MANIFEST_AND_BLOBS_PASS`、`ECS_TYPECHECK_AND_BUILD_PASS`、`ECS_CANDIDATE_STAGING_PASS`；构建与 256 MiB／50% CPU／64 tasks 无 DB 冒烟 systemd 均 success/status 0，现役 `current` 仍为 `8cc4`。真实 DB/AI 负载、业务级恢复、切流及新体验版真机仍待验；生产 DDL 已另行通过。长期备份优化列末位。
 
 **商户更新（用户 2026-10-18 回执）：** 虚拟支付和微信支付均已开通。ECS root 只读生产环境探针返回 `WECHAT_VIRTUAL_PAY_APP_KEY/OFFER_ID/PRODUCT_ONE/PRODUCT_TEN` 与 `CREDIT_FREE_GRANT_VERSION/AMOUNT` 均未配置，`WECHAT_VIRTUAL_PAY_ENABLED/PRODUCTION_APPROVED`、`CREDIT_ENFORCEMENT_ENABLED`、`NEWS_V2_ENABLED` 均未设为明确布尔值。因此当前生产充值与 News V2 仍不能用。所附截图展示虚拟支付基本配置页及一个 AppID 关联页；截图没有呈现 OfferID、两档道具 ID/价格、现网/沙箱 AppKey、生产配置状态、订单查询/发货/退款或真实交易。因此删除“尚未开通”的待办，保留“配置接线与实付验收”门槛。AI 评估次数购买走源码中的虚拟支付 `mode=goods` 和 `wx.requestVirtualPayment`；旧 JSAPI 下单端点仍返回 503，普通微信支付开通不自动使这条充值链可用。密钥只在受限生产环境配置，仓库/聊天/日志只记录存在性与脱敏标识。
 
-**资讯停在 9 月的定位边界：** 10 月 12 日《中南大学保研看什么？成绩、综测与学院细则》已在同账号后台发表，但固定账号的 `freepublish/batchget` 完整两页仅返回 40 组 41 篇且无此目标；因此该篇缺失发生在自动同步的官方来源视图之前，不是分页、入库、标签或日期排序造成的。页面其他可能的新稿还受到现役 `GET /news` 的“状态 active 且标签非空”过滤；尚无所有 9 月以后稿件的逐篇源端→库→列表对照，不能把整个截止现象武断归为单一原因。数据分析 `getarticlesummary` 返回 47009，永久图文素材 0；自动来源适配**未解决**。管理员核实原链接的受控补录入口已有前端/API 代码，但生产 V2 七表缺失、开关未启用，尚不能用它交付最新文章，更不能称自动同步通过。
+**资讯停在 9 月的定位边界：** 10 月 12 日《中南大学保研看什么？成绩、综测与学院细则》已在同账号后台发表，但固定账号的 `freepublish/batchget` 完整两页仅返回 40 组 41 篇且无此目标；因此该篇缺失发生在自动同步的官方来源视图之前，不是分页、入库、标签或日期排序造成的。页面其他可能的新稿还受到现役 `GET /news` 的“状态 active 且标签非空”过滤；尚无所有 9 月以后稿件的逐篇源端→库→列表对照，不能把整个截止现象武断归为单一原因。数据分析 `getarticlesummary` 返回 47009，永久图文素材 0；自动来源适配**未解决**。管理员核实原链接的受控补录入口已有前端/API 代码，但生产 V2 七表已建立、开关未启用，尚不能用它交付最新文章，更不能称自动同步通过。
 
 ## 2026-10-18 生产只读探针及客服入口审计
 
@@ -20,7 +22,7 @@
 
 **2026-10-18 用户补充的资讯故障范围：** 不是只有 10 月 12 日单篇缺失；用户观察到整个 10 月的文章系统性缺席，页面似乎停在 9 月。现有 `freepublish/batchget` 的 40 组 41 篇完整扫描只定位了一个已核实样本在官方来源视图前缺席，尚未建立 10 月全月源端、库内及展示层的计数和时间分布。后续一次只读检视按四段取证：官方返回的最晚时间与 10 月组数；新闻同步 timer 最后成功时间与状态；`news_posts` 按月份／来源／状态／标签计数；登录角色在 `/news` 的实际列表。不要把单篇证据推演为全月根因，也不要因 News V2 建表就宣称恢复自动同步。用户已批准 Profile 单列、News 七表、商业四表生产 DDL；执行结果待现场回执，API 切流和开关仍分别待验。
 
-**四栏与客服／资讯当前边界（2026-10-18）：** 固定前端管理员选择学员或老师后，经只读凭证直接切到现有 `index/classroom/news/profile` 四个原生 Tab；不是另做镜像页。只读状态隐藏资料编辑、课表导入和计划保存入口，计划编辑页输入禁用；通用请求阻止非 GET，固定 API 也按只读凭证限制写入及可读路径。学员计划列表仍有“点击即可编辑／编辑”文字，需在体验版确认不会误导并可作为小范围后续文案修正。客服共用 `wx.openCustomerServiceChat`，代码接线不代表真机能打开或客服端已接收。10 月缺文可由管理员核实原文后受控补录，但自动同步缺口未修复，必须分别记录。生产表、开关、体验版均未启用／验收。
+**四栏与客服／资讯当前边界（2026-10-18）：** 固定前端管理员选择学员或老师后，经只读凭证直接切到现有 `index/classroom/news/profile` 四个原生 Tab；不是另做镜像页。只读状态隐藏资料编辑、课表导入和计划保存入口，计划编辑页输入禁用；通用请求阻止非 GET，固定 API 也按只读凭证限制写入及可读路径。学员计划列表仍有“点击即可编辑／编辑”文字，需在体验版确认不会误导并可作为小范围后续文案修正。客服共用 `wx.openCustomerServiceChat`，代码接线不代表真机能打开或客服端已接收。10 月缺文可由管理员核实原文后受控补录，但自动同步缺口未修复，必须分别记录。生产三组结构已建立并检查；开关、体验版尚未启用／验收。
 
 **2026-10-18 生产 DDL 首次现场尝试：未执行。** root 预检完成固定归档 `sha256sum: OK`，随后未出现 `PRODUCTION_DDL_PRECHECK_PASS` 或任何迁移步骤；原因是我方预检误使用 `jiuchen-api` 用户读取 staging，固定隔离构建脚本实际以 `0700` 建目录并 `chown -R jiuchen-deploy`，仅部署用户可进入。用户随后只读资讯诊断在同一不可达目录以 `jiuchen-api` 启动，报 `MODULE_NOT_FOUND`，未连数据库。现役 News timer `ActiveState=active`、11:27 CST 触发，近期服务日志有 `Succeeded`、同步 `total=46, created=0, updated=0`；仅证明任务运行，尚不证明 10 月文章覆盖。修正版应以 `jiuchen-deploy` 运行固定 staging 代码和只读诊断，保留用户已批准的三组 DDL 范围，失败继续停止。
 
@@ -54,9 +56,9 @@
 | 顺序 | 模块 | CODE / TEST | 生产与真实使用 | 下一决定或动作 |
 | --- | --- | --- | --- | --- |
 | 1 | 首发功能边界与固定候选 | 整包 API 含 AI quality v3 且没有独立开关；集成分支还有 News V2、商业路径等未获同批授权 | 1b8ae8b3 未部署 | 冻结首发含哪些功能；仅核心则制作 core-only 新候选并按新 SHA 重新验证，不能借既有绿灯扩大范围 |
-| 2 | Profile 入学年份 | 单列迁移在临时 MySQL 两次执行及旧行往返 PASS | 2026-10-17 只读列清单再次确认 user_profiles.enrollment_year 缺失，GET /me/profile 曾 500 | 真实备份隔离迁移 PASS；该单列 DDL 已获批准、待现场执行并验证资料读写 |
-| 3 | 收费、次数和商业后台 | 固定 1b8 与现役 8cc4 的商业交易源码无差异（schema checker 单独修复）；检查器已修正；虚拟支付、赠送 1+4、¥1.90/¥16.90 与 283a 前端充值界面有代码/单元测试；两项支付能力据用户回执已开通，配置接线和真实商户链路未验收 | 2026-10-17 两轮只读元数据确认四张商业表全部缺失；业务库默认及 users/assessments/user_profiles 同为 utf8mb3_general_ci，两父表 id 为 PRIMARY；真实充值/扣减/金额不可用 | 旧 e590 商业隔离 Gate 因元数据字段映射错误失败；283a 集成代码 Gate PASS；隔离 1b8 同类合成迁移/约束/恢复复验 PASS；真实备份结构隔离迁移 PASS；生产 DDL 和商户交易仍 PENDING；随后核对官方虚拟支付准入、赠送版本与开关、退款/发货/对账及真机支付；旧 JSAPI 下单端点恒 503 |
-| 4 | 资讯与官方来源 | 旧 /news 兼容；News V2 七表混合字符集临时迁移/关系回归 PASS，合同为正常30条＋旧文72小时 | 生产七表缺失、开关未启用；10月12目标已在公众号后台发表但不在官方 freepublish 列表；自动来源未通过 | 先决定首发是旧资讯有限范围、可核实原文的受控补录，还是必须完成 V2/自动同步；后两项不得冒充同一个验收 |
+| 2 | Profile 入学年份 | 单列迁移在临时 MySQL 两次执行及旧行往返 PASS | 2026-10-17 只读列清单再次确认 user_profiles.enrollment_year 缺失，GET /me/profile 曾 500 | 真实备份隔离迁移 PASS；该单列 DDL 已通过生产 checker；认证后的资料读写待验 |
+| 3 | 收费、次数和商业后台 | 固定 1b8 与现役 8cc4 的商业交易源码无差异（schema checker 单独修复）；检查器已修正；虚拟支付、赠送 1+4、¥1.90/¥16.90 与 283a 前端充值界面有代码/单元测试；两项支付能力据用户回执已开通，配置接线和真实商户链路未验收 | 2026-10-17 两轮只读元数据确认四张商业表全部缺失；业务库默认及 users/assessments/user_profiles 同为 utf8mb3_general_ci，两父表 id 为 PRIMARY；真实充值/扣减/金额不可用 | 旧 e590 商业隔离 Gate 因元数据字段映射错误失败；283a 集成代码 Gate PASS；隔离 1b8 同类合成迁移/约束/恢复复验 PASS；真实备份结构隔离迁移 PASS；生产四表及 checker 已 PASS；商户交易仍 PENDING；随后核对官方虚拟支付准入、赠送版本与开关、退款/发货/对账及真机支付；旧 JSAPI 下单端点恒 503 |
+| 4 | 资讯与官方来源 | 旧 /news 兼容；News V2 七表混合字符集临时迁移/关系回归 PASS，合同为正常30条＋旧文72小时 | 生产七表已建、开关未启用；10月12目标已在公众号后台发表但不在官方 freepublish 列表；自动来源未通过 | 先决定首发是旧资讯有限范围、可核实原文的受控补录，还是必须完成 V2/自动同步；后两项不得冒充同一个验收 |
 | 5 | 管理员、老师与体验 | 只读统计/身份、客服复制、报告导出等有代码及模拟回归；只读跨身份镜像另有授权边界 | 周/月/年统计、角色样本、首页/课表刷新、客服粘贴、图片/MD/DOCX/PDF 导出在新体验版尚无真机全项回执；部分教师/已分配学员样本缺 | 一次性上传固定前端体验版，按 [真机清单](p1-unified-device-acceptance-2026-10-14.md) 逐项记录 PASS/FAIL/BLOCKED；缺样本记 DATA PENDING，不造数据 |
 | 6 | 受控发布与资源 | 1b8 代码门禁通过；本 SHA ECS 独立构建与无 DB 限额冒烟 PASS | 生产 API 仍是 8cc4；新候选真实 DB/AI 负载、业务健康、回滚、微信提审/正式版均未执行 | 依据最终范围与精确 SHA 单独审批 DDL、API promote、开关和微信版本；ECS 同 256MiB/50%/64 限额下验证真实依赖后切流、真机回归、提交审核 |
 | 7 | 管理员备份与救火 | 加密下载、诊断、隔离上传及恢复演练接口；工具本地 17 项合成测试 PASS | 2026-10-18 已知六组件复验复用、数据库全量导出与加密下载 PASS；WSL 独立 MySQL8 导入 17 表 PASS。全资产覆盖、逐行等价与业务级恢复仍待验 | 最小库恢复点成立；该真实结构副本的候选迁移已 PASS；再按独立范围审批生产 DDL。长期版本治理与自动清理后置 |
@@ -65,10 +67,10 @@
 
 ## 当前执行边界
 
-- 生产 DDL、API 切流、News V2/支付/AI 参数开关、公司官网/共享代理变更、微信正式发布需具体版本、范围、恢复与结果对应的独立确认。不可手工编辑 current；API 使用现有 approved-release、READY、jiuchen-promote 的健康与回滚机制。
+- 本次三组生产 DDL 已获批准并执行；API 切流、News V2/支付/AI 参数开关、公司官网/共享代理变更、微信正式发布仍需具体版本、范围、恢复与结果对应的独立确认。不可手工编辑 current；API 使用现有 approved-release、READY、jiuchen-promote 的健康与回滚机制。
 - 现役旧 /news 与已验收 AI/课表可用于有限体验版；不将体验版路径可打开写成生产完整功能通过。
 - 公众号自动来源首缺口在官方视图前，2026-10-14 同 AppID 后六位 4880db 的目标已发表、freepublish 两页40组41篇无目标；getarticlesummary 返回 47009，永久图文素材数 0。不要重复扫描后把缺文归因于标签/窗口。来源 update_time 只能写“来源更新时间”，真实发表时间仍待核。
-- 生产商业四表缺失、coaching_records/growth_records 缺失；不把统计缺表显示成 0。跨身份只读功能不能未经批准扩大角色查看权。
+- 生产商业四表已建并通过 checker；coaching_records/growth_records 缺失；不把统计缺表显示成 0。跨身份只读功能不能未经批准扩大角色查看权。
 - 维护工具故障原始密钥、数据库地址、个人数据和明文备份不进 Git、Actions、聊天或普通日志。README 与 [备份合同](../ops/business-backup-restore-contract-2026-10-16.md)为详细范围；productionBackupRestored=false，fullBusinessCoverage=false。
 
 ## 接手与回报
