@@ -2,7 +2,7 @@
 
 本页只记当前可执行状态。完整收费版为正式交付目标，生产收费尚未验收；[固定候选与独立 DDL 审查包](p1-paid-release-scope-and-schema-review-2026-10-17.md)用于下一轮现场核对。历史事实保留在 Git 历史和下列专项文档中，旧日期的计划、候选 SHA、绿灯和“下一步”不自动成为今天的授权。接手先读 CONSTITUTION.md → AGENTS.md → 本页 → 对应专项文档；涉及 ECS 再读 ops/ecs/AGENTS.md。
 
-**2026-10-18 上游差异诊断准备：** [只读对照脚本](../../ops/ecs/news-source-diff-readonly-20261018.mjs) 已入库，SHA-256 `43a010637b8ff6f528398943dd05964874d4c7286475c3f8b91544d7476cfff8`，`node --check` PASS，尚未在 ECS 运行。对四条运营短链和已知中南大学标题比较官方 `freepublish/batchget`、生产库的 URL/标题命中与是否有正文，旧 9 月稿作对照；只输出账号 AppID 后四位，DB 只读事务，无生产写入。详见[资讯拓扑审查](p1-news-topology-first-principles-2026-10-18.md)。先读此回执再选择来源适配，避免继续在标签／时间上兜圈。
+**2026-10-18 15:07 上游只读对照实测：** [固定脚本](../../ops/ecs/news-source-diff-readonly-20261018.mjs) SHA-256 `43a010637b8ff6f528398943dd05964874d4c7286475c3f8b91544d7476cfff8` 已在 ECS staging 以独立 systemd unit 成功运行，`READ_ONLY_SOURCE_AND_DATABASE_DIFF`、exit 0，`candidateSha=1b8ae8b3...`、`productionWrites=false`。生产配置公众号 AppID 后四位 `80db`；官方 `freepublish/batchget` 完整返回 45/45 组、46 条，9 月旧稿对照存在；运营提供的四篇短链及 10 月 12 日“中南大学”文章均在源端和生产 `news_posts` 标题/URL 对照中零命中。短链和官方长链可能不同，但标题近似对照也未命中；未读取文章网页。五篇缺失定位在当前自动来源视图及入库之前，不能归罪于此次的标签、日期或分页。下一判别为在**实际发布这些文章的服务号后台**确认 AppID 后四位是否 `80db`，以及旧稿与新稿分别所在的后台发布记录路径；账号错误与同账号发布路径不覆盖仍是待证假设。勿请求 AppSecret 或在聊天中贴密钥；详见[资讯拓扑审查](p1-news-topology-first-principles-2026-10-18.md)。
 
 **2026-10-18 资讯拓扑纠偏：** [第一性原理与源码拓扑审查](p1-news-topology-first-principles-2026-10-18.md)确认用户首发目标是“服务号图文在小程序内读完整正文；收藏保存原文链接，收藏访问允许跳服务号；视频可链接”。现有自动 `freepublish/batchget` 返回的正文可进入 `rich-text`；但四篇短链缺源时，固定 1b8 的管理员补录仅写 `html:null`，详情页会提示无正文并跳原文，**URL 补录不满足站内阅读**。先前将“补四条 URL 并验原文”当作资讯首发闭环是不完整判定。不能只修强制时间；需对指定真稿核来源／正文、取得可核的本方正文并走同一入库合同，防止自动更新覆盖已存正文，再以真实手机验站内图文与收藏原文。新代码需新 SHA 和相关 Gate；当前生产未切流。
 
