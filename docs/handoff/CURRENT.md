@@ -14,7 +14,7 @@
 
 ## 2026-10-18 生产只读探针及客服入口审计
 
-管理员在 ECS root 对现役环境执行只读探针：`readOnlyProbe=PASS`、`dbEndpointLoopback=false`、`dbServerTls=disabled`、`dbRequireSecureTransport=OFF`、`dbSessionTlsActive=false`。因此 WSL 备份工具 `ssl-mode=REQUIRED` 与当前服务端能力冲突，解释 `MYSQL_ERROR_2026`；非 loopback 尚不足以判断数据库位于另一台机器。已提交 WSL 维护工具条件通道：先核 MySQL 握手 TLS 位；仅服务端不支持 TLS 且目标是 ECS 本机网卡数字 IP，才通过既有 SSH 隧道临时使用无 TLS MySQL 客户端；异机地址直接停止。现场 `db-check`、database 续传和隔离恢复仍待回执；现有六组件 PARTIAL 不是全库备份。[工具说明](../../tools/maintenance/README.md)。
+管理员在 ECS root 对现役环境执行只读探针：`readOnlyProbe=PASS`、`dbEndpointLoopback=false`、`dbServerTls=disabled`、`dbRequireSecureTransport=OFF`、`dbSessionTlsActive=false`。因此 WSL 备份工具 `ssl-mode=REQUIRED` 与当前服务端能力冲突，解释 `MYSQL_ERROR_2026`；非 loopback 尚不足以判断数据库位于另一台机器。已提交 WSL 维护工具条件通道：先核 MySQL 握手 TLS 位；仅服务端不支持 TLS 且目标是 ECS 本机网卡数字 IP，才通过既有 SSH 隧道临时使用无 TLS MySQL 客户端；异机地址直接停止。**10:00 左右现场 db-check 输出 `DB_STEP=REMOTE_CONFIG_READ`、`DB_STEP=SSH_TUNNEL_CREATE`，随后 `FAILED: DB_TLS_UNAVAILABLE_REMOTE_ENDPOINT`**，证明当前目标不满足同机规则；没有继续连接、导出、恢复或 DDL。下一步只读分类数据库目的地址与 ECS 路由，确定受保护的数据通道；现有六组件 PARTIAL 不是全库备份。[工具说明](../../tools/maintenance/README.md)。
 
 固定前端 `283aaf15` 源码审计：主页“联系顾问”、我的“联系顾问/联系运营”经 `/auth/me` 刷新身份后打开 `wx.openCustomerServiceChat`；游客明确以未登录身份进入。院校详情先验证会话、取可用资料，复制学校咨询摘要后打开客服；评估结果先核对账号及报告，复制评估摘要后打开客服。产品列表及产品详情（含底部按钮）直接打开同一客服，不复制身份摘要。共同配置为 `runtime.ts` 中企业微信 `corpId` 与 `kfid` URL；客户端只打开会话，不会自动发送，须人工粘贴或主动发送卡片。代码与合成导航测试覆盖部分分支；当前没有固定体验版逐入口打开和客服端实际接收回执。产品入口绕过身份摘要是现有行为，真机记录接收方能否识别咨询来源；若首发要求所有入口都带身份/产品上下文，应另做小范围修复并生成新前端 SHA。
 
