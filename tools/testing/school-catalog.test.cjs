@@ -202,7 +202,7 @@ test('school consultation follows server verification and a single consent modal
  assert.match(ts,/copyConsultationAndOpen\(text/);assert.match(ts,/buildSchoolConsultation/);assert.match(ts,/refreshAuthResult\(\)/)
  assert.match(svc,/目标学校：/)
  assert.match(svc,/当前身份：/)
- assert.match(svc,/refreshAuthResult\(\)/)
+ assert.match(svc,/request\('\/auth\/me'\)/)
  assert.match(wxml,/一次确认即可联系九辰客服/)
  assert.doesNotMatch(wxml,/两种方式/)
  for(const name of ['复旦大学','南开大学'])assert.ok(school.includes('"'+name+'": {'),name)

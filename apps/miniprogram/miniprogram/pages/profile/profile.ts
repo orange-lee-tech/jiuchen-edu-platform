@@ -1,6 +1,7 @@
 import { deleteCurrentAccount, getSavedAuthResult, logoutWechatUser, type UserRole } from '../../utils/auth'
 import { friendlyRequestError, getMyNewsFavorites, type NewsFavorite } from '../../utils/request'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
+import { openOfficialArticle } from '../../utils/official-article'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 import {getReadOnlyContext,clearReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 
@@ -83,6 +84,10 @@ Page({
     finally{if(getSavedAuthResult()?.user.id===owner)this.setData({favoritesLoading:false})}
   },
   onFavoriteOpen(event:WechatMiniprogram.BaseEvent){
+    const favorite=this.data.favorites.find(item=>item.postId===event.currentTarget.dataset.id)
+    if(favorite)openOfficialArticle(favorite.articleUrl)
+  },
+  onFavoriteReader(event:WechatMiniprogram.BaseEvent){
     const favorite=this.data.favorites.find(item=>item.postId===event.currentTarget.dataset.id)
     if(favorite)openPage(`/pages/news-detail/news-detail?id=${encodeURIComponent(favorite.postId)}`)
   },

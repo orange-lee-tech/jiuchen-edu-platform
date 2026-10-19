@@ -1,6 +1,6 @@
 import { runtimeConfig } from '../config/runtime'
 import { getSavedAuthResult, type BootstrapUser, type BusinessIdentity, type UserRole } from './auth'
-import { request } from './request'
+import { getMyAcademicProfile, request } from './request'
 
 const CONTACT_ROLE_LABELS:Record<UserRole,string> = {
   admin:'管理员', teacher:'辅导老师', staff:'内部员工', student:'学员', user:'普通用户',
@@ -63,12 +63,27 @@ export async function openVerifiedWechatCustomerService(
   const name=verified.user.displayName?.trim() || '（请填写姓名）'
   const internalId=verified.businessIdentity?.status==='claimed'
     ? verified.businessIdentity.businessId : ''
+  let academic:null|Awaited<ReturnType<typeof getMyAcademicProfile>>=null
+  if(verified.user.role==='student'||verified.user.role==='user'){
+    try{academic=await getMyAcademicProfile()}catch{
+      wx.showToast({title:'学业资料暂无法核对',icon:'none'})
+    }
+  }
+  if(getSavedAuthResult()?.session.token!==before.session.token)return
   const identityLines=[
     '【九辰客服 · 身份识别】',
     '咨询事项：'+purpose,
     '当前身份：'+role,
     '联系人：'+name,
     '九辰内部编号：'+(internalId||'尚未绑定'),
+    ...(academic?[
+      '本科院校：'+(academic.university||'未填写'),
+      '专业方向：'+(academic.major||'未填写'),
+      '入学年份：'+(academic.enrollmentYear?String(academic.enrollmentYear):'未填写'),
+      '当前年级：'+(academic.currentGrade||'未填写'),
+      '绩点/均分：'+(academic.gpaText||'未填写'),
+      '专业排名：'+(academic.rankText||'未填写'),
+    ]:[]),
     ...(context.school?['目标学校：'+context.school]:[]),
     ...(context.grade?['就读年级：'+context.grade]:[]),
     ...(context.major?['就读专业：'+context.major]:[]),
@@ -76,11 +91,14 @@ export async function openVerifiedWechatCustomerService(
   const summary=identityLines.join('\n')
   wx.showModal({
     title:'确认客服识别信息',
-    content:summary+'\n\n确认后先复制信息，再点击打开客服。请在会话中手动粘贴发送。',
+    content:summary+'\n\n确认后会复制完整资料，打开客服时附上简短身份卡片。请在会话中手动粘贴完整资料。',
     confirmText:'复制信息',
     success(result){
       if(!result.confirm)return
-      void copyConsultationAndOpen(summary,undefined,()=>{
+      void copyConsultationAndOpen(summary,{
+        title:['九辰咨询',role,name,internalId||'未绑定'].join('｜').slice(0,60),
+        path:'/pages/index/index',
+      },()=>{
         const current=getSavedAuthResult()
         return Boolean(current && current.user.id===verified.user.id && current.session.token===before.session.token)
       })
@@ -94,7 +112,7 @@ export function supportsWechatCustomerService(): boolean {
 }
 
 export type CustomerServiceCard = { title:string; path:string }
-export function openWechatCustomerService(_card?:CustomerServiceCard): void {
+export function openWechatCustomerService(card?:CustomerServiceCard): void {
   const { corpId, url } = runtimeConfig.wechatCustomerService
 
   if (!corpId || !url) {
@@ -115,6 +133,12 @@ export function openWechatCustomerService(_card?:CustomerServiceCard): void {
 
   const open = (canRetry:boolean) => wx.openCustomerServiceChat({
     corpId, extInfo:{url},
+    ...(card?{
+      showMessageCard:true,
+      sendMessageTitle:card.title.slice(0,60),
+      // Staff may not own a student's private page. This path is always public.
+      sendMessagePath:'/pages/index/index',
+    }:{}),
     success(){console.info('Opened WeChat customer service.',{corpId,url})},
     fail(error){
       const code=String(error.errMsg||'unknown').slice(0,120)
@@ -147,7 +171,7 @@ export function copyConsultationAndOpen(
         if (!isCurrent()) { resolve(); return }
         wx.showModal({
           title:'咨询信息已复制',
-          content:'请在客服对话中粘贴发送。信息不会自动发送给老师。',
+          content:'客服卡片仅含简短标题；完整咨询资料已复制，请在对话中粘贴发送。',
           showCancel:false,confirmText:'打开客服',
           success:()=>{ if(isCurrent()) openWechatCustomerService(card); resolve() },
           fail:()=>resolve(),

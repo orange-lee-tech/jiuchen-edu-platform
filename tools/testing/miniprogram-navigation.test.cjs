@@ -705,7 +705,8 @@ test('unbound school consultation copies the correct school and identifies missi
  assert.equal(opened,null)
  assert.equal(p.data.consultBusy,true)
  h.modals[0].success({confirm:true});await flow
- assert.equal(opened.showMessageCard,undefined,'trial build must not send an unopenable card')
+ assert.equal(opened.showMessageCard,true)
+ assert.equal(opened.sendMessagePath,'/pages/index/index')
  assert.equal(p.data.consultBusy,false)
 })
 test('school inquiry stops when identity validation fails',async()=>{
@@ -793,7 +794,7 @@ test('PKU media/map are real sourced assets and consultation uses the shared cha
  assert.match(wxml,/onPreviewPhoto/)
  assert.match(wxml,/mapMarkers/)
  assert.match(service,/openCustomerServiceChat/)
- assert.doesNotMatch(service,/showMessageCard:true/)
+ assert.match(service,/showMessageCard:true/)
 })
 
 test('customer service identifies the actual server-verified role without auto-sending',async()=>{
@@ -821,7 +822,9 @@ test('customer service identifies the actual server-verified role without auto-s
  assert.match(copied,/九辰内部编号：JCA-ABCD-1234/)
  assert.equal(opened,null,'chat opens on the second explicit user click')
  h.modals[1].success({confirm:true})
- assert.equal(opened.showMessageCard,undefined,'trial build must not send an unopenable card')
+ assert.equal(opened.showMessageCard,true)
+ assert.equal(opened.sendMessagePath,'/pages/index/index')
+ assert.match(opened.sendMessageTitle,/测试管理员/)
 })
 test('customer-service identity never claims server verification when revalidation fails',async()=>{
  const h=harness()
@@ -856,10 +859,10 @@ test('guest consultation stays available but cannot claim an authenticated staff
  assert.match(h.modals[0].content,/未登录游客/)
  assert.equal(opened,null)
  h.modals[0].success({confirm:true})
- assert.equal(opened.showMessageCard,undefined)
+ assert.equal(opened.showMessageCard,true)
 })
 
-test('customer service does not unmount mine while checking the server and never sends broken cards',async()=>{
+test('customer service keeps mine mounted and sends a card targeting a public page',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('admin'))
  h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
  h.wx.setClipboardData=o=>o.success()
@@ -878,20 +881,24 @@ test('customer service does not unmount mine while checking the server and never
  h.modals[0].success({confirm:true})
  assert.equal(opened,undefined)
  h.modals[1].success({confirm:true})
- assert.equal(opened.showMessageCard,undefined)
+ assert.equal(opened.showMessageCard,true)
+ assert.equal(opened.sendMessagePath,'/pages/index/index')
  h.wx.getAccountInfoSync=()=>({miniProgram:{envVersion:'release'}})
  h.load('utils/customer-service').openWechatCustomerService({title:'已发布入口',path:'/pages/index/index'})
- assert.equal(opened.showMessageCard,undefined)
- assert.equal(opened.sendMessagePath,undefined)
+ assert.equal(opened.showMessageCard,true)
+ assert.equal(opened.sendMessagePath,'/pages/index/index')
 })
 
-test('favorite links stay in the native reader for both news and mine',()=>{
+test('news stays native while saved originals open at WeChat and retain a native reader action',()=>{
  const h=harness(),favorite={postId:id,articleUrl:'https://mp.weixin.qq.com/s/bad',title:'测试'}
  const news=h.page('pages/news/news');news.setData({favorites:[favorite]})
  news.onFavoriteTap({currentTarget:{dataset:{id}}})
  assert.equal(h.navigations.at(-1).url,`/pages/news-detail/news-detail?id=${id}`)
  const mine=h.page('pages/profile/profile');mine.setData({favorites:[favorite]})
+ let original='';h.wx.openOfficialAccountArticle=o=>{original=o.url}
  mine.onFavoriteOpen({currentTarget:{dataset:{id}}})
+ assert.equal(original,favorite.articleUrl)
+ mine.onFavoriteReader({currentTarget:{dataset:{id}}})
  assert.equal(h.navigations.at(-1).url,`/pages/news-detail/news-detail?id=${id}`)
 })
 
@@ -900,7 +907,8 @@ test('cancel favorite reports the server error and succeeds on a subsequent atte
  const p=h.page('pages/news-detail/news-detail')
  p.setData({post:{id,favoritesEnabled:true},favoritesReady:true,favorited:true})
  const failed=p.onToggleFavorite()
- assert.equal(h.requests[0].method,'DELETE')
+ assert.equal(h.requests[0].method,'POST')
+ assert.match(h.requests[0].url,/\/remove$/)
  h.respond(0,{error:'service_unavailable'},503);await failed
  assert.match(p.data.favoriteError,/503\/service_unavailable/)
  assert.equal(p.data.favorited,true)
@@ -966,6 +974,46 @@ test('product list and detail use the same verified customer-service entry',asyn
   assert.match(h.requests[0].url,/\/auth\/me/)
   h.respond(0,{ok:true,user:authFixture('student').user,businessIdentity:null})
   await settle()
+  assert.match(h.requests[1].url,/\/me\/profile$/)
+  h.respond(1,{ok:true,profile:{university:'中南大学',major:'计算机',currentGrade:'大二',enrollmentYear:2024,gpaText:null,rankText:null}})
+  await settle()
   assert.match(h.modals[0].content,/服务方案咨询/)
  }
+})
+
+test('student consultation reviews the server name and academic fields before sending a short card',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ h.runtimeConfig.wechatCustomerService={corpId:'corp',url:'https://test.invalid/kefu'}
+ let copied='',opened;h.wx.setClipboardData=o=>{copied=o.data;o.success()};h.wx.openCustomerServiceChat=o=>{opened=o}
+ h.page('pages/profile/profile').onCustomerServiceTap()
+ h.respond(0,{ok:true,user:{...authFixture('student').user,displayName:'李同学'},businessIdentity:{businessId:'JCS-ABCD-1234',status:'claimed',type:'student'}})
+ await settle()
+ assert.match(h.requests[1].url,/\/me\/profile$/)
+ h.respond(1,{ok:true,profile:{university:'中南大学',major:'人工智能',currentGrade:'大二',enrollmentYear:2024,gpaText:'3.8',rankText:'10/100'}})
+ await settle()
+ assert.match(h.modals[0].content,/联系人：李同学/)
+ assert.match(h.modals[0].content,/本科院校：中南大学/)
+ assert.match(h.modals[0].content,/绩点\/均分：3.8/)
+ h.modals[0].success({confirm:true})
+ assert.match(copied,/专业方向：人工智能/)
+ assert.equal(opened,undefined)
+ h.modals[1].success({confirm:true})
+ assert.equal(opened.showMessageCard,true)
+ assert.equal(opened.sendMessagePath,'/pages/index/index')
+ assert.match(opened.sendMessageTitle,/李同学/)
+})
+
+test('the student can save their own name and refresh server identity',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/profile-edit/profile-edit')
+ page.setData({nameInput:'李同学'})
+ const flow=page.onSaveName()
+ assert.equal(h.requests[0].method,'PUT')
+ assert.match(h.requests[0].url,/\/me\/display-name$/)
+ h.respond(0,{ok:true,displayName:'李同学'})
+ await settle()
+ assert.match(h.requests[1].url,/\/auth\/me$/)
+ h.respond(1,{ok:true,user:{...authFixture('student').user,displayName:'李同学'},businessIdentity:null})
+ await flow
+ assert.equal(h.auth.getSavedAuthResult().user.displayName,'李同学')
 })
