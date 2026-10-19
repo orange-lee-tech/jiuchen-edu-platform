@@ -31,11 +31,11 @@ Page({
   stopShell: undefined as (() => void) | undefined,
   onShow() {
     this.stopShell?.()
+    this.setData({favoritesVisible:false,favorites:[],favoritesError:''})
     this.stopShell = observeSlot('mine', (state) => {
       const auth = state.auth
       const role = auth?.user.role || ''
       this.setData({
-        favoritesVisible:false,favorites:[],favoritesError:'',
         ...shellView(state), loggedIn: Boolean(auth), role,
         roleLabel: shellView(state).shellRoleLabel, businessId: auth?.businessIdentity?.businessId || '',
         userName: auth?.user.displayName || (role === 'staff' ? '九辰内部员工' : role === 'teacher' ? '九辰辅导老师' : role === 'admin' ? '九辰管理员' : role === 'student' ? '九辰学员' : '我的保研档案'),
