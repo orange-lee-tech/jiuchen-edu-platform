@@ -781,7 +781,7 @@ test('home keeps profile completion accessible without displacing the plan CTA',
  assert.match(fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8'),/地点：\{\{item.location \|\| '暂无'\}\}/)
  assert.match(page,/onCompleteProfile\(\)/)
 })
-test('PKU media/map are real sourced assets and customer-service card points to school',()=>{
+test('PKU media/map are real sourced assets and consultation uses the shared chat entry',()=>{
  const data=fs.readFileSync(path.join(root,'packages/schools/data.ts'),'utf8')
  const wxml=fs.readFileSync(path.join(root,'packages/schools/detail/detail.wxml'),'utf8')
  const service=fs.readFileSync(path.join(root,'utils/customer-service.ts'),'utf8')
@@ -792,7 +792,8 @@ test('PKU media/map are real sourced assets and customer-service card points to 
  assert.match(data,/CC BY-SA 4\.0/)
  assert.match(wxml,/onPreviewPhoto/)
  assert.match(wxml,/mapMarkers/)
- assert.match(service,/sendMessagePath:card\.path/)
+ assert.match(service,/openCustomerServiceChat/)
+ assert.doesNotMatch(service,/showMessageCard:true/)
 })
 
 test('customer service identifies the actual server-verified role without auto-sending',async()=>{
@@ -856,7 +857,7 @@ test('guest consultation stays available but cannot claim an authenticated staff
  assert.equal(opened.showMessageCard,undefined)
 })
 
-test('customer service does not unmount mine while checking the server and only published builds send cards',async()=>{
+test('customer service does not unmount mine while checking the server and never sends broken cards',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('admin'))
  h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
  h.wx.setClipboardData=o=>o.success()
@@ -876,8 +877,53 @@ test('customer service does not unmount mine while checking the server and only 
  assert.equal(opened.showMessageCard,undefined)
  h.wx.getAccountInfoSync=()=>({miniProgram:{envVersion:'release'}})
  h.load('utils/customer-service').openWechatCustomerService({title:'已发布入口',path:'/pages/index/index'})
- assert.equal(opened.showMessageCard,true)
- assert.equal(opened.sendMessagePath,'/pages/index/index')
+ assert.equal(opened.showMessageCard,undefined)
+ assert.equal(opened.sendMessagePath,undefined)
+})
+
+test('favorite links stay in the native reader for both news and mine',()=>{
+ const h=harness(),favorite={postId:id,articleUrl:'https://mp.weixin.qq.com/s/bad',title:'测试'}
+ const news=h.page('pages/news/news');news.setData({favorites:[favorite]})
+ news.onFavoriteTap({currentTarget:{dataset:{id}}})
+ assert.equal(h.navigations.at(-1).url,`/pages/news-detail/news-detail?id=${id}`)
+ const mine=h.page('pages/profile/profile');mine.setData({favorites:[favorite]})
+ mine.onFavoriteOpen({currentTarget:{dataset:{id}}})
+ assert.equal(h.navigations.at(-1).url,`/pages/news-detail/news-detail?id=${id}`)
+})
+
+test('cancel favorite reports the server error and succeeds on a subsequent attempt',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture())
+ const p=h.page('pages/news-detail/news-detail')
+ p.setData({post:{id,favoritesEnabled:true},favoritesReady:true,favorited:true})
+ const failed=p.onToggleFavorite()
+ assert.equal(h.requests[0].method,'DELETE')
+ h.respond(0,{error:'service_unavailable'},503);await failed
+ assert.match(p.data.favoriteError,/503\/service_unavailable/)
+ assert.equal(p.data.favorited,true)
+ const retried=p.onToggleFavorite();h.respond(1,{ok:true});await retried
+ assert.equal(p.data.favorited,false)
+ assert.equal(p.data.favoriteError,'')
+})
+
+test('administrator can preview unclassified news from the management list',()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('admin'))
+ const page=h.page('pages/admin/admin');page.setData({posts:[{id}]})
+ page.onPreviewNews({currentTarget:{dataset:{id}}})
+ assert.equal(h.navigations.at(-1).url,`/pages/news-detail/news-detail?id=${id}`)
+ const wxml=fs.readFileSync(path.join(root,'pages/admin/admin.wxml'),'utf8')
+ assert.match(wxml,/bindtap="onPreviewNews">预览正文/)
+})
+
+test('customer-service failure shows the platform error and one click retry',()=>{
+ const h=harness();h.runtimeConfig.wechatCustomerService={corpId:'corp',url:'https://test.invalid/kefu'}
+ const attempts=[];h.wx.openCustomerServiceChat=o=>attempts.push(o)
+ h.load('utils/customer-service').openWechatCustomerService()
+ attempts[0].fail({errMsg:'openCustomerServiceChat:fail -1001'})
+ assert.match(h.modals[0].content,/-1001/)
+ h.modals[0].success({confirm:true})
+ assert.equal(attempts.length,2)
+ attempts[1].fail({errMsg:'network unavailable'})
+ assert.equal(h.modals[1].showCancel,false)
 })
 
 test('saved official link opens in a runtime without URL and falls back to copy when unavailable',()=>{
