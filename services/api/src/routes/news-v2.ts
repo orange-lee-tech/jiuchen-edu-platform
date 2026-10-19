@@ -143,12 +143,15 @@ export function registerNewsV2Routes(app:FastifyInstance,database:DatabaseContex
       ON DUPLICATE KEY UPDATE user_id=user_id`,[user.userId,article.id,article.articleUrl,article.title,article.publishedAt])
     return {ok:true,articleUrl:article.articleUrl}
   })
-  app.delete<{Params:{id:string}}>('/me/news-favorites/:id',async(request,reply)=>{
+  const removeFavorite=async(request:FastifyRequest<{Params:{id:string}}>,reply:FastifyReply)=>{
     const user=await requireRole(request,reply,['user','student','teacher','staff','admin']);if(!user)return
     if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({ok:false,error:'invalid_news_id'})
     await pool.query(`DELETE FROM news_favorites WHERE user_id=? AND post_id=?`,[user.userId,request.params.id])
     return {ok:true}
-  })
+  }
+  app.delete<{Params:{id:string}}>('/me/news-favorites/:id',removeFavorite)
+  // Some mini-program gateways reject DELETE before it reaches Fastify.
+  app.post<{Params:{id:string}}>('/me/news-favorites/:id/remove',removeFavorite)
   app.get('/me/news-retirements',async(request,reply)=>{
     const user=await requireRole(request,reply,['teacher','staff','admin']);if(!user)return
     const [rows]=await pool.query(`SELECT t.id AS taskId,t.batch_id AS batchId,t.state,t.note,t.updated_at AS updatedAt,

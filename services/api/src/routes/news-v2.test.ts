@@ -203,3 +203,20 @@ test('verified image post keeps ordered images and accepts unknown publication t
   assert.equal(writes[0].params[8],null)
   await app.close()
 })
+
+test('POST removal is owner scoped and retains DELETE for older clients',async()=>{
+  const calls:Array<unknown[]>=[]
+  const app=adminFixture('owner-one',{async query(sql:string,params:unknown[]=[]){
+    if(sql.includes('DELETE FROM news_favorites'))calls.push(params)
+    return [[]]
+  }})
+  const id='00000000-0000-4000-8000-000000000001'
+  const headers={authorization:'Bearer synthetic'}
+  try{
+    assert.equal((await app.inject({method:'POST',url:'/me/news-favorites/bad/remove',headers})).statusCode,400)
+    assert.equal((await app.inject({method:'POST',url:'/me/news-favorites/'+id+'/remove',headers})).statusCode,200)
+    assert.equal((await app.inject({method:'DELETE',url:'/me/news-favorites/'+id,headers})).statusCode,200)
+    assert.deepEqual(calls,[['owner-one',id],['owner-one',id]])
+  }finally{await app.close()}
+})
+

@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { DatabaseContext } from '../db/client.js'
-import { userProfiles } from '../db/schema.js'
+import { students, userProfiles, users } from '../db/schema.js'
 import { canEditAcademicProfile, type UserRole } from '../domain/auth-policy.js'
 import { resolveSessionUser } from '../services/session.js'
 
@@ -31,6 +31,21 @@ export function registerProfileRoutes(
   app: FastifyInstance,
   database: DatabaseContext,
 ) {
+  app.put<{Body:unknown}>('/me/display-name', async(request,reply)=>{
+    if(!database.configured)return reply.code(503).send({ok:false,error:'database_not_configured'})
+    const sessionUser=await resolveSessionUser(request,database)
+    if(!sessionUser)return reply.code(401).send({ok:false,error:'unauthorized'})
+    const parsed=z.object({displayName:z.string().trim().min(1).max(80)}).strict().safeParse(request.body)
+    if(!parsed.success)return reply.code(400).send({ok:false,error:'invalid_display_name'})
+    await database.db.transaction(async tx=>{
+      await tx.update(users).set({displayName:parsed.data.displayName}).where(eq(users.id,sessionUser.userId))
+      if(sessionUser.role==='student'){
+        // A claimed student's classroom still reads students.name.
+        await tx.update(students).set({name:parsed.data.displayName}).where(eq(students.userId,sessionUser.userId))
+      }
+    })
+    return {ok:true,displayName:parsed.data.displayName}
+  })
   app.get('/me/profile', async (request, reply) => {
     if (!database.configured) {
       return reply.code(503).send({

@@ -61,7 +61,16 @@ export function registerNewsRoutes(
       if(!phase && !reviewer){
         const [manual]=await database.pool.query<import('mysql2/promise').RowDataPacket[]>("SELECT source FROM news_posts WHERE id=? AND source='manual' LIMIT 1",[request.params.id])
         if(!manual.length)return reply.code(404).send({ok:false,error:'news_post_not_found'})
-      } else if(!reviewer && phase!=='normal' && phase!=='buffering')return reply.code(404).send({ok:false,error:'news_post_not_found'})
+      } else if(!reviewer && phase!=='normal' && phase!=='buffering'){
+        // Retiring a public article must not destroy its owner's saved reader.
+        // This exception is scoped to the authenticated owner and the saved post.
+        if(!user)return reply.code(404).send({ok:false,error:'news_post_not_found'})
+        const [favorites]=await database.pool.query<import('mysql2/promise').RowDataPacket[]>(
+          'SELECT post_id FROM news_favorites WHERE user_id=? AND post_id=? LIMIT 1',
+          [user.userId,request.params.id],
+        )
+        if(!favorites.length)return reply.code(404).send({ok:false,error:'news_post_not_found'})
+      }
     }
     const post = await getActiveNewsPost(database, request.params.id, reviewer)
     if (!post) {
