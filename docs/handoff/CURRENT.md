@@ -2,6 +2,12 @@
 
 **当前现场执行入口：** [858aa6a5 十月资讯候选执行与验收](p1-public-pages-release-execution-2026-10-18.md)。新固定 ECS staging 脚本 SHA-256 `f4936b0466748523366e9236b940eed13ee64cbec0ab8c7261cd4168d8c3aed9`；新 release 准备脚本 SHA-256 `bacad470d98ede2f51d00c05bb22d41484d74cef39797b4043de55b509f461d7`。staging 和 release 准备均已在 ECS 通过；现役未切换。旧云端 CI 三任务在步骤前失败，不替代自托管本 SHA 的四项成功。
 
+## 2026-10-19 08:21 CST：A/B/C 生产范围批准，待现场执行
+
+- 用户明确批准 A：固定 `858aa6a5bebbdb88346c6282f691b4976886b935` API 切换（随包生效的 AI assessment-agent-v3 与跨身份只读）；B：一次官方资讯生产同步/展示窗口预热及 `NEWS_V2_ENABLED`；C：已核同服务号的四篇真实公开页面（图文 2／3 图、贴图 7／1 图）写入。此批准不包括支付开关、商户密钥、官网/代理、微信正式发布。
+- [固定 A+B 现场脚本](../../ops/ecs/p1-858aa6-activate-api-news-v2-20261019.sh) SHA-256 `eda3c5fa1c928e3d5a3a316bace41007b8476c35facb0552e2d8066ee1d4c005` 已经 `bash -n`；需与仓库既有 `jiuchen-promote` 固定复制品 SHA-256 `bd462b9520997e3b4ab3c59da017821e4dd7a718e3961c2212afd691dae752a9` 一起上传，仅在用户 ECS root 执行。脚本先验现役、备份与开关状态，再用固定 release 的只读应用环境执行一次获批的生产资讯预热（会写 News 表），确认正常窗口有内容，再原子设置开关/批准 SHA/READY，通过既有 promote 健康检查切换。若中途失败，原现役与状态以现场回执为准；不把脚本准备当作执行成功。
+- 四篇写入使用已审 `61a208d3396e0136279ed843a587da0ed1a290f0d7bf1f01746f67a34a651f92` 私有 JSON 与[管理员批量工具](../../tools/news/submit-public-pages.py)，A+B 成功且有合法管理员会话后执行；原文/会话票据不得入 Git、Actions、聊天。商户真实交易、微信体验版和真机仍待验。
+
 ## 2026-10-19 00:09 CST：858aa6a5 release 目录准备回执
 
 - 用户现场回执：固定 `prepare-public-pages-release-20261018.sh` 与 API 归档双 SHA-256 OK；`ARCHIVE_MANIFEST_AND_BLOBS_PASS`、Node 22 typecheck/build `RELEASE_TYPECHECK_AND_BUILD_PASS`、`RELEASE_LINK_BOUNDARY_PASS`；独立 unit `jiuchen-release-build-1792339637-290223.service` success/status 0。
