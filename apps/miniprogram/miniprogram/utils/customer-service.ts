@@ -1,5 +1,6 @@
 import { runtimeConfig } from '../config/runtime'
-import { getSavedAuthResult, refreshAuthResult, type UserRole } from './auth'
+import { getSavedAuthResult, type BootstrapUser, type BusinessIdentity, type UserRole } from './auth'
+import { request } from './request'
 
 const CONTACT_ROLE_LABELS:Record<UserRole,string> = {
   admin:'管理员', teacher:'辅导老师', staff:'内部员工', student:'学员', user:'普通用户',
@@ -45,16 +46,16 @@ export async function openVerifiedWechatCustomerService(
     })
     return
   }
-  let auth
-  try{auth=await refreshAuthResult()}catch{
+  let verified: {ok:true;user:BootstrapUser;businessIdentity:BusinessIdentity|null}
+  try{verified=await request('/auth/me')}catch{
     wx.showModal({
       title:'身份校验暂不可用',
-      content:'无法向服务器核对你的账号角色，本次不会把缓存身份当作已认证信息发送。请稍后重试。',
+      content:'无法向服务器核对你的账号角色，本次不会把本地缓存身份当作已认证信息发送。请稍后重试。',
       showCancel:false,
     })
     return
   }
-  if(!auth){
+  if(!verified.ok || verified.user.id!==before.user.id || !CONTACT_ROLE_LABELS[verified.user.role]){
     wx.showModal({
       title:'身份未通过验证',
       content:'本次没有从服务器确认登录身份，不能依赖本地缓存向客服宣称自己是老师或管理员。请稍后重试。',
@@ -62,14 +63,14 @@ export async function openVerifiedWechatCustomerService(
     })
     return
   }
-  if(auth.user.id!==before.user.id || auth.session.token!==before.session.token){
+  if(getSavedAuthResult()?.session.token!==before.session.token){
     wx.showToast({title:'登录身份已变化，请重试',icon:'none'})
     return
   }
-  const role=CONTACT_ROLE_LABELS[auth.user.role]
-  const name=auth.user.displayName?.trim() || '（请填写姓名）'
-  const internalId=auth.businessIdentity?.status==='claimed'
-    ? auth.businessIdentity.businessId : ''
+  const role=CONTACT_ROLE_LABELS[verified.user.role]
+  const name=verified.user.displayName?.trim() || '（请填写姓名）'
+  const internalId=verified.businessIdentity?.status==='claimed'
+    ? verified.businessIdentity.businessId : ''
   const identityLines=[
     '【九辰客服 · 身份识别】',
     '咨询事项：'+purpose,
@@ -85,12 +86,12 @@ export async function openVerifiedWechatCustomerService(
     (internalId?'｜'+internalId:'')).slice(0,48)
   wx.showModal({
     title:'确认客服识别信息',
-    content:summary+'\n\n确认后复制信息并打开微信客服。请手动粘贴发送，或主动发送显示的身份卡片；不会后台自动提交。',
+    content:summary+'\n\n确认后复制信息并打开微信客服，请手动粘贴发送。不会后台自动提交。',
     confirmText:'复制并联系',
     success(result){
       if(!result.confirm)return
       const current=getSavedAuthResult()
-      if(!current || current.user.id!==auth.user.id || current.session.token!==auth.session.token){
+      if(!current || current.user.id!==verified.user.id || current.session.token!==before.session.token){
         wx.showToast({title:'账号已变更，请重试',icon:'none'})
         return
       }
@@ -111,6 +112,10 @@ export function supportsWechatCustomerService(): boolean {
 }
 
 export type CustomerServiceCard = { title:string; path:string }
+function canSendMiniProgramCard():boolean{
+  try { return wx.getAccountInfoSync().miniProgram.envVersion==='release' }
+  catch { return false }
+}
 export function openWechatCustomerService(card?:CustomerServiceCard): void {
   const { corpId, url } = runtimeConfig.wechatCustomerService
 
@@ -133,7 +138,7 @@ export function openWechatCustomerService(card?:CustomerServiceCard): void {
   wx.openCustomerServiceChat({
     corpId,
     extInfo: { url },
-    ...(card ? {
+    ...(card && canSendMiniProgramCard() ? {
       showMessageCard:true,
       sendMessageTitle:card.title,
       sendMessagePath:card.path,
