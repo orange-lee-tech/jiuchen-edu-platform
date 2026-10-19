@@ -40,7 +40,7 @@
     <text wx:elif="{{!favorites.length}}" class="news-extra-meta">暂无收藏文章</text>
     <view wx:for="{{favorites}}" wx:key="postId" class="news-extra-row" data-id="{{item.postId}}" bindtap="onFavoriteTap">
       <text class="news-extra-title">{{item.title}}</text>
-      <text class="news-extra-meta">查看公众号原文 ›</text>
+      <text class="news-extra-meta">在小程序内阅读 ›</text>
     </view>
   </view>
 
