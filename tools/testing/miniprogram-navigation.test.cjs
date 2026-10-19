@@ -914,6 +914,16 @@ test('administrator can preview unclassified news from the management list',()=>
  assert.match(wxml,/bindtap="onPreviewNews">预览正文/)
 })
 
+test('administrator news tab opens the reading list after server role validation',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('admin'))
+ const page=h.page('pages/news/news');page.onShow()
+ h.respond(0,{ok:true,user:authFixture('admin').user,businessIdentity:null})
+ await settle()
+ assert.equal(page.data.shellKind,'admin')
+ assert.equal(page.data.showReferenceNews,true)
+ assert.match(h.requests[1].url,/\/news$/)
+})
+
 test('customer-service failure shows the platform error and one click retry',()=>{
  const h=harness();h.runtimeConfig.wechatCustomerService={corpId:'corp',url:'https://test.invalid/kefu'}
  const attempts=[];h.wx.openCustomerServiceChat=o=>attempts.push(o)
