@@ -896,3 +896,16 @@ test('saved official link opens in a runtime without URL and falls back to copy 
  openOfficialArticle('https://example.invalid/s/a')
  assert.match(toast,/不是可验证/)
 })
+
+test('product list and detail use the same verified customer-service entry',async()=>{
+ for(const route of ['pages/products/products','pages/product-detail/product-detail']){
+  const h=harness();h.auth.saveAuthResult(authFixture('student'))
+  const p=h.page(route)
+  p.onCustomerServiceTap()
+  assert.equal(h.requests.length,1)
+  assert.match(h.requests[0].url,/\/auth\/me/)
+  h.respond(0,{ok:true,user:authFixture('student').user,businessIdentity:null})
+  await settle()
+  assert.match(h.modals[0].content,/服务方案咨询/)
+ }
+})
