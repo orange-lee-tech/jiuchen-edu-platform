@@ -1,0 +1,101 @@
+<view class="school-page">
+  <view class="school-header">
+    <text class="school-kicker">九辰 · 院校资料</text>
+    <text class="school-title">认识目标院校</text>
+    <text class="school-desc">官方建设名单、历史行业圈层与主管单位分开核验。按学校、地区和专业背景组合查找。</text>
+  </view>
+  <view class="search-row">
+    <view class="search-field"><text class="search-icon">⌕</text><input value="{{query}}" placeholder="校名 / 拼音 / 地区" bindinput="onQuery" confirm-type="search" /></view>
+    <view class="filter-button" bindtap="onOpenFilter">组合筛选 ▾</view>
+  </view>
+  <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="tier-scroll">
+    <view class="level-tabs">
+      <view wx:for="{{levels}}" wx:key="value" class="level-tab {{level === item.value ? 'selected' : ''}}" data-level="{{item.value}}" bindtap="onLevel">{{item.label}}</view>
+    </view>
+  </scroll-view>
+  <view class="group-label">行业认可圈层 <text>历史称谓 · 非官方排名</text></view>
+  <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="group-scroll">
+    <view class="group-tabs">
+      <view class="group-tab {{group === 'all' ? 'selected' : ''}}" data-group="all" bindtap="onGroup">全部圈层</view>
+      <view wx:for="{{groups}}" wx:key="key" class="group-tab {{group === item.key ? 'selected' : ''}}" data-group="{{item.key}}" bindtap="onGroup">{{item.label}}</view>
+    </view>
+  </scroll-view>
+  <view class="school-count">
+    <text>匹配 {{resultCount}} 条院校／校区记录</text>
+    <text class="filter-summary" bindtap="onOpenFilter">筛选条件 ›</text>
+  </view>
+  <view wx:if="{{resultCount === 0}}" class="empty-state">
+    <text>当前组合条件没有匹配学校</text>
+    <text>地区、层次、圈层、主管单位会同时生效。可以修改条件或清空组合；不代表院校不存在。</text>
+    <button bindtap="onReset" class="empty-reset">清空筛选条件</button>
+  </view>
+  <view class="school-list">
+    <view wx:for="{{schools}}" wx:key="id" class="school-card" data-id="{{item.id}}" bindtap="onSchool" aria-role="button">
+      <view class="school-emblem"><text>{{item.monogram}}</text></view>
+      <view class="school-copy">
+        <text class="card-name">{{item.name}}</text>
+        <text class="card-location">{{item.subtitle}}</text>
+        <view class="school-tags">
+          <text wx:if="{{item.is985}}" class="school-tag">985 / 211</text>
+          <text wx:elif="{{item.is211}}" class="school-tag">211</text>
+          <text wx:if="{{item.isDoubleFirst}}" class="school-tag double">双一流</text>
+          <text wx:if="{{item.affiliationLabel}}" class="school-tag dept">{{item.affiliationLabel}}</text>
+          <text wx:for="{{item.cardTags}}" wx:for-item="tag" wx:key="key" class="school-tag circle">{{tag.label}}</text>
+        </view>
+      </view>
+      <text class="school-arrow">›</text>
+    </view>
+  </view>
+  <button wx:if="{{schools.length < resultCount}}" class="load-more" bindtap="onLoadMore">再显示更多院校 · 已显示 {{schools.length}} / {{resultCount}}</button>
+  <view class="catalog-source">2022 年第二轮双一流建设名单覆盖 147 所高校；原 985/211 保留历史口径和校区重复条目。行业圈层不是官方排名，主管单位也不等于历史原隶属。请以当年学院及招生原文确定推免要求。</view>
+</view>
+<view wx:if="{{showFilter}}" class="filter-overlay" bindtap="onCloseFilter">
+  <view class="filter-panel" catchtap="onStopFilterTap">
+    <view class="filter-head"><text>组合筛选</text><text class="filter-close" bindtap="onCloseFilter">✕</text></view>
+    <text class="filter-subtitle">条件取交集，可分别选择地区、层次、行业圈层、主管部门和学校；所有内容在点击完成后才生效。</text>
+    <scroll-view scroll-y="{{true}}" class="filter-scroll" enhanced show-scrollbar="{{true}}" bounces="{{false}}">
+      <view class="filter-section">
+        <text class="filter-section-title">地区</text>
+        <view class="filter-region-list">
+          <view wx:for="{{regions}}" wx:key="*this" class="filter-chip {{draftRegion === item ? 'selected' : ''}}" data-region="{{item}}" bindtap="onFilterRegion">{{item}}</view>
+        </view>
+      </view>
+      <view class="filter-section">
+        <text class="filter-section-title">院校层次 · 官方名单</text>
+        <view class="filter-region-list">
+          <view wx:for="{{levels}}" wx:key="value" class="filter-chip {{draftLevel === item.value ? 'selected' : ''}}" data-level="{{item.value}}" bindtap="onFilterLevel">{{item.label}}</view>
+        </view>
+      </view>
+      <view class="filter-section">
+        <text class="filter-section-title">行业圈层 · 民间／历史称谓</text>
+        <view class="filter-region-list">
+          <view class="filter-chip {{draftGroup === 'all' ? 'selected' : ''}}" data-group="all" bindtap="onFilterGroup">全部圈层</view>
+          <view wx:for="{{groups}}" wx:key="key" class="filter-chip {{draftGroup === item.key ? 'selected' : ''}}" data-group="{{item.key}}" bindtap="onFilterGroup">{{item.label}}</view>
+        </view>
+      </view>
+      <view class="filter-section">
+        <text class="filter-section-title">现行主管单位 · 已核实成员</text>
+        <view class="filter-region-list">
+          <view class="filter-chip {{draftAffiliation === 'all' ? 'selected' : ''}}" data-affiliation="all" bindtap="onFilterAffiliation">全部主管单位</view>
+          <view wx:for="{{affiliations}}" wx:key="key" class="filter-chip {{draftAffiliation === item.key ? 'selected' : ''}}" data-affiliation="{{item.key}}" bindtap="onFilterAffiliation">{{item.label}}</view>
+        </view>
+        <text class="filter-hint">尚未逐校核实主管部门的院校暂不加入该分类；历史机械部、电力部等不会冒充现行主管机关。</text>
+      </view>
+      <view class="filter-section">
+        <text class="filter-section-title">指定学校 · 可选</text>
+        <input class="filter-input" value="{{draftQuery}}" bindinput="onFilterQuery" placeholder="输入学校名称或简拼，再点选下方学校" confirm-type="search" />
+        <view wx:if="{{draftExactSchool}}" class="selected-school" data-name="{{draftExactSchool}}" bindtap="onFilterSchool">已选：{{draftExactSchool}}　× 点击取消</view>
+        <scroll-view scroll-y="{{true}}" class="candidate-list">
+          <view wx:for="{{candidateSchools}}" wx:key="id" class="candidate-school {{draftExactSchool === item.name ? 'selected' : ''}}" data-name="{{item.name}}" bindtap="onFilterSchool">{{item.name}}</view>
+        </scroll-view>
+      </view>
+    </scroll-view>
+    <view class="filter-actions">
+      <text class="filter-preview">预计匹配 {{previewCount}} 条</text>
+      <view class="filter-action-buttons">
+        <button bindtap="onFilterReset">重置</button>
+        <button class="confirm" bindtap="onFilterApply">完成筛选</button>
+      </view>
+    </view>
+  </view>
+</view>

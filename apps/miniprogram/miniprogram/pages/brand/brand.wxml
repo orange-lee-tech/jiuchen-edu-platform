@@ -1,0 +1,91 @@
+<view class="brand-page">
+  <view wx:if="{{loading}}" class="state-card">正在加载品牌资料…</view>
+  <view wx:elif="{{error}}" class="state-card error">{{error}}</view>
+
+  <block wx:elif="{{view}}">
+    <view class="hero">
+      <text class="eyebrow">{{view.englishName}}</text>
+      <text class="title">{{view.brandName}}</text>
+      <text class="positioning">{{view.positioning}}</text>
+      <text class="slogan">{{view.slogan}}</text>
+      <view class="slogan-row">
+        <text wx:for="{{view.serviceSlogans}}" wx:key="*this" class="slogan-chip">{{item}}</text>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <text class="section-title">我们做什么</text>
+      <text wx:if="{{view.planningModel}}" class="lead">{{view.planningModel}}</text>
+      <view class="scope-grid">
+        <text wx:for="{{view.serviceScope}}" wx:key="*this" class="scope-chip">{{item}}</text>
+      </view>
+      <view wx:if="{{view.pathways.length}}" class="pathway-row">
+        <text class="label">路径统筹</text>
+        <text class="value">{{view.pathwayText}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.audience.length}}" class="section-card">
+      <text class="section-title">适合谁</text>
+      <view wx:for="{{view.audience}}" wx:key="index" class="bullet-row">
+        <text class="bullet">•</text>
+        <text class="bullet-text">{{item.text}}</text>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.highlights.length}}" class="section-card">
+      <text class="section-title">服务理念与亮点</text>
+      <view wx:for="{{view.highlights}}" wx:key="index" class="highlight">
+        <text class="row-title">{{item.title}}</text>
+        <text class="detail">{{item.detail}}</text>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.timeline.length}}" class="section-card">
+      <text class="section-title">本科阶段成长路径</text>
+      <text class="section-note">按品牌手册视觉阅读顺序还原，不擅自重排源图。</text>
+      <view wx:for="{{view.timeline}}" wx:key="index" class="timeline-row">
+        <view class="dot"></view>
+        <view class="timeline-main">
+          <text class="row-title">{{item.stage}}</text>
+          <text wx:for="{{item.tasks}}" wx:key="*this" class="line">• {{item}}</text>
+          <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{view.services.length}}" class="section-card">
+      <text class="section-title">九辰服务体系</text>
+      <view wx:for="{{view.services}}" wx:key="index" class="service-group">
+        <view class="service-head">
+          <text class="service-name">{{index + 1}}. {{item.name}}</text>
+          <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+        </view>
+        <view wx:for="{{item.items}}" wx:key="index" class="service-item">
+          <text class="row-title">{{item.name}}</text>
+          <text wx:if="{{item.description}}" class="detail">{{item.description}}</text>
+          <text wx:if="{{item.delivery}}" class="delivery">形式：{{item.delivery}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <text class="section-title">师资资料边界</text>
+      <view class="metric">
+        <text class="metric-value">{{view.teacherCount}}</text>
+        <text class="metric-label">品牌手册师资来源记录</text>
+      </view>
+      <text class="section-note">
+        当前状态：{{view.teacherVerification}}。因此本页不直接公开未核验个人履历，也不将相关资历用于 AI 录取判断。
+      </text>
+    </view>
+
+    <view class="source-card">
+      <text>来源：九辰保研品牌手册 · {{view.sourcePages}} 页</text>
+      <text wx:if="{{view.sourceDate}}">资料时点：{{view.sourceDate}}</text>
+      <text>未核验营销数字、办学成果声明、联系方式及案例证据均未进入本公开页面。</text>
+    </view>
+  </block>
+</view>

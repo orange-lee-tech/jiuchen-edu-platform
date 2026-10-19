@@ -1,0 +1,85 @@
+.library-head {
+  margin: 10rpx 4rpx 24rpx;
+}
+
+.page-title,
+.page-desc,
+.eyebrow,
+.result-title,
+.result-desc,
+.result-action {
+  display: block;
+}
+
+.page-title {
+  font-size: 38rpx;
+  font-weight: 800;
+}
+
+.page-desc {
+  margin-top: 12rpx;
+  color: #7a808b;
+  font-size: 23rpx;
+  line-height: 1.7;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 22rpx;
+}
+
+.search-icon {
+  margin-right: 14rpx;
+  color: #8a8f98;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 25rpx;
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+
+.result-card,
+.state-card {
+  padding: 26rpx;
+}
+
+.eyebrow {
+  color: #2f6fed;
+  font-size: 21rpx;
+  font-weight: 700;
+}
+
+.result-title {
+  margin-top: 10rpx;
+  font-size: 29rpx;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.result-desc {
+  margin-top: 10rpx;
+  color: #777e89;
+  font-size: 23rpx;
+  line-height: 1.6;
+}
+
+.result-action {
+  margin-top: 16rpx;
+  color: #2f6fed;
+  font-size: 23rpx;
+}
+
+.state-card {
+  margin-top: 22rpx;
+  color: #858b95;
+  font-size: 24rpx;
+  line-height: 1.7;
+}

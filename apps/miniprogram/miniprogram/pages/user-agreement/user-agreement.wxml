@@ -1,0 +1,70 @@
+<view class="agreement-page">
+  <view class="agreement-head">
+    <text class="agreement-title">九辰保研小程序用户协议</text>
+    <text class="agreement-meta">版本：2026-10-06 · 生效日期：2026-10-06</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">一、协议范围</text>
+    <text class="section-body">本协议适用于你使用“九辰保研”微信小程序提供的账号登录、身份绑定、AI 保研评估、规划与辅导、课表导入、资讯阅读、资料管理、人工客服及后续依法上线的付费服务。开始使用相关功能前，请阅读并理解本协议。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">二、账号与身份</text>
+    <text class="section-body">小程序可通过微信登录或微信手机号能力确认账号身份。首次登录可能创建普通用户账号；学员、老师、管理员等业务身份以九辰后台实际绑定结果为准。请勿冒用、转让他人账号或内部 ID。因账号异常、遗失或误绑定，请通过小程序客服联系处理。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">三、AI 评估与建议</text>
+    <text class="section-body">AI 保研评估用于整理你提交的背景资料、结合九辰已有案例与知识资料生成辅助分析。AI 输出不构成录取承诺、院校官方意见、法律意见或绝对结果预测。保研政策、院校要求、报名条件和截止时间可能变化，重要决定应以院校、教育主管部门等官方最新信息及人工老师核实结果为准。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">四、规划、课堂与资料更新</text>
+    <text class="section-body">学员计划、老师辅导记录、课表和成长资料以系统中真实保存的数据为准。学员提交的规划修改可能需要老师审核后成为正式版本。课表图片、Excel/CSV 等导入结果可能受文件结构和识别准确率影响，用户应在保存前核对并可手动修正。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">五、资讯与通知</text>
+    <text class="section-body">资讯主要来源于九辰教育服务号及经运营人员审核维护的内容。小程序可能在获得你的微信授权后发送与评估结果、老师更新、重要机会或服务状态有关的订阅消息。订阅消息以用户主动授权为前提，你可以在微信相关设置中管理通知权限。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">六、用户提交内容</text>
+    <text class="section-body">你应确保提交的成绩、排名、科研、竞赛、课表、目标院校等资料真实且有权提供。系统可以在提供本服务所必要的范围内存储、整理和处理这些内容。AI 或系统从自然语言中整理出的结构化信息，在需要写入长期档案时应以你的确认或明确操作为准。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">七、个人信息与隐私</text>
+    <text class="section-body">九辰仅在实现登录、身份识别、资料管理、评估、规划、客服和消息通知等功能所必要的范围内处理个人信息。具体授权范围以微信授权界面、小程序隐私保护指引及实际功能提示为准。对于不再需要的数据，你可以通过客服或产品提供的相关入口提出更正、删除或注销请求。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">八、付费服务</text>
+    <text class="section-body">如后续上线 AI 评估额度、充值或其他付费服务，具体价格、可获得的服务内容、次数和有效规则以付款前页面实际展示并由用户确认的信息为准。未正式展示并确认的价格或免费次数不构成承诺。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">九、使用规范</text>
+    <text class="section-body">不得利用本服务实施违法违规行为，不得攻击、干扰系统，不得批量窃取数据、绕过权限控制或利用他人身份访问资料。对明显异常、恶意或危害系统安全的使用行为，九辰有权采取限制功能、暂停账号或其他必要措施。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">十、服务变化与可用性</text>
+    <text class="section-body">产品可能持续优化功能、界面、模型或内容来源。因微信平台、云服务、网络、第三方接口维护等原因，部分功能可能短时不可用。九辰会尽合理努力恢复服务，但不会以模拟数据或虚假结果掩盖真实故障。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">十一、知识产权</text>
+    <text class="section-body">小程序的软件、界面设计、九辰原创内容及依法享有权利的资料受相关法律保护。用户依法享有其自行提交内容的权利；未经许可，不得批量复制、出售或以其他方式商业化使用九辰提供的受保护内容。</text>
+  </view>
+
+  <view class="agreement-section">
+    <text class="section-title">十二、联系与反馈</text>
+    <text class="section-body">如对账号、数据、评估、规划、付费或本协议有疑问，可通过小程序内“联系客服”进入九辰教育微信客服，由人工客服继续处理。</text>
+  </view>
+
+  <view class="agreement-foot">
+    <text>继续使用相关功能并勾选“我已阅读并同意”，表示你已阅读并同意本协议。</text>
+  </view>
+</view>

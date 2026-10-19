@@ -1,0 +1,84 @@
+<view wx:if="{{school}}" class="detail-page">
+  <view class="detail-hero {{photoVisible ? 'has-photo' : ''}}">
+    <image wx:if="{{photoVisible && school.heroPhoto}}" class="hero-photo" src="{{school.heroPhoto.url}}" mode="aspectFill" binderror="onPhotoError" bindtap="onPreviewPhoto" />
+    <view class="hero-shade"></view>
+    <view class="hero-content">
+      <view class="hero-top"><text>九辰 · 目标院校</text><text class="hero-mark">{{tierLabel}}</text></view>
+      <view class="hero-main"><view class="hero-identity"><text class="hero-name">{{school.name}}</text><text class="hero-city">{{cityLabel}}</text></view></view>
+      <view wx:if="{{school.heroPhoto && photoVisible}}" class="hero-photo-indicator">校园实拍 · {{school.heroPhoto.caption}}</view>
+      <view wx:else class="hero-photo-indicator hero-illustrated">九辰院校档案 · {{school.name}}</view>
+      <view class="hero-tags"><text wx:if="{{school.isDoubleFirst}}">双一流 · 2022名单</text><text wx:if="{{school.affiliationLabel}}">{{school.affiliationLabel}}</text><text wx:if="{{school.isC9}}">C9 联盟</text><text wx:for="{{school.groupTags}}" wx:for-item="tag" wx:key="key">{{tag.label}}</text><text wx:if="{{!school.is211}}">非985/211</text></view>
+    </view>
+  </view>
+  <view wx:if="{{school.heroPhoto && photoVisible}}" class="photo-credit">
+    <text>{{school.heroPhoto.caption}} · {{school.heroPhoto.author}} · {{school.heroPhoto.license}}</text>
+    <text class="photo-actions" bindtap="onPreviewPhoto">预览大图 ›</text>
+    <text class="photo-actions" data-key="photo" bindtap="copyUrl">图片出处 ›</text>
+    <text class="photo-actions" data-key="photoLicense" bindtap="copyUrl">许可 ›</text>
+  </view>
+  <view wx:elif="{{school.heroPhoto && !photoVisible}}" class="photo-credit">
+    <text>校园照片暂时未能加载；已保留可核验的原图来源。</text>
+    <text class="photo-actions" bindtap="onRetryPhoto">重新加载 ›</text>
+    <text class="photo-actions" data-key="photo" bindtap="copyUrl">查看出处 ›</text>
+  </view>
+
+  <view class="detail-overview">
+    <view class="fact-cell"><text class="fact-key">城市</text><text class="fact-value">{{school.city}}</text></view>
+    <view class="fact-cell"><text class="fact-key">院校属性</text><text class="fact-value">{{tierLabel}}</text></view>
+    <view class="fact-cell"><text class="fact-key">行业分类</text><text class="fact-value">{{circleLabel}}</text></view>
+  </view>
+  <view class="detail-card">
+    <view class="detail-heading"><text>学校简介</text><text class="detail-hint">公开资料 · 逐校核验</text></view>
+    <text wx:if="{{hasIntro}}" class="intro-text">{{school.intro}}</text>
+    <text wx:else class="intro-text">已收录{{school.name}}的基本院校属性。简介和校区资料尚待逐校官网核验，具体推免资格以当年学校与学院通知为准。</text>
+    <view wx:if="{{school.founded}}" class="founded-line">历史起始年份 {{school.founded}} · 以学校校史为准</view>
+    <view class="source-links">
+      <view wx:if="{{school.affiliationLabel}}" class="detail-source" data-key="affiliation" bindtap="copyUrl"><text>主管单位：{{school.affiliationLabel}}</text><text>核验来源 ›</text></view>
+      <view wx:if="{{school.introSource}}" class="detail-source" data-key="intro" bindtap="copyUrl"><text>学校官方介绍</text><text>复制链接 ›</text></view>
+      <view wx:if="{{school.is211}}" class="detail-source" data-key="{{school.is985 ? 'moe' : 'moe211'}}" bindtap="copyUrl"><text>教育部 {{school.is985 ? '985' : '211'}} 工程原始名单</text><text>复制链接 ›</text></view>
+      <view wx:if="{{school.isDoubleFirst}}" class="detail-source" data-key="doubleFirst" bindtap="copyUrl"><text>2022年第二轮双一流建设高校名单</text><text>复制名单 ›</text></view>
+      <view wx:if="{{school.isC9}}" class="detail-source" data-key="c9" bindtap="copyUrl"><text>C9 联盟参考</text><text>复制链接 ›</text></view>
+    </view>
+  </view>
+
+  <view class="detail-card geo-card">
+    <view class="detail-heading"><text>校区地图</text><text class="detail-hint">地图参考 · 可切换校区</text></view>
+    <view class="campus-selector">
+      <view wx:for="{{campusOptions}}" wx:key="index" class="campus-option {{campusIndex === index ? 'selected' : ''}}"
+        data-index="{{index}}" bindtap="onSelectCampus">
+        <text class="campus-label">{{item.campus}}</text>
+        <text class="campus-quality">{{item.quality === 'verified' ? '已核验' : '参考点'}}</text>
+      </view>
+    </view>
+    <view wx:if="{{activeCampus}}" class="campus-location">
+      <text class="map-name">{{school.name}} · {{activeCampus.campus}}</text>
+      <map class="campus-map" latitude="{{activeCampus.latitude}}" longitude="{{activeCampus.longitude}}" scale="15"
+        markers="{{mapMarkers}}" show-location="{{false}}" />
+      <text class="campus-disclaimer">{{activeCampus.quality === 'verified' ? '此校区坐标经过单独来源核验。' : '历史公开地理数据参考点，可能与当前校区入口存在偏差；实际到校路线请再次核对。'}}</text>
+      <text wx:if="{{activeCampus.address}}" class="campus-address">{{activeCampus.address}}</text>
+      <view class="geo-actions">
+        <button class="map-button" bindtap="onOpenMap">打开微信地图 ›</button>
+        <text class="geo-source" data-key="map" bindtap="copyUrl">数据出处 ›</text>
+      </view>
+    </view>
+    <view wx:else class="geo-pending">该校区尚无可信坐标，不能使用城市中心冒充。</view>
+  </view>
+  <view class="detail-card project-card">
+    <view class="detail-heading"><text>学院与招生项目</text><text class="detail-hint">按当年文件核实</text></view>
+    <view wx:if="{{school.admissions}}" class="official-admissions">
+      <text class="official-admissions-heading">已核实的院校招生资料</text>
+      <view class="official-admissions-link" data-key="admissions" bindtap="copyUrl"><text>{{school.admissions.title}}</text><text>复制链接 ›</text></view>
+      <view class="official-admissions-link" data-key="catalogs" bindtap="copyUrl"><text>{{school.admissions.catalogsTitle}}</text><text>复制链接 ›</text></view>
+      <view class="official-admissions-link" data-key="summer" bindtap="copyUrl"><text>{{school.admissions.summerTitle}}</text><text>复制链接 ›</text></view>
+    </view>
+    <view class="project-guide"><text class="project-number">01</text><view><text class="project-title">确定目标学院与方向</text><text class="project-note">先确认学院、专业代码与研究方向，再评估匹配程度。</text></view></view>
+    <view class="project-guide"><text class="project-number">02</text><view><text class="project-title">查当年招生原文</text><text class="project-note">最新推免通知、专业目录及时间节点，以学校研究生院和院系原文为准。</text></view></view>
+    <view class="project-guide"><text class="project-number">03</text><view><text class="project-title">结合个人背景沟通</text><text class="project-note">将目标院校与本人年级、专业发给老师，形成下一步行动方案。</text></view></view>
+    <text class="project-warning">无可核验来源的学院数量、项目数量和关注数不展示为事实。院校标签也不构成推免录取资格。</text>
+  </view>
+  <view class="detail-card consult-card">
+    <view class="detail-heading"><text>咨询九辰老师</text><text class="detail-hint">一对一需求沟通</text></view>
+    <text class="consult-desc">一次确认即可联系九辰客服：先向服务器核验登录身份，再附上目标院校和可读取的年级、专业。确认后复制信息、打开客服；仍需你亲自粘贴发送。</text>
+    <button class="consult-button" bindtap="onConsultSchool" loading="{{consultBusy}}" disabled="{{consultBusy}}">携带 {{school.name}} 信息联系九辰 ›</button>
+  </view>
+</view>

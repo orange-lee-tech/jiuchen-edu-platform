@@ -1,0 +1,74 @@
+<view class="page-shell">
+  <role-shell slot="mine" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <block wx:if="{{shellPhase === 'ready'}}">
+  <view class="position-hero surface">
+    <text class="eyebrow">AI 保研定位</text>
+    <text class="hero-title">先认识自己，再决定冲哪里</text>
+    <text class="hero-desc">结合个人背景、目标院校与项目数据，形成结构化定位建议。结果用于辅助规划，不展示伪精确录取概率。</text>
+    <button wx:if="{{!readOnly}}" class="primary-btn" bindtap="onStartAssessment">开始 AI 评估</button>
+    <button class="history-btn" bindtap="onAssessmentHistory">查看历史评估</button>
+    <text class="quota">历史结果可再次查看；是否运行新评估由你决定。</text>
+  </view>
+
+  <view class="section-head">
+    <view>
+      <text class="section-title">我的背景</text>
+      <text class="section-subtitle">{{canEditProfile ? '来自“我的个人资料”，仅在资料编辑页修改' : '登录后可查看个人学业背景'}}</text>
+    </view>
+    <text wx:if="{{canEditProfile && !readOnly}}" class="link" bindtap="onProfileCardTap">编辑资料 ›</text>
+  </view>
+
+  <view wx:if="{{canEditProfile}}" class="profile-card surface" bindtap="onProfileCardTap">
+    <label class="profile-row">
+      <text class="profile-label">本科院校</text>
+      <text class="profile-input">{{profileForm.university || '未填写'}}</text>
+    </label>
+    <label class="profile-row">
+      <text class="profile-label">专业方向</text>
+      <text class="profile-input">{{profileForm.major || '未填写'}}</text>
+    </label>
+    <label class="profile-row">
+      <text class="profile-label">当前年级</text>
+      <text class="profile-input">{{profileForm.currentGrade || '未填写'}}</text>
+    </label>
+    <label class="profile-row">
+      <text class="profile-label">绩点 / 均分</text>
+      <text class="profile-input">{{profileForm.gpaText || '未填写'}}</text>
+    </label>
+    <label class="profile-row">
+      <text class="profile-label">专业排名</text>
+      <text class="profile-input">{{profileForm.rankText || '未填写'}}</text>
+    </label>
+  </view>
+
+  <button wx:else class="history-btn" bindtap="onProfileCardTap">{{shellRoleLabel === '未登录' ? '登录并填写个人背景' : '查看我的身份与资料'}}</button>
+
+  <view class="section-head">
+    <view>
+      <text class="section-title">评估维度</text>
+      <text class="section-subtitle">不采用固定权重公式，后续由服务端 AI 结合资料分析</text>
+    </view>
+  </view>
+
+  <view class="dimension-list">
+    <view
+      wx:for="{{dimensions}}"
+      wx:key="title"
+      class="dimension-card surface"
+      data-key="{{item.key}}"
+      bindtap="onDimensionTap"
+    >
+      <view>
+        <text class="dimension-title">{{item.title}}</text>
+        <text class="dimension-desc">{{item.desc}}</text>
+      </view>
+      <text class="dimension-status">{{item.status}}</text>
+    </view>
+  </view>
+
+  <view class="notice surface">
+    <text class="notice-title">定位结果会包含什么？</text>
+    <text class="notice-text">目标梯度建议、优势与短板、下一阶段行动重点，以及可核查的院校 / 项目 / 案例依据。</text>
+  </view>
+  </block>
+</view>

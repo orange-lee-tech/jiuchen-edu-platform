@@ -1,0 +1,38 @@
+<auth-gate />
+<view class="history-page">
+  <view class="hero">
+    <text class="eyebrow">ASSESSMENT HISTORY</text>
+    <text class="title">我的保研评估</text>
+    <text class="desc">提交后可直接离开，后台分析进度与完成结果会在这里持续更新。</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="state-card">正在加载…</view>
+  <view wx:elif="{{assessments.length === 0}}" class="state-card">
+    <text class="empty-title">还没有评估记录</text>
+    <text class="empty-desc">{{canCreateAssessment ? '完善背景和目标后，生成第一份结构化定位报告。' : '本账号暂无历史结果，当前内部身份不发起新评估。'}}</text>
+    <button wx:if="{{canCreateAssessment}}" class="primary" bindtap="onCreateAssessment">开始评估</button>
+  </view>
+  <view wx:else class="assessment-list">
+    <view
+      wx:for="{{assessments}}"
+      wx:key="id"
+      class="assessment-card"
+      data-id="{{item.id}}"
+      data-status="{{item.status}}"
+      bindtap="onAssessmentTap"
+    >
+      <view class="card-head">
+        <text class="school">{{item.input.profile.university}} · {{item.input.profile.major}}</text>
+        <text class="status {{item.statusTone}}">{{item.statusLabel}}</text>
+      </view>
+      <text class="targets">目标：{{item.targetSummary}}</text>
+      <view class="card-foot">
+        <text>{{item.dateLabel}}</text>
+        <text wx:if="{{item.status === 'succeeded'}}" class="link">查看报告 ›</text>
+        <text wx:elif="{{item.status === 'draft'}}" class="link">继续编辑 ›</text>
+        <text wx:elif="{{item.status === 'running'}}" class="link">后台分析中…</text>
+        <text wx:elif="{{item.status === 'failed'}}" class="link">运行失败</text>
+      </view>
+    </view>
+  </view>
+</view>

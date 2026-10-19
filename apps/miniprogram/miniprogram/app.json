@@ -1,0 +1,86 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/position/position",
+    "pages/classroom/classroom",
+    "pages/news/news",
+    "pages/news-detail/news-detail",
+    "pages/profile/profile",
+    "pages/growth-profile/growth-profile",
+    "pages/login/login",
+    "pages/user-agreement/user-agreement",
+    "pages/profile-edit/profile-edit",
+    "pages/admin/admin",
+    "pages/assessment-form/assessment-form",
+    "pages/assessment-history/assessment-history",
+    "pages/assessment-result/assessment-result",
+    "pages/products/products",
+    "pages/product-detail/product-detail",
+    "pages/brand/brand",
+    "pages/library/library",
+    "pages/plan-editor/plan-editor",
+    "pages/teacher-students/teacher-students",
+    "pages/schedule-import/schedule-import"
+  ],
+  "window": {
+    "navigationBarTitleText": "九辰保研",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f6f7fb"
+  },
+  "tabBar": {
+    "color": "#8a8f98",
+    "selectedColor": "#2f6fed",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/icons/home-normal.png",
+        "selectedIconPath": "assets/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/classroom/classroom",
+        "text": "规划",
+        "iconPath": "assets/icons/calendar-normal.png",
+        "selectedIconPath": "assets/icons/calendar-active.png"
+      },
+      {
+        "pagePath": "pages/news/news",
+        "text": "机会",
+        "iconPath": "assets/icons/opportunity-normal.png",
+        "selectedIconPath": "assets/icons/opportunity-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "assets/icons/mine-normal.png",
+        "selectedIconPath": "assets/icons/mine-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "usingComponents": {
+    "role-shell": "/components/role-shell/role-shell",
+    "auth-gate": "/components/auth-gate/auth-gate",
+    "first-use-guide": "/components/first-use-guide/first-use-guide",
+    "official-website-dialog": "/components/official-website-dialog/official-website-dialog"
+  },
+  "sitemapLocation": "sitemap.json",
+  "subpackages": [
+    {
+      "root": "packages/schools",
+      "pages": [
+        "directory/directory",
+        "detail/detail"
+      ]
+    },
+    {
+      "root": "packages/read-only",
+      "pages": [
+        "view/view"
+      ]
+    }
+  ]
+}

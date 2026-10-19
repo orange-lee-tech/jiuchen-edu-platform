@@ -1,0 +1,5 @@
+# Linux runtime / deployment files must retain LF when checked out on Windows.
+*.sh text eol=lf
+ops/ecs/*.service text eol=lf
+ops/ecs/*.timer text eol=lf
+ops/ecs/*.mjs text eol=lf

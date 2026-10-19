@@ -1,0 +1,89 @@
+<auth-gate bind:validated="onIdentityValidated" />
+<view class="profile-edit-page">
+  <view class="intro-card">
+    <text class="intro-title">个人资料</text>
+    <text class="intro-desc">登录账号与九辰内部身份分开管理。首次登录默认为游客，填写正确内部ID后系统自动切换对应身份。</text>
+  </view>
+
+  <view class="form-card">
+    <label class="field">
+      <text class="field-label">我的真实姓名</text>
+      <input class="field-input" value="{{nameInput}}" maxlength="80" placeholder="请填写本人真实姓名" bindinput="onNameInput" />
+      <text class="identity-desc">由你主动填写；客服咨询和个人档案使用此姓名。原有的测试学员名称不会自动当作真实姓名。</text>
+    </label>
+  </view>
+  <button class="save-button" loading="{{savingName}}" disabled="{{savingName || loading || readOnly}}" bindtap="onSaveName">保存姓名</button>
+
+  <view class="identity-card">
+    <view class="identity-head">
+      <view>
+        <text class="identity-title">九辰内部ID</text>
+        <text class="identity-desc" wx:if="{{!identityLocked}}">由九辰提供。绑定成功后不可自行修改。</text>
+        <text class="identity-desc" wx:else>已绑定并锁定；如需变更，请联系管理员。</text>
+      </view>
+      <text class="identity-status">{{identityLocked ? '已绑定' : '未绑定'}}</text>
+    </view>
+
+    <view wx:if="{{identityLocked && identity}}" class="locked-id">
+      <text class="locked-code">{{identity.businessId}}</text>
+      <text class="locked-role">{{role === 'staff' ? '内部员工' : identity.type === 'student' ? '学员' : identity.type === 'teacher' ? '老师' : '管理员'}}</text>
+    </view>
+
+    <view wx:else class="claim-row">
+      <input
+        class="internal-id-input"
+        value="{{internalIdInput}}"
+        placeholder="例如：JCS-XXXX-XXXX"
+        bindinput="onInternalIdInput"
+      />
+      <button
+        class="claim-button"
+        loading="{{claiming}}"
+        disabled="{{claiming}}"
+        bindtap="onClaimInternalId"
+      >确认绑定</button>
+    </view>
+    <text wx:if="{{!identityLocked}}" class="identity-desc">学员、老师和管理员均可凭正确且可用的编号直接绑定；ID被暂停或撤销时无法认领。</text>
+  </view>
+
+  <block wx:if="{{canEditAcademic}}">
+    <view class="section-label">学业资料</view>
+    <view class="form-card">
+      <label class="field">
+        <text class="field-label">本科院校</text>
+        <input class="field-input" data-field="university" value="{{form.university}}" placeholder="例如：中南大学" bindinput="onFieldInput" />
+      </label>
+      <label class="field">
+        <text class="field-label">专业方向</text>
+        <input class="field-input" data-field="major" value="{{form.major}}" placeholder="例如：人工智能" bindinput="onFieldInput" />
+      </label>
+      <view class="field">
+        <text class="field-label">入学年份（用于推算大学阶段）</text>
+        <picker range="{{enrollmentYears}}" bindchange="onEnrollmentYearChange">
+          <view class="field-input enrollment-picker">{{form.enrollmentYear ? form.enrollmentYear + ' 年入学' : '请选择入学年份 ›'}}</view>
+        </picker>
+        <text class="enrollment-help">以你正式入读本科的年份为准。课表归属学期仍由你导入时确认。</text>
+      </view>
+      <label class="field">
+        <text class="field-label">当前年级</text>
+        <input class="field-input" data-field="currentGrade" value="{{form.currentGrade}}" placeholder="例如：大二" bindinput="onFieldInput" />
+      </label>
+      <label class="field">
+        <text class="field-label">绩点 / 均分</text>
+        <input class="field-input" data-field="gpaText" value="{{form.gpaText}}" placeholder="例如：GPA 3.72 / 4.0" bindinput="onFieldInput" />
+      </label>
+      <label class="field">
+        <text class="field-label">专业排名</text>
+        <input class="field-input" data-field="rankText" value="{{form.rankText}}" placeholder="例如：12 / 103" bindinput="onFieldInput" />
+      </label>
+    </view>
+
+    <button class="save-button" loading="{{saving}}" disabled="{{saving || loading}}" bindtap="onSave">保存资料</button>
+  </block>
+
+  <view wx:else class="role-note">
+    当前身份的业务资料由九辰后台维护；本页只展示你的内部ID绑定状态。
+  </view>
+
+  <text class="privacy-note">后续新增资料字段时继续遵循“业务需要再收集”的原则。</text>
+</view>

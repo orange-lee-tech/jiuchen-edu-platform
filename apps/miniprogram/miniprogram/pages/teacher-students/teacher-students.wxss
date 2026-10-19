@@ -1,0 +1,76 @@
+.teacher-head {
+  margin: 8rpx 4rpx 24rpx;
+}
+
+.page-title,
+.page-desc,
+.review-student,
+.review-title,
+.review-meta,
+.student-name,
+.student-meta,
+.student-stage {
+  display: block;
+}
+
+.page-title { font-size: 38rpx; font-weight: 800; }
+.page-desc { margin-top: 10rpx; color: #7a808b; font-size: 23rpx; line-height: 1.7; }
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  margin: 28rpx 4rpx 14rpx;
+}
+
+.section-title { font-size: 28rpx; font-weight: 800; }
+.section-note { color: #8b919a; font-size: 21rpx; }
+
+.pending-list,
+.student-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.pending-review,
+.student-card,
+.empty {
+  padding: 24rpx;
+}
+
+.review-student { color: #2f6fed; font-size: 21rpx; font-weight: 700; }
+.review-title { margin-top: 8rpx; font-size: 27rpx; font-weight: 750; }
+.review-meta,
+.student-meta,
+.student-stage { margin-top: 7rpx; color: #858b95; font-size: 21rpx; }
+
+.review-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12rpx;
+  margin-top: 18rpx;
+}
+
+.reject-button,
+.approve-button {
+  margin: 0;
+  border-radius: 14rpx;
+  font-size: 22rpx;
+}
+
+.reject-button { background: #fff; color: #a64e47; }
+.approve-button { background: #2f6fed; color: #fff; }
+.approve-button::after { border: 0; }
+
+.student-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.student-name { font-size: 27rpx; font-weight: 750; }
+.arrow { color: #adb2bb; font-size: 36rpx; }
+.empty { color: #8b919a; font-size: 23rpx; }
+
+.student-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8rpx;}
+.edit-mini{margin:0;background:#eef5fd;border-radius:6rpx;color:#3167ad;font-size:19rpx;line-height:50rpx;padding:0 10rpx;}

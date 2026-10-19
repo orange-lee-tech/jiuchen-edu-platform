@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly Jiuchen official account check
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=60
+Unit=jiuchen-news-sync.service
+
+[Install]
+WantedBy=timers.target

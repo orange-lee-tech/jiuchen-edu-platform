@@ -1,0 +1,47 @@
+<view class="detail-page">
+  <view wx:if="{{loading}}" class="state-card">正在加载服务号正文…</view>
+  <view wx:elif="{{error}}" class="state-card error-card">
+    <text>{{error}}</text>
+    <button class="secondary" bindtap="onRetry">重新加载</button>
+  </view>
+
+  <block wx:elif="{{post}}">
+    <view class="article-head">
+      <view class="tag-row">
+        <text wx:for="{{post.tags}}" wx:key="*this" class="tag">{{item}}</text>
+        <text wx:if="{{post.tags.length === 0}}" class="tag muted">未分类</text>
+      </view>
+      <text class="article-title">{{post.title}}</text>
+      <text class="article-meta">{{post.source === 'wechat_official' ? (post.publicationTimeSource === 'admin_verified_publish_record' ? '九辰教育服务号 · 管理员核实原文' : '九辰教育服务号') : '九辰编辑'}}{{dateLabel ? ' · ' + dateLabel : ''}}{{post.content.author ? ' · ' + post.content.author : ''}}</text>
+      <text wx:if="{{post.summary}}" class="article-summary">{{post.summary}}</text>
+      <button wx:if="{{post.favoritesEnabled}}" class="favorite-action" loading="{{favoriteBusy}}" disabled="{{favoriteBusy || !favoritesReady}}" bindtap="onToggleFavorite">{{favorited ? '已收藏 · 取消收藏' : '收藏原文'}}</button>
+      <text wx:if="{{favoriteError}}" class="favorite-note">{{favoriteError}}</text>
+      <button wx:if="{{!post.favoritesEnabled && post.source === 'wechat_official' && post.articleUrl}}" class="favorite-action" bindtap="onUnavailableFavorite">收藏原文</button>
+    </view>
+
+    <image wx:if="{{!readerNodes.length && !contentBlocks.length && post.coverUrl && !coverFailed}}" class="cover" src="{{post.coverUrl}}" mode="widthFix" binderror="onCoverError" />
+
+    <view wx:if="{{post.content.mediaType === 'video'}}" class="state-card">
+      <text>视频内容请在公众号原文观看</text>
+      <button class="secondary" bindtap="onOpenOriginal">打开服务号视频</button>
+    </view>
+    <view wx:elif="{{readerNodes.length}}" class="article-content">
+      <rich-text nodes="{{readerNodes}}"></rich-text>
+    </view>
+    <view wx:elif="{{contentBlocks.length}}" class="article-content">
+      <block wx:for="{{contentBlocks}}" wx:key="index">
+        <text wx:if="{{item.type === 'text'}}" class="body-paragraph" user-select="true">{{item.text}}</text>
+        <image wx:else class="body-image" src="{{item.url}}" mode="widthFix" data-url="{{item.url}}" bindtap="onPreviewImage" binderror="onBodyImageError" />
+      </block>
+      <text wx:if="{{bodyImageFailed}}" class="image-warning">有图片未能加载，请联系管理员核对图片来源。</text>
+    </view>
+
+    <view wx:else class="state-card body-missing">
+      <text class="missing-title">这条历史同步记录还没有站内正文</text>
+      <text class="missing-desc">管理员重新同步服务号后，已发布图文正文会保存到小程序数据层；当前可暂时查看服务号原文。</text>
+      <button class="secondary" bindtap="onOpenOriginal">查看服务号原文</button>
+    </view>
+
+    <button wx:if="{{(post.content.html || contentBlocks.length) && post.articleUrl}}" class="original-link" bindtap="onOpenOriginal">查看服务号原始页面</button>
+  </block>
+</view>

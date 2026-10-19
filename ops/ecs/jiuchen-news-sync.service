@@ -1,0 +1,16 @@
+[Unit]
+Description=Jiuchen official account published-article check
+After=network-online.target jiuchen-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=jiuchen-api
+Group=jiuchen-api
+WorkingDirectory=/opt/jiuchen-api/current/services/api
+EnvironmentFile=/etc/jiuchen-api/production.env
+ExecStart=/opt/jiuchen-api/runtime/node/bin/node dist/scripts/sync-official-account.js
+TimeoutStartSec=300
+MemoryMax=256M
+NoNewPrivileges=true
+PrivateTmp=true

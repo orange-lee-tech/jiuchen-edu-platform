@@ -1,0 +1,11 @@
+.gate { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 1000; overflow-y: auto; box-sizing: border-box; padding: 48rpx 28rpx calc(40rpx + env(safe-area-inset-bottom)); background: #f2f4f6; }
+.gate-content { padding: 32rpx; border-top: 6rpx solid #2f6fed; background: #e7eef8; border-radius: 6rpx; }
+.gate-brand, .gate-title, .gate-message { display: block; }
+.gate-brand { color: #2459be; font-size: 26rpx; font-weight: 600; }
+.gate-title { margin-top: 16rpx; color: #18202a; font-size: 40rpx; line-height: 1.4; font-weight: 800; }
+.gate-message { margin-top: 16rpx; color: #46586e; font-size: 27rpx; line-height: 1.8; }
+button { margin: 24rpx 0 0; padding: 22rpx; border-radius: 8rpx; font-size: 28rpx; line-height: 1.5; white-space: normal; }
+button::after { border: 0; }
+.gate-primary { background: #2f6fed; color: #fff; }
+.gate-primary:active { background: #2459be; }
+.gate-secondary { background: #fafbfc; color: #2459be; border: 1rpx solid #a6b9d1; }

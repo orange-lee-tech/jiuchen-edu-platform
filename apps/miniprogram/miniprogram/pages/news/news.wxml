@@ -1,0 +1,135 @@
+<view class="page-shell">
+  <role-shell view-slot="opportunity" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <view wx:if="{{shellPhase === 'ready' && shellKind !== 'student'}}" class="reference-news-link" bindtap="onReferenceNews" hover-class="reference-news-pressed" aria-role="button">
+    <text>{{showReferenceNews ? '收起保研参考文章' : '查看保研参考文章'}}</text>
+    <text class="reference-news-arrow">{{showReferenceNews ? '⌃' : '›'}}</text>
+  </view>
+  <block wx:if="{{shellPhase === 'ready' && (shellKind === 'student' || showReferenceNews)}}">
+  <view class="news-head">
+    <view>
+      <text class="page-title">{{shellKind === 'student' ? '保研机会与文章' : '保研参考文章'}}</text>
+      <text class="page-desc">阅读服务号与九辰编辑文章，按人工分类查找内容。具体项目条件与时间请以文章原始来源为准。</text>
+    </view>
+    <text class="source-chip">{{sourceLabel}}</text>
+  </view>
+
+  <view class="school-entry" bindtap="onSchools" hover-class="school-entry-hover" aria-role="button">
+    <view class="school-entry-icon"><text>校</text></view>
+    <view class="school-entry-copy"><text class="school-entry-title">院校库 · 双一流与特色高校</text><text class="school-entry-desc">可组合筛选院校层次、地区、行业圈层与主管单位</text></view>
+    <text class="school-entry-arrow">›</text>
+  </view>
+
+  <view wx:if="{{pendingClassificationCount > 0}}" class="pending-news-note">
+    <view class="pending-news-text">
+      <text class="pending-news-title">当前列表有 {{pendingClassificationCount}} 篇资讯待分类</text>
+      <text class="pending-news-desc">{{pendingClassificationRole === 'admin' ? '分类后学员才能在资讯中看到，点击处理标签。' : '新同步文章需要管理员添加标签后才能向学员展示。'}}</text>
+    </view>
+    <button wx:if="{{pendingClassificationRole === 'admin'}}" class="pending-news-action" bindtap="onManageNewsTags">处理标签</button>
+  </view>
+
+  <view wx:if="{{newsV2Enabled && retiring.length}}" class="news-extra">
+    <text class="section-title">即将退役 · {{retiring.length}} 篇</text>
+    <view wx:for="{{retiring}}" wx:key="id" class="news-extra-row" data-id="{{item.id}}" bindtap="onArticleTap">
+      <text class="news-extra-title">{{item.title}}</text>
+      <text class="news-extra-meta">{{item.sourceLabel}} · {{item.dateLabel}} · 将于 {{item.retireAt}} 退出资讯列表</text>
+    </view>
+  </view>
+  <view wx:if="{{newsV2Enabled}}" class="news-extra">
+    <text class="section-title">我的收藏 · {{favorites.length}} 篇</text>
+    <text wx:if="{{favoritesError}}" class="news-extra-meta">{{favoritesError}}</text>
+    <text wx:elif="{{!favorites.length}}" class="news-extra-meta">暂无收藏文章</text>
+    <view wx:for="{{favorites}}" wx:key="postId" class="news-extra-row" data-id="{{item.postId}}" bindtap="onFavoriteTap">
+      <text class="news-extra-title">{{item.title}}</text>
+      <text class="news-extra-meta">在小程序内阅读 ›</text>
+    </view>
+  </view>
+
+  <view wx:if="{{loadError}}" class="news-error"><text>{{loadError}}</text><button bindtap="loadNews">重新加载文章</button></view>
+  <view wx:elif="{{loading && !allArticles.length}}" class="news-loading">正在读取文章…</view>
+  <view wx:elif="{{!allArticles.length}}" class="news-empty"><text>暂无可阅读文章</text><text class="empty-description">文章完成同步与分类后会显示在这里。</text><button bindtap="loadNews">刷新文章</button></view>
+  <block wx:else>
+  <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="category-row">
+      <view
+        wx:for="{{categories}}"
+        wx:key="*this"
+        class="category {{currentCategory === index ? 'active' : ''}}"
+        data-index="{{index}}"
+        bindtap="onCategoryTap"
+      >{{item}}</view>
+    </view>
+  </scroll-view>
+
+  <view
+    wx:if="{{featured.id}}"
+    class="featured surface"
+    data-id="{{featured.id}}"
+    bindtap="onArticleTap"
+  >
+    <view class="featured-media">
+      <image
+        wx:if="{{featured.coverUrl && !featured.coverFailed}}"
+        class="featured-cover"
+        src="{{featured.coverUrl}}"
+        mode="aspectFill"
+        data-id="{{featured.id}}"
+        binderror="onCoverError"
+      />
+      <view wx:else class="cover-fallback featured-fallback">讯</view>
+    </view>
+    <view class="featured-body">
+      <text class="featured-title">{{featured.title}}</text>
+      <text wx:if="{{featured.isVideo}}" class="article-meta">视频 · 在服务号原文观看</text>
+      <text class="featured-summary">{{featured.summary}}</text>
+      <view class="news-card-footer">
+        <view class="article-tags"><text wx:for="{{featured.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text></view>
+        <text class="featured-meta">来源：{{featured.sourceLabel}}</text>
+        <text class="featured-meta">{{featured.dateLabel}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <text class="section-title">最新内容</text>
+    <text wx:if="{{loading}}" class="section-note">同步中…</text>
+  </view>
+
+  <view class="article-list">
+    <view
+      wx:for="{{articles}}"
+      wx:key="id"
+      class="article-card surface"
+      data-id="{{item.id}}"
+      bindtap="onArticleTap"
+    >
+      <view class="article-media">
+        <image
+          wx:if="{{item.coverUrl && !item.coverFailed}}"
+          class="article-cover"
+          src="{{item.coverUrl}}"
+          mode="aspectFill"
+          data-id="{{item.id}}"
+          binderror="onCoverError"
+        />
+        <view wx:else class="cover-fallback">讯</view>
+      </view>
+      <view class="article-main">
+        <text class="article-title">{{item.title}}</text>
+        <text wx:if="{{item.isVideo}}" class="article-meta">视频 · 在服务号原文观看</text>
+        <text wx:if="{{item.summary}}" class="article-summary">{{item.summary}}</text>
+        <view class="news-card-footer">
+          <view class="article-tags"><text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text><text wx:if="{{item.tags.length === 0}}" class="article-tag muted">未分类</text></view>
+          <text class="article-meta">来源：{{item.sourceLabel}}</text>
+          <text class="article-meta">{{item.dateLabel}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{!loading && !featured.id}}" class="empty surface">
+      当前分类暂无内容。
+    </view>
+  </view>
+  </block>
+  </block>
+</view>
+<first-use-guide wx:if="{{!readOnly}}" />

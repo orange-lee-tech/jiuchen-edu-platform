@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+# One automatic entry for development commits: the PR event.
+# Keep the full verification job and its check name unchanged.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install and typecheck miniprogram
+        working-directory: apps/miniprogram
+        run: |
+          npm install
+          npm run typecheck
+
+      - name: Verify native navigation, real-data and export regressions
+        run: node --test tools/testing/miniprogram-navigation.test.cjs tools/testing/school-catalog.test.cjs tools/testing/report-export.test.cjs tools/testing/real-data.test.cjs
+
+      - name: Install, test and build admin
+        working-directory: apps/admin
+        run: |
+          npm install
+          npm run typecheck
+          npm test
+          npm run build
+
+      - name: Install, test and build API
+        working-directory: services/api
+        run: |
+          npm install
+          npm run typecheck
+          npm test
+          npm run build

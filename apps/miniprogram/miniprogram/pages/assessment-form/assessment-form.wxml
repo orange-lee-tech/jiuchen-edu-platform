@@ -1,0 +1,158 @@
+<auth-gate />
+<view class="assessment-page">
+  <view class="hero">
+    <text class="eyebrow">AI 保研评估</text>
+    <text class="title">把背景与目标整理成可验证的评估输入</text>
+    <text class="desc">结构化资料将与有限条真实案例证据一起用于评估；模型未配置时不会生成模拟结果。</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="card">正在加载资料…</view>
+
+  <block wx:else>
+    <view wx:if="{{billingEnabled}}" class="card credit-panel">
+      <view class="section-head"><text class="section-title">AI 评估额度</text><text class="link" bindtap="loadCredits">刷新次数 ›</text></view>
+      <text wx:if="{{creditAvailable !== null}}" class="credit-balance">可用 {{creditAvailable}} 次</text>
+      <text wx:else class="credit-status">{{creditLoading ? '正在核实额度…' : creditError || '额度尚未取得'}}</text>
+      <text class="credit-subtitle">游客免费 1 次，绑定学员后累计免费 5 次；成功评估才扣除 1 次。已保存的历史报告可免费查看。</text>
+      <view wx:if="{{checkoutEnabled}}" class="credit-offers">
+        <button wx:for="{{skuChoices}}" wx:key="key" data-key="{{item.key}}" class="credit-offer" disabled="{{purchasing || creditLoading}}" loading="{{purchasing}}" bindtap="onBuyCredit">{{item.count}} 次 · ¥{{item.price}}</button>
+      </view>
+      <text wx:else class="credit-status">目前仅显示真实额度，微信充值尚未开放；可咨询客服。</text>
+      <button wx:if="{{pendingPaymentOrderId}}" class="credit-verify" bindtap="onVerifyCreditPayment">核实上一笔充值订单</button>
+    </view>
+
+    <view class="card import-card">
+      <view class="import-copy">
+        <text class="section-title">导入已有材料</text>
+        <text class="import-desc">支持 Word、PDF 与常见图片。系统提取英语、科研、竞赛及目标等可补充信息；本科院校、专业、年级、绩点和排名以“我的个人资料”为准。</text>
+      </view>
+      <button
+        class="import-button"
+        loading="{{importing}}"
+        disabled="{{importing}}"
+        bindtap="onImportMaterial"
+      >导入材料</button>
+    </view>
+
+    <view class="card">
+      <view class="section-head">
+        <text class="section-title">基础背景 · 只读</text>
+        <text class="link" bindtap="onOpenProfileEdit">去编辑个人资料 ›</text>
+      </view>
+      <text class="profile-lock-note">以下学业资料与“我的个人资料”同步，评估页不能直接修改。</text>
+      <view class="profile-row"><text>本科院校</text><text class="locked-profile-value">{{profile.university || '未填写'}}</text></view>
+      <view class="profile-row"><text>专业</text><text class="locked-profile-value">{{profile.major || '未填写'}}</text></view>
+      <view class="profile-row"><text>当前年级</text><text class="locked-profile-value">{{profile.currentGrade || '未填写'}}</text></view>
+      <view class="profile-row"><text>绩点 / 均分</text><text class="locked-profile-value">{{profile.gpaText || '未填写'}}</text></view>
+      <view class="profile-row"><text>排名</text><text class="locked-profile-value">{{profile.rankText || '未填写'}}</text></view>
+      <textarea class="textarea" maxlength="1000" value="{{profile.backgroundNote}}" placeholder="其它背景说明（可选）" bindinput="onBackgroundNoteInput" />
+    </view>
+
+    <view id="section-english" class="card">
+      <view class="section-head">
+        <text class="section-title">英语</text>
+        <text class="link" bindtap="onAddEnglish">+ 添加</text>
+      </view>
+      <view wx:if="{{english.length === 0}}" class="empty">暂无英语成绩，可按需添加。</view>
+      <view wx:for="{{english}}" wx:key="index" class="entry">
+        <picker range="{{englishTypes}}" range-key="label" data-index="{{index}}" bindchange="onEnglishTypeChange">
+          <view class="picker-field">{{item.type}}</view>
+        </picker>
+        <input class="input" data-index="{{index}}" value="{{item.score}}" placeholder="分数" bindinput="onEnglishScoreInput" />
+        <input class="input" data-index="{{index}}" value="{{item.note}}" placeholder="备注（可选）" bindinput="onEnglishNoteInput" />
+        <button class="remove" data-index="{{index}}" bindtap="onRemoveEnglish">删除</button>
+      </view>
+    </view>
+
+    <view id="section-research" class="card">
+      <view class="section-head">
+        <text class="section-title">科研经历</text>
+        <text class="link" bindtap="onAddResearch">+ 添加</text>
+      </view>
+      <view wx:if="{{research.length === 0}}" class="empty">暂无科研经历，可按需添加。</view>
+      <view wx:for="{{research}}" wx:key="index" class="entry vertical">
+        <picker range="{{researchTiers}}" data-index="{{index}}" bindchange="onResearchTierChange">
+          <view class="picker-field picker-select">{{item.achievementTier || '成果级别：Nature / Science / SCI/SSCI / EI / 普刊等'}}</view>
+        </picker>
+        <input class="input" data-index="{{index}}" data-field="title" value="{{item.title}}" placeholder="项目 / 论文 / 科研经历名称" bindinput="onResearchInput" />
+        <input class="input" data-index="{{index}}" data-field="organization" value="{{item.organization}}" placeholder="实验室 / 学校 / 机构（可选）" bindinput="onResearchInput" />
+        <input class="input" data-index="{{index}}" data-field="role" value="{{item.role}}" placeholder="你的角色（可选）" bindinput="onResearchInput" />
+        <textarea class="textarea compact" data-index="{{index}}" data-field="description" value="{{item.description}}" placeholder="做了什么（可选）" bindinput="onResearchInput" />
+        <input class="input" data-index="{{index}}" data-field="output" value="{{item.output}}" placeholder="论文 / 专利 / 成果（可选）" bindinput="onResearchInput" />
+        <button class="remove" data-index="{{index}}" bindtap="onRemoveResearch">删除</button>
+      </view>
+    </view>
+
+    <view id="section-competition" class="card">
+      <view class="section-head">
+        <text class="section-title">竞赛与实践</text>
+        <text class="link" bindtap="onAddCompetition">+ 添加</text>
+      </view>
+      <view wx:if="{{competitions.length === 0}}" class="empty">暂无竞赛经历，可按需添加。</view>
+      <view wx:for="{{competitions}}" wx:key="index" class="entry vertical">
+        <view class="competition-search">
+          <input class="input" data-index="{{index}}" value="{{item.name}}" placeholder="输入关键词，如 数模 / 挑战杯 / 蓝桥杯" bindinput="onCompetitionNameInput" />
+          <view wx:if="{{competitionSuggestions[index] && competitionSuggestions[index].length}}" class="suggestions">
+            <view
+              wx:for="{{competitionSuggestions[index]}}"
+              wx:for-item="suggestion"
+              wx:for-index="suggestionIndex"
+              wx:key="*this"
+              class="suggestion-item"
+              data-index="{{index}}"
+              data-name="{{suggestion}}"
+              bindtap="onSelectCompetitionSuggestion"
+            >{{suggestion}}</view>
+          </view>
+        </view>
+        <picker range="{{competitionAwards}}" data-index="{{index}}" bindchange="onCompetitionAwardChange">
+          <view class="picker-field picker-select">{{item.award || '奖项级别：国一 / 国二 / 国三 / 省一 / 省二 / 省三等'}}</view>
+        </picker>
+        <input class="input" data-index="{{index}}" data-field="role" value="{{item.role}}" placeholder="你的角色（可选）" bindinput="onCompetitionInput" />
+        <textarea class="textarea compact" data-index="{{index}}" data-field="description" value="{{item.description}}" placeholder="补充说明（可选）" bindinput="onCompetitionInput" />
+        <button class="remove" data-index="{{index}}" bindtap="onRemoveCompetition">删除</button>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-head">
+        <text class="section-title">目标院校</text>
+        <text class="link" bindtap="onAddTarget">+ 添加（最多5所）</text>
+      </view>
+      <view wx:for="{{targets}}" wx:key="index" class="entry vertical">
+        <input class="input" data-index="{{index}}" data-field="schoolName" value="{{item.schoolName}}" placeholder="目标院校（必填）" bindinput="onTargetInput" />
+        <input class="input" data-index="{{index}}" data-field="programName" value="{{item.programName}}" placeholder="学院 / 项目（可选）" bindinput="onTargetInput" />
+        <input class="input" data-index="{{index}}" data-field="researchDirection" value="{{item.researchDirection}}" placeholder="研究方向（可选）" bindinput="onTargetInput" />
+        <input class="input" data-index="{{index}}" data-field="note" value="{{item.note}}" placeholder="其它说明（可选）" bindinput="onTargetInput" />
+        <button wx:if="{{targets.length > 1}}" class="remove" data-index="{{index}}" bindtap="onRemoveTarget">删除</button>
+      </view>
+    </view>
+
+    <view class="card context-card">
+      <view class="section-head"><text class="section-title">评估时参考的个人记录</text></view>
+      <view class="context-choice">
+        <view class="context-copy"><text class="context-title">导入我的规划</text><text class="context-hint">默认开启。提炼本人已保存的阶段计划、任务进展和课表；没有内容则自动跳过，待审核内容会单独标记。</text></view>
+        <switch checked="{{includePlanning}}" color="#0d9488" bindchange="onIncludePlanning" />
+      </view>
+      <view class="context-choice">
+        <view class="context-copy"><text class="context-title">考虑历史评估记录</text><text class="context-hint">默认开启。仅参考本人最近最多 3 次成功评估的精简摘要，去除重复；不会重新调用历史评估或收费。</text></view>
+        <switch checked="{{includeRecentAssessments}}" color="#0d9488" bindchange="onIncludeHistory" />
+      </view>
+      <text class="context-disclaimer">两个选项保存到当前草稿，仅影响新评估。原始个人记录由服务端按登录账号查取，不接收他人数据。</text>
+    </view>
+
+    <view class="status-card">
+      <text class="status-title">{{providerConfigured ? 'AI 运行环境已配置' : '当前仅保存 Draft'}}</text>
+      <text class="status-desc">
+        {{providerConfigured
+          ? '提交后将在后台完成分析，可离开此页并在历史评估中查看进度。'
+          : '案例 Retriever 与真实模型接入前，不生成模拟匹配分或录取概率。'}}
+      </text>
+    </view>
+
+    <view class="actions">
+      <button class="secondary" loading="{{saving}}" bindtap="onSaveDraft">保存评估草稿</button>
+      <button class="primary" loading="{{saving}}" bindtap="onRunAssessment">提交后台评估</button>
+    </view>
+  </block>
+</view>

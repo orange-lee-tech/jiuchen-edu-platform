@@ -1,0 +1,189 @@
+<view class="detail-page">
+  <view wx:if="{{loading}}" class="state-card">正在加载产品资料…</view>
+  <view wx:elif="{{error}}" class="state-card error">{{error}}</view>
+
+  <block wx:elif="{{view}}">
+    <view class="hero-card">
+      <image
+        wx:if="{{view.coverAsset}}"
+        class="cover"
+        src="{{view.coverAsset}}"
+        mode="aspectFill"
+      />
+      <view class="hero-body">
+        <text class="title">{{view.name}}</text>
+        <text wx:for="{{view.taglines}}" wx:key="*this" class="tagline">{{item}}</text>
+        <text wx:if="{{view.serviceModel}}" class="service-model">{{view.serviceModel}}</text>
+
+        <view class="meta-row">
+          <text wx:if="{{view.periodDisplay}}" class="meta-chip">{{view.periodDisplay}}</text>
+          <text wx:if="{{view.priceDisplay}}" class="meta-chip">{{view.priceDisplay}}</text>
+        </view>
+
+        <text wx:if="{{view.positioning}}" class="positioning">{{view.positioning}}</text>
+        <button class="consult" bindtap="onCustomerServiceTap">在线咨询</button>
+      </view>
+    </view>
+
+    <view wx:if="{{view.subproducts.length}}" class="section-card">
+      <text class="section-title">服务方向</text>
+      <view class="meta-row">
+        <text wx:for="{{view.subproducts}}" wx:key="*this" class="meta-chip">{{item}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.researchPackages.length}}" class="section-card">
+      <text class="section-title">科研项目套餐</text>
+      <text class="section-note">套餐信息按产品手册原文整理，具体交付以咨询确认与正式合同为准。</text>
+      <view wx:for="{{view.researchPackages}}" wx:key="index" class="service-row">
+        <view class="package-head">
+          <text class="row-title">{{item.name}}{{item.variant ? ' · ' + item.variant : ''}}</text>
+          <text wx:if="{{item.price}}" class="package-price">{{item.price}}</text>
+        </view>
+        <text wx:for="{{item.details}}" wx:key="*this" class="line">• {{item}}</text>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.paperPackages.length}}" class="section-card">
+      <text class="section-title">论文辅导服务套餐</text>
+      <text class="section-note">“待核对”及疑似排版/识别歧义内容按源手册保留，不自行修正。</text>
+      <view wx:for="{{view.paperPackages}}" wx:key="index" class="paper-package">
+        <view class="package-head">
+          <view>
+            <text class="row-title">{{item.module}} · {{item.content}}</text>
+            <text wx:if="{{item.details}}" class="detail-text">{{item.details}}</text>
+          </view>
+          <text wx:if="{{item.fee}}" class="package-price">{{item.fee}}</text>
+        </view>
+        <view class="package-meta-row">
+          <text wx:if="{{item.hours}}" class="resource-meta">课时：{{item.hours}}</text>
+          <text wx:if="{{item.period}}" class="{{item.periodPending ? 'pending' : 'resource-meta'}}">周期：{{item.period}}</text>
+          <text wx:if="{{item.teacher}}" class="resource-meta">导师：{{item.teacher}}</text>
+        </view>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.audience.length}}" class="section-card">
+      <text class="section-title">适合谁</text>
+      <view wx:for="{{view.audience}}" wx:key="index" class="bullet-row">
+        <text class="bullet">•</text>
+        <text class="bullet-text">{{item.text}}</text>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.highlights.length}}" class="section-card">
+      <text class="section-title">产品亮点</text>
+      <view class="chip-grid">
+        <view wx:for="{{view.highlights}}" wx:key="index" class="highlight-card">
+          <text class="highlight-title">{{item.title}}</text>
+          <text wx:if="{{item.detail}}" class="detail-text">{{item.detail}}</text>
+          <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{view.timeline.length}}" class="section-card">
+      <text class="section-title">阶段规划</text>
+      <view wx:for="{{view.timeline}}" wx:key="index" class="timeline-row">
+        <view class="timeline-dot"></view>
+        <view class="timeline-body">
+          <text class="row-title">{{item.stage}}{{item.timeRange ? ' · ' + item.timeRange : ''}}</text>
+          <text wx:for="{{item.tasks}}" wx:key="*this" class="line">• {{item}}</text>
+          <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{view.services.length}}" class="section-card">
+      <text class="section-title">核心服务</text>
+      <view wx:for="{{view.services}}" wx:key="index" class="service-row">
+        <text class="row-title">{{index + 1}}. {{item.name}}</text>
+        <text wx:if="{{item.summary}}" class="detail-text">{{item.summary}}</text>
+        <text wx:for="{{item.details}}" wx:key="*this" class="line">• {{item}}</text>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.modules.length}}" class="section-card">
+      <text class="section-title">详细规划模块</text>
+      <view wx:for="{{view.modules}}" wx:key="index" class="service-row">
+        <text class="row-title">{{item.name}}</text>
+        <text wx:for="{{item.details}}" wx:key="*this" class="line">• {{item}}</text>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.examples.length}}" class="section-card example-card">
+      <text class="section-title">手册规划示例</text>
+      <text class="section-note">示例用于解释规划方法，不作为真实保研案例数据。</text>
+      <view wx:for="{{view.examples}}" wx:key="index" class="service-row">
+        <text class="row-title">{{item.title}}</text>
+        <text wx:for="{{item.lines}}" wx:key="*this" class="line">• {{item}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.trainingItems.length}}" class="section-card">
+      <text class="section-title">专项能力培训</text>
+      <view wx:for="{{view.trainingItems}}" wx:key="index" class="resource-row">
+        <view>
+          <text class="row-title">{{item.name}}</text>
+          <text class="detail-text">{{item.purpose}}</text>
+          <text class="resource-meta">{{item.hours}}{{item.time ? ' · ' + item.time : ''}}</text>
+        </view>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.courses.length}}" class="section-card">
+      <text class="section-title">绩点课程资源（{{view.courses.length}}项）</text>
+      <text class="section-note">课程资源按原手册整理；标记“待核对”的链接不提供跳转。</text>
+      <view wx:for="{{view.courses}}" wx:key="index" class="resource-row">
+        <view>
+          <text class="row-title">{{item.grade}} · {{item.name}}</text>
+          <text class="detail-text">{{item.institution}}{{item.teacher ? ' · ' + item.teacher : ''}}{{item.hours ? ' · ' + item.hours : ''}}</text>
+          <text wx:if="{{item.resourceNote}}" class="pending">{{item.resourceNote}}</text>
+        </view>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{view.internships.length}}" class="section-card">
+      <text class="section-title">实习规划参考</text>
+      <text class="section-note">原图无法可靠识别的公司与渠道继续标记“待核对”，没有进行猜测补全。</text>
+      <view wx:for="{{view.internships}}" wx:key="index" class="resource-row">
+        <view>
+          <text class="row-title">{{item.direction}} · {{item.company}}</text>
+          <text class="detail-text">{{item.roles}}</text>
+          <text class="resource-meta">{{item.location}}{{item.pay ? ' · ' + item.pay : ''}}</text>
+          <text wx:if="{{item.channel}}" class="pending">{{item.channel}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{view.teachers.length}}" class="section-card">
+      <text class="section-title">{{view.teacherSectionTitle}}（{{view.teachers.length}}）</text>
+      <text class="section-note">师资信息按产品手册时点展示；“待核验”内容不参与 AI 录取判断。</text>
+      <view wx:for="{{view.teachers}}" wx:key="index" class="teacher-row">
+        <view class="teacher-main">
+          <text class="row-title">{{item.name}}</text>
+          <text wx:if="{{item.education}}" class="detail-text">{{item.education}}</text>
+          <text wx:if="{{item.courses}}" class="detail-text">课程：{{item.courses}}</text>
+          <text wx:if="{{item.claimedOffers}}" class="pending">{{item.claimedOffers}}</text>
+          <text class="verification">{{item.verification}}</text>
+        </view>
+        <text wx:if="{{item.source}}" class="source">{{item.source}}</text>
+      </view>
+    </view>
+
+    <view class="bottom-consult">
+      <view>
+        <text class="bottom-title">需要结合个人背景判断是否适合？</text>
+        <text class="bottom-desc">可联系九辰顾问进一步沟通。</text>
+      </view>
+      <button class="consult compact" bindtap="onCustomerServiceTap">在线咨询</button>
+    </view>
+  </block>
+</view>

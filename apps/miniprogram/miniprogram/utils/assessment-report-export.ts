@@ -1,0 +1,550 @@
+import type {
+  AssessmentRecord,
+} from './request'
+
+export type AssessmentReportReference = {
+  ref: string
+  caseId: string
+  title: string
+  metaLabel: string
+  excerpt: string
+  similarityReason: string
+  resultSummary: string
+  sourceType: 'jiuchen' | 'external' | 'official' | 'internal'
+}
+
+export type AssessmentReportExportContext = {
+  assessment: AssessmentRecord
+  displayName: string
+  userId?: string
+  exportDate?: string
+  references: AssessmentReportReference[]
+}
+
+const CHINESE_NUMBERS = [
+  '一',
+  '二',
+  '三',
+  '四',
+  '五',
+  '六',
+  '七',
+  '八',
+  '九',
+  '十',
+  '十一',
+  '十二',
+  '十三',
+  '十四',
+  '十五',
+  '十六',
+  '十七',
+  '十八',
+  '十九',
+  '二十',
+]
+
+function chineseNumber(index: number) {
+  return CHINESE_NUMBERS[index] || String(index + 1)
+}
+
+export function traceableAssessmentCaseId(value: string) {
+  return value.match(/\bJCC-\d{6}\b/i)?.[0].toUpperCase() || ''
+}
+
+function citationSuffix(
+  refs: string[],
+  references: AssessmentReportReference[],
+) {
+  const caseIdByRef = new Map(references.map((item) => [item.ref, traceableAssessmentCaseId(item.caseId)]))
+  const caseIds = refs
+    .map((ref) => caseIdByRef.get(ref))
+    .filter((value): value is string => Boolean(value))
+
+  const unique = [...new Set(caseIds)]
+  return unique.length ? `（参考案例 ${unique.join('、')}）` : ''
+}
+
+export function formatAssessmentDate(value: string | null | undefined) {
+  if (!value) return '未记录'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return '未记录'
+  const date = new Date(parsed.getTime() + 8 * 3600000)
+  return `${date.getUTCFullYear()}年${date.getUTCMonth() + 1}月${date.getUTCDate()}日`
+}
+
+function safeDisplayName(value: string) {
+  const trimmed = value.trim()
+  return trimmed && !['微信用户','用户','某学员'].includes(trimmed) ? trimmed : '姓名未登记'
+}
+
+export function assessmentExportIdentity(context:AssessmentReportExportContext){
+  return `${safeDisplayName(context.displayName)} · 用户ID：${context.userId||'用户ID未记录'} · 导出日期：${context.exportDate||formatAssessmentDate(new Date().toISOString())}`
+}
+
+export function assessmentInputLines(context:AssessmentReportExportContext){
+  const input=context.assessment.input
+  const labels:Record<string,string>={university:'本科院校',major:'专业',currentGrade:'年级',gpaText:'GPA',rankText:'排名',backgroundNote:'背景补充',
+    type:'类型',score:'成绩',note:'补充说明',title:'名称',achievementTier:'成果层次',role:'参与角色',organization:'组织',level:'级别',description:'描述',output:'成果',
+    name:'竞赛名称',award:'获奖',schoolName:'目标院校',programName:'目标专业',researchDirection:'研究方向',preferredRegions:'意向地区',
+    includePlanning:'参考规划',includeRecentAssessments:'参考最近历史'}
+  const values:Record<string,string>={cet4:'四级',cet6:'六级',ielts:'雅思',toefl:'托福',gre:'GRE',school:'校级',provincial:'省级',national:'国家级',international:'国际级',other:'其他',project:'科研项目',paper:'论文',patent:'专利',lab:'实验室'}
+  const render=(record:Record<string,unknown>)=>Object.entries(record).filter(([,value])=>value!==null&&value!==undefined&&value!=='')
+    .map(([key,value])=>`${labels[key]||key}：${Array.isArray(value)?value.join('、'):typeof value==='boolean'?(value?'是':'否'):values[String(value)]||String(value)}`)
+  const lines=['用户提供的信息',...render(input.profile)]
+  for(const [title,records] of [['英语成绩',input.english],['科研经历',input.research],['竞赛经历',input.competitions],['申请目标',input.targets]] as const){
+    if(records?.length){lines.push(title);records.forEach((record,index)=>lines.push(`（${index+1}）`,...render(record as unknown as Record<string,unknown>)))}
+  }
+  if(input.preferences)lines.push('个人偏好',...render(input.preferences as Record<string,unknown>))
+  if(input.contextOptions)lines.push('评估参考范围',...render(input.contextOptions))
+  return lines
+}
+
+function safeFilePart(value: string) {
+  return value.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '')
+}
+
+export function buildAssessmentReportBaseFilename(
+  context: AssessmentReportExportContext,
+) {
+  const name =
+    safeFilePart(safeDisplayName(context.displayName)).slice(0, 24) || '用户'
+  const date = formatAssessmentDate(
+    context.assessment.completedAt || context.assessment.updatedAt,
+  )
+  return `${name}${date}评估`
+}
+
+function targetLabel(
+  tier: 'reach' | 'match' | 'conservative' | 'insufficient_data',
+) {
+  if (tier === 'reach') return '冲刺'
+  if (tier === 'match') return '匹配'
+  if (tier === 'conservative') return '稳妥'
+  return '信息不足'
+}
+
+function priorityLabel(priority: 'high' | 'medium' | 'low') {
+  if (priority === 'high') return '优先'
+  if (priority === 'medium') return '重要'
+  return '建议'
+}
+
+function pushFindingSection(
+  lines: string[],
+  title: string,
+  findings: Array<{
+    title: string
+    detail: string
+    evidenceRefs: string[]
+  }>,
+  references: AssessmentReportReference[],
+) {
+  if (!findings.length) return
+  lines.push(title)
+
+  findings.forEach((finding, index) => {
+    lines.push(
+      `（${chineseNumber(index)}）${finding.title}`,
+      `1. ${finding.detail}${citationSuffix(finding.evidenceRefs, references)}`,
+      '',
+    )
+  })
+}
+
+export function buildAssessmentReportPlainText(
+  context: AssessmentReportExportContext,
+) {
+  const { assessment, references } = context
+  const output = assessment.output
+
+  if (!output) return ''
+
+  const lines: string[] = [
+    '九辰保研评估报告',
+    assessmentExportIdentity(context),
+    `姓名：${safeDisplayName(context.displayName)}`,
+    `评估日期：${formatAssessmentDate(assessment.completedAt || assessment.updatedAt)}`,
+    `当前背景：${assessment.input.profile.university} · ${assessment.input.profile.major}`,
+    assessment.model.name ? `评估模型：${assessment.model.name}` : '',
+    '',
+    ...assessmentInputLines(context),
+    '',
+    '学业背景与评估概要',
+    output.profileSummary,
+    '',
+  ]
+
+  pushFindingSection(lines, '一、优势', output.strengths, references)
+  pushFindingSection(lines, '二、风险', output.risks, references)
+
+  if (output.targetAssessments.length) lines.push('三、目标评估')
+  output.targetAssessments.forEach((target, index) => {
+    const program = target.programName ? ` · ${target.programName}` : ''
+    lines.push(
+      `（${chineseNumber(index)}）${target.schoolName}${program}（${targetLabel(target.tier)}）`,
+      `1. 判断：${target.rationale}${citationSuffix(target.evidenceRefs, references)}`,
+    )
+
+    if (target.gapItems.length) {
+      lines.push('2. 关键差距：')
+      target.gapItems.forEach((item, gapIndex) => {
+        lines.push(`（${gapIndex + 1}）${item}`)
+      })
+    }
+
+    if (target.actions.length) {
+      lines.push('3. 针对性动作：')
+      target.actions.forEach((item, actionIndex) => {
+        lines.push(`（${actionIndex + 1}）${item}`)
+      })
+    }
+
+    lines.push('')
+  })
+
+  if (output.recommendedActions.length) {
+    lines.push('四、推荐行动')
+    output.recommendedActions.forEach((action, index) => {
+      lines.push(
+        `（${chineseNumber(index)}）${action.title}（${priorityLabel(action.priority)}）`,
+        `1. ${action.rationale}`,
+      )
+      if (action.timeframe) lines.push(`2. 建议周期：${action.timeframe}`)
+      lines.push('')
+    })
+  }
+
+  lines.push(
+    '五、联系老师',
+    '（一）人工咨询',
+    '1. 可携带本次评估结果联系九辰老师，重点确认目标梯度、关键差距与下一阶段执行安排。',
+    '2. 咨询时建议同时说明目标院校、时间窗口和当前最希望解决的问题。',
+    '',
+  )
+
+  if (references.length) {
+    lines.push('六、参考案例')
+    references.forEach((reference) => {
+      const caseId = traceableAssessmentCaseId(reference.caseId)
+      lines.push(
+        `${caseId ? `${caseId} ` : ''}${reference.title}${reference.metaLabel ? `（${reference.metaLabel}）` : ''}`,
+      )
+      if (reference.similarityReason) {
+        lines.push(`1. 与本次判断的关联：${reference.similarityReason}`)
+      }
+      if (reference.resultSummary) {
+        lines.push(`2. 结果参照：${reference.resultSummary}`)
+      }
+      if (reference.excerpt) {
+        lines.push(`3. 案例摘要：${reference.excerpt}`)
+      }
+      lines.push('')
+    })
+  }
+
+  const referenced = new Set(references.map(item => item.ref))
+  assessment.evidence?.filter(item => !referenced.has(item.ref)).forEach(item => {
+    lines.push(`${item.kind === 'case' ? '案例依据' : '证据依据'}：${item.title}（${item.sourceLabel}）`, item.excerpt || '', '')
+  })
+  output.similarCases.filter(item => !referenced.has(item.evidenceRef)).forEach(item => {
+    lines.push(`参考案例（${item.sourceType === 'jiuchen' ? '九辰案例' : '外部案例'}；编号关联未核实）`,
+      item.similarityReason, item.resultSummary, '')
+  })
+  if (output.uncertainties.length) lines.push('七、不确定性及说明', ...output.uncertainties, '')
+  if (output.disclaimer) lines.push('免责声明', output.disclaimer)
+
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+
+export function buildAssessmentReportMarkdown(
+  context: AssessmentReportExportContext,
+) {
+  const text = buildAssessmentReportPlainText(context)
+  if (!text) return ''
+  return text.split('\n').map((line,index)=> {
+    if(index===0)return '# '+line
+    if(/^[一二三四五六七八九十]+、|^学业背景与评估概要$|^免责声明$/.test(line))return '## '+line
+    if(/^（[一二三四五六七八九十]+）/.test(line))return '### '+line
+    return line
+  }).join('\n\n')
+}
+
+
+function utf8Bytes(value: string) {
+  const bytes: number[] = []
+
+  for (let index = 0; index < value.length; index += 1) {
+    let code = value.charCodeAt(index)
+
+    if (code >= 0xd800 && code <= 0xdbff && index + 1 < value.length) {
+      const next = value.charCodeAt(index + 1)
+      if (next >= 0xdc00 && next <= 0xdfff) {
+        code = 0x10000 + ((code - 0xd800) << 10) + (next - 0xdc00)
+        index += 1
+      }
+    }
+
+    if (code <= 0x7f) {
+      bytes.push(code)
+    } else if (code <= 0x7ff) {
+      bytes.push(
+        0xc0 | (code >> 6),
+        0x80 | (code & 0x3f),
+      )
+    } else if (code <= 0xffff) {
+      bytes.push(
+        0xe0 | (code >> 12),
+        0x80 | ((code >> 6) & 0x3f),
+        0x80 | (code & 0x3f),
+      )
+    } else {
+      bytes.push(
+        0xf0 | (code >> 18),
+        0x80 | ((code >> 12) & 0x3f),
+        0x80 | ((code >> 6) & 0x3f),
+        0x80 | (code & 0x3f),
+      )
+    }
+  }
+
+  return new Uint8Array(bytes)
+}
+
+function crc32(bytes: Uint8Array) {
+  let crc = 0xffffffff
+
+  for (const byte of bytes) {
+    crc ^= byte
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0)
+    }
+  }
+
+  return (crc ^ 0xffffffff) >>> 0
+}
+
+function writeUint16(view: DataView, offset: number, value: number) {
+  view.setUint16(offset, value, true)
+}
+
+function writeUint32(view: DataView, offset: number, value: number) {
+  view.setUint32(offset, value >>> 0, true)
+}
+
+function concatBytes(parts: Uint8Array[]) {
+  const size = parts.reduce((total, part) => total + part.length, 0)
+  const merged = new Uint8Array(size)
+  let offset = 0
+
+  for (const part of parts) {
+    merged.set(part, offset)
+    offset += part.length
+  }
+
+  return merged
+}
+
+function zipStore(entries: Array<{ name: string; data: Uint8Array }>) {
+  const localParts: Uint8Array[] = []
+  const centralParts: Uint8Array[] = []
+  let localOffset = 0
+
+  entries.forEach((entry) => {
+    const name = utf8Bytes(entry.name)
+    const checksum = crc32(entry.data)
+
+    const localHeader = new Uint8Array(30)
+    const localView = new DataView(localHeader.buffer)
+    writeUint32(localView, 0, 0x04034b50)
+    writeUint16(localView, 4, 20)
+    writeUint16(localView, 6, 0x0800)
+    writeUint16(localView, 8, 0)
+    writeUint16(localView, 10, 0)
+    writeUint16(localView, 12, 0)
+    writeUint32(localView, 14, checksum)
+    writeUint32(localView, 18, entry.data.length)
+    writeUint32(localView, 22, entry.data.length)
+    writeUint16(localView, 26, name.length)
+    writeUint16(localView, 28, 0)
+
+    localParts.push(localHeader, name, entry.data)
+
+    const centralHeader = new Uint8Array(46)
+    const centralView = new DataView(centralHeader.buffer)
+    writeUint32(centralView, 0, 0x02014b50)
+    writeUint16(centralView, 4, 20)
+    writeUint16(centralView, 6, 20)
+    writeUint16(centralView, 8, 0x0800)
+    writeUint16(centralView, 10, 0)
+    writeUint16(centralView, 12, 0)
+    writeUint16(centralView, 14, 0)
+    writeUint32(centralView, 16, checksum)
+    writeUint32(centralView, 20, entry.data.length)
+    writeUint32(centralView, 24, entry.data.length)
+    writeUint16(centralView, 28, name.length)
+    writeUint16(centralView, 30, 0)
+    writeUint16(centralView, 32, 0)
+    writeUint16(centralView, 34, 0)
+    writeUint16(centralView, 36, 0)
+    writeUint32(centralView, 38, 0)
+    writeUint32(centralView, 42, localOffset)
+
+    centralParts.push(centralHeader, name)
+    localOffset += localHeader.length + name.length + entry.data.length
+  })
+
+  const local = concatBytes(localParts)
+  const central = concatBytes(centralParts)
+  const end = new Uint8Array(22)
+  const endView = new DataView(end.buffer)
+
+  writeUint32(endView, 0, 0x06054b50)
+  writeUint16(endView, 4, 0)
+  writeUint16(endView, 6, 0)
+  writeUint16(endView, 8, entries.length)
+  writeUint16(endView, 10, entries.length)
+  writeUint32(endView, 12, central.length)
+  writeUint32(endView, 16, local.length)
+  writeUint16(endView, 20, 0)
+
+  return concatBytes([local, central, end])
+}
+
+function xmlEscape(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function paragraphStyle(line: string, index: number) {
+  if (index === 0) return 'Title'
+  if (/^[一二三四五六七八九十]+、/.test(line)) return 'Heading1'
+  if (/^（[一二三四五六七八九十]+）/.test(line)) return 'Heading2'
+  return 'Normal'
+}
+
+export function buildAssessmentReportDocx(
+  context: AssessmentReportExportContext,
+) {
+  const plainText = buildAssessmentReportPlainText(context)
+  const lines = plainText.split(/\r?\n/)
+
+  const paragraphs = lines.map((line, index) => {
+    if (!line) return '<w:p/>'
+    const style = paragraphStyle(line, index)
+    return (
+      '<w:p>' +
+      '<w:pPr><w:pStyle w:val="' + style + '"/></w:pPr>' +
+      '<w:r><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="Microsoft YaHei"/></w:rPr>' +
+      '<w:t xml:space="preserve">' + xmlEscape(line) + '</w:t></w:r>' +
+      '</w:p>'
+    )
+  }).join('')
+
+  const documentXml =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+    '<w:body>' +
+    paragraphs +
+    '<w:sectPr>' +
+    '<w:headerReference w:type="default" r:id="rId2"/><w:footerReference w:type="default" r:id="rId3"/>' +
+    '<w:pgSz w:w="11906" w:h="16838"/>' +
+    '<w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/>' +
+    '</w:sectPr>' +
+    '</w:body></w:document>'
+
+  const stylesXml =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:style>' +
+    '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/><w:spacing w:after="320"/></w:pPr><w:rPr><w:b/><w:sz w:val="36"/><w:szCs w:val="36"/></w:rPr></w:style>' +
+    '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="Heading 1"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:before="260" w:after="120"/></w:pPr><w:rPr><w:b/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr></w:style>' +
+    '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="Heading 2"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:before="160" w:after="80"/></w:pPr><w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:style>' +
+    '</w:styles>'
+
+  const contentTypes =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+    '<Override PartName="/word/header.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' +
+    '<Override PartName="/word/footer.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
+    '</Types>'
+
+  const rootRels =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+    '</Relationships>'
+
+  const documentRels =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header.xml"/>' +
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer.xml"/>' +
+    '</Relationships>'
+
+  const archive = zipStore([
+    { name: '[Content_Types].xml', data: utf8Bytes(contentTypes) },
+    { name: '_rels/.rels', data: utf8Bytes(rootRels) },
+    { name: 'word/document.xml', data: utf8Bytes(documentXml) },
+    { name: 'word/_rels/document.xml.rels', data: utf8Bytes(documentRels) },
+    { name: 'word/styles.xml', data: utf8Bytes(stylesXml) },
+    { name: 'word/header.xml', data:utf8Bytes(`<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:t>${xmlEscape(assessmentExportIdentity(context))}</w:t></w:r></w:p></w:hdr>`) },
+    { name: 'word/footer.xml', data:utf8Bytes('<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t>九辰教育 · 第 </w:t></w:r><w:fldSimple w:instr="PAGE"/><w:r><w:t> 页</w:t></w:r></w:p></w:ftr>') },
+  ])
+
+  return archive.buffer as ArrayBuffer
+}
+
+export function writeAssessmentReportFile(
+  fileName: string,
+  data: string | ArrayBuffer,
+) {
+  const filePath = `${wx.env.USER_DATA_PATH}/${safeFilePart(fileName)}`
+  const manager = wx.getFileSystemManager()
+
+  return new Promise<string>((resolve, reject) => {
+    const success = () => resolve(filePath)
+    const fail = (error: { errMsg?: string }) => {
+      reject(new Error(error.errMsg || 'report_file_write_failed'))
+    }
+
+    if (typeof data === 'string') {
+      manager.writeFile({
+        filePath,
+        data,
+        encoding: 'utf8',
+        success,
+        fail,
+      })
+      return
+    }
+
+    manager.writeFile({
+      filePath,
+      data,
+      success,
+      fail,
+    })
+  })
+}
+
+export function cleanupExpiredAssessmentExports(now=Date.now()){
+  const manager=wx.getFileSystemManager()
+  if(typeof manager.readdir!=='function')return
+  manager.readdir({dirPath:wx.env.USER_DATA_PATH,success:result=>{
+    result.files.forEach(name=>{
+      const timestamp=name.match(/^jiuchen-report-(\d{13})-/)?.[1]
+      if(timestamp&&now-Number(timestamp)>10*60*1000)manager.unlink({filePath:wx.env.USER_DATA_PATH+'/'+name,fail:()=>{}})
+    })
+  },fail:()=>{}})
+}

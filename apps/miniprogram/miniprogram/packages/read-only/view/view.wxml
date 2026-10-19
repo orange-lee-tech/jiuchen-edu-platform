@@ -1,0 +1,4 @@
+<view class="entry">
+  <text wx:if="{{loading}}">正在确认目标身份的只读权限…</text>
+  <view wx:else><text>{{error}}</text><button bindtap="onRetry">重新确认权限</button><button bindtap="onExit">返回原工作台</button></view>
+</view>

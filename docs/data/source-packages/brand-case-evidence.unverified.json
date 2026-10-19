@@ -1,0 +1,36 @@
+{
+  "dataset_scope": "jiuchen_case_evidence",
+  "separated_from": "jiuchen_product_knowledge",
+  "source_file": "九辰保研品牌手册.pdf",
+  "source_date": "2026-09-12",
+  "verification_status": "unverified",
+  "student_cases": [
+    {"student":"王同学","undergraduate_school":"南京理工大学","ranking":"3/86（前3%）","english":"六级598","research":"一作CCF-B论文，SCI二区一作","competitions":"数模国一（队长）、计算机设计大赛国二","admission_school":"清华大学","source_page":6,"verification_status":"unverified"},
+    {"student":"孙同学","undergraduate_school":"东华大学","ranking":"5/68（前7.4%）","english":"六级548","research":"国创主持，一作核心论文，具备材料表征实验能力","competitions":"市赛一等奖、电赛、挑战杯省级三等奖","admission_school":"中国科学院","source_page":6,"verification_status":"unverified"},
+    {"student":"何同学","undergraduate_school":"浙江理工大学","ranking":"3/40，综测1/40","english":"六级461","research":"主持校级大创，参与结构工程课题","competitions":"物理、数学国二，BIM国三，工程管理省二","admission_school":"华南理工大学","source_page":6,"verification_status":"unverified"},
+    {"student":"李同学","undergraduate_school":"西南财经大学","ranking":"2/72（前2.8%）","english":"六级586","research":"国社科参与人，省级大创主持","competitions":"挑战杯、互联网+省银，大英赛省三","admission_school":"南京大学","source_page":6,"verification_status":"unverified"},
+    {"student":"韩同学","undergraduate_school":"安徽农业大学","ranking":"1/45（专业第一）","english":"六级445","research":"一作EI会议论文，参与省级课题，获软件著作权","competitions":"两项测绘智能赛国二、数模省三","admission_school":"山东大学","source_page":6,"verification_status":"unverified"},
+    {"student":"游同学","undergraduate_school":"江西财经大学","ranking":"2/72（前2.8%）","english":"六级562，雅思7.0","research":"一作CSSCI论文，主持国家级大创，参与国家社科项目","competitions":"三创赛国二（队长）、挑战杯省一、互联网+省银","admission_school":"浙江大学","source_page":7,"verification_status":"unverified"},
+    {"student":"王同学","undergraduate_school":"河南理工大学","ranking":"2/52（前3.8%）","english":"六级512","research":"参与省级自科项目，SCI二区论文","competitions":"数模国一（队长）、数学竞赛国二、华为杯数模省一","admission_school":"中国科学技术大学","source_page":7,"verification_status":"unverified"},
+    {"student":"吴同学","undergraduate_school":"浙江传媒学院","ranking":"2/52（前3.8%）","english":"六级532，雅思7.0","research":"CSSCI扩展版一作论文，主持省级大创，参与省部级课题","competitions":"广告艺术大赛省一、挑战杯省二、互联网+校银","admission_school":"华东政法大学","source_page":7,"verification_status":"unverified"},
+    {"student":"赵同学","undergraduate_school":"中南大学","ranking":"3/57（前5.3%）","english":"六级596，雅思7.0","research":"主持国家级大创，一作CSSCI论文，参与国家社科项目","competitions":"互联网+省金、数模省一、挑战杯省二","admission_school":"清华大学","source_page":7,"verification_status":"unverified"},
+    {"student":"朱同学","undergraduate_school":"苏州大学","ranking":"2/72（前2.8%）","english":"六级528，雅思7.5","research":"一作CSSCI论文，主持国家级大创，参与国家社科项目","competitions":"挑战杯省一、模拟法庭国二、互联网+校金","admission_school":"浙江大学","source_page":7,"verification_status":"unverified"},
+    {"student":"郑同学","undergraduate_school":"四川师范大学","ranking":"2/48（前4.2%）","english":"六级512，雅思6.5","research":"一作北大核心论文，主持省级大创，参与省级传播课题","competitions":"计设大赛省一、挑战杯省二、互联网+校银","admission_school":"北京师范大学","source_page":8,"verification_status":"unverified"},
+    {"student":"黄同学","undergraduate_school":"江西财经大学","ranking":"3/62（前4.8%）","english":"六级521，雅思6.5","research":"一作CSSCI扩展版论文，主持省级大创，参与省级课题","competitions":"挑战杯省一、公共管理案例赛省二、互联网+校银","admission_school":"厦门大学","source_page":8,"verification_status":"unverified"},
+    {"student":"徐同学","undergraduate_school":"中南财经政法大学","ranking":"1/62（专业第一）","english":"六级612，雅思7.5","research":"一作CSSCI论文，主持国家级大创，参与国家社科项目","competitions":"挑战杯省一、数模省一、互联网+省金","admission_school":"复旦大学","source_page":8,"verification_status":"unverified"},
+    {"student":"高同学","undergraduate_school":"南昌大学","ranking":"3/65（前4.6%）","english":"六级548","research":"一作SCI二区论文，主持国家级大创","competitions":"化学实验创新赛国二、挑战杯省一、数模省三","admission_school":"厦门大学","source_page":8,"verification_status":"unverified"},
+    {"student":"陈同学","undergraduate_school":"西南大学","ranking":"2/36（前5.6%）","english":"六级498分","research":"一作学术论文，主持省级大创","competitions":"斩获省、国家级文艺与专业竞赛多项奖项","admission_school":"中国传媒大学","source_page":8,"verification_status":"unverified"},
+    {"student":"张同学","undergraduate_school":"广东财经大学","ranking":"3/65（前4.6%）","english":"四级536、六级498","research":"主持省级大创，二作发表学术论文，参与省级金融课题","competitions":"数模省一、挑战杯省二、东方财富杯省二","admission_school":"暨南大学","source_page":9,"verification_status":"unverified"},
+    {"student":"陈同学","undergraduate_school":"华中科技大学","ranking":"2/64（前3.1%）","english":"六级582，托福102","research":"一作SCI二区论文，主持国家级大创","competitions":"光电设计赛国一（队长）、挑战杯省一、数模省一","admission_school":"清华大学","source_page":9,"verification_status":"unverified"},
+    {"student":"李同学","undergraduate_school":"西南政法大学","ranking":"2/65（前3.1%）","english":"六级562，雅思7.5","research":"一作CSSCI论文，主持国家级大创","competitions":"挑战杯省一、模拟法庭国二、互联网+校金","admission_school":"浙江大学","source_page":9,"verification_status":"unverified"},
+    {"student":"彭同学","undergraduate_school":"天津商业大学","ranking":"1/56（专业第一）","english":"六级498","research":"主持国家级大创，一作科技核心论文","competitions":"数模国二、统计建模省一、泰迪杯数据挖掘省二","admission_school":"南开大学","source_page":9,"verification_status":"unverified"},
+    {"student":"黄同学","undergraduate_school":"杭州电子科技大学","ranking":"2/65（前3.1%）","english":"六级572，托福102","research":"一作CCF-B会议论文，国创项目1项","competitions":"电子设计竞赛国一（队长）、智能汽车竞赛省一","admission_school":"复旦大学","source_page":9,"verification_status":"unverified"}
+  ],
+  "offer_showcase": {
+    "source_page": 23,
+    "schools": ["南开大学","北京师范大学","清华大学","中国科学技术大学","中国传媒大学","浙江大学","同济大学","上海交通大学","山东大学"],
+    "verification_status": "unverified",
+    "note": "页面展示为“九辰录取OFFER”喜报视觉证据；不并入产品知识主数据。"
+  },
+  "archive_note": "原转换包内容留档；当前不得进入 AI Retriever 或公开真实案例数据集。"
+}

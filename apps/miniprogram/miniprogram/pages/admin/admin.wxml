@@ -1,0 +1,256 @@
+<auth-gate />
+<view class="admin-page">
+  <view class="admin-head">
+    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : section === 'admin-readonly' ? '只读切换身份' : section === 'admin-analytics' ? 'AI 评估与充值统计' : '资讯运营'}}</text>
+    <text class="admin-desc">当前工作页只处理一类业务。其他功能从底部工作台直接进入，不必在这里重复切换菜单。</text>
+  </view>
+
+  <view class="admin-quick-return" bindtap="onReturnWorkspace">‹ 返回管理工作台</view>
+  <view wx:if="{{loading}}" class="card">正在读取最新管理数据…</view>
+  <view wx:elif="{{loadError}}" class="card"><text class="card-title">数据未能读取</text><text class="card-note">{{loadError}}</text><button class="primary" bindtap="loadData">重新读取</button></view>
+
+  <block wx:elif="{{section === 'admin-users'}}">
+    <view class="list-toolbar"><text class="card-title">内部编号</text><button class="mini" disabled="{{actionLoading}}" bindtap="onNewEntry">新增 / 绑定</button></view>
+    <view wx:if="{{formMode === 'create'}}" class="card form-card">
+      <text class="card-title">生成内部ID</text>
+      <picker range="{{idTypes}}" range-key="label" value="{{newIdTypeIndex}}" bindchange="onIdTypeChange">
+        <view class="picker-field">{{idTypes[newIdTypeIndex].label}} ›</view>
+      </picker>
+      <input class="input" value="{{newIdName}}" placeholder="姓名（学生/老师可填写）" bindinput="onNameInput" />
+      <button class="primary" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="onCreateId">生成新编号</button><button class="secondary" disabled="{{actionLoading}}" bindtap="onCloseForm">取消</button>
+    </view>
+
+    <view wx:if="{{formMode === 'bind'}}" class="card form-card">
+      <text class="card-title">绑定游客账号</text>
+      <picker range="{{availableIds}}" range-key="businessId" value="{{bindIdIndex}}" bindchange="onBindIdChange">
+        <view class="picker-field">{{availableIds.length ? availableIds[bindIdIndex].businessId : '暂无可用ID'}} ›</view>
+      </picker>
+      <picker range="{{guestUsers}}" range-key="displayLabel" value="{{bindUserIndex}}" bindchange="onBindUserChange">
+        <view class="picker-field">{{guestUsers.length ? guestUsers[bindUserIndex].displayLabel : '暂无可绑定账号'}} ›</view>
+      </picker>
+      <button class="primary" loading="{{actionLoading}}" disabled="{{actionLoading || !availableIds.length || !guestUsers.length}}" bindtap="onBindId">确认绑定账号</button><button class="secondary" disabled="{{actionLoading}}" bindtap="onCloseForm">取消</button>
+    </view>
+
+    <view class="card">
+      <input class="input" placeholder="搜索内部编号" value="{{idQuery}}" bindinput="onIdSearch" />
+      <picker range="{{idFilters}}" value="{{idFilter}}" bindchange="onIdFilter"><view class="picker-field">{{idFilters[idFilter]}} · 匹配 {{visibleIds.length}} 个 ›</view></picker>
+      <view wx:if="{{!visibleIds.length}}" class="card-note">没有匹配的编号，请调整搜索或状态。</view>
+      <view wx:for="{{visibleIds}}" wx:key="id" class="id-row">
+        <text class="row-title">{{item.entityLabel}}</text>
+        <text class="id-code" selectable>{{item.businessId}}</text>
+        <view class="id-meta"><text>{{item.typeLabel}}</text><text class="status {{item.status}}">{{item.statusLabel}}</text><text wx:if="{{item.own}}">本人编号</text><text wx:if="{{item.accountLabel}}">{{item.accountLabel}}</text></view>
+        <text wx:if="{{item.type === 'student'}}" class="row-desc">{{item.schoolMajorLabel}}</text>
+        <text wx:if="{{item.type === 'student' && item.userId}}" class="row-desc">学业阶段：{{item.currentStage || '资料待完善'}}</text>
+        <text wx:if="{{item.type === 'student' && item.assignmentState === 'unassigned'}}" class="state-note">未分配老师</text>
+        <text wx:if="{{item.type === 'teacher' && item.userId}}" class="state-note">{{item.assignmentLabel}}</text>
+        <text wx:if="{{item.type === 'teacher' && item.userId}}" class="row-desc">实际负责学员：{{item.assignmentCount == null ? '来源未记录' : item.assignmentCount + ' 人'}}</text>
+        <text wx:if="{{item.type === 'admin'}}" class="state-note">{{item.assignmentLabel}}</text>
+        <view class="id-actions"><button class="mini copy" data-id="{{item.id}}" bindtap="onCopyId">复制编号</button><button wx:if="{{item.actions.length}}" class="mini" disabled="{{actionLoading}}" data-id="{{item.id}}" bindtap="onIdActions">{{item.actions[0] === '暂停访问' ? '暂停 / 更多' : item.actions[0] === '恢复编号' ? '恢复 / 更多' : '绑定 / 更多'}}</button></view>
+      </view>
+    </view>
+    <view class="card visitor-card"><text class="card-title">未绑定身份账号</text><text class="visitor-count">{{unboundAccountCount}}</text><text class="card-note">来自真实普通账号记录，仅展示数量；不把未绑定账号冒充学员，也不展示昵称作为实名。</text></view>
+    <view class="card"><text class="card-title">正式账号</text><text class="card-note">账号显示名不等于实名。正式身份以内部编号与已绑定档案为准；资料缺失时显示待完善。</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的正式账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayLabel}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
+  </block>
+
+  <block wx:elif="{{section === 'admin-readonly'}}">
+    <view class="card readonly-notice">
+      <text class="card-title">管理员 · 只读身份切换</text>
+      <text class="card-note">可查看任何已建档学员与老师的专属信息。点击后仍使用自己的管理员登录身份，不会获得目标账号的修改、付款、上传或AI评估执行权限。</text>
+    </view>
+    <view class="card">
+      <text class="card-title">全部学员</text>
+      <view wx:for="{{students}}" wx:key="id" class="readonly-row" data-id="{{item.id}}" bindtap="onReadOnlyStudent">
+        <view class="row-main"><text class="row-title">{{item.name}}</text><text class="row-desc">{{item.university || '院校待补充'}} · {{item.major || '专业待补充'}}</text><text class="row-desc">{{item.stateLabel}}</text></view>
+        <text class="readonly-go">{{item.canView === false ? '暂不可查看' : '查看 ›'}}</text>
+      </view>
+      <text wx:if="{{!students.length}}" class="card-note">暂无学员档案</text>
+    </view>
+    <view class="card">
+      <text class="card-title">全部老师</text>
+      <view wx:for="{{teachers}}" wx:key="id" class="readonly-row" data-id="{{item.id}}" bindtap="onReadOnlyTeacher">
+        <view class="row-main"><text class="row-title">{{item.name}}</text><text class="row-desc">{{item.title || '职务待补充'}} · {{item.stateLabel}}</text></view>
+        <text class="readonly-go">{{item.canView === false ? '暂不可查看' : '查看 ›'}}</text>
+      </view>
+      <text wx:if="{{!teachers.length}}" class="card-note">暂无老师档案</text>
+    </view>
+  </block>
+
+  <block wx:elif="{{section === 'admin-assignments'}}">
+    <view class="card">
+      <text class="card-title">建立师生关系</text>
+      <picker range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="onStudentChange">
+        <view class="picker-field">{{students.length ? students[studentIndex].name : '暂无学员'}} ›</view>
+      </picker>
+      <picker range="{{teachers}}" range-key="name" value="{{teacherIndex}}" bindchange="onTeacherChange">
+        <view class="picker-field">{{teachers.length ? teachers[teacherIndex].name : '暂无老师'}} ›</view>
+      </picker>
+      <picker range="{{relationshipOptions}}" value="{{relationship === 'primary' ? 0 : 1}}" bindchange="onRelationshipChange">
+        <view class="picker-field">{{relationship === 'primary' ? '主辅导' : '协助'}} ›</view>
+      </picker>
+      <button class="primary" loading="{{actionLoading}}" bindtap="onAddAssignment">添加分配</button>
+    </view>
+
+    <view class="card">
+      <text class="card-title">当前分配</text>
+      <view wx:for="{{assignments}}" wx:key="id" class="list-row">
+        <view class="row-main">
+          <text class="row-title">{{item.teacherName}} → {{item.studentName}}</text>
+          <text class="row-desc">{{item.relationship === 'primary' ? '主辅导' : '协助'}}</text>
+        </view>
+        <button class="mini danger" data-id="{{item.id}}" bindtap="onDeleteAssignment">移除</button>
+      </view>
+    </view>
+  </block>
+
+  <block wx:elif="{{section === 'admin-analytics'}}">
+    <view class="card">
+      <view class="analytics-switch">
+        <button class="mini {{analyticsPeriod === 'week' ? 'selected' : ''}}" data-period="week" bindtap="onAnalyticsPeriod">周</button>
+        <button class="mini {{analyticsPeriod === 'month' ? 'selected' : ''}}" data-period="month" bindtap="onAnalyticsPeriod">月</button>
+        <button class="mini {{analyticsPeriod === 'year' ? 'selected' : ''}}" data-period="year" bindtap="onAnalyticsPeriod">年</button>
+        <button class="mini" bindtap="loadAnalytics">刷新</button>
+      </view>
+      <view class="analytics-switch">
+        <button class="mini {{chartMode === 'line' ? 'selected' : ''}}" data-mode="line" bindtap="onChartMode">折线图</button>
+        <button class="mini {{chartMode === 'bar' ? 'selected' : ''}}" data-mode="bar" bindtap="onChartMode">柱状图</button>
+      </view>
+      <view wx:if="{{analytics}}" class="supplier-monitor {{analytics.supplier.status}}">
+        <view class="supplier-monitor-head"><text>AI 供应商余额预警</text><text class="supplier-status">{{analytics.supplier.status === 'normal' ? '常规监测' : analytics.supplier.status === 'critical' ? '紧急补充' : analytics.supplier.status === 'warning' ? '提前预警' : analytics.supplier.status === 'early_stage' ? '样本不足' : '需要核实'}}</text></view>
+        <text class="supplier-message">{{analytics.supplier.message}}</text>
+        <view wx:if="{{analytics.supplier.availableFen !== null}}" class="supplier-metrics">
+          <text>参考可用余额 ¥{{(analytics.supplier.availableFen / 100)}}</text>
+          <text wx:if="{{analytics.supplier.estimatedRunwayDays !== null}}">预计可支撑 {{analytics.supplier.estimatedRunwayDays}} 天</text>
+        </view>
+        <text class="supplier-tip">公司运营管理 API 服务商余额；这里不是用户充值余额。读数尚未自动同步时，不可将展示视为实时保障。</text>
+      </view>
+      <text wx:if="{{analyticsWarning}}" class="card-note" user-select="true">{{analyticsWarning}}。数据源不可用，不计作 0。</text>
+      <text wx:if="{{analytics}}" class="card-note" user-select="true">区间：{{analytics.range.from}} 至 {{analytics.range.before}}（终点不包含） · {{analytics.range.timezone}}
+{{analytics.range.basis}}</text>
+      <view wx:if="{{analytics}}" class="analytics-summary">
+        <view class="analytics-stat"><text>成功评估</text><text class="analytics-stat-number">{{analytics.summary.assessmentCount}}</text></view>
+        <view class="analytics-stat"><text>区间评估用户</text><text class="analytics-stat-number">{{assessmentUserCountLabel}}</text></view>
+        <view class="analytics-stat"><text>当前账号记录数（全库）</text><text class="analytics-stat-number">{{userCount === null ? '读取失败' : userCount}}</text></view>
+        <view class="analytics-stat amber"><text>成功充值订单</text><text class="analytics-stat-number">{{analytics.summary.rechargeCount === null ? '读取失败' : analytics.summary.rechargeCount}}</text><text>购入 {{analytics.summary.rechargeCreditCount === null ? '读取失败' : analytics.summary.rechargeCreditCount}} 次</text></view>
+      </view>
+      <text wx:if="{{userCountError}}" class="card-note">账号来源读取失败：{{userCountError}}；评估统计保持独立。</text>
+      <view wx:if="{{analytics}}" class="card-note">
+        <text>创建任务 {{analytics.summary.createdCount}} · 曾开始任务 {{analytics.summary.startedTaskCount}} · 失败 {{analytics.summary.failedCount}} · 运行中 {{analytics.summary.runningCount}}
+</text>
+        <text>充值金额 ¥{{rechargeAmountLabel}} · 实际消费笔数 {{analytics.summary.consumptionCount === null ? '读取失败' : analytics.summary.consumptionCount}}
+</text>
+        <text>全历史免费发放 {{analytics.ledger.freeGranted === null ? '读取失败' : analytics.ledger.freeGranted}} · 付费发放 {{analytics.ledger.paidGranted === null ? '读取失败' : analytics.ledger.paidGranted}} · 已扣额度 {{analytics.ledger.debitedCredits === null ? '读取失败' : analytics.ledger.debitedCredits}}
+</text>
+        <text>全历史结算余额 {{analytics.ledger.balance === null ? '读取失败' : analytics.ledger.balance}} · 当前冻结 {{analytics.reservations.held === null ? '读取失败' : analytics.reservations.held}} · 区间退回 {{analytics.summary.releasedCount === null ? '读取失败' : analytics.summary.releasedCount}} 笔 / {{analytics.reservations.released === null ? '读取失败' : analytics.reservations.released}} 额度</text>
+        <text>免费/付费实际使用：来源未记录。未归因消费 {{analytics.ledger.unallocatedConsumption === null ? '读取失败' : analytics.ledger.unallocatedConsumption}}。不推造历史分摊。
+</text>
+        <text>成功但无完成时间：{{analytics.gaps.successWithoutCompletedAt}}（全历史）；成功但无消费账本：{{analytics.gaps.successWithoutDebit === null ? '未能核对' : analytics.gaps.successWithoutDebit}}；完成时间疑似时区偏移：{{analytics.gaps.suspectEightHourCompletionCount}} 条（待核对日期归桶）。
+</text>
+        <text>历史每次运行请求、逐次扣减金额及实际 API 成本尚未记录。次数对比仅为经营辅助，不能当作资金收支。</text>
+      </view>
+      <text class="card-note">周为近7天、月为近12个月、年为近5年。计数以服务器真实成功记录为准，零值也显示。</text>
+    </view>
+    <view wx:for="{{analyticsPlots}}" wx:for-item="plot" wx:key="key" class="card">
+      <text class="card-title">{{plot.title}}</text>
+      <text class="card-note">当前区间最大值：{{plot.max}} {{plot.unit}}，左右滑动可查看完整数据</text>
+      <scroll-view scroll-x class="analytics-scroll">
+        <view class="analytics-plot" style="width:{{plot.width}}rpx">
+          <view class="analytics-axis"></view>
+          <block wx:for="{{plot.points}}" wx:for-item="point" wx:key="key">
+            <view wx:if="{{chartMode === 'bar'}}" class="analytics-bar {{plot.key === 'rechargeCount' ? 'amber' : ''}}" style="left:{{point.barX}}rpx;bottom:36rpx;height:{{point.height}}rpx"></view>
+            <block wx:else>
+              <view wx:if="{{point.hasPrev}}" class="analytics-line {{plot.key === 'rechargeCount' ? 'amber' : ''}}" style="left:{{point.prevX}}rpx;bottom:{{point.prevBottom}}rpx;width:{{point.length}}rpx;transform:rotate({{point.angle}}deg)"></view>
+              <view class="analytics-dot {{plot.key === 'rechargeCount' ? 'amber' : ''}}" style="left:{{point.x}}rpx;bottom:{{point.bottom}}rpx"></view>
+            </block>
+            <text class="analytics-value" style="left:{{point.x}}rpx;bottom:{{point.labelBottom}}rpx">{{point.display}}</text>
+            <text class="analytics-label" style="left:{{point.x}}rpx">{{point.label}}</text>
+          </block>
+        </view>
+      </scroll-view>
+    </view>
+    <view wx:if="{{analytics}}" class="card">
+      <text class="card-title">充值订单与额度消费笔数对比</text>
+      <text class="card-note">顺序：时间 · 充值订单 · 额度消费。仅用于经营观察，不代表资金收支；免费使用也会产生消费。</text>
+      <view wx:for="{{analytics.buckets}}" wx:key="key" class="account-row"><text>{{item.label}} · {{item.rechargeCount === null ? '支付读取失败' : item.rechargeCount}} 单 · {{item.consumptionCount === null ? '账本读取失败' : item.consumptionCount}} 笔</text></view>
+    </view>
+    <view class="card">
+      <text class="card-title">当前区间充值金额排行榜</text>
+      <text class="card-note">统计当前区间支付成功订单，按实际支付金额降序排列，不含赠送次数。</text>
+      <text wx:if="{{analytics && analytics.sources.payments.status === 'ok' && !analytics.payers.length}}" class="card-note">目前尚无充值订单。</text>
+      <view wx:for="{{analytics ? analytics.payers : []}}" wx:key="userIdSuffix" class="analytics-rank-row">
+        <text class="analytics-order">{{index + 1}}</text>
+        <view class="analytics-rank-user"><text class="row-title">{{item.displayName}}</text><text class="row-desc">账号尾号 {{item.userIdSuffix}} · {{item.rechargeCount}} 单</text></view>
+        <text class="analytics-rank-fee">¥{{item.amountYuan}}</text>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view wx:if="{{newsV2Enabled}}" class="card">
+      <text class="card-title">即将退役文章 · {{retirementTasks.length}} 条任务</text>
+      <text wx:if="{{retirementError}}" class="card-note">{{retirementError}}</text>
+      <button class="mini" bindtap="loadRetirementTasks">刷新任务</button>
+      <view wx:for="{{retirementTasks}}" wx:key="taskId" class="list-row news-row">
+        <view class="row-main">
+          <text class="row-title">{{item.title}}</text>
+          <text class="row-desc">来源时间待核实：{{item.sourceLabel}} · 退役：{{item.retireLabel}}</text>
+          <text class="row-desc">{{item.phase === 'buffering' ? '缓冲中' : '历史任务'}} · {{item.state === 'todo' ? '待办' : item.state === 'acknowledged' ? '知晓' : item.state === 'doing' ? '在办' : '反馈'}} · 操作人尾号 {{item.operatorSuffix || '暂无'}}</text>
+          <text wx:if="{{item.note}}" class="row-desc" user-select="true">{{item.note}}</text>
+        </view>
+        <button class="mini" data-id="{{item.taskId}}" bindtap="onRetirementTask">处理</button>
+      </view>
+    </view>
+    <view class="card">
+      <text class="card-title">九辰教育服务号</text>
+      <text class="card-note">默认从服务号已发布图文同步到小程序资讯，不重复人工发布。需要服务端配置服务号 AppID / AppSecret 且账号具有对应发布接口权限。</text>
+      <button class="primary" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="onSyncNews">立即同步最近动态</button>
+      <text wx:if="{{newsSyncSummary}}" class="card-note" user-select="true">{{newsSyncSummary}}</text>
+      <text wx:if="{{newsSyncHistory}}" class="card-note" user-select="true">{{newsSyncHistory}}</text>
+    </view>
+    <view wx:if="{{newsV2Enabled}}" class="card">
+      <text class="card-title">核实公众号原文补录</text>
+      <text class="card-note">仅用于同账号后台已发表、但接口未返回的图文或贴图。核对原文链接，并导入完整正文或原始图片；发表时间不能核实可留空。补录不算自动同步成功。</text>
+      <button class="mini" bindtap="onVerifiedOfficialToggle">{{verifiedFormOpen ? '收起补录' : '核实并补录原文'}}</button>
+      <view wx:if="{{verifiedFormOpen}}" class="verified-form">
+        <text class="verified-label">原文标题</text>
+        <input class="input" value="{{verifiedDraft.title}}" data-key="title" bindinput="onVerifiedOfficialInput" maxlength="255" placeholder="与公众号后台发表记录逐字核对" />
+        <text class="verified-label">微信原文链接</text>
+        <input class="input" value="{{verifiedDraft.articleUrl}}" data-key="articleUrl" bindinput="onVerifiedOfficialInput" placeholder="https://mp.weixin.qq.com/..." />
+        <text class="verified-label">发表时间（北京时间，可留空；日期与时刻须同时填写）</text>
+        <view class="verified-date">
+          <picker mode="date" value="{{verifiedDraft.date}}" bindchange="onVerifiedOfficialDate"><view class="picker-field">{{verifiedDraft.date || '选择发表日期'}}</view></picker>
+          <picker mode="time" value="{{verifiedDraft.time}}" bindchange="onVerifiedOfficialTime"><view class="picker-field">{{verifiedDraft.time || '选择发表时刻'}}</view></picker>
+        </view>
+        <text class="verified-label">分类（必填，逗号分隔，最多8个）</text>
+        <input class="input" value="{{verifiedDraft.tags}}" data-key="tags" bindinput="onVerifiedOfficialInput" placeholder="例如：推免，院校" />
+        <text class="verified-label">摘要与封面（可选）</text>
+        <input class="input" value="{{verifiedDraft.summary}}" data-key="summary" bindinput="onVerifiedOfficialInput" maxlength="1000" placeholder="后台实际摘要；没有则留空" />
+        <input class="input" value="{{verifiedDraft.coverUrl}}" data-key="coverUrl" bindinput="onVerifiedOfficialInput" placeholder="微信图片链接；没有则留空" />
+        <picker range="{{mediaChoices}}" value="{{verifiedDraft.mediaType === 'video' ? 2 : verifiedDraft.mediaType === 'image' ? 1 : 0}}" bindchange="onVerifiedOfficialMedia"><view class="picker-field">{{verifiedDraft.mediaType === 'video' ? '视频原文（跳转公众号）' : verifiedDraft.mediaType === 'image' ? '贴图（站内图片）' : '图文（站内阅读）'}}</view></picker>
+        <text wx:if="{{verifiedDraft.mediaType !== 'video'}}" class="verified-label">站内内容（必填）</text>
+        <text wx:if="{{verifiedDraft.mediaType !== 'video'}}" class="card-note">每行一段文字或一张图片的完整 https://mmbiz.qpic.cn/ 链接，按公众号原稿顺序填写。贴图至少一张图片；勿填原文网页链接。</text>
+        <textarea wx:if="{{verifiedDraft.mediaType !== 'video'}}" class="input verified-body" value="{{verifiedDraft.body}}" data-key="body" bindinput="onVerifiedOfficialInput" maxlength="30000" placeholder="正文第一段&#10;https://mmbiz.qpic.cn/..." />
+        <button class="primary" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="onVerifiedOfficialSubmit">核对后提交补录</button>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">已同步内容与标签 · 待分类 {{pendingClassificationCount}} 篇</text>
+      <button class="mini" bindtap="onNewsSort">{{newsUnclassifiedFirst ? '未分类优先' : '发表时间倒序'}} · 点击切换</button>
+      <text class="card-note">默认按发表时间倒序，可切换未分类优先；添加标签后学员才可见。重新同步不会覆盖已有标签。留空保存会再次隐藏该文章对学员的展示。</text>
+      <view wx:for="{{posts}}" wx:key="id" class="list-row news-row">
+        <view class="row-main">
+          <text class="row-title">{{item.title}}</text>
+          <text class="row-desc">{{item.dateLabel}}</text>
+          <text wx:if="{{item.lifecycleLabel}}" class="row-desc">{{item.lifecycleLabel}}</text>
+          <text class="row-desc">{{item.source === 'wechat_official' ? (item.publicationTimeSource === 'admin_verified_publish_record' ? '管理员核实原文' : '服务号同步') : '九辰编辑'}} · {{item.status === 'active' ? '已发布' : '已隐藏'}}</text>
+          <view class="tag-list">
+            <text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="tag-chip">{{tag}}</text>
+            <text wx:if="{{item.tags.length === 0}}" class="tag-empty">未分类</text>
+          </view>
+        </view>
+        <button class="mini" data-id="{{item.id}}" bindtap="onPreviewNews">预览正文</button>
+        <button class="mini" data-id="{{item.id}}" bindtap="onEditNewsTags">管理标签</button>
+      </view>
+    </view>
+  </block>
+</view>

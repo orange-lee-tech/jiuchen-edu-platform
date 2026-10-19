@@ -1,0 +1,39 @@
+name: P1 isolated release archive
+on:
+  push:
+    branches: [p1/foundation]
+    paths: ['.github/workflows/p1-release-archive-local.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  archive:
+    runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 858aa6a5bebbdb88346c6282f691b4976886b935
+          fetch-depth: 0
+          path: release-source
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 283aaf15fc0047f100028eee547a5581c3f8c047
+          path: release-tools
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify and package immutable source
+        shell: bash
+        run: |
+          test "$(git -C release-source rev-parse HEAD)" = "858aa6a5bebbdb88346c6282f691b4976886b935"
+          node release-tools/tools/release/package-isolated-api.mjs release-source 858aa6a5bebbdb88346c6282f691b4976886b935 "$RUNNER_TEMP/p1-858aa6a5-archive" | tee "$RUNNER_TEMP/p1-858aa6a5-summary.txt"
+          cat "$RUNNER_TEMP/p1-858aa6a5-summary.txt" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p1-api-858aa6a5-readonly
+          path: ${{ runner.temp }}/p1-858aa6a5-archive/
+          retention-days: 7
+          if-no-files-found: error

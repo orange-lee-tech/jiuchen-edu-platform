@@ -53,7 +53,9 @@ API 校验并标准化输入
         ↓
 构建 Agent 上下文
         ↓
-调用 AI 模型
+记录检索证据 / 数据版本
+        ↓
+通过 Model Provider Adapter 调用 AI 模型
         ↓
 结构化输出 Schema 校验
         ↓
@@ -69,7 +71,7 @@ API 校验并标准化输入
 - 不在小程序直接调用 AI 模型；
 - 不让模型直接修改额度或数据库业务状态；
 - AI 失败时不应无故消耗额度；
-- 输出必须经过服务端 Schema 校验。
+- 输出必须经过服务端 Schema 校验；\n- V1 默认采用检索增强 + 模型 API，不把训练/微调自有大模型作为前置条件；\n- 模型输出中的院校、案例与建议应尽量能追溯到检索证据。
 
 ## 4. 评估额度充值
 
@@ -121,3 +123,48 @@ CreditLedger 增加额度
 ```
 
 因此开发过程不是“所有东西做完 -> 一次性上传服务器”。基础 API 能跑通后，应尽早建立 staging 环境，后续逐步联调微信真实能力。
+
+
+## 6. 九辰教育服务号资讯同步
+
+```text
+九辰教育服务号发布文章
+        ↓
+微信官方 access_token
+        ↓
+freepublish/batchget
+        ↓
+按 sourceKey 去重 / upsert
+        ↓
+news_posts
+        ↓
+GET /news
+        ↓
+小程序资讯
+```
+
+约束：
+- AppID/AppSecret 只保存在服务端；
+- Production 使用固定公网出口 IP 并加入服务号 API IP 白名单；
+- 同步失败不得阻断登录、课堂等其它模块；
+- 重复同步不得产生重复文章；
+- 小程序不直接访问微信服务号 Secret API。
+
+## 7. Production 部署与故障隔离
+
+官网静态站点与小程序 API 可共用阿里云 ECS，但发布链独立：
+
+```text
+官网 Git 仓库 -> build out/ -> 官网静态目录 -> Host Nginx
+小程序 Git 仓库 -> API build/container -> 独立服务 -> reverse proxy
+```
+
+两者不得共享：
+- 项目目录；
+- Node 进程；
+- .env；
+- 发布脚本；
+- 日志文件；
+- rollback 状态。
+
+同一 ECS 仍是共享故障域；宿主机宕机、磁盘耗尽或主机级安全事件仍会同时影响两者。

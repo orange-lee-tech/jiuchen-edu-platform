@@ -1,0 +1,55 @@
+/* Home RC1: one visual system, one accent, centered equal-weight entry cards. */
+.home-page{box-sizing:border-box;min-height:100vh;padding:24rpx 22rpx calc(42rpx + env(safe-area-inset-bottom));background:#edf3f8;color:#142d48;}
+.eyebrow,.home-title,.home-description,.home-caption,.section-heading,.action-title,.action-description,.service-title,.service-description{display:block;}
+.home-intro{padding:32rpx 27rpx 30rpx;background:linear-gradient(140deg,#143a62 0%,#155b75 100%);border:1rpx solid #2b6279;border-radius:10rpx;box-shadow:0 6rpx 16rpx rgba(16,52,77,.11);}
+.eyebrow{font-size:22rpx;font-weight:700;color:#eed39a;letter-spacing:1rpx;}
+.home-title{font-size:40rpx;line-height:1.35;font-weight:800;margin-top:13rpx;color:#fff;}
+.home-description{font-size:24rpx;line-height:1.62;color:#e3edf3;margin-top:11rpx;}
+button{box-sizing:border-box;margin-left:0;margin-right:0;border-radius:8rpx;white-space:normal;}
+button::after{border:0;}
+.home-primary{display:flex;width:100%;justify-content:center;align-items:center;margin:23rpx 0 0;min-height:86rpx;padding:12rpx 20rpx;background:#ecca80;color:#173951;font-size:28rpx;line-height:1.4;font-weight:800;}
+.home-caption{font-size:21rpx;line-height:1.55;color:#d6e6ef;margin-top:14rpx;}
+.home-minor-link{display:block;margin-top:12rpx;color:#f5dbac;font-size:22rpx;font-weight:700;text-decoration:underline;}
+.home-schedule{margin-top:18rpx;padding:20rpx 24rpx;background:#fff;border:1rpx solid #cbdbe5;border-radius:9rpx;}
+.home-schedule-meta{display:block;margin-top:8rpx;font-size:23rpx;line-height:1.5;color:#38566b;}
+.home-schedule-course{display:flex;align-items:stretch;gap:18rpx;margin-top:15rpx;padding-top:15rpx;border-top:1rpx solid #dce7ed;color:#38566b;}
+.home-course-when{display:flex;flex:0 0 168rpx;flex-direction:column;justify-content:center;padding-right:16rpx;border-right:1rpx solid #d5e2e9;}
+.home-course-day,.home-course-time,.home-course-name,.home-course-location{display:block;}
+.home-course-day{font-size:22rpx;font-weight:800;color:#1f6176;}
+.home-course-time{margin-top:4rpx;font-size:20rpx;color:#5f7888;}
+.home-course-main{display:flex;flex:1;min-width:0;flex-direction:column;justify-content:center;}
+.home-course-name{font-size:24rpx;font-weight:800;line-height:1.45;color:#173f59;word-break:break-word;}
+.home-course-location{margin-top:5rpx;font-size:20rpx;color:#687f8d;}
+.home-section-bar{display:flex;align-items:center;justify-content:space-between;gap:10rpx;margin:28rpx 0 15rpx;}
+.section-heading{font-size:30rpx;font-weight:800;line-height:1.45;color:#142d48;margin:0;}
+.section-supplement{font-size:19rpx;color:#647b8c;text-align:right;}
+.action-list,.service-links{display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;row-gap:14rpx;}
+.action-row,.service-link{position:relative;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;align-items:center;width:49%;text-align:center;background:#fff;border:1rpx solid #cbdbe5;border-top:4rpx solid #28768b;border-radius:9rpx;box-shadow:0 3rpx 9rpx rgba(20,57,81,.055);}
+.action-row{min-height:220rpx;padding:26rpx 15rpx 23rpx;}
+.action-pressed,.service-pressed{background:#e4f0f4;}
+.action-symbol,.service-symbol{display:flex;align-items:center;justify-content:center;width:73rpx;height:73rpx;background:#dcebf2;border-radius:10rpx;flex-shrink:0;}
+.action-icon,.service-icon{width:46rpx;height:46rpx;}
+.action-title,.service-title{font-size:28rpx;font-weight:800;line-height:1.35;color:#173b57;margin-top:13rpx;}
+.action-description,.service-description{font-size:20rpx;line-height:1.45;color:#637989;margin-top:6rpx;padding:0;text-align:center;}
+.action-more{position:absolute;right:15rpx;top:17rpx;color:#66899a;font-size:28rpx;line-height:1;}
+.service-section{margin-top:28rpx;padding-top:19rpx;border-top:2rpx solid #cfdde5;}
+.service-links{margin-top:15rpx;}
+.service-link{min-height:201rpx;padding:23rpx 14rpx;}
+.service-website{width:100%;min-height:157rpx;}
+.service-website .service-symbol{width:66rpx;height:66rpx;}
+.service-website .service-icon{width:42rpx;height:42rpx;}
+
+/* Product contract: cards immediately inside first-level menus use saturated blue,
+   never white, gray or pale fills. Yellow is an accent, not a competing tile color. */
+.action-row,.service-link{
+ background:#175b86;
+ border:1rpx solid #194f74;
+ border-top:5rpx solid #eac263;
+ box-shadow:0 5rpx 12rpx rgba(9,53,83,.13);
+}
+.action-row:nth-child(even),.service-link:nth-child(even){background:#1b668f;}
+.action-row:active,.service-link:active,.action-pressed,.service-pressed{background:#10496d;}
+.action-symbol,.service-symbol{background:#eac263;}
+.action-title,.service-title{color:#fff;}
+.action-description,.service-description{color:#e3eef5;}
+.action-more{color:#f3cf74;}

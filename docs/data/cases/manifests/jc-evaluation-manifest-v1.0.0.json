@@ -1,0 +1,52 @@
+{
+  "evaluation_version": "JC-EVAL-1.0.0",
+  "status": "frozen",
+  "suite_size": 92,
+  "subsets": {
+    "core_representative": {
+      "size": 80,
+      "selection": "deterministic stratified proportional sampling by discipline"
+    },
+    "language_extension": {
+      "size": 12,
+      "selection": "targeted unseen cases to improve language-band measurement without reusing boundary-review cases",
+      "language_score_distribution_in_full_suite": {
+        "2": 4,
+        "3": 5,
+        "4": 5,
+        "5": 5
+      }
+    }
+  },
+  "selection_seed": "jiuchen-eval-v1.0.0-freeze-2026-10-02",
+  "excluded_from_evaluation": {
+    "boundary_review_cases": 30,
+    "reason": "used to validate/develop V1 rules; not blind"
+  },
+  "rule_label_coverage": {
+    "discipline": 87,
+    "academic_strength": 36,
+    "language_strength": 19,
+    "research_strength": 65,
+    "competition_strength": 50
+  },
+  "historical_outcome_available": 86,
+  "files": {
+    "model_visible": "eval_inputs.jsonl",
+    "scorer_only_rule_reference": "eval_expected_rule_labels.jsonl",
+    "retrospective_only": "eval_outcomes_retrospective.jsonl"
+  },
+  "leakage_rules": [
+    "Evaluation case IDs must not appear in rule supervision train/dev.",
+    "Evaluation case IDs must not appear in RAG corpus during evaluation.",
+    "Reported outcomes are never passed to the model during evaluation.",
+    "Expected rule labels are scorer-only."
+  ],
+  "metrics_v1": {
+    "reporting": "Core and targeted extensions must be reported separately.",
+    "discipline": ["exact_match_accuracy"],
+    "scored_dimensions": ["exact_match_accuracy", "within_one_band_accuracy"],
+    "uncertainty": ["abstain_when_reference_unavailable_rate"],
+    "overall": "not scored in V1 because official overall ground truth is not defined"
+  }
+}

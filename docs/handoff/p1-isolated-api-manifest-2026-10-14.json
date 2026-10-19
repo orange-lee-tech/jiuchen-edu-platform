@@ -1,0 +1,871 @@
+{
+  "candidateSha": "eda525c1a2276af90668849b669e9bce19a4fd7d",
+  "sourceProductionSha": "8cc4bb85ffdf3e86e7a13a89d119f1b110491e48",
+  "archive": "jiuchen-api-eda525c1a2276af90668849b669e9bce19a4fd7d-readonly.tar.gz",
+  "sha256": "18e6cb2ee5228f27e433623b3ad0da0647ff94efd84225d088350a0d640fb25c",
+  "archiveBytes": 304088,
+  "runtimePaths": [
+    "services/api"
+  ],
+  "testOnlyPaths": [
+    "tools/testing/generate-school-directory.cjs",
+    "apps/miniprogram/miniprogram/packages/schools/data.ts"
+  ],
+  "privateEnvironmentIncluded": false,
+  "privateCasesIncluded": false,
+  "nodeModulesIncluded": false,
+  "distIncluded": false,
+  "changeFiles": [
+    ".github/workflows/news-v2-mysql-gate.yml",
+    ".github/workflows/profile-mysql-gate.yml",
+    "services/api/package.json",
+    "services/api/src/app.test.ts",
+    "services/api/src/app.ts",
+    "services/api/src/config/env.ts",
+    "services/api/src/db/check-profile-foundation.ts",
+    "services/api/src/db/news-v2-schema-contract.test.ts",
+    "services/api/src/db/news-v2-schema-contract.ts",
+    "services/api/src/db/profile-schema-contract.test.ts",
+    "services/api/src/db/profile-schema-contract.ts",
+    "services/api/src/db/upgrade-enrollment-year.ts",
+    "services/api/src/db/upgrade-news-v2.ts",
+    "services/api/src/domain/assessment.ts",
+    "services/api/src/routes/mobile-admin.ts",
+    "services/api/src/routes/news-v2.test.ts",
+    "services/api/src/routes/news-v2.ts",
+    "services/api/src/routes/news.ts",
+    "services/api/src/routes/profile.test.ts",
+    "services/api/src/routes/read-only-workspace.ts",
+    "services/api/src/routes/release-candidate-compatibility.test.ts",
+    "services/api/src/scripts/sync-official-account.ts",
+    "services/api/src/services/admin-identity-directory.test.ts",
+    "services/api/src/services/admin-identity-directory.ts",
+    "services/api/src/services/assessment-runtime.test.ts",
+    "services/api/src/services/assessment-runtime.ts",
+    "services/api/src/services/commercial-analytics.test.ts",
+    "services/api/src/services/commercial-analytics.ts",
+    "services/api/src/services/news-lifecycle.test.ts",
+    "services/api/src/services/news-lifecycle.ts",
+    "services/api/src/services/news-v2-store.ts",
+    "services/api/src/services/news.ts",
+    "services/api/src/services/official-account.test.ts",
+    "services/api/src/services/official-account.ts",
+    "services/api/src/services/read-only-context.test.ts",
+    "services/api/src/services/read-only-context.ts",
+    "services/api/src/services/session.ts",
+    "tools/testing/generate-school-directory.cjs"
+  ],
+  "files": [
+    {
+      "path": "apps/miniprogram/miniprogram/packages/schools/data.ts",
+      "blob": "dbae6c63f8412aca4e22a4e1cf5debc6189662e2",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/.dockerignore",
+      "blob": "087cc413d185f3bdbaa0e9d5b32df660aa078754",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/.env.example",
+      "blob": "c5f744d9d5b23f8d7a5d4d48e3a3e2858dc9108c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/Dockerfile",
+      "blob": "53daadcc62bc87430f6bcf34ead6359eea5bd93b",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/drizzle.config.ts",
+      "blob": "07d37e91211c3b51322c4740d29df2117dd3a978",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/package-lock.json",
+      "blob": "7c8069745095090cf2cb2d9b25bb593b30dc302e",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/package.json",
+      "blob": "889d0d006e8f7fbf35238dbb7be6063f4b814c6c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/app.test.ts",
+      "blob": "9eab81ebb89811db8273a9c29b82d9bceadb4bfd",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/app.ts",
+      "blob": "6a6a30207e438eac1a06134334d195d47a24a322",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/config/env.test.ts",
+      "blob": "92a777bf6ce81665877fd0ede1af6203a2ca0875",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/config/env.ts",
+      "blob": "cc310c1b159ad6aaf962acdb5cda62b165e673bd",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/config/health-config.test.ts",
+      "blob": "3a407af9c56e6c6d916864ae9c9ee39a3c7cd952",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-brand-public.test.ts",
+      "blob": "e4251bb511fb263c24fbe992ffbd5e544832640a",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-brand-public.ts",
+      "blob": "d065b2d104fe10b2ccf7bc912f790490fecb63f5",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-product-qingbei.ts",
+      "blob": "93e31c19e4a52063395a25f87ac3918784318f20",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-product-research.ts",
+      "blob": "0a18b7c8be68c00350e00250ff8a77f28ec973be",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-product-wenlu.ts",
+      "blob": "6f1a518849d86eed3b89d8c59d7199440a8bfb2e",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-product-yuesheng.part1.ts",
+      "blob": "2a6f9a487a24647f1c59f02a5212a3da38e1d326",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-product-yuesheng.part2.ts",
+      "blob": "fe4dadb8d8d09b90815f75aac27565b916d692fe",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-product-yuesheng.part3.ts",
+      "blob": "af9c6e4d3e2939c802c35d4a109e4c76715ebbc9",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-product-yuesheng.part4.ts",
+      "blob": "64ac97a34038429b54ae8c92a0b3f90ef38bdded",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-product-yuesheng.ts",
+      "blob": "8bba6589a2201b4d6ceed2fce2053578ad7c0c2c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-products.part1.ts",
+      "blob": "b94bdb12802ac0539e2cb91252fc806116881f86",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-products.part2.ts",
+      "blob": "49b0d351eadaa5111c43121857c24f1da163013e",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-products.part3.ts",
+      "blob": "ede0460a1b6e4313e0812ffe729012261f66f8c7",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-products.part4.ts",
+      "blob": "80dd10c915709c3afdb4dcf39172d82a4d1b9638",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-products.test.ts",
+      "blob": "6b2126ca7a3c7fdc1f272662c8974c285cc736bf",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/bundled-products.ts",
+      "blob": "4c05d3a081157d63131afa85e3d34ef199d0fd49",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/normalize-converted-product.ts",
+      "blob": "5f9b7e395bc4aa894c49892ca93eaa38818ed449",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/data/school-directory.generated.ts",
+      "blob": "3be5b8b46df2198468ff56b51afedc671823dec3",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/assessment-schema-contract.test.ts",
+      "blob": "7fdefb04644a79eef476a818e7020c294730636e",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/assessment-schema-contract.ts",
+      "blob": "11e637126564d7ebe4dab46b9633a76221a2f327",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/check-assessment-foundation.ts",
+      "blob": "77f3192cdad513bc6fadb2957d67485c238c3931",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/check-credit-payment-foundation.ts",
+      "blob": "beb2646465a4d1caa83b504f8d3d9698eee04569",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/check-growth-profile-foundation.ts",
+      "blob": "750f3f77c3766985cc7c7ba6f4b384c85fa27f55",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/check-news-experience.ts",
+      "blob": "f1e8657b1ec8616d1705ff5999d5fa4d90048496",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/check-profile-foundation.ts",
+      "blob": "9b2d9b7aee2f6332de86b90566841ac16f583923",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/client.ts",
+      "blob": "cfcfa8339e0aada1696daf718ea4f1ef82debae2",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/credit-payment-schema-contract.test.ts",
+      "blob": "e8a91a6b5064adba29fa93cd9cf57ce27911c6d2",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/credit-payment-schema-contract.ts",
+      "blob": "e5e94ae76289016465785967996a67dd3332acc3",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/growth-profile-schema-contract.test.ts",
+      "blob": "7ebfdb5e8a3779a8451abe00fa34be5743c45b0a",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/growth-profile-schema-contract.ts",
+      "blob": "f538b9ccf6e27639ea4bd0567edf646e8b5f895e",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/news-v2-schema-contract.test.ts",
+      "blob": "a9222fa832b8fef547a9c005fcef8caa6bf612b3",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/news-v2-schema-contract.ts",
+      "blob": "1beadd3c17de70f71c4718cee5385ec329bbe25c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/profile-schema-contract.test.ts",
+      "blob": "4a391121451919a27e5ef617c78982f97590c0eb",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/profile-schema-contract.ts",
+      "blob": "d6ea9a349c56a1f6832c84b0ec3e58639630c2d7",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/schema.ts",
+      "blob": "2d7f81406ae3f0267fd85de9bd3f29e76d041f2a",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/seed-test-internal-ids.ts",
+      "blob": "0b0fbff4c30a5690496e533fbd65febbc8b434bf",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/seed.ts",
+      "blob": "3444838d4b669b8ba77ffd44998b99be248c03c0",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-assessment-foundation.ts",
+      "blob": "bdbc1c7b245b2adb5004316a19f1ae34dd29324d",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-auth-foundation.ts",
+      "blob": "430290318b04e6054ea7c70181a9cffaf5f3c33f",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-classroom-guidance.ts",
+      "blob": "296999c793f57c80dc9f47d01786128ec84d0c74",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-classroom-revisions.ts",
+      "blob": "f50ad308e5aa693e5d75d5338403348bcbee7fe4",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-credit-payment-foundation.ts",
+      "blob": "f73c3099165d9df96d24cbd3ef502378e389c959",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-enrollment-year.ts",
+      "blob": "075cc6875428167a00d714234bafdd7104b15a68",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-growth-profile.ts",
+      "blob": "0f9804812b847f45ac1a5e262672972298d03e0c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-identity-v2.ts",
+      "blob": "d13178213a1f7ed321338681f0f377feec97ec1e",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-native-auth.ts",
+      "blob": "2ca0261dd596193670a5a6db2c397c9be4f3fd6d",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-news-experience.ts",
+      "blob": "bc5b7eca7c2226fa5e762bdb91974789a5a76efd",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-news-v2.ts",
+      "blob": "265bdeff8ca4c38292d1cba6f861f5a72d3655d2",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/db/upgrade-product-knowledge.ts",
+      "blob": "332abc4cf768463fa4dad6f5f79a480e0ed7302c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/assessment.test.ts",
+      "blob": "76724d8b9f99db299646f843cc09a125bcb93dfd",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/assessment.ts",
+      "blob": "778dcf2a78df115115d43e94f3a29aee2f2077f4",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/auth-policy.test.ts",
+      "blob": "eedc468dc5a681ec1dd593511aeffb60bd59a987",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/auth-policy.ts",
+      "blob": "be922b14995dfd560993d8968632278868607359",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/classroom.test.ts",
+      "blob": "04632f93ac4d65512b94dfe131618b74a44ad40f",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/classroom.ts",
+      "blob": "3e9c4d650b1c3765da8e2815a950346d8af61560",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/credit-policy.test.ts",
+      "blob": "bd1a33977456ede5b7b77fa0ed2b4382c0fd9c30",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/credit-policy.ts",
+      "blob": "63b80d09347e85359f7176c3f992a441796deb9e",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/growth-profile.test.ts",
+      "blob": "44a4b390bcb303382a5e49bb36a427a8f59fb7a7",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/growth-profile.ts",
+      "blob": "b1438d8aa070340efc95fb297447a45550c34fec",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/internal-id.test.ts",
+      "blob": "a6ad7c4683597b6866b003cd8a29ee054e4bea10",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/internal-id.ts",
+      "blob": "4d289032267373c4ef805d2256ceba2bf669410c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/product-handbook.test.ts",
+      "blob": "fb131ff8e49d57c743f5762267ee3155a6935623",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/product-handbook.ts",
+      "blob": "3863c7e57f44bec750a9aa57d4b3e884897d419d",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/product-knowledge.test.ts",
+      "blob": "a8cf4f0b135097fb91c42eeed5642017ab1f8cbc",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/product-knowledge.ts",
+      "blob": "3d9a4f4058f30f18226441bdd1bc692c5e27c790",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/read-only-access.test.ts",
+      "blob": "f3ac8eb4d614b9f424e769bcee983ba4602e53bf",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/domain/read-only-access.ts",
+      "blob": "b57e7000b4dd10c0b9b406bddc0d252f3ab5271b",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/admin.ts",
+      "blob": "a90152909457a07f6e390965a7d7fe34e0054943",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/assessments.profile.test.ts",
+      "blob": "80a4ca9ead0ef79f1796fea82b5b9db962854ecf",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/assessments.test.ts",
+      "blob": "eed0399c9bad8e85606332a839eb552af916c59f",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/assessments.ts",
+      "blob": "e6aa623ba743f76176b0c5b0913802b0e493df7e",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/auth.ts",
+      "blob": "1fb19aad281a55006fb38f40e1eca3436361d8c4",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/brand.test.ts",
+      "blob": "4bbe8a5fd9f5d4e2e3f5cae32a12096353db58b6",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/brand.ts",
+      "blob": "a21a03ccc272e216e9fde60c4d32ecca33fe890a",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/classroom-schedule-stage.test.ts",
+      "blob": "484237cb1f5046e876e6b20652f9f10f3f0c1079",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/classroom-workspace.ts",
+      "blob": "0e1209d971cbe080199655831bdadcea4a1a4058",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/commercial.ts",
+      "blob": "bb2339e263b91b3459a69171d6f21ac57c6f34c8",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/growth-profile.ts",
+      "blob": "eaed6f9c9517bef2a13499b742e48e72cb3651a0",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/identity.ts",
+      "blob": "604d87070f562c60d932b7c8089ebd9f60fcb953",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/mobile-admin.release-a.test.ts",
+      "blob": "32ebdac12385d4c3e8b58a04f631fac2b512dfb7",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/mobile-admin.ts",
+      "blob": "95e5d8448b453798c216b8a04e8579316c57900d",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/news-v2.test.ts",
+      "blob": "e27e7cce9120e65cfde322b63d45134f1a7ebebe",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/news-v2.ts",
+      "blob": "d176346165057d7fb9a1990202ebdbdc0171bd22",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/news.ts",
+      "blob": "5e32fd120562e9ffdc61d12cbf43ff10ad67cdd1",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/products.ts",
+      "blob": "6165a1c291ec0a0224bcec759114e5ce358a9330",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/profile.test.ts",
+      "blob": "f46e219aa72675b57b0bd446c4a586df47dad49c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/profile.ts",
+      "blob": "114ad3c58f1459629cada1f989fec2ad72e0283c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/read-only-workspace.ts",
+      "blob": "f5d36776b50d30274a111f08407cadc575e1c241",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/release-candidate-compatibility.test.ts",
+      "blob": "a4e0401b68eb717ecf0e5309c2dfbd894cd820c8",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/students.ts",
+      "blob": "df52f14d38971a6c7ca126a32c7a63da14dbe0fb",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/routes/teacher.ts",
+      "blob": "1e17738d05676af7478fde089fb5c61d3b48a6f5",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/scripts/import-product-handbook.ts",
+      "blob": "53ef3924065949553b7d6f8ca300e1998a6b0e0a",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/scripts/smoke-assessment-runtime.ts",
+      "blob": "8ca932cdab3952c70f61c9abe573ed8b02bbd03c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/scripts/sync-official-account.ts",
+      "blob": "799c9587753f756183e7d43051e818b70dfae6b2",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/scripts/test-official-account.ts",
+      "blob": "2af848d482bbc1cad17a7260a63cea44f4495cda",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/scripts/validate-product-handbook.ts",
+      "blob": "2577c23644f7a3dd37ffdbf2f0fc0a9a07a3d4d6",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/server.ts",
+      "blob": "e081ad9e29142f3442aa6b096e70c56c7711a227",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/admin-identity-directory.test.ts",
+      "blob": "1ff062eab80b3c41a39ecb03ba5a315640877383",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/admin-identity-directory.ts",
+      "blob": "eca279887bd9b9d36d9834d38768789ee3d1a060",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/ai-provider.test.ts",
+      "blob": "aa7a7cd19e69639441a6b999ebe4e1d685c21080",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/ai-provider.ts",
+      "blob": "b2c37cc456ad38a53b00fb2b2de9d6932ea17e25",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-account-context.test.ts",
+      "blob": "18b00ec97d290e3ac84a65fdfc5598ab10ffe1f5",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-account-context.ts",
+      "blob": "d804fbe1c49692b285fcb83d1071fa0e81d5ed4b",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-background.test.ts",
+      "blob": "bfaec03a59f323b067610df873bc5e58d1921eeb",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-background.ts",
+      "blob": "9b9e88b66b0cee575824a7fd5728b407cb61f6ee",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-import.test.ts",
+      "blob": "e5a946e16fb346a8d8ec0c7a84083d61eea63f9c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-import.ts",
+      "blob": "2efb64f54522f6a70ecd37127c7c115d5159729f",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-knowledge.test.ts",
+      "blob": "678cd235c5b6c798d187478d202f1edb57bd8cdf",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-knowledge.ts",
+      "blob": "0bf26eed710adfe7bd598be0127d75950ede6136",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-notification.test.ts",
+      "blob": "712553a4c0037dba1f367cc6c5b78c8ba566ad84",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-notification.ts",
+      "blob": "b5649b57a484bf0f02f562c9df6fc44df698ebd5",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-runtime.test.ts",
+      "blob": "37feeeecf502b623fa33199e1bc9cc88c09592a0",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/assessment-runtime.ts",
+      "blob": "18a64f0224d6c1266852457fc524bca69470afa0",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/commercial-analytics.test.ts",
+      "blob": "a3bb5494539cd046496969928ebc9128eaa7165f",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/commercial-analytics.ts",
+      "blob": "0d7dfea962fbb654b74102c63c0f46be0c217892",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/commercial-config.test.ts",
+      "blob": "a43c9724ecd0de69369cc5f15f79d15c1fba9c01",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/commercial-config.ts",
+      "blob": "ad2518412fc2e99676e7ebe223bc2e8a2cbe3bfd",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/commercial-supplier-risk.test.ts",
+      "blob": "1ade0705aa1eedc179da7c3eb4cba180dd4a80dc",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/credit-ledger.test.ts",
+      "blob": "30f9942ff247e499ffab9bd14d4363ccde38f340",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/credit-ledger.ts",
+      "blob": "dc34e22ed65965fdcd940ce48fc49cc1eed377cb",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/internal-identities.ts",
+      "blob": "e12d76c2217861063d7c3bd06ba9042c71aa7bdb",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/material-document-extractor.test.ts",
+      "blob": "b7ef4e3e18c319553decb0de7349f9f1de1724e1",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/material-document-extractor.ts",
+      "blob": "1234e6c453d0657853a42db6ee654613c5064fe9",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/news-lifecycle.test.ts",
+      "blob": "ee2811d133e078d248ef0c0e3ea36e5c5544be45",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/news-lifecycle.ts",
+      "blob": "0e208309649d2db26e07d665492e3f9a6e384def",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/news-v2-store.ts",
+      "blob": "0cfcada8a9797a40c9e6143fd3368ec716365564",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/news.test.ts",
+      "blob": "8d1c777e137984d7a789677cd3d42b0907dbd07c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/news.ts",
+      "blob": "f69385c4b4f457221543fdba4ab65fb1a0535627",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/official-account.test.ts",
+      "blob": "5e318f3bcb06ccf4ef02c0ae33d41566262afe55",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/official-account.ts",
+      "blob": "820d4b3fbf2df95c27988d39c3674689140459a6",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/payment-orders.test.ts",
+      "blob": "26932927f04b04fb90a27654f9beeba4fadc1044",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/payment-orders.ts",
+      "blob": "0a57b2ebd36cc271277788eb93c9728474f224ac",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/read-only-context.test.ts",
+      "blob": "b047cad46562d84a53328616b7ab7b64e33287e1",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/read-only-context.ts",
+      "blob": "7448266330a27a4d328d2bcbe3f8c6fad413ade3",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/resume-docx.test.ts",
+      "blob": "b8ffe2f667aa326ea980884150b5187299bf0851",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/resume-docx.ts",
+      "blob": "e40c2dbe05e650fd19a6c5f36f53881a1e711e16",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/schedule-parser.test.ts",
+      "blob": "cfdacf8bbaf575798580e7390513168db42a1036",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/schedule-parser.ts",
+      "blob": "22a96eabbaadd00b85c756b1d525d629ee99b966",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/schedule-storage.ts",
+      "blob": "a87a7dc0626e4280b078508f219de5b5e7ec5dd1",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/school-directory-knowledge.test.ts",
+      "blob": "fbbceed6fe03d63c7470b364882bc1559d028373",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/school-directory-knowledge.ts",
+      "blob": "17f0b6fccbcd7739803e9b9d88e57f644a97e0fe",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/session.ts",
+      "blob": "0972cd176ae6bf218247cb2e4218fd30eed821a4",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/wechat-pay.test.ts",
+      "blob": "71a97eb2f6f612fcb421ad128606c66eeec2c12c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/wechat-pay.ts",
+      "blob": "2034c4728f2d5e129090298debd241b342ead3d4",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/wechat-virtual-payment.test.ts",
+      "blob": "7b1a718937a272e2d3d77638e4c1175a82828e24",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/wechat-virtual-payment.ts",
+      "blob": "e1148af5047bdbfd6ac356d5b7281cf8180ef36e",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/wechat.test.ts",
+      "blob": "abbf0fc6e3d593859e84f2ac24d6bc85c6c3d36c",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/src/services/wechat.ts",
+      "blob": "b28e0a6aa0a59a39d681448e429d8c88f6d6dc88",
+      "mode": "100644"
+    },
+    {
+      "path": "services/api/tsconfig.json",
+      "blob": "3d289cf1daccac4832250569be4840dbf05543f4",
+      "mode": "100644"
+    },
+    {
+      "path": "tools/testing/generate-school-directory.cjs",
+      "blob": "96bc052d1f8f8a8a7c31e1741f2f07382d939fe7",
+      "mode": "100644"
+    }
+  ],
+  "status": "REVIEW_ARTIFACT_ONLY_NOT_PRODUCTION_APPROVED"
+}

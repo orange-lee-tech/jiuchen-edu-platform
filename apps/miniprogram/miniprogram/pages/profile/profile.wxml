@@ -1,0 +1,47 @@
+<view class="mine-page">
+  <role-shell view-slot="mine" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <block wx:if="{{shellPhase === 'ready'}}">
+    <view class="identity-panel">
+      <text class="identity-eyebrow">九辰保研 · {{roleLabel}}</text>
+      <text class="user-name">{{loggedIn ? userName : '把准备记录留在这里'}}</text>
+      <text class="identity-description">{{loggedIn ? (role === 'admin' || role === 'teacher' || role === 'staff' ? '内部身份与账号管理。业务权限及人员分配在对应工作台中处理。' : '你的学业资料和评估历史都保存在自己的账户里。') : '登录并绑定身份后，可以保存资料与查看记录。'}}</text>
+      <view wx:if="{{businessId}}" class="identity-number">
+        <text class="identity-number-label">我的九辰内部编号</text>
+        <text class="identity-code" selectable>{{businessId}}</text>
+      </view>
+      <view class="identity-buttons">
+        <view wx:if="{{businessId}}" class="identity-control identity-copy" bindtap="onCopyIdentity" hover-class="identity-control-pressed" aria-role="button">复制编号</view>
+        <view wx:if="{{!readOnly}}" class="identity-control identity-primary" bindtap="onIdentityTap" hover-class="identity-control-pressed" aria-role="button">{{!loggedIn ? '登录并绑定身份' : role === 'admin' || role === 'teacher' || role === 'staff' ? '查看身份与绑定' : '编辑我的学业资料'}}</view>
+      </view>
+    </view>
+    <text class="section-heading">{{shellKind === 'student' ? '我的资料与记录' : '我的账号与支持'}}</text>
+    <view class="menu-list">
+      <block wx:for="{{menus}}" wx:key="key">
+        <view wx:if="{{item.key === 'service'}}" class="menu-row menu-service" bindtap="onCustomerServiceTap" hover-class="menu-pressed" aria-role="button">
+          <view class="menu-symbol"><image class="menu-icon" src="/assets/icons/service-active.png" mode="aspectFit" /></view>
+          <view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text>
+        </view>
+        <view wx:else class="menu-row menu-{{item.key}}" data-key="{{item.key}}" bindtap="onMenuTap" hover-class="menu-pressed" aria-role="button">
+          <view class="menu-symbol"><image class="menu-icon" src="/assets/icons/{{item.key === 'growth' ? 'growth' : item.key === 'position' || item.key === 'assessment' ? 'assessment' : item.key === 'students' ? 'users' : 'mine'}}-active.png" mode="aspectFit" /></view>
+          <view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text>
+        </view>
+        <view wx:if="{{readOnly && item.key === 'service'}}" class="menu-row" bindtap="onExitReadOnly"><text class="menu-title">退出只读查看</text><text class="arrow">›</text></view>
+      </block>
+    </view>
+    <view wx:if="{{favoritesVisible}}" class="menu-list">
+      <text class="section-heading">我的收藏</text>
+      <text wx:if="{{favoritesLoading}}">正在读取个人收藏…</text>
+      <view wx:elif="{{favoritesError}}"><text>{{favoritesError}}</text><button bindtap="onFavorites">重新读取收藏</button></view>
+      <text wx:elif="{{!favorites.length}}">尚未收藏公众号原文</text>
+      <view wx:for="{{favorites}}" wx:key="postId" class="menu-row" data-id="{{item.postId}}" bindtap="onFavoriteOpen"><text class="menu-title">{{item.title}}</text><text class="arrow">服务号原文 ›</text><button data-id="{{item.postId}}" catchtap="onFavoriteReader">站内阅读</button></view>
+    </view>
+    <view class="website-row" bindtap="onWebsite" hover-class="menu-pressed" aria-role="button"><image class="menu-icon" src="/assets/icons/website-active.png" mode="aspectFit" /><text>九辰官网 · 复制地址</text><text class="arrow">›</text></view>
+    <view wx:if="{{loggedIn && !readOnly}}" class="account-actions">
+      <button class="logout-button" loading="{{loggingOut}}" disabled="{{loggingOut || deleting}}" bindtap="onLogout">退出当前登录</button>
+      <button class="delete-button" loading="{{deleting}}" disabled="{{loggingOut || deleting}}" bindtap="onDeleteAccount">注销账号</button>
+      <text class="account-note">退出保留账号资料。注销会清理自填资料并解除登录绑定，操作前会再次确认。</text>
+    </view>
+  </block>
+</view>
+<first-use-guide wx:if="{{!readOnly}}" />
+<official-website-dialog id="website-dialog" />

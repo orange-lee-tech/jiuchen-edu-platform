@@ -1,0 +1,21 @@
+.history-page { min-height: 100vh; box-sizing: border-box; padding: 28rpx 24rpx 70rpx; background: #f6f7fb; }
+.hero { padding: 16rpx 6rpx 26rpx; }
+.eyebrow, .title, .desc, .targets, .empty-title, .empty-desc { display: block; }
+.eyebrow { color: #2f6fed; font-size: 21rpx; font-weight: 800; letter-spacing: 2rpx; }
+.title { margin-top: 10rpx; color: #20242b; font-size: 38rpx; font-weight: 800; }
+.desc { margin-top: 12rpx; color: #747b86; font-size: 23rpx; line-height: 1.65; }
+.assessment-list { display: flex; flex-direction: column; gap: 18rpx; }
+.assessment-card, .state-card { padding: 26rpx; border: 1rpx solid #e9edf3; border-radius: 22rpx; background: #fff; }
+.card-head, .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
+.school { flex: 1; color: #272b32; font-size: 26rpx; font-weight: 800; }
+.status { padding: 6rpx 14rpx; border-radius: 999rpx; background: #eef1f5; color: #6f7680; font-size: 19rpx; }
+.status.success { background: #e9f8ef; color: #278052; }
+.status.progress { background: #eef4ff; color: #3567be; }
+.status.danger { background: #fff0ed; color: #b45149; }
+.targets { margin-top: 18rpx; color: #59616d; font-size: 22rpx; line-height: 1.6; }
+.card-foot { margin-top: 22rpx; color: #9aa0aa; font-size: 20rpx; }
+.link { color: #2f6fed; font-weight: 700; }
+.empty-title { color: #30343b; font-size: 28rpx; font-weight: 800; text-align: center; }
+.empty-desc { margin: 14rpx 0 24rpx; color: #858b94; font-size: 22rpx; line-height: 1.6; text-align: center; }
+.primary { border-radius: 16rpx; background: #2f6fed; color: #fff; font-size: 24rpx; font-weight: 700; }
+.primary::after { border: 0; }

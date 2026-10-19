@@ -1,0 +1,252 @@
+const assert = require('node:assert/strict')
+const test = require('node:test')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const root = path.resolve(__dirname, '../..')
+const mini = path.join(root, 'apps/miniprogram/miniprogram')
+// Git may check this generated catalog out as CRLF on Windows while CI reads
+// LF. Parse the same source semantics on both platforms.
+const school = fs.readFileSync(path.join(mini, 'packages/schools/data.ts'), 'utf8').replace(/\r\n/g, '\n')
+const app = JSON.parse(fs.readFileSync(path.join(mini, 'app.json'), 'utf8'))
+
+const rowSource = school.match(/const tuples:[^=]+\s*=\s*(\[[\s\S]*?\])\s*\/\/ 77 non-985/)
+const c9Source = school.match(/const c9Schools = new Set\((\[[\s\S]*?\])\)/)
+assert.ok(rowSource, 'source data must be a compact literal list of Ministry-verified entries')
+assert.ok(c9Source, 'C9 subset must have an explicit named source')
+const rows = JSON.parse(rowSource[1])
+const c9Names = JSON.parse(c9Source[1])
+const extraSource = school.match(/const other211: ReadonlyArray<readonly \[string,string,string\]> = (\[[^;]+?\])\nconst historicalAliases/)
+assert.ok(extraSource, 'missing complete 211 extra list')
+const extras = JSON.parse(extraSource[1])
+
+test('original 985 source has 39 unique schools, C9 exactly nine, extra 211 has 77', () => {
+  assert.equal(rows.length, 39)
+  const names = rows.map(row => row[0])
+  assert.equal(new Set(names).size, 39)
+  assert.equal(extras.length,77)
+  assert.equal(new Set([...names,...extras.map(row=>row[0])]).size,116)
+  assert.ok(extras.some(row=>row[0]==='华北电力大学（保定）'))
+  assert.equal(c9Names.length, 9)
+  assert.equal(new Set(c9Names).size, 9)
+  for (const name of c9Names) assert.ok(names.includes(name), name)
+  for (const row of rows) {
+    assert.equal(row.length, 4)
+    assert.ok(row.every(value => typeof value === 'string' && value.trim()))
+  }
+  assert.ok(names.includes('南京大学'))
+  assert.ok(names.includes('中南大学'))
+})
+
+test('industry circles include all seven defense universities and all nine law institutions', () => {
+  const groups = school.match(/\{ key: 'law',[^\n]+\}|\{ key: 'defense7',[^\n]+\}/g) || []
+  assert.equal(groups.length,2)
+  const law = groups.find(x=>x.includes("key: 'law'"))
+  const defense = groups.find(x=>x.includes("key: 'defense7'"))
+  for(const [text,count] of [[law,9],[defense,7]]) {
+    const members = [...text.matchAll(/'([^']+)'/g)].map(match=>match[1]).slice(3)
+    assert.equal(members.length,count)
+  }
+  const specials = ['华东政法大学','西南政法大学','西北政法大学']
+  for(const university of specials) assert.ok(school.includes("['"+university+"'"))
+  const directory = fs.readFileSync(path.join(mini,'packages/schools/directory/directory.ts'),'utf8')
+  assert.match(directory,/group:value as SchoolGroupKey.*level:'all'/)
+  assert.match(directory,/previewFilter\(/)
+  assert.match(directory,/draftRegion:[\s\S]*?draftGroup/)
+
+})
+
+test('schools are isolated in a lazy mini-program subpackage and reachable through Opportunity', () => {
+  const pkg = (app.subpackages || app.subPackages || []).find(pkg => pkg.root === 'packages/schools')
+  assert.ok(pkg, 'school catalog may not bloat main app bundle')
+  assert.deepEqual(pkg.pages, ['directory/directory', 'detail/detail'])
+  for (const route of pkg.pages) {
+    for (const ext of ['ts', 'wxml', 'wxss', 'json']) {
+      assert.ok(fs.existsSync(path.join(mini,pkg.root,route+'.'+ext)), route+'.'+ext)
+    }
+  }
+  const news = fs.readFileSync(path.join(mini,'pages/news/news.ts'),'utf8')
+  assert.match(news, /packages\/schools\/directory\/directory/)
+})
+
+test('catalog preserves source evidence and excludes fabricated analytics', () => {
+  assert.match(school, /www\.moe\.gov\.cn\/srcsite\/A22/)
+  assert.match(school, /cge\.bit\.edu\.cn/)
+  const detail = fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
+  assert.match(detail, /教育部 \{\{school.is985 \? '985' : '211'\}\} 工程原始名单/)
+  assert.match(detail, /项目数量和关注数/)
+  assert.match(detail, /教育部|已核验|学院/)
+})
+
+test('catalog starter data budget remains small for 1.8 GiB shared ECS', () => {
+  const folder = path.join(mini,'packages/schools')
+  let sum = 0
+  for (const part of ['data.ts','directory/directory.ts','directory/directory.wxml','directory/directory.wxss','detail/detail.ts','detail/detail.wxml','detail/detail.wxss']) {
+    sum += fs.statSync(path.join(folder,part)).size
+  }
+  assert.ok(sum < 256 * 1024, 'starter source exceeded 256KiB budget')
+})
+
+test('school WXML does not nest mustache expressions inside other expressions', () => {
+  // WXML does not support {{...{{...}}...}} even when inner braces occur in
+  // a quoted fallback string. TypeScript checks cannot detect this preview blocker.
+  for (const page of ['directory/directory.wxml', 'detail/detail.wxml']) {
+    const content = fs.readFileSync(path.join(mini, 'packages/schools', page), 'utf8')
+    assert.doesNotMatch(content, /\{\{(?:(?!\}\})[\s\S])*\{\{/, page + ': nested WXML expression')
+  }
+  const detail = fs.readFileSync(path.join(mini, 'packages/schools/detail/detail.wxml'), 'utf8')
+  assert.match(detail, /<text wx:if="\{\{hasIntro\}\}" class="intro-text">\{\{school\.intro\}\}<\/text>/)
+  assert.match(detail,/bindtap="onConsultSchool"/)
+  assert.match(detail,/<map class="campus-map"/)
+  assert.match(detail,/heroPhoto\.url/)
+  assert.match(detail, /<text wx:else class="intro-text">已收录/)
+})
+
+test('all seven defense universities have precise campus POI source metadata', () => {
+  const names = ['北京航空航天大学','北京理工大学','哈尔滨工业大学',
+    '哈尔滨工程大学','西北工业大学','南京航空航天大学','南京理工大学']
+  const verified = school.split('const verifiedExtras: Record<string, Partial<School>> = {')[1] || ''
+  for (const name of names) {
+    const start = verified.indexOf('"' + name + '": {')
+    assert.ok(start>=0, name + ' missing campus metadata')
+    const next = verified.indexOf('\n  },',start)
+    const snippet = verified.slice(start,next)
+    assert.match(snippet,/"mapLocation"/,name)
+    assert.match(snippet,/"sourceUrl": "https:\/\/[^"]+"/,name)
+    assert.match(snippet,/"latitude": [-\d.]+, "longitude": [-\d.]+/,name)
+  }
+})
+
+test('second-round Double First Class source is exactly 147, no duplicate original institution', () => {
+ const m=school.match(/export const DOUBLE_FIRST_CLASS_2022 = `([^`]+)`\.split\('、'\)/)
+ assert.ok(m,'missing audited 147-name official dataset')
+ const official=m[1].split('、')
+ assert.equal(official.length,147)
+ assert.equal(new Set(official).size,147)
+ const supplemented=school.match(/const newDoubleFirst: ReadonlyArray<readonly \[string,string,string\]> = (\[[\s\S]*?\])\n\/\*\* Selective/)
+ assert.ok(supplemented,'missing non-211 double-first entries')
+ const added=[...supplemented[1].matchAll(/\['([^']+)','([^']+)','([^']+)'\]/g)].map(x=>x[1])
+ assert.equal(added.length,32)
+ const historic=new Set([...rows,...extras].map(x=>x[0]))
+ const display=new Set([...historic,...added].map(n=>n==='上海体育大学'?'上海体育学院':n))
+ display.delete('华北电力大学（保定）')
+ assert.deepEqual([...official].sort(),[...display].sort())
+ assert.match(school,/doubleFirstSet\.has/)
+})
+test('all 15 sector group definitions are explicit and sourced when relevant', () => {
+ const groupPart=school.split('export const SCHOOL_GROUPS:')[1].split('const groupMembership')[0]
+ const keys=[...groupPart.matchAll(/\{ key: '([^']+)'/g)].map(x=>x[1])
+ assert.equal(keys.length,15)
+ assert.equal(new Set(keys).size,15)
+ for(const key of ['architecture8','mechanical4','electric2','teachers6'])
+   assert.ok(keys.includes(key),key)
+})
+test('drawer fixes stale scroll trap with explicit scroll height and staged AND controls',()=>{
+ const wxml=fs.readFileSync(path.join(mini,'packages/schools/directory/directory.wxml'),'utf8')
+ const wxss=fs.readFileSync(path.join(mini,'packages/schools/directory/directory.wxss'),'utf8')
+ const ts=fs.readFileSync(path.join(mini,'packages/schools/directory/directory.ts'),'utf8')
+ assert.match(wxss,/\.filter-scroll\{[^}]*height:55vh/)
+ assert.match(wxss,/\.filter-panel\{[^}]*min-height:0/)
+ assert.match(wxml,/scroll-y="\{\{true\}\}"/)
+ assert.match(wxml,/bindtap="onFilterApply"/)
+ for(const key of ['onFilterRegion','onFilterLevel','onFilterGroup','onFilterAffiliation','onFilterSchool','onFilterQuery'])
+   assert.ok(wxml.includes('bindtap="'+key+'"')||wxml.includes('bindinput="'+key+'"'),key)
+ assert.match(ts,/draftRegion:this\.data\.region/)
+ assert.match(ts,/affiliation:this\.data\.draftAffiliation/)
+})
+
+test('audited Ministry of Education and ethnic-affairs university rosters stay complete',()=>{
+ const moe=school.match(/\{key:'moe',label:'教育部',sourceUrl:'[^']+',\s*members:`([^`]+)`\.split\('、'\)/)
+ assert.ok(moe)
+ const ministry=moe[1].split('、')
+ assert.equal(ministry.length,75)
+ assert.equal(new Set(ministry).size,75)
+ assert.match(school,/国家民委[^\n]+/)
+ for(const u of ['中央民族大学','中南民族大学','西南民族大学','西北民族大学','北方民族大学','大连民族大学'])
+   assert.ok(school.includes(u),u)
+})
+
+test('all 172 schools have usable campus references with audited quality and campus switching',()=>{
+ const points=fs.readFileSync(path.join(mini,'packages/schools/campus-points.ts'),'utf8')
+ const match=points.match(/export const SCHOOL_CAMPUS_POINTS: Readonly<Record<string,readonly SchoolCampusPoint\[\]>> = (\{[^\n]+\})/)
+ assert.ok(match,'generated campus entries missing')
+ const all=JSON.parse(match[1])
+ assert.equal(Object.keys(all).length,172)
+ assert.ok(Object.values(all).every(x=>Array.isArray(x)&&x.length>0))
+ for(const [name,locations] of Object.entries(all)){
+   const unique=new Set()
+   for(const location of locations){
+     assert.ok(location.latitude>16&&location.latitude<54,name)
+     assert.ok(location.longitude>73&&location.longitude<136,name)
+     assert.ok(['verified','third-party','approximate'].includes(location.quality),name)
+     assert.match(location.sourceUrl,/^https:\/\//)
+     assert.ok(location.campus.length>0)
+     assert.ok(!unique.has(location.campus),name+' duplicate campus')
+     unique.add(location.campus)
+   }
+ }
+ assert.equal(all['复旦大学'].length,4,'Fudan campus roster must be complete')
+ assert.ok(all['南开大学'].length>=2,'Nankai requires switchable campuses')
+ const w=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
+ assert.match(w,/wx:for="\{\{campusOptions\}\}"/)
+ assert.match(w,/bindtap="onSelectCampus"/)
+ assert.match(w,/activeCampus\.latitude/)
+ const ts=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.ts'),'utf8')
+ assert.match(ts,/SCHOOL_CAMPUS_POINTS\[school\.name\]/)
+})
+test('school consultation follows server verification and a single consent modal',()=>{
+ const ts=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.ts'),'utf8')
+ const wxml=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
+ const svc=fs.readFileSync(path.join(mini,'utils/customer-service.ts'),'utf8')
+ assert.doesNotMatch(ts,/wx\.showActionSheet/)
+ assert.match(ts,/copyConsultationAndOpen\(text/);assert.match(ts,/buildSchoolConsultation/);assert.match(ts,/refreshAuthResult\(\)/)
+ assert.match(svc,/目标学校：/)
+ assert.match(svc,/当前身份：/)
+ assert.match(svc,/request\('\/auth\/me'\)/)
+ assert.match(wxml,/一次确认即可联系九辰客服/)
+ assert.doesNotMatch(wxml,/两种方式/)
+ for(const name of ['复旦大学','南开大学'])assert.ok(school.includes('"'+name+'": {'),name)
+})
+
+test('all school-map keys exactly match the 172 catalog entries, never a fabricated city center',()=>{
+ const source=school
+ const first=rows.map(x=>x[0])
+ const other=extras.map(x=>x[0])
+ const special=source.split('const specialtySchools:')[1].split('\n]')[0]
+ const doubles=source.split('const newDoubleFirst:')[1].split('\n]')[0]
+ const publicRows=source.split('const notablePublic:')[1].split('\n]')[0]
+ const extra=[special,doubles,publicRows].flatMap(part=>
+   [...part.matchAll(/\[\s*'([^']+)'\s*,\s*'[^']+'\s*,\s*'[^']+'/g)].map(x=>x[1]))
+ const expected=[...first,...other,...extra]
+ assert.equal(expected.length,172)
+ assert.equal(new Set(expected).size,172)
+ const media=fs.readFileSync(path.join(mini,'packages/schools/campus-points.ts'),'utf8')
+ const points=JSON.parse(media.match(/export const SCHOOL_CAMPUS_POINTS: Readonly<Record<string,readonly SchoolCampusPoint\[\]>> = (\{[^\n]+\})/)[1])
+ assert.deepEqual(Object.keys(points).sort(),expected.sort())
+ assert.equal(Object.values(points).reduce((sum,v)=>sum+v.length,0),316)
+ assert.equal(points['复旦大学'].length,4)
+ assert.equal(points['南开大学'].length,3)
+ assert.equal(points['南开大学'].some(x=>x.campus==='紫金山路校区'),false,
+   'historical campus POI cannot override official 2026 campus roster')
+ for(const name of ['复旦大学','南开大学']){
+   const locations=points[name]
+   assert.ok(locations.some(x=>x.quality==='verified'),name)
+ }
+})
+test('actual campus hero photos have traceable authors, licenses, and fallbacks',()=>{
+ const detail=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.wxml'),'utf8')
+ const ts=fs.readFileSync(path.join(mini,'packages/schools/detail/detail.ts'),'utf8')
+ for(const name of ['复旦大学','南开大学','北京大学','吉林大学','南京大学']){
+  const key='"'+name+'": {',from=school.indexOf(key)
+  assert.ok(from>=0,name+' absent from audited media metadata')
+  const rest=school.slice(from,from+1500)
+  assert.match(rest,/"heroPhoto"/,name)
+  for(const k of ['"author"','"license"','"licenseUrl"','"sourceUrl"'])
+    assert.ok(rest.includes(k),name+' missing '+k)
+ }
+ assert.match(detail,/binderror="onPhotoError"/)
+ assert.match(detail,/hero-photo-indicator/)
+ assert.match(detail,/实拍/)
+ assert.match(ts,/onRetryPhoto/)
+ assert.match(detail,/wx:else class="hero-photo-indicator hero-illustrated"/)
+})

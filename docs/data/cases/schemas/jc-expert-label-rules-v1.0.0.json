@@ -1,0 +1,42 @@
+{
+  "schema_version": "JC-EXPERT-RULES-1.0.0",
+  "status": "frozen",
+  "frozen_date": "2026-10-02",
+  "boundary_review": {
+    "status": "passed",
+    "approved_scopes": [
+      "规则分档是否符合业务直觉",
+      "学科门类归类",
+      "科研/竞赛证据映射到1-5档"
+    ],
+    "policy": "local special cases may remain manual_review; missing facts are never fabricated."
+  },
+  "score_scale": {
+    "5": "显著强",
+    "4": "较强",
+    "3": "中等",
+    "2": "较弱",
+    "1": "明显不足",
+    "NA": "信息不足"
+  },
+  "discipline_weights": {
+    "工学": {"academic": 0.35, "language": 0.15, "research": 0.3, "competition": 0.12, "practice": 0.08},
+    "理学": {"academic": 0.4, "language": 0.18, "research": 0.32, "competition": 0.07, "practice": 0.03},
+    "医学": {"academic": 0.45, "language": 0.16, "research": 0.25, "competition": 0.07, "practice": 0.07},
+    "人文": {"academic": 0.38, "language": 0.14, "research": 0.12, "competition": 0.2, "practice": 0.16},
+    "社科": {"academic": 0.36, "language": 0.16, "research": 0.18, "competition": 0.18, "practice": 0.12},
+    "农学": {"academic": 0.38, "language": 0.12, "research": 0.28, "competition": 0.1, "practice": 0.12},
+    "艺术学": {"academic": 0.3, "language": 0.08, "research": 0.05, "competition": 0.25, "practice": 0.32}
+  },
+  "overall_scoring": {
+    "official_overall_score_enabled": false,
+    "reason": "practice data is not stably available in current historical cases",
+    "partial_score_policy": "weighted average over medium/high-confidence available dimensions; diagnostic only, never ground truth"
+  },
+  "training_policy": {
+    "outcome_hidden_from_input": true,
+    "missing_label_masked": true,
+    "low_confidence_label_not_used_for_supervision": true,
+    "case_level_human_expert_label": false
+  }
+}

@@ -1,0 +1,49 @@
+name: P1 frontend release verification
+run-name: P1 frontend 51ea8775 - integrated release verification
+
+on:
+  push:
+    branches: [p1/foundation]
+    paths: ['.github/workflows/p1-frontend-release-local.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p1-frontend-release-local
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  frontend:
+    runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 51ea8775de74581289617cf1428ba4165775c1e0
+          persist-credentials: false
+      - name: Verify exact frontend source
+        run: |
+          test "$(git rev-parse HEAD)" = "51ea8775de74581289617cf1428ba4165775c1e0"
+          echo "TESTED_FRONTEND=51ea8775de74581289617cf1428ba4165775c1e0"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install and typecheck miniprogram
+        working-directory: apps/miniprogram
+        run: |
+          npm install --no-audit --no-fund
+          npm run typecheck
+      - name: Navigation, catalog, export and real-data regressions
+        run: node --test tools/testing/miniprogram-navigation.test.cjs tools/testing/school-catalog.test.cjs tools/testing/report-export.test.cjs tools/testing/real-data.test.cjs
+      - name: Record release boundaries
+        if: always()
+        env:
+          CHECK_RESULT: ${{ job.status }}
+        run: |
+          printf 'Frontend source: 51ea8775de74581289617cf1428ba4165775c1e0\nAPI source: 50e7fe3d7f93a347dfdc4af0675992690eb01e6f (separate isolated gates)\nResult: %s\nNo production connection, deployment or device acceptance.\n' "$CHECK_RESULT" >> "$GITHUB_STEP_SUMMARY"

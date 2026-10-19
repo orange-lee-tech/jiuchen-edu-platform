@@ -1,0 +1,123 @@
+{
+  "document": {
+    "document_id": "product-chongding-junior-v1",
+    "title": "九辰保研·大三冲顶计划产品手册",
+    "document_type": "product_handbook",
+    "source_file": "九辰-大三冲顶计划产品手册.pdf",
+    "source_page_count": 10,
+    "source_date": "2026-09-11",
+    "source_date_basis": "PDF metadata ModDate；可见页面未标注文档发布日期",
+    "conversion_version": "handbook-v1",
+    "language": "zh-CN",
+    "dataset_scope": "jiuchen_product_knowledge",
+    "case_dataset_separated": true
+  },
+  "brand": {
+    "name": "九辰教育",
+    "english_name": "JIUCHEN EDUCATION"
+  },
+  "product": {
+    "name": "九辰保研·大三冲顶计划",
+    "short_name": "大三冲顶计划",
+    "price": {
+      "amount": 13800,
+      "currency": "CNY",
+      "display": "13800元"
+    },
+    "service_period": {
+      "duration_months": 14,
+      "from": "大三9月",
+      "to": "大四10月",
+      "display": "14个月（大三9月至大四10月）"
+    },
+    "one_to_one_hours": 12,
+    "positioning": "聚焦大三保研关键冲刺周期，不做长期通识成长，专注把学生已经积累的学业、科研竞赛成果最大化发挥价值。",
+    "source_pages": [1, 4, 9]
+  },
+  "audience": [
+    {
+      "id": "audience-1",
+      "text": "大三本科学生，具备推免潜力/大概率拿到推免资格",
+      "source_page": 4
+    }
+  ],
+  "highlights": [
+    {
+      "title": "重信息",
+      "description": "一站式汇总全部目标院校推免关键信息，消灭信息差",
+      "icon_semantic": "information",
+      "source_page": 4
+    }
+  ],
+  "timeline": [
+    {
+      "stage": "大三上",
+      "time_range": null,
+      "order": 1,
+      "tasks": [
+        "背景盘点",
+        "目标方向梳理",
+        "专业课补强",
+        "英语查漏补缺",
+        "初步搜集院校、导师信息",
+        "启动材料初稿构思"
+      ],
+      "source_page": 5
+    }
+  ],
+  "modules": [
+    {
+      "name": "定位规划",
+      "summary": "全面盘点学员背景并形成专属定位方案",
+      "details": [],
+      "source_page": 6
+    }
+  ],
+  "core_services": [
+    {
+      "order": 1,
+      "name": "实时信息汇总服务",
+      "summary": "提供大三申请阶段全部需要的院校方向相关信息，持续同步更新。",
+      "bullets": [],
+      "source_page": 7
+    }
+  ],
+  "teachers": [
+    {
+      "display_name": "李老师",
+      "education_raw": "中南大学本科浙江大学硕士工科类",
+      "education_items": [
+        {
+          "institution": "中南大学",
+          "degree": "本科",
+          "discipline": "工科类"
+        },
+        {
+          "institution": "浙江大学",
+          "degree": "硕士",
+          "discipline": "工科类"
+        }
+      ],
+      "offers_claimed": ["清华大学", "浙江大学", "上海交通大学", "哈尔滨工业大学"],
+      "specialties": [],
+      "source_page": 9,
+      "source_date": "2026-09-11",
+      "verification_status": "source_only"
+    }
+  ],
+  "marketing_claims": [
+    {
+      "claim_id": "claim-overall-admission-rate",
+      "claim_type": "marketing_performance",
+      "source_text": "学员保研整体录取率达96%",
+      "source_page": 2,
+      "verification_status": "unverified",
+      "display_allowed": false
+    }
+  ],
+  "contact": {
+    "source_page": 10,
+    "include_in_product_body": false
+  },
+  "visual_blocks": []
+}

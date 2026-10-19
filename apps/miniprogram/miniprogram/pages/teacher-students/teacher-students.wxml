@@ -1,0 +1,46 @@
+<auth-gate />
+<view class="page-shell">
+  <view class="teacher-head">
+    <text class="page-title">我的学员</text>
+    <text class="page-desc">只显示后台已授权的师生关系。学员更新需要老师审核后才进入正式档案。</text>
+  </view>
+
+  <view class="section-head">
+    <text class="section-title">待审核更新</text>
+    <text class="section-note">{{pending.length}} 项</text>
+  </view>
+
+  <view wx:if="{{pending.length}}" class="pending-list">
+    <view wx:for="{{pending}}" wx:key="id" class="pending-review surface">
+      <text class="review-student">{{item.studentName}}</text>
+      <text class="review-title">{{item.title}}</text>
+      <text class="review-meta">{{item.stageCode}} · {{item.type}} · {{item.itemsJson.length}} 项任务</text>
+      <view wx:if="{{!readOnly}}" class="review-actions">
+        <button class="reject-button" data-id="{{item.id}}" bindtap="onReject">否决</button>
+        <button class="approve-button" data-id="{{item.id}}" bindtap="onApprove">通过进档</button>
+      </view>
+    </view>
+  </view>
+  <view wx:else class="empty surface">当前没有待审核更新。</view>
+
+  <view class="section-head">
+    <text class="section-title">已分配学员</text>
+    <text class="section-note">点击姓名以只读身份查看完整学员档案</text>
+  </view>
+
+  <view class="student-list">
+    <view wx:for="{{students}}" wx:key="studentId" class="student-card surface" data-index="{{index}}" bindtap="onStudentTap">
+      <view>
+        <text class="student-name">{{item.name}}</text>
+        <text class="student-meta">{{item.university || '院校待补充'}} · {{item.major || '专业待补充'}}</text>
+        <text class="student-stage">当前阶段：{{item.assignedStageCode || item.currentStage || '待设置'}}</text>
+      </view>
+      <view class="student-actions">
+        <text class="arrow">只读查看 ›</text>
+        <button wx:if="{{!readOnly}}" class="edit-mini" catchtap="onEditStudentPlan" data-index="{{index}}">编辑计划</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{!loading && students.length === 0}}" class="empty surface">暂无已分配学员。</view>
+</view>
