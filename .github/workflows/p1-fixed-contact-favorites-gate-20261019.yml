@@ -1,0 +1,80 @@
+name: P1 fixed contact and favorites gate
+
+# One-off release evidence for the two immutable candidate commits below.
+# Remove this workflow after release acceptance; do not attach it to p1/**.
+on:
+  push:
+    branches: [codex/p1-favorites-contact-api-2026-10-19]
+    paths: ['.github/workflows/p1-fixed-contact-favorites-gate-20261019.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  fixed-pair:
+    runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact API candidate
+        uses: actions/checkout@v4
+        with:
+          ref: dbd7d9a818523cc3b007afe47a03519510415652
+          fetch-depth: 0
+          path: api-source
+          persist-credentials: false
+      - name: Checkout exact mini-program candidate
+        uses: actions/checkout@v4
+        with:
+          ref: 9da7f9178b737b8ebbc7b17ece1ef3260824f893
+          path: mini-source
+          persist-credentials: false
+      - name: Checkout fixed archive tool
+        uses: actions/checkout@v4
+        with:
+          ref: 283aaf15fc0047f100028eee547a5581c3f8c047
+          path: release-tools
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: api-source/services/api/package-lock.json
+      - name: Verify both immutable commits
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C api-source rev-parse HEAD)" = dbd7d9a818523cc3b007afe47a03519510415652
+          test "$(git -C mini-source rev-parse HEAD)" = 9da7f9178b737b8ebbc7b17ece1ef3260824f893
+          test "$(git -C release-tools rev-parse HEAD)" = 283aaf15fc0047f100028eee547a5581c3f8c047
+          printf 'API=dbd7d9a818523cc3b007afe47a03519510415652\nMINI=9da7f9178b737b8ebbc7b17ece1ef3260824f893\n' >> "$GITHUB_STEP_SUMMARY"
+      - name: API typecheck, tests and build
+        working-directory: api-source/services/api
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Mini-program typecheck and release regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd mini-source/apps/miniprogram
+          npm install --no-audit --no-fund --package-lock=false
+          npm run typecheck
+          cd ../..
+          node --test tools/testing/miniprogram-navigation.test.cjs tools/testing/school-catalog.test.cjs tools/testing/report-export.test.cjs tools/testing/real-data.test.cjs
+      - name: Package exact API source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node release-tools/tools/release/package-isolated-api.mjs api-source dbd7d9a818523cc3b007afe47a03519510415652 "$RUNNER_TEMP/p1-dbd7d9a8-archive" | tee "$RUNNER_TEMP/p1-dbd7d9a8-summary.txt"
+          cat "$RUNNER_TEMP/p1-dbd7d9a8-summary.txt" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload fixed API archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-api-dbd7d9a8-readonly
+          path: ${{ runner.temp }}/p1-dbd7d9a8-archive/
+          retention-days: 7
+          if-no-files-found: error
