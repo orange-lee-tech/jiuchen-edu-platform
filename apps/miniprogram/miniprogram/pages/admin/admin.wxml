@@ -248,6 +248,7 @@
             <text wx:if="{{item.tags.length === 0}}" class="tag-empty">未分类</text>
           </view>
         </view>
+        <button class="mini" data-id="{{item.id}}" bindtap="onPreviewNews">预览正文</button>
         <button class="mini" data-id="{{item.id}}" bindtap="onEditNewsTags">管理标签</button>
       </view>
     </view>
