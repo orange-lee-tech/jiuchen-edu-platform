@@ -819,6 +819,8 @@ test('customer service identifies the actual server-verified role without auto-s
  assert.match(copied,/当前身份：管理员/)
  assert.match(copied,/联系人：测试管理员/)
  assert.match(copied,/九辰内部编号：JCA-ABCD-1234/)
+ assert.equal(opened,null,'chat opens on the second explicit user click')
+ h.modals[1].success({confirm:true})
  assert.equal(opened.showMessageCard,undefined,'trial build must not send an unopenable card')
 })
 test('customer-service identity never claims server verification when revalidation fails',async()=>{
@@ -874,6 +876,8 @@ test('customer service does not unmount mine while checking the server and never
  await settle()
  assert.equal(p.data.shellPhase,'ready')
  h.modals[0].success({confirm:true})
+ assert.equal(opened,undefined)
+ h.modals[1].success({confirm:true})
  assert.equal(opened.showMessageCard,undefined)
  h.wx.getAccountInfoSync=()=>({miniProgram:{envVersion:'release'}})
  h.load('utils/customer-service').openWechatCustomerService({title:'已发布入口',path:'/pages/index/index'})
