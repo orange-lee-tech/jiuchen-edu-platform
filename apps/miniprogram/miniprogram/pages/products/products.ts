@@ -1,5 +1,5 @@
 import { getProducts } from '../../utils/request'
-import { openWechatCustomerService } from '../../utils/customer-service'
+import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 
 type AnyRecord = Record<string, unknown>
 
@@ -79,7 +79,7 @@ Page({
   },
 
   onCustomerServiceTap() {
-    openWechatCustomerService()
+    void openVerifiedWechatCustomerService('服务方案咨询')
   },
 
   onProductTap(event: WechatMiniprogram.BaseEvent) {
