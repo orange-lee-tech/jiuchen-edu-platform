@@ -705,7 +705,7 @@ test('unbound school consultation copies the correct school and identifies missi
  assert.equal(opened,null)
  assert.equal(p.data.consultBusy,true)
  h.modals[0].success({confirm:true});await flow
- assert.match(opened.sendMessagePath,/id=s015/)
+ assert.equal(opened.showMessageCard,undefined,'trial build must not send an unopenable card')
  assert.equal(p.data.consultBusy,false)
 })
 test('school inquiry stops when identity validation fails',async()=>{
@@ -818,9 +818,7 @@ test('customer service identifies the actual server-verified role without auto-s
  assert.match(copied,/当前身份：管理员/)
  assert.match(copied,/联系人：测试管理员/)
  assert.match(copied,/九辰内部编号：JCA-ABCD-1234/)
- assert.equal(opened.showMessageCard,true)
- assert.match(opened.sendMessageTitle,/管理员/)
- assert.equal(opened.sendMessagePath,'/pages/profile/profile')
+ assert.equal(opened.showMessageCard,undefined,'trial build must not send an unopenable card')
 })
 test('customer-service identity never claims server verification when revalidation fails',async()=>{
  const h=harness()
@@ -855,7 +853,46 @@ test('guest consultation stays available but cannot claim an authenticated staff
  assert.match(h.modals[0].content,/未登录游客/)
  assert.equal(opened,null)
  h.modals[0].success({confirm:true})
+ assert.equal(opened.showMessageCard,undefined)
+})
+
+test('customer service does not unmount mine while checking the server and only published builds send cards',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('admin'))
+ h.runtimeConfig.wechatCustomerService={corpId:'test-corp',url:'https://test.invalid/kefu'}
+ h.wx.setClipboardData=o=>o.success()
+ let opened;h.wx.openCustomerServiceChat=o=>{opened=o}
+ const p=h.page('pages/profile/profile');p.onShow()
+ h.respond(0,{ok:true,user:authFixture('admin').user,businessIdentity:null})
+ await settle()
+ assert.equal(p.data.shellPhase,'ready')
+ p.setData({favoritesVisible:true,favorites:[{postId:'saved'}]})
+ p.onCustomerServiceTap()
+ assert.equal(p.data.shellPhase,'ready')
+ assert.equal(p.data.favoritesVisible,true)
+ h.respond(h.requests.length-1,{ok:true,user:authFixture('admin').user,businessIdentity:null})
+ await settle()
+ assert.equal(p.data.shellPhase,'ready')
+ h.modals[0].success({confirm:true})
+ assert.equal(opened.showMessageCard,undefined)
+ h.wx.getAccountInfoSync=()=>({miniProgram:{envVersion:'release'}})
+ h.load('utils/customer-service').openWechatCustomerService({title:'已发布入口',path:'/pages/index/index'})
  assert.equal(opened.showMessageCard,true)
- assert.match(opened.sendMessageTitle,/未登录游客/)
- assert.doesNotMatch(opened.sendMessageTitle,/管理员|老师|学员/)
+ assert.equal(opened.sendMessagePath,'/pages/index/index')
+})
+
+test('saved official link opens in a runtime without URL and falls back to copy when unavailable',()=>{
+ const h=harness();let opened, copied, toast
+ h.wx.showToast=o=>{toast=o.title}
+ h.wx.openOfficialAccountArticle=o=>{opened=o.url}
+ h.wx.setClipboardData=o=>{copied=o.data;o.success()}
+ const {openOfficialArticle}=h.load('utils/official-article')
+ const url='https://mp.weixin.qq.com/s/ul2gk6Xo1TKi_PXvgRpqBA'
+ openOfficialArticle(url)
+ assert.equal(opened,url)
+ delete h.wx.openOfficialAccountArticle
+ openOfficialArticle(url)
+ assert.equal(copied,url)
+ assert.match(h.modals[0].content,/粘贴链接/)
+ openOfficialArticle('https://example.invalid/s/a')
+ assert.match(toast,/不是可验证/)
 })
