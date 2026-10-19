@@ -6,12 +6,8 @@ const CONTACT_ROLE_LABELS:Record<UserRole,string> = {
   admin:'管理员', teacher:'辅导老师', staff:'内部员工', student:'学员', user:'普通用户',
 }
 
-/**
- * WeCom's message card is only an optional draft the visitor must actively send.
- * Prefilling chat text is unsupported, so copy the checked identity statement.
- * All role and internal-ID values come from a fresh /auth/me response, NOT a
- * client-supplied target-role or impersonated account.
- */
+/** Prefilling chat text is unsupported, so copy the checked identity statement.
+ * All role and internal-ID values come from a fresh /auth/me response. */
 export type CustomerServiceContext = {
   school?: string
   grade?: string
@@ -19,7 +15,7 @@ export type CustomerServiceContext = {
   path?: string
 }
 /** One verified identity confirmation, optionally carrying a school consultation.
- * This never silently sends clipboard text, role labels or a message card. */
+ * This never silently sends clipboard text or role labels. */
 export async function openVerifiedWechatCustomerService(
   purpose='联系九辰运营', context:CustomerServiceContext={},
 ):Promise<void>{
@@ -112,11 +108,7 @@ export function supportsWechatCustomerService(): boolean {
 }
 
 export type CustomerServiceCard = { title:string; path:string }
-function canSendMiniProgramCard():boolean{
-  try { return wx.getAccountInfoSync().miniProgram.envVersion==='release' }
-  catch { return false }
-}
-export function openWechatCustomerService(card?:CustomerServiceCard): void {
+export function openWechatCustomerService(_card?:CustomerServiceCard): void {
   const { corpId, url } = runtimeConfig.wechatCustomerService
 
   if (!corpId || !url) {
@@ -135,25 +127,22 @@ export function openWechatCustomerService(card?:CustomerServiceCard): void {
     return
   }
 
-  wx.openCustomerServiceChat({
-    corpId,
-    extInfo: { url },
-    ...(card && canSendMiniProgramCard() ? {
-      showMessageCard:true,
-      sendMessageTitle:card.title,
-      sendMessagePath:card.path,
-    } : {}),
-    success() {
-      console.info('Opened WeChat customer service.', { corpId, url })
-    },
-    fail(error) {
-      console.error('Failed to open WeChat customer service.', error)
-      wx.showToast({
-        title: '客服暂时无法打开，请稍后重试',
-        icon: 'none',
+  const open = (canRetry:boolean) => wx.openCustomerServiceChat({
+    corpId, extInfo:{url},
+    success(){console.info('Opened WeChat customer service.',{corpId,url})},
+    fail(error){
+      const code=String(error.errMsg||'unknown').slice(0,120)
+      console.error('Failed to open WeChat customer service.',error)
+      wx.showModal({
+        title:'客服未打开（新版）',
+        content:`微信返回：${code}。${canRetry?'可点击重试一次。':'请将此错误反馈给九辰运营。'}`,
+        showCancel:canRetry,
+        confirmText:canRetry?'点击重试':'知道了',
+        success:result=>{if(canRetry&&result.confirm)open(false)},
       })
     },
   })
+  open(true)
 }
 
 
