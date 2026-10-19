@@ -96,7 +96,8 @@ Page({
     this.stopShell?.()
     this.stopShell = observeSlot('opportunity', (state) => {
       this.viewGeneration += 1
-      this.setData({ ...shellView(state), showReferenceNews: state.phase === 'ready' && this.data.shellKind !== 'student', allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0 })
+      const view=shellView(state)
+      this.setData({ ...view, showReferenceNews: state.phase === 'ready' && view.shellKind !== 'student', allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0 })
       if (state.phase === 'ready') void this.loadNews()
     })
   },
