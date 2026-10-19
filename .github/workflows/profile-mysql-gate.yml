@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   profile-gate:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
     timeout-minutes: 12
     services:
       mysql:

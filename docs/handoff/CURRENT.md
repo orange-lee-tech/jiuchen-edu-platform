@@ -2,6 +2,18 @@
 
 **当前状态：** 用户 ECS 回执确认生产 API 已切至 `dbd7d9a818523cc3b007afe47a03519510415652`，服务健康、News V2 公开读取和新路由未登录拦截通过；四篇十月稿先前已写入并公开可读。官网指针未变。用户报告固定前端的其他体验项已通过，客服卡片点击仍显示微信“页面不存在”；当前截图中的卡片标记“未发布的小程序·开发版”，待上传并指定体验版后用新卡片复验。真实商户交易、充值次数及统计、正式发布待验。旧云端 CI 计费失败不替代固定 Runner 验证。
 
+## 2026-10-19：用户提供的 0.0.19 体验包核对
+
+- 用户提供 `miniprogram.zip`（ZIP 约 5.9 MiB，1510 个文件，其中 1340 个为 node_modules）；压缩包结构是 `miniprogram/` 微信开发者工具项目。ZIP 完整性检查通过。
+- 排除本机依赖目录和仅供本机使用的 `project.private.config.json`，压缩包中的 168 个业务与工程文件与当前 `main` 的 `apps/miniprogram` blob 完全一致，无缺失或业务代码差异。唯一同名差异为 `project.config.json` 中微信开发者工具自动补充的编译/编辑字段；AppID、项目根、基础库版本及既有编译设置一致。不会以 ZIP 覆盖 API、网站、文档或仓库项目配置；私有配置和 node_modules 不入 Git。
+- 对 ZIP 提取的项目实际执行 TypeScript typecheck PASS；将当前仓库的小程序测试工具指向该项目执行 106/106 回归 PASS。测试只证明本地静态/模拟行为；微信后台实际上传、0.0.19 指定体验版、新生成的客服卡片点击和商业真机链路仍待用户回执。本次 main 更新仅是 Runner 配置和状态台账，不产生新的小程序源码 SHA。
+
+## 2026-10-19：版本号与 Runner 路由更正
+
+- 用户确定下一次体验版号为 `0.0.19`。此前 `1.0.19` 建议作废；尚无该体验版上传、指定或新客服卡片可达回执。预发布编号与 npm 工程内部 package 版本分开，首次正式发布版本待业务验收后由用户确定。版本台账见 [version-ledger.md](../release/version-ledger.md)。
+- 用户明确所有 CI 使用 Windows 电脑中的 Ubuntu WSL 自托管 Runner；Mac mini 尚未部署。通用 CI、News V2 MySQL Gate、Profile MySQL Gate 从 `ubuntu-latest` 改为 `[self-hosted, Linux, X64, orangeleetec-local-linux]`，保留 job/check 名称。五条历史本机候选工作流维持原标签与仅手动/修改自身文件的触发边界。见 [工作流登记](../automation/registry.yml)。
+- 此提交是路由配置，不代表 Runner 当前在线，也不代表新路由已经执行通过。历史 GitHub 托管 CI 在任何步骤前失败；不重跑云端。新检查只依据实际本机 job 步骤和结果记账。
+
 ## 2026-10-19：main 合包与本地验证回执
 
 - 固定配对合包 API typecheck、222/222 tests、build，小程序 typecheck、106/106 回归，管理端 typecheck、2/2 tests、build，本地均 PASS。合包以 Git tree blob 逐一核对小程序未改变、API 九处取自现役固定候选；本地源码快照缺少部分仓库文档/二进制资产，但测试过的应用源码与对应 blob 核对一致。
