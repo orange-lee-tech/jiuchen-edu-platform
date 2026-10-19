@@ -15,7 +15,8 @@ function isOfficialUrl(value:string){
 function isOfficialImageUrl(value:string){
   try {
     const url=new URL(value)
-    return url.protocol==='https:' && url.hostname==='mmbiz.qpic.cn'
+    return url.protocol==='https:' && ['mmbiz.qpic.cn','mmecoa.qpic.cn'].includes(url.hostname) &&
+      !url.username && !url.password && !url.port
   } catch { return false }
 }
 
@@ -38,7 +39,8 @@ const verifiedOfficialPost = z.object({
   summary: z.string().trim().max(1000).nullable().optional(),
   coverUrl: z.string().trim().url().refine(value => {
     const url = new URL(value)
-    return url.protocol === 'https:' && ['mmbiz.qpic.cn', 'mp.weixin.qq.com'].includes(url.hostname)
+    return isOfficialImageUrl(value) ||
+      url.protocol === 'https:' && url.hostname === 'mp.weixin.qq.com' && !url.username && !url.password && !url.port
   }).nullable().optional(),
   publishedAt: z.string().refine(value =>
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
@@ -141,12 +143,15 @@ export function registerNewsV2Routes(app:FastifyInstance,database:DatabaseContex
       ON DUPLICATE KEY UPDATE user_id=user_id`,[user.userId,article.id,article.articleUrl,article.title,article.publishedAt])
     return {ok:true,articleUrl:article.articleUrl}
   })
-  app.delete<{Params:{id:string}}>('/me/news-favorites/:id',async(request,reply)=>{
+  const removeFavorite=async(request:FastifyRequest<{Params:{id:string}}>,reply:FastifyReply)=>{
     const user=await requireRole(request,reply,['user','student','teacher','staff','admin']);if(!user)return
     if(!uuid.safeParse(request.params.id).success)return reply.code(400).send({ok:false,error:'invalid_news_id'})
     await pool.query(`DELETE FROM news_favorites WHERE user_id=? AND post_id=?`,[user.userId,request.params.id])
     return {ok:true}
-  })
+  }
+  app.delete<{Params:{id:string}}>('/me/news-favorites/:id',removeFavorite)
+  // Some mini-program gateways reject DELETE before it reaches Fastify.
+  app.post<{Params:{id:string}}>('/me/news-favorites/:id/remove',removeFavorite)
   app.get('/me/news-retirements',async(request,reply)=>{
     const user=await requireRole(request,reply,['teacher','staff','admin']);if(!user)return
     const [rows]=await pool.query(`SELECT t.id AS taskId,t.batch_id AS batchId,t.state,t.note,t.updated_at AS updatedAt,
