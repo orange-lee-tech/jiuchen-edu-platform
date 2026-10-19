@@ -2,6 +2,10 @@
 
 This file applies to Codex and other coding agents working in this repository.
 
+## Current branch authority (2026-10-19)
+
+`main` now contains the reconciled 0.0.19 frontend and deployed dbd7d9a8 API source. `docs/handoff/CURRENT.md` is the sole live status page. `p1/foundation` is a legacy integration branch and may be pruned after checking it is identical to/ancestor of `main`; do not treat older PR or branch descriptions as the active release state. WeChat publication, payment enablement and production changes remain separate approved actions.
+
 ## Active entry and priority (2026-10-12)
 
 **One current authority:** `docs/handoff/CURRENT.md`. Read in order:
@@ -16,7 +20,7 @@ Do not infer a deployment or permission from a code SHA, stale handoff, CI green
 ## Authority and scope
 
 1. Read `CONSTITUTION.md` before changing code.
-2. Active engineering branch is `p1/foundation` unless the human explicitly assigns another branch.
+2. `main` is the authoritative integrated source. Use an existing task branch when practical; create another only when the user asks or isolation is needed. Do not revive `p1/foundation` as a competing authority.
 3. Do not merge to `main`, force-push, rewrite history, or delete branches unless the human explicitly approves that exact action.
 4. Preserve all untracked and locally modified files. Never use `git reset --hard`, `git clean -fd`, or equivalent destructive cleanup without explicit human approval.
 5. Work only inside this repository unless the task explicitly authorizes another path.
