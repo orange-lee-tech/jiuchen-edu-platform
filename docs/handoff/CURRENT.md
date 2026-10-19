@@ -1,6 +1,13 @@
-# CURRENT — 九辰教育唯一活跃交接（2026-10-18）
+# CURRENT — 九辰教育唯一活跃交接（2026-10-19）
 
-**当前现场执行入口：** [858aa6a5 十月资讯候选执行与验收](p1-public-pages-release-execution-2026-10-18.md)。新固定 ECS staging 脚本 SHA-256 `f4936b0466748523366e9236b940eed13ee64cbec0ab8c7261cd4168d8c3aed9`；新 release 准备脚本 SHA-256 `bacad470d98ede2f51d00c05bb22d41484d74cef39797b4043de55b509f461d7`。staging 和 release 准备均已在 ECS 通过；现役未切换。旧云端 CI 三任务在步骤前失败，不替代自托管本 SHA 的四项成功。
+**当前状态：** 四篇十月真稿生产写入和公开 API 列表/详情读取已通过；微信体验版真机、支付与正式发布待验。固定候选执行范围和历史 staging/release 证据见 [858aa6a5 十月资讯候选执行与验收](p1-public-pages-release-execution-2026-10-18.md)。现役 API 精确 SHA 尚需现场只读回执确认；旧云端 CI 的计费失败不替代自托管固定候选四项成功。
+
+## 2026-10-19 09:32 CST：四篇十月原文已写生产，公开读取通过
+
+- 用户 WSL 现场回执：固定四页私有负载先执行只读 review，随后使用真实管理员会话运行 `submit-public-pages-20261019.py --apply`；`POST_1=CREATED`、`POST_2=CREATED`、`POST_3=CREATED`、`POST_4=CREATED`，最终 `FOUR_POST_REQUESTS_COMPLETED`。曾因输入 `ok` 或将票据连同引号粘贴而在首篇得到 401；一次连接被远端断开且未确认写入。随后切换真正管理员身份，独立只读会话检查 `ECS_AUTH_HTTP=200`、`ECS_ROLE=admin`。不记录会话票据。
+- 本机从生产公共 HTTPS 执行 `verify-four-public-news-20261019.py`：四篇逐篇 `ARTICLE_1_PUBLIC_PASS images=2`、`ARTICLE_2_PUBLIC_PASS images=7`、`ARTICLE_3_PUBLIC_PASS images=1`、`ARTICLE_4_PUBLIC_PASS images=3`，最终 `FOUR_PUBLIC_ARTICLES_AND_DETAIL_PASS`。校验覆盖公开 `/news` 的 `v2=true`、各原文 URL 唯一可见、详情标题/媒体类型/图片块数量/收藏功能标记及图文正文块合同。
+- 此回执证明 C 四篇生产写入与公开 API 列表/详情读取通过，公开接口已响应 News V2；**不等于**图片在微信真机完成加载、收藏跳原文、客服实际收信、四角色只读/编辑权限、真实评估负载或商户交易通过。A+B 现场激活脚本的完整 `A_B_PROMOTION_PASS`、现役 `current` 精确 SHA 和资源限额真实负载回执未在本次用户日志中提供，应只读核对，不从四篇可读倒推出确切 release SHA。
+- 下一关：一次微信体验版集中真机验收；逐条检查四篇正文/13 张图的真实显示、收藏与原文、游客/学员/老师/管理员客服端到端、资料读写、课表/评估与只读身份权限负例。支付继续保持独立门槛，先核商户配置与真实交易，再启用收费；十月稿自动来源缺口、10 月 12 日中南大学稿仍需单列。正式发布/官网和代理变更未获本项批准。
 
 ## 2026-10-19 08:21 CST：A/B/C 生产范围批准，待现场执行
 
