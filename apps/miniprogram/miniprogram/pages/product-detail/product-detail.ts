@@ -1,5 +1,5 @@
 import { getProduct } from '../../utils/request'
-import { openWechatCustomerService } from '../../utils/customer-service'
+import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 
 type AnyRecord = Record<string, unknown>
 
@@ -237,7 +237,7 @@ Page({
   },
 
   onCustomerServiceTap() {
-    openWechatCustomerService()
+    void openVerifiedWechatCustomerService('服务方案咨询：'+(this.data.view?.name||'九辰服务'))
   },
 
   onLoad(options: { documentKey?: string }) {
