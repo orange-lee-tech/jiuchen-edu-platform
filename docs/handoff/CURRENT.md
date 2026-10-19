@@ -2,6 +2,12 @@
 
 **当前状态：** 生产 API 已确认为 `858aa6a5bebbdb88346c6282f691b4976886b935`，服务 active、News V2 已开启；四篇十月稿生产写入和公开读取通过。体验版真机发现收藏取消、客服信息及卡片阻断；API 与前端联合候选已备齐，尚未部署复验；商户真实交易与正式发布待验。官网仍是 `/www/wwwroot/jiuchen-releases/20260809-115206-2fecbaf0`。旧云端 CI 计费失败不替代本地 Runner 验证。
 
+## 2026-10-19：dbd7d9a8 ECS staging 回执与下一门（未切流）
+
+- 用户 ECS 日志：固定 tar.gz 与 staging 脚本双 SHA-256 OK，`ARCHIVE_MANIFEST_AND_BLOBS_PASS`；隔离目录 `/opt/jiuchen-api/staging/verify-dbd7d9a818523cc3b007afe47a03519510415652-20261019-061659-574221`。Node 22 typecheck/build `ECS_TYPECHECK_AND_BUILD_PASS`；cgroup v1 实测 30 次无数据库健康请求，内核 MemoryLimit=268435456、MemoryPeak=76087296 bytes、MemoryFailcnt=0、CPU 0.5、TasksMax 64，`ECS_KERNEL_256M_NO_DB_SMOKE_PASS`；unit 均 result=success/status=0；`ECS_CANDIDATE_STAGING_PASS` 和 `ECS_STAGING_COMMAND_PASS`。现役仍为 `/opt/jiuchen-api/releases/858aa6a5bebbdb88346c6282f691b4976886b935`。
+- [固定 release 准备与数据库只读兼容脚本](https://github.com/orange-lee-tech/jiuchen-edu-platform/blob/8cb1103db618fc4162023d601f414808c6982ef6/tools/release/prepare-contact-favorites-release-20261019.sh) SHA-256 `c184bca674a0d5fac9825064653b29b4bb7efd0f9dce307a3cec95e8e2d5a672`，`bash -n` 和嵌入 JS `node --check` 通过。脚本复核归档与 Git blobs，隔离构建后以生产环境连接做 read-only transaction 的六表必要字段检查；仅在全通过时创建 root 所有的 `releases/dbd7d9a8...`，检查服务用户可读，现役指针保持不变。**尚未执行；真实业务、AI 与微信真机不因该检查自动通过。**
+- 下一门先取得 `PRODUCTION_DB_READONLY_COMPAT_PASS` 和 `RELEASE_PREPARED`，再完整审阅新 SHA 切流脚本及回滚点。旧 858 的 A/B/C 授权不自动延伸到 dbd；正式切流需本候选单独批准。支付配置与真实充值、各角色真机、客服卡片及资讯仍待验收。
+
 ## 2026-10-19：收藏、姓名与客服卡片联合修复候选（未部署）
 
 - 用户复测现有体验版：取消收藏 `400/http_400`；“我的收藏”进入站内资讯正文；学员客服复制文案缺姓名及学业资料；身份与学业展示预置“测试学员零三”，资料编辑没有姓名；此前客服小程序卡片点开“页面不存在”。具体前端体验版 SHA 尚未从本次手机回执核验。这些均按 DEVICE FAIL/PENDING 处理。
