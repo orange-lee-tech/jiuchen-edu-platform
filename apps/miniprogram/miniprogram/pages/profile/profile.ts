@@ -1,6 +1,5 @@
 import { deleteCurrentAccount, getSavedAuthResult, logoutWechatUser, type UserRole } from '../../utils/auth'
 import { friendlyRequestError, getMyNewsFavorites, type NewsFavorite } from '../../utils/request'
-import { openOfficialArticle } from '../../utils/official-article'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 import {getReadOnlyContext,clearReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
@@ -85,7 +84,7 @@ Page({
   },
   onFavoriteOpen(event:WechatMiniprogram.BaseEvent){
     const favorite=this.data.favorites.find(item=>item.postId===event.currentTarget.dataset.id)
-    if(favorite)openOfficialArticle(favorite.articleUrl)
+    if(favorite)openPage(`/pages/news-detail/news-detail?id=${encodeURIComponent(favorite.postId)}`)
   },
   async onLogout() {
     if(isReadOnly())return
