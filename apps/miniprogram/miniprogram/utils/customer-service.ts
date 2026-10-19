@@ -31,12 +31,8 @@ export async function openVerifiedWechatCustomerService(
         const card={title:'九辰咨询｜未登录游客'+(context.school?'｜'+context.school:''),
           path:context.path||'/pages/index/index'}
         if(context.school){
-          wx.setClipboardData({
-            data:['【九辰院校咨询】','当前身份：未登录游客','目标学校：'+context.school,
-              '联系人：（请填写）'].join('\n'),
-            success:()=>openWechatCustomerService(card),
-            fail:()=>wx.showToast({title:'复制失败，请稍后再试',icon:'none'}),
-          })
+          void copyConsultationAndOpen(['【九辰院校咨询】','当前身份：未登录游客','目标学校：'+context.school,
+            '联系人：（请填写）'].join('\n'))
         } else openWechatCustomerService(card)
       },
     })
@@ -78,25 +74,15 @@ export async function openVerifiedWechatCustomerService(
     ...(context.major?['就读专业：'+context.major]:[]),
   ]
   const summary=identityLines.join('\n')
-  const cardTitle=('九辰咨询｜'+role+'｜'+name+(context.school?'｜'+context.school:'')+
-    (internalId?'｜'+internalId:'')).slice(0,48)
   wx.showModal({
     title:'确认客服识别信息',
-    content:summary+'\n\n确认后复制信息并打开微信客服，请手动粘贴发送。不会后台自动提交。',
-    confirmText:'复制并联系',
+    content:summary+'\n\n确认后先复制信息，再点击打开客服。请在会话中手动粘贴发送。',
+    confirmText:'复制信息',
     success(result){
       if(!result.confirm)return
-      const current=getSavedAuthResult()
-      if(!current || current.user.id!==verified.user.id || current.session.token!==before.session.token){
-        wx.showToast({title:'账号已变更，请重试',icon:'none'})
-        return
-      }
-      wx.setClipboardData({
-        data:summary,
-        success:()=>openWechatCustomerService({
-          title:cardTitle,path:context.path||'/pages/profile/profile',
-        }),
-        fail:()=>wx.showToast({title:'身份信息复制失败',icon:'none'}),
+      void copyConsultationAndOpen(summary,undefined,()=>{
+        const current=getSavedAuthResult()
+        return Boolean(current && current.user.id===verified.user.id && current.session.token===before.session.token)
       })
     },
   })
