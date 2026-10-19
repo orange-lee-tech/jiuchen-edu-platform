@@ -1,7 +1,15 @@
 # CURRENT — 九辰教育唯一活跃交接（2026-10-19）
 
-**当前状态：** 生产 API 已确认为 `858aa6a5bebbdb88346c6282f691b4976886b935`，服务 active、News V2 已开启；四篇十月稿生产写入和公开读取通过。体验版真机发现收藏取消、客服信息及卡片阻断；API 与前端联合候选已通过固定 Runner、ECS 隔离构建及只读生产 DB 兼容检查，API 新 release 已准备但尚未切流；商户真实交易、联合真机验收与正式发布待验。官网仍是 `/www/wwwroot/jiuchen-releases/20260809-115206-2fecbaf0`。旧云端 CI 计费失败不替代本地 Runner 验证。
+**当前状态：** 用户 ECS 回执确认生产 API 已切至 `dbd7d9a818523cc3b007afe47a03519510415652`，服务健康、News V2 公开读取和新路由未登录拦截通过；四篇十月稿先前已写入并公开可读。官网指针未变。固定前端 `9da7f9178b737b8ebbc7b17ece1ef3260824f893` 尚待同一微信体验版真机验收；真实商户交易、充值次数及统计、正式发布待验。旧云端 CI 计费失败不替代固定 Runner 验证。
 
+## 2026-10-19 14:50 CST：dbd7d9a8 API 已切流，转入联合真机验收
+
+- 用户在 Windows PowerShell 校验切流脚本 SHA-256 `a96257e158ee91cbf7c988ce34398d1995a986f784bced8f146222165d6612c2`，上传 ECS staging；ECS 对该脚本及固定旧 promotion 脚本分别 `sha256sum: OK`，`NEWS_V2_FLAG_PRECHECK_PASS`、`PRECHECK_PASS candidate=dbd7d9a818523cc3b007afe47a03519510415652 previous=858aa6a5bebbdb88346c6282f691b4976886b935`。
+- `STEP=PROMOTE_FIXED_SHA` 后得到 `PROMOTE_OK active=dbd7d9a818523cc3b007afe47a03519510415652 previous=858aa6a5bebbdb88346c6282f691b4976886b935`；最终 `NEWS_V2_PUBLIC_COUNT=10`、`AUTH_BOUNDARY_DISPLAY_NAME=401`、`AUTH_BOUNDARY_FAVORITES=401`、`API_CURRENT=/opt/jiuchen-api/releases/dbd7d9a818523cc3b007afe47a03519510415652`、`ROLLBACK_TARGET=/opt/jiuchen-api/releases/858aa6a5bebbdb88346c6282f691b4976886b935`、`WEBSITE_POINTER_UNCHANGED=true`、`DBD7_API_PROMOTION_PASS`、本机 `API_CUTOVER_COMMAND_PASS`。
+- 重启期间三次 `curl: (7) ... Connection refused` 是 promotion 健康轮询初期的瞬时连接失败；随后健康门禁和脚本后检通过。没有 `RECOVERY_START` 或回退迹象。该回执证明 API 切流与所列只读接口检查成功，不证明学员资料写入、收藏取消、微信客服卡片、AI 真实负载或充值交易成功。
+- **下一步同一体验版：** 从固定前端 `9da7f9178b737b8ebbc7b17ece1ef3260824f893` 打开微信开发者工具并上传体验版，在手机连续验收四篇正文与图片、收藏取消及原文／退役后的本人阅读、姓名与学业资料、管理员/老师/学员/游客客服入口和新卡片、四角色只读权限、评估与课表。先确认使用的是新体验版，旧聊天记录里的旧卡片不能算新版本失败。随后单列商户配置、一次真实充值及后台统计，最终才提审正式发布。若真机失败，记录身份、页面、动作、状态码/微信 errMsg，不扩大生产修改范围。
+
+以下按发生时间保留切流前证据；其中“未切流”“待切流”均为当时状态，以本节为准。
 ## 2026-10-19：dbd7d9a8 ECS staging 与 release 准备通过（未切流）
 
 - 用户 ECS 日志：固定 tar.gz 与 staging 脚本双 SHA-256 OK，`ARCHIVE_MANIFEST_AND_BLOBS_PASS`；隔离目录 `/opt/jiuchen-api/staging/verify-dbd7d9a818523cc3b007afe47a03519510415652-20261019-061659-574221`。Node 22 typecheck/build `ECS_TYPECHECK_AND_BUILD_PASS`；cgroup v1 实测 30 次无数据库健康请求，内核 MemoryLimit=268435456、MemoryPeak=76087296 bytes、MemoryFailcnt=0、CPU 0.5、TasksMax 64，`ECS_KERNEL_256M_NO_DB_SMOKE_PASS`；unit 均 result=success/status=0；`ECS_CANDIDATE_STAGING_PASS` 和 `ECS_STAGING_COMMAND_PASS`。现役仍为 `/opt/jiuchen-api/releases/858aa6a5bebbdb88346c6282f691b4976886b935`。
