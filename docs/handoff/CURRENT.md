@@ -1,6 +1,59 @@
 # CURRENT — 九辰教育唯一活跃交接（2026-10-19）
 
-**当前状态：** 四篇十月真稿生产写入和公开 API 列表/详情读取已通过；微信体验版真机、支付与正式发布待验。固定候选执行范围和历史 staging/release 证据见 [858aa6a5 十月资讯候选执行与验收](p1-public-pages-release-execution-2026-10-18.md)。现役 API 精确 SHA 尚需现场只读回执确认；旧云端 CI 的计费失败不替代自托管固定候选四项成功。
+**当前状态：** 用户 ECS 回执确认生产 API 已切至 `dbd7d9a818523cc3b007afe47a03519510415652`，服务健康、News V2 公开读取和新路由未登录拦截通过；四篇十月稿先前已写入并公开可读。官网指针未变。用户报告固定前端的其他体验项已通过，客服卡片点击仍显示微信“页面不存在”；当前截图中的卡片标记“未发布的小程序·开发版”，待上传并指定体验版后用新卡片复验。真实商户交易、充值次数及统计、正式发布待验。旧云端 CI 计费失败不替代固定 Runner 验证。
+
+## 2026-10-19：0.0.19 发布台面与分支整合状态
+
+- 用户指定体验版号 `0.0.19`，固定前端源码 `9da7f9178b737b8ebbc7b17ece1ef3260824f893`；生产 API 的最后现场回执为 `dbd7d9a818523cc3b007afe47a03519510415652`。尚缺 0.0.19 上传、设为体验版及新客服卡片点击的现场回执，开发版旧卡片“页面不存在”不能作为体验版或正式版的结论。
+- 发布阻断：新卡片回跳与必要角色真机验收；真实商户配置、充值、扣次和统计闭环；新组合在生产数据库与 AI 请求下的资源和业务检查；微信体验版、提审与审核通过。用户报告其他真机问题已通过，但逐项证据待补。四篇十月原文公开读取通过；十月后续公众号自动来源仍有缺口，不能把四篇补录等同于持续自动同步。
+- 代码整合：`main` 仍为早期 P0，`p1/foundation`、前端 PR #4 与现役 API PR #5 不在同一最新祖先链。禁止将某个 PR 直接当作已验证的前后端合包；必须汇合两条代码链、审查冲突，并对整包重新跑门禁后更新 main。旧草稿 PR #2/#3 属于早期原型/候选，可关闭；独有提交的分支不得在没有归档和差异核查前删除。生产回退目录仍需保留。
+- 数据恢复：生产 DDL 前的最小可恢复点已下载，本地隔离导入 17 张原表及迁移演练通过；长期轮替备份放发布后。不得把隔离导入当作生产业务恢复验收。
+- GitHub 整理回执：旧五 Tab 原型 PR #2、早期隔离 API PR #3 已关闭且分支暂留。PR #1、#4、#5 保持 Draft，并在 PR 正文标出当前配对与整合门槛。2026-10-19 尚未合并 main、尚未删除远端分支；GitHub 连接无删分支能力，云浏览器未登录私有仓库。旧 API 候选分支即使为 API 现用分支祖先，也要在 main 整合和回退可达性复核后再剪除；P2/其他含独有提交的分支禁止盲删。
+- 临时工作台：旧隔离源码快照的三处 npm 依赖目录以 `npm prune --omit=dev` 清理开发依赖，合计目录占用从约 737 MiB 降到约 211 MiB；未删除源码快照或用户 Windows 桌面的体验目录。
+
+## 2026-10-19 15:16 CST：真机客服卡片单项未通过
+
+- 用户报告此前集中验收的其他问题已通过；此项为用户口述 PASS，尚无逐项原始回执。两张截图显示客服会话中可生成管理员身份摘要卡片，卡片底部标记“未发布的小程序·开发版”；点击进入微信的“页面不存在”。不得记为客服卡片回跳 PASS，也不能把微信的页面不存在写成 API 页面加载空白。
+- 固定前端 `9da7f9178b737b8ebbc7b17ece1ef3260824f893` 的 `customer-service.ts` 给客服卡片设置首页路径 `/pages/index/index`；该页面确实在 `app.json` 的 pages 数组。截图无法单独判定是开发版卡片的访问版本差异，还是微信对卡片路径格式的解析；从图片也不能核定用户当前手机运行的精确前端 SHA。
+- 本次体验版版本号由用户设为 `0.0.19`；说明：`九辰保研体验版：资讯原文与收藏、本人姓名及学业资料、四角色权限和客服咨询联调。前端 9da7f917，API dbd7d9a8；客服卡片回跳待验，充值支付未开放。` 将固定源码上传并在后台设为体验版，使用体验版重新产生**一张新卡片**，由具备体验权限的微信号打开。若仍“页面不存在”，记录体验版版本、微信号是否具备体验权限和新卡片截图，再针对路径或微信平台约束修复，不拿旧开发版聊天卡片做结论。
+## 2026-10-19 14:50 CST：dbd7d9a8 API 已切流，转入联合真机验收
+
+- 用户在 Windows PowerShell 校验切流脚本 SHA-256 `a96257e158ee91cbf7c988ce34398d1995a986f784bced8f146222165d6612c2`，上传 ECS staging；ECS 对该脚本及固定旧 promotion 脚本分别 `sha256sum: OK`，`NEWS_V2_FLAG_PRECHECK_PASS`、`PRECHECK_PASS candidate=dbd7d9a818523cc3b007afe47a03519510415652 previous=858aa6a5bebbdb88346c6282f691b4976886b935`。
+- `STEP=PROMOTE_FIXED_SHA` 后得到 `PROMOTE_OK active=dbd7d9a818523cc3b007afe47a03519510415652 previous=858aa6a5bebbdb88346c6282f691b4976886b935`；最终 `NEWS_V2_PUBLIC_COUNT=10`、`AUTH_BOUNDARY_DISPLAY_NAME=401`、`AUTH_BOUNDARY_FAVORITES=401`、`API_CURRENT=/opt/jiuchen-api/releases/dbd7d9a818523cc3b007afe47a03519510415652`、`ROLLBACK_TARGET=/opt/jiuchen-api/releases/858aa6a5bebbdb88346c6282f691b4976886b935`、`WEBSITE_POINTER_UNCHANGED=true`、`DBD7_API_PROMOTION_PASS`、本机 `API_CUTOVER_COMMAND_PASS`。
+- 重启期间三次 `curl: (7) ... Connection refused` 是 promotion 健康轮询初期的瞬时连接失败；随后健康门禁和脚本后检通过。没有 `RECOVERY_START` 或回退迹象。该回执证明 API 切流与所列只读接口检查成功，不证明学员资料写入、收藏取消、微信客服卡片、AI 真实负载或充值交易成功。
+- **固定体验版入口：** [前端精确 SHA 源码 ZIP](https://github.com/orange-lee-tech/jiuchen-edu-platform/archive/9da7f9178b737b8ebbc7b17ece1ef3260824f893.zip)，独立解压，微信开发者工具导入其中的 `apps/miniprogram`（项目 AppID 已在 `project.config.json`），Windows PowerShell 用 `npm.cmd install --no-save --package-lock=false --no-audit --no-fund` 再 `npm.cmd run typecheck`；两项均须检查退出码。编译后上传并由小程序后台设为体验版；不要从本分支移动 HEAD、旧体验版目录或聊天历史旧卡片取证。
+- **下一步同一体验版：** 从固定前端 `9da7f9178b737b8ebbc7b17ece1ef3260824f893` 打开微信开发者工具并上传体验版，在手机连续验收四篇正文与图片、收藏取消及原文／退役后的本人阅读、姓名与学业资料、管理员/老师/学员/游客客服入口和新卡片、四角色只读权限、评估与课表。先确认使用的是新体验版，旧聊天记录里的旧卡片不能算新版本失败。随后单列商户配置、一次真实充值及后台统计，最终才提审正式发布。若真机失败，记录身份、页面、动作、状态码/微信 errMsg，不扩大生产修改范围。
+
+以下按发生时间保留切流前证据；其中“未切流”“待切流”均为当时状态，以本节为准。
+## 2026-10-19：dbd7d9a8 ECS staging 与 release 准备通过（未切流）
+
+- 用户 ECS 日志：固定 tar.gz 与 staging 脚本双 SHA-256 OK，`ARCHIVE_MANIFEST_AND_BLOBS_PASS`；隔离目录 `/opt/jiuchen-api/staging/verify-dbd7d9a818523cc3b007afe47a03519510415652-20261019-061659-574221`。Node 22 typecheck/build `ECS_TYPECHECK_AND_BUILD_PASS`；cgroup v1 实测 30 次无数据库健康请求，内核 MemoryLimit=268435456、MemoryPeak=76087296 bytes、MemoryFailcnt=0、CPU 0.5、TasksMax 64，`ECS_KERNEL_256M_NO_DB_SMOKE_PASS`；unit 均 result=success/status=0；`ECS_CANDIDATE_STAGING_PASS` 和 `ECS_STAGING_COMMAND_PASS`。现役仍为 `/opt/jiuchen-api/releases/858aa6a5bebbdb88346c6282f691b4976886b935`。
+- [固定 release 准备与数据库只读兼容脚本](https://github.com/orange-lee-tech/jiuchen-edu-platform/blob/8cb1103db618fc4162023d601f414808c6982ef6/tools/release/prepare-contact-favorites-release-20261019.sh) SHA-256 `c184bca674a0d5fac9825064653b29b4bb7efd0f9dce307a3cec95e8e2d5a672`，`bash -n` 和嵌入 JS `node --check` 通过。脚本复核归档与 Git blobs，隔离构建后以生产环境连接做 read-only transaction 的六表必要字段检查；仅在全通过时创建 root 所有的 `releases/dbd7d9a8...`，检查服务用户可读，现役指针保持不变。**已由用户在 ECS 执行通过，回执见下一条；真实业务、AI 与微信真机不因该检查自动通过。**
+- **2026-10-19 用户 ECS release 准备回执：** 脚本与固定归档 SHA-256 OK，manifest/Git blobs PASS；Node 22 的 typecheck/build `RELEASE_TYPECHECK_AND_BUILD_PASS`、unit success/status 0；生产只读 DB 兼容检查 `PRODUCTION_DB_READONLY_COMPAT_PASS`，六表 `users`、`students`、`user_profiles`、`news_posts`、`news_favorites`、`news_display_states`，`newsV2Enabled=true`、`productionWrites=false`、`aiOrPaymentCalls=false`；`RELEASE_LINK_BOUNDARY_PASS`。新 root-owned release `/opt/jiuchen-api/releases/dbd7d9a818523cc3b007afe47a03519510415652` 已准备；`PRODUCTION_CURRENT_UNCHANGED=/opt/jiuchen-api/releases/858aa6a5bebbdb88346c6282f691b4976886b935`。未写 READY/approved-release，未重启，未切流。
+- [固定新 SHA 切流与失败回退脚本](https://github.com/orange-lee-tech/jiuchen-edu-platform/blob/72a91c6a727660067bdc4e737fd2e54230020816/tools/release/promote-contact-favorites-20261019.sh) SHA-256 `a96257e158ee91cbf7c988ce34398d1995a986f784bced8f146222165d6612c2`；`bash -n` 和两段嵌入 Python 静态编译通过，**尚未上传或运行**。它要求 `--apply`、root、现役精确旧 SHA、新 release、固定旧受审 promotion 脚本哈希，并在执行时写入本候选的批准标记与 READY；只切 `jiuchen-api`，检查健康、News V2、无会话的新写入路由均 401、官网指针不变。失败时尝试恢复旧 SHA 并核查健康，若恢复不完整显式报警。运行前仍需确认固定旧 promotion 脚本存在且校验通过。
+- **下一门：** 按仓库 `AGENTS.md` 的精确切流单独审批要求，旧 858 的 A/B/C 授权不自动延伸到 dbd。批准并执行后仍需在同一次微信体验版会话核验 `9da7f9178b737b8ebbc7b17ece1ef3260824f893` 的收藏取消/退役、原文、本人姓名、客服入口与卡片及四角色；支付配置、真实充值和统计也仍须真实验收。
+
+## 2026-10-19：收藏、姓名与客服卡片联合修复候选（未部署）
+
+- 用户复测现有体验版：取消收藏 `400/http_400`；“我的收藏”进入站内资讯正文；学员客服复制文案缺姓名及学业资料；身份与学业展示预置“测试学员零三”，资料编辑没有姓名；此前客服小程序卡片点开“页面不存在”。具体前端体验版 SHA 尚未从本次手机回执核验。这些均按 DEVICE FAIL/PENDING 处理。
+- API 隔离候选 `dbd7d9a818523cc3b007afe47a03519510415652` 从现役 `858aa6a5` 精确派生，[Draft PR #5](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/5) 目标为原隔离 API 分支。保留现役已支持的公众号图片源白名单；增加登录本人已收藏的退役资讯正文访问、POST 取消收藏兼容入口（旧 DELETE 仍在）、本人姓名更新并同步本人绑定的学员名。未改生产数据、DDL、支付、AI 或现役指针。
+- 前端后继候选（本分支）：我的收藏主入口使用保存时的公众号原文 URL，保留站内阅读次入口；取消收藏调用新的 POST 路由；个人资料新增由本人填写并保存姓名；客服从服务端核对身份与学业资料后由用户确认，卡片标题只含简短身份摘要，路径固定到公开首页，完整资料仍须用户粘贴发送。微信卡片 API 不提供任意长正文自动填写，体验版可达和客服人员可点开仍需真机验证。原文若被公众号删除，外链也会失效；已收藏的站内正文则由后端按本人权限保留。
+- 本地对应源码：API TypeScript、build 和全套 219/219 单元与合同测试 PASS；小程序 TypeScript PASS。[固定配对自托管 Gate](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39207715118) 已核对两个精确 SHA，API Node 22 typecheck、222/222 测试、build 通过；小程序 typecheck、106/106 回归通过；[API 归档](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/39207715118/artifacts/12165778617) 上传通过（ZIP SHA-256 `5725a9a3c4fabd3d1924626c1fa54af7b0126cc33f003c61d646622fb45db5c2`，内层 tar.gz SHA-256 `1bffcd9f66da800c7713ecad7bd9008edd68a21228c752e6311928e8adea26de`，163 个 Git blobs）。固定 API 候选仍为 `dbd7d9a8...`、小程序 `9da7f917...`；工作流提交 `16e76c59...` 和后续验收脚本提交 `7ba21b87...` 均不改变候选代码。 [ECS staging 只读脚本](https://github.com/orange-lee-tech/jiuchen-edu-platform/blob/7ba21b8712e6ac8f05c0d68f0a4c6e88c029dec0/tools/release/verify-contact-favorites-staging-20261019.sh) SHA-256 `523792df9da2f05ad3065fea91e4a0ee340e4b3a71740289a29918d368e8bb2a`，已过 `bash -n`，本候选 ECS 实跑通过，见本页首节。生产发布、微信真机取消收藏/原文/卡片、本人真实姓名及四角色验收仍 PENDING。当前生产 API 仍据用户回执为 `858aa6a5`；草稿 PR 和 Gate 不构成切流或微信发布批准。
+- 下一步按页首已完成的 ECS staging、生产 DB 只读兼容与 release 准备回执，取得新候选明确切流批准后才切流。同一微信体验版会话查收藏取消、退役本人阅读、官方原文、姓名资料、客服卡片及完整粘贴信息。真实 DB 写入、AI 负载、商户真实充值/统计和正式发布仍独立待验。
+
+## 2026-10-19 真机复测未通过：资讯、收藏和客服
+
+- 用户在固定前端 `6f506aeedf18ad83e8459c0b3ce053f7d7cd911b` 的本机类型检查 PASS 后反馈：收藏后原文仍无法打开；取消收藏出现“收藏未保存，请重试”；客服入口仍未通过；院校和 AI 咨询会话中所见卡片点击“页面不存在”；管理员资讯管理只能编辑标签，缺少正文预览。**尚未确认手机测试的是新预览还是历史体验版、卡片是新产生还是会话历史；不得判定客服修复已通过。**生产 API 指针和官网指针仍以用户上一条只读回执为准。
+- 代码检视：资讯与“我的”收藏列表把保存的公众号 URL 直接送入外部打开 API，未使用已存在的站内资讯详情；管理员管理列表无预览按钮，管理员资讯页默认折叠；微信客服调用已在院校/评估场景可达，但旧消息卡片不会因新版代码而从聊天记录消失。服务端生产候选含 `DELETE /me/news-favorites/:id`，这不足以判定本次取消收藏的 HTTP/DB 失败原因。
+- 下一前端候选：收藏点击改用 `postId` 进入站内详情；管理员资讯页默认加载文章、管理列表新增“预览正文”；所有环境不再发送新小程序卡片；身份核验后先复制摘要、再通过用户明确点击“打开客服”调用微信接口；失败时显示微信 `errMsg` 并允许一次用户点击重试；收藏失败时保留 HTTP 状态/错误码。业务正文继续由生产 News V2 提供，不更改生产 DDL 或服务指针。小程序 TypeScript 检查通过，导航与报告咨询相关回归 **78/78 PASS**；真机、取消收藏成功、客服实开均**待复验**。
+- 下次集中复验先确认新项目预览码与本候选一致，并区分聊天历史卡片和新发送卡片。若取消收藏仍失败，回传页面显示的 `状态码/错误码`；若客服仍失败，回传“客服未打开（新版）”弹窗的微信错误。收到后针对真实原因修复，不能盲目重试生产写入或宣称正式发布完成。
+
+## 2026-10-19：生产只读确认与体验版阻断修复候选
+
+- 用户现场只读回执：`API_CURRENT=/opt/jiuchen-api/releases/858aa6a5bebbdb88346c6282f691b4976886b935`、`API_SERVICE=active`、`NEWS_V2_ENABLED=true`；官网指针未改变。固定前端体验版 `51ea8775de74581289617cf1428ba4165775c1e0`，项目目录 `C:\\Users\\yulia\\Desktop\\jiuchen-experience-51ea8775\\apps\\miniprogram`。
+- 真机已见：收藏动作响应，但“我的收藏”点原文报链接无效；管理员身份切换通过，管理员“我的”联系运营闪屏未进入；学员 AI 评估和院校咨询可进入微信客服并可发送信息，但所附卡片显示“未发布的小程序·开发版”，点击报“页面不存在”；其他客服入口尚未完成逐一成功验收。客服聊天可达不等于卡片可打开。
+- 本分支前端候选修复：去除公众号链接打开时对全局 `URL` 的依赖；原文 API 不可用时明确复制链接给用户；客服身份独立从 `/auth/me` 只读核验以避免全局 loading 卸载“我的”菜单；“我的收藏”只在真正 onShow 时重置；开发版/体验版不再附带不可访问的小程序卡片，保留剪贴板摘要和客服会话；产品列表及产品详情咨询也进入同一核验流程。已在本地完成小程序 TypeScript typecheck、导航与报告咨询相关回归 73/73，**真机尚待复验**。
+- 后续集中真机复验：收藏原文直接打开（若落入复制提示需单独记录）；管理员/学员/老师/游客的“我的”和首页客服、产品列表/详情、院校与评估咨询的会话及粘贴信息；四篇文章及 13 张图片；资料读写、角色只读限制、真实评估资源。商户配置和真实充值仍独立验收，未据此宣称正式商业发布可行。备份已在本地隔离导入 17 张原表并演练三组 DDL，但生产后续变更仍应保留最小可恢复点。
 
 ## 2026-10-19 09:32 CST：四篇十月原文已写生产，公开读取通过
 

@@ -1,7 +1,7 @@
 import { deleteCurrentAccount, getSavedAuthResult, logoutWechatUser, type UserRole } from '../../utils/auth'
 import { friendlyRequestError, getMyNewsFavorites, type NewsFavorite } from '../../utils/request'
-import { openOfficialArticle } from '../../utils/official-article'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
+import { openOfficialArticle } from '../../utils/official-article'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 import {getReadOnlyContext,clearReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 
@@ -31,11 +31,11 @@ Page({
   stopShell: undefined as (() => void) | undefined,
   onShow() {
     this.stopShell?.()
+    this.setData({favoritesVisible:false,favorites:[],favoritesError:''})
     this.stopShell = observeSlot('mine', (state) => {
       const auth = state.auth
       const role = auth?.user.role || ''
       this.setData({
-        favoritesVisible:false,favorites:[],favoritesError:'',
         ...shellView(state), loggedIn: Boolean(auth), role,
         roleLabel: shellView(state).shellRoleLabel, businessId: auth?.businessIdentity?.businessId || '',
         userName: auth?.user.displayName || (role === 'staff' ? '九辰内部员工' : role === 'teacher' ? '九辰辅导老师' : role === 'admin' ? '九辰管理员' : role === 'student' ? '九辰学员' : '我的保研档案'),
@@ -86,6 +86,10 @@ Page({
   onFavoriteOpen(event:WechatMiniprogram.BaseEvent){
     const favorite=this.data.favorites.find(item=>item.postId===event.currentTarget.dataset.id)
     if(favorite)openOfficialArticle(favorite.articleUrl)
+  },
+  onFavoriteReader(event:WechatMiniprogram.BaseEvent){
+    const favorite=this.data.favorites.find(item=>item.postId===event.currentTarget.dataset.id)
+    if(favorite)openPage(`/pages/news-detail/news-detail?id=${encodeURIComponent(favorite.postId)}`)
   },
   async onLogout() {
     if(isReadOnly())return

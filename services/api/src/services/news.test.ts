@@ -1,12 +1,19 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import Fastify from 'fastify'
-import {upsertOfficialAccountPosts} from './news.js'
+import {normalizeNewsContent,upsertOfficialAccountPosts} from './news.js'
 import {registerNewsRoutes} from '../routes/news.js'
 import {userSessions} from '../db/schema.js'
 import type {DatabaseContext} from '../db/client.js'
 import type {OfficialAccountPost} from './official-account.js'
 const content={html:'合成正文',author:null,contentSourceUrl:null,sourceUpdatedAt:null,sourceCreatedAt:null,publicationTimeSource:'unverified' as const}
+test('verified image blocks survive output normalization without widening image hosts',()=>{
+ const result=normalizeNewsContent({blocks:[
+   {type:'image',url:'https://mmecoa.qpic.cn/mmecoa_png/sample/0'},
+   {type:'image',url:'https://mmecoa.qpic.cn.evil.example/sample'},
+ ]})
+ assert.deepEqual(result.blocks,[{type:'image',url:'https://mmecoa.qpic.cn/mmecoa_png/sample/0'}])
+})
 test('sync counts genuine changes, keeps reviewed tags and hidden state, and reports row failures',async()=>{
  const post:OfficialAccountPost={sourceKey:'synthetic',title:'合成标题',summary:null,coverUrl:null,articleUrl:null,publishedAt:null,content}
  const row={id:'synthetic',...post,contentJson:content,tagsJson:['已分类'],status:'hidden'}

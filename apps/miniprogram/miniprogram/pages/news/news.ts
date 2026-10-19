@@ -1,7 +1,6 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import { INITIAL_SHELL, observeSlot, openPage, shellView } from '../../utils/navigation'
 import { getNewsListing, getMyNewsFavorites, type NewsFavorite, type NewsPost } from '../../utils/request'
-import { openOfficialArticle } from '../../utils/official-article'
 
 import {newsPublicationLabel} from '../../utils/news-date'
 
@@ -97,8 +96,9 @@ Page({
     this.stopShell?.()
     this.stopShell = observeSlot('opportunity', (state) => {
       this.viewGeneration += 1
-      this.setData({ ...shellView(state), showReferenceNews: false, allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0 })
-      if (state.phase === 'ready' && this.data.shellKind === 'student') void this.loadNews()
+      const view=shellView(state)
+      this.setData({ ...view, showReferenceNews: state.phase === 'ready' && view.shellKind !== 'student', allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0 })
+      if (state.phase === 'ready') void this.loadNews()
     })
   },
   onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading' }) },
@@ -268,6 +268,6 @@ Page({
   },
   onFavoriteTap(event: WechatMiniprogram.BaseEvent) {
     const post = this.data.favorites.find(item => item.postId === event.currentTarget.dataset.id)
-    if (post) openOfficialArticle(post.articleUrl)
+    if (post) openPage(`/pages/news-detail/news-detail?id=${encodeURIComponent(post.postId)}`)
   },
 })

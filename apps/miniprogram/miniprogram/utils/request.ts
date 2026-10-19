@@ -584,6 +584,11 @@ export async function updateMyAcademicProfile(
   return result.profile
 }
 
+export async function updateMyDisplayName(displayName:string):Promise<string>{
+  const result=await request<{ok:true;displayName:string}>('/me/display-name','PUT',{displayName})
+  return result.displayName
+}
+
 
 export async function getMyInternalIdentity(): Promise<{
   identity: InternalIdentity | null
@@ -936,7 +941,7 @@ export async function getMyNewsFavorites():Promise<NewsFavorite[]>{
   return result.favorites
 }
 export async function saveNewsFavorite(id:string):Promise<void>{await request('/me/news-favorites/'+encodeURIComponent(id),'PUT',{})}
-export async function removeNewsFavorite(id:string):Promise<void>{await request('/me/news-favorites/'+encodeURIComponent(id),'DELETE')}
+export async function removeNewsFavorite(id:string):Promise<void>{await request('/me/news-favorites/'+encodeURIComponent(id)+'/remove','POST',{})}
 
 export async function getNewsPost(id: string): Promise<NewsPostDetail> {
   const result = await request<{ ok: true; post: NewsPostDetail }>(

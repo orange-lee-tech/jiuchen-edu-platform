@@ -5,6 +5,15 @@
     <text class="intro-desc">登录账号与九辰内部身份分开管理。首次登录默认为游客，填写正确内部ID后系统自动切换对应身份。</text>
   </view>
 
+  <view class="form-card">
+    <label class="field">
+      <text class="field-label">我的真实姓名</text>
+      <input class="field-input" value="{{nameInput}}" maxlength="80" placeholder="请填写本人真实姓名" bindinput="onNameInput" />
+      <text class="identity-desc">由你主动填写；客服咨询和个人档案使用此姓名。原有的测试学员名称不会自动当作真实姓名。</text>
+    </label>
+  </view>
+  <button class="save-button" loading="{{savingName}}" disabled="{{savingName || loading || readOnly}}" bindtap="onSaveName">保存姓名</button>
+
   <view class="identity-card">
     <view class="identity-head">
       <view>

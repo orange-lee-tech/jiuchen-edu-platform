@@ -1,5 +1,5 @@
 import { getSavedAuthResult } from '../../utils/auth'
-import { authorizePage, safeBack } from '../../utils/navigation'
+import { authorizePage, openPage, safeBack } from '../../utils/navigation'
 import { filterInternalIds, internalIdView, ID_FILTERS } from '../../utils/admin-id-view'
 import {
   bindAdminInternalId,
@@ -513,6 +513,13 @@ Page({
         }
       },
     })
+  },
+
+  onPreviewNews(event: WechatMiniprogram.BaseEvent) {
+    if (getSavedAuthResult()?.user.role !== 'admin') return
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!this.data.posts.some(post => post.id === id)) return
+    openPage(`/pages/news-detail/news-detail?id=${encodeURIComponent(id)}`)
   },
 
   onVerifiedOfficialToggle(){

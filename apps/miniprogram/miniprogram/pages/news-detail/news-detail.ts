@@ -1,4 +1,4 @@
-import { getNewsPost, getMyNewsFavorites, saveNewsFavorite, removeNewsFavorite, type NewsPostDetail } from '../../utils/request'
+import { ApiRequestError, getNewsPost, getMyNewsFavorites, saveNewsFavorite, removeNewsFavorite, type NewsPostDetail } from '../../utils/request'
 import {openOfficialArticle} from '../../utils/official-article'
 import { articleReaderNodes, type ArticleNode } from '../../utils/article-reader'
 import { validateIntent } from '../../utils/navigation'
@@ -79,11 +79,15 @@ Page({
     const owner=getSavedAuthResult()?.user.id,wasFavorited=this.data.favorited
     const generation=this.generation
     try{
-      this.setData({favoriteBusy:true})
+      this.setData({favoriteBusy:true,favoriteError:''})
       if(wasFavorited)await removeNewsFavorite(post.id)
       else await saveNewsFavorite(post.id)
       if(generation===this.generation&&getSavedAuthResult()?.user.id===owner)this.setData({favorited:!wasFavorited})
-    }catch{wx.showToast({title:'收藏未保存，请重试',icon:'none'})}
+    }catch(error){
+      const code=error instanceof ApiRequestError?`${error.statusCode}/${error.code}`:'client_error'
+      if(generation===this.generation&&getSavedAuthResult()?.user.id===owner)
+        this.setData({favoriteError:`${wasFavorited?'取消收藏':'收藏'}失败（${code}）。请保留此提示反馈给管理员。`})
+    }
     finally{this.setData({favoriteBusy:false})}
   },
   onUnavailableFavorite(){wx.showModal({title:'收藏服务尚不可用',content:'当前服务器尚未启用个人收藏。可以先查看公众号原文；收藏记录需服务器升级后才能保存。',showCancel:false})},

@@ -1,5 +1,6 @@
 import {
   getSavedAuthResult,
+  refreshAuthResult,
   updateSavedIdentity,
   type UserRole,
 } from '../../utils/auth'
@@ -9,6 +10,7 @@ import {
   getMyAcademicProfile,
   getMyInternalIdentity,
   updateMyAcademicProfile,
+  updateMyDisplayName,
   type AcademicProfile,
   type InternalIdentity,
 } from '../../utils/request'
@@ -53,6 +55,9 @@ Page({
     internalIdInput: '',
     identity: null as InternalIdentity | null,
     identityLocked: false,
+    nameInput: '',
+    nameTouched: false,
+    savingName: false,
     form: { ...EMPTY_FORM },
     enrollmentYears: Array.from({ length: 24 }, (_, i) => String(new Date().getFullYear() + 1 - i)),
   },
@@ -74,6 +79,7 @@ Page({
     this.setData({
       role: auth.user.role,
       canEditAcademic,
+      nameInput: auth.user.displayName || '',
     })
 
     void this.hydrateThenLoad()
@@ -107,12 +113,14 @@ Page({
 
   async loadAll() {
     try {
-      const [identityResult, profile] = await Promise.all([
+      const [identityResult, profile, refreshed] = await Promise.all([
         getMyInternalIdentity(),
         this.data.canEditAcademic
           ? getMyAcademicProfile()
           : Promise.resolve(null),
+        refreshAuthResult(),
       ])
+      if(refreshed && !this.data.nameTouched)this.setData({nameInput:refreshed.user.displayName||''})
 
       this.setData({
         identity: identityResult.identity,
@@ -187,6 +195,28 @@ Page({
     this.setData({
       [`form.${field}`]: event.detail.value,
     })
+  },
+
+  onNameInput(event:WechatMiniprogram.Input){
+    this.setData({nameInput:event.detail.value,nameTouched:true})
+  },
+  async onSaveName(){
+    const name=this.data.nameInput.trim()
+    if(!name || name.length>80){
+      wx.showToast({title:'请填写80字以内的真实姓名',icon:'none'});return
+    }
+    const owner=getSavedAuthResult()?.user.id
+    if(!owner)return
+    try{
+      this.setData({savingName:true})
+      const saved=await updateMyDisplayName(name)
+      if(getSavedAuthResult()?.user.id!==owner)return
+      this.setData({nameInput:saved,nameTouched:false})
+      await refreshAuthResult()
+      wx.showToast({title:'姓名已保存',icon:'success'})
+    }catch(error){
+      wx.showToast({title:friendlyRequestError(error,'姓名保存失败，请重试'),icon:'none'})
+    }finally{this.setData({savingName:false})}
   },
 
   onEnrollmentYearChange(event: WechatMiniprogram.CustomEvent<{value: string}>) {
