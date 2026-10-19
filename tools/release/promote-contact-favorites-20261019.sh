@@ -65,9 +65,12 @@ website_before=$(readlink -f /www/wwwroot/jiuchen-current)
 printf 'PRECHECK_PASS candidate=%s previous=%s\n' "$candidate" "$previous"
 
 phase=activation
-cp -p "$approved_file" "$approved_backup"
-cp -p "$previous_file" "$previous_backup"
-chmod 0600 "$approved_backup" "$previous_backup"
+if ! cp -p "$approved_file" "$approved_backup" ||
+   ! cp -p "$previous_file" "$previous_backup" ||
+   ! chmod 0600 "$approved_backup" "$previous_backup"; then
+  rm -f -- "$approved_backup" "$previous_backup"
+  block 'marker_backup_failed_before_activation'
+fi
 
 recover(){
   local reason=$1
