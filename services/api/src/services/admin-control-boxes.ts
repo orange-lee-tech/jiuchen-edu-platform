@@ -130,24 +130,108 @@ export async function activateControlDraft(input: {
   pool: mysql.Pool; box: ControlBox; actorId: string; expectedVersion: number
   currentPin?: string; newPin: string; masterKey?: string
 }) {
-  const [rows] = await input.pool.query<DraftRow[]>(
-    'SELECT * FROM admin_control_drafts WHERE box = ? AND actor_user_id = ? LIMIT 1',
-    [input.box, input.actorId],
-  )
-  const draft = rows[0]
-  if (!draft) throw new ControlError('control_draft_missing', 404)
-  if (Number(draft.based_on_version) !== input.expectedVersion) {
-    throw new ControlError('control_version_conflict', 409)
+  if (!sixDigitPin.safeParse(input.newPin).success ||
+      (input.currentPin !== undefined && !sixDigitPin.safeParse(input.currentPin).success)) {
+    throw new ControlError('pin_must_be_six_digits', 400)
   }
-  const settings = input.box === 'settings' ? decodeSettings(draft.payload_json) : undefined
-  const secret = input.box === 'assessment_key' && draft.encrypted_secret
-    ? unsealKey(draft.encrypted_secret, input.masterKey ?? '') : undefined
-  const result = await saveControlBox({ ...input, settings: settings ?? undefined, secret })
-  await input.pool.query('DELETE FROM admin_control_drafts WHERE box = ? AND actor_user_id = ?',
-    [input.box, input.actorId])
-  return result
-}
 
+  const connection = await input.pool.getConnection()
+  let committed = false
+  try {
+    await connection.beginTransaction()
+
+    // Lock order is always control box first, then draft. Draft activation and
+    // draft saving therefore serialize against both config changes and edits
+    // to the same administrator's draft.
+    const [boxRows] = await connection.query<BoxRow[]>(
+      'SELECT * FROM admin_control_boxes WHERE box = ? LIMIT 1 FOR UPDATE', [input.box],
+    )
+    const row = boxRows[0]
+    const [draftRows] = await connection.query<DraftRow[]>(
+      'SELECT * FROM admin_control_drafts WHERE box = ? AND actor_user_id = ? LIMIT 1 FOR UPDATE',
+      [input.box, input.actorId],
+    )
+    const draft = draftRows[0]
+    if (!draft) throw new ControlError('control_draft_missing', 404)
+
+    const activeVersion = row ? Number(row.version) : 0
+    if (Number(draft.based_on_version) !== input.expectedVersion ||
+        activeVersion !== input.expectedVersion) {
+      throw new ControlError('control_version_conflict', 409)
+    }
+
+    const settings = input.box === 'settings' ? decodeSettings(draft.payload_json) : undefined
+    const secret = input.box === 'assessment_key' && draft.encrypted_secret
+      ? unsealKey(draft.encrypted_secret, input.masterKey ?? '') : undefined
+    if (input.box === 'settings' && !settings) {
+      throw new ControlError('invalid_commercial_settings', 400)
+    }
+    if (input.box === 'assessment_key' && (!secret || secret.length < 8 || secret.length > 2048)) {
+      throw new ControlError('invalid_assessment_key', 400)
+    }
+    const encryptedSecret = input.box === 'assessment_key'
+      ? sealKey(secret!, input.masterKey ?? '') : null
+
+    if (row) {
+      if (row.locked_until && new Date(row.locked_until).getTime() > Date.now()) {
+        throw new ControlError('control_pin_locked', 429)
+      }
+      const valid = input.currentPin && verifyPin(input.currentPin, row.pin_salt, row.pin_hash)
+      if (!valid) {
+        const attempts = Number(row.failed_attempts) + 1
+        await connection.query(
+          'UPDATE admin_control_boxes SET failed_attempts = ?, locked_until = CASE WHEN ? >= 5 THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 15 MINUTE) ELSE locked_until END WHERE box = ?',
+          [attempts, attempts, input.box],
+        )
+        await connection.commit()
+        committed = true
+        throw new ControlError('control_pin_invalid', 403)
+      }
+    } else if (input.currentPin) {
+      throw new ControlError('control_not_initialized', 409)
+    }
+
+    const salt = randomBytes(16).toString('hex')
+    const digest = pinDigest(input.newPin, salt)
+    const version = activeVersion + 1
+    if (row) {
+      await connection.query(
+        'UPDATE admin_control_boxes SET version=?,pin_salt=?,pin_hash=?,payload_json=?,encrypted_secret=?,failed_attempts=0,locked_until=NULL WHERE box=?',
+        [version, salt, digest, input.box === 'settings' ? JSON.stringify(settings) : null,
+          encryptedSecret, input.box],
+      )
+    } else {
+      await connection.query(
+        'INSERT INTO admin_control_boxes (box,version,pin_salt,pin_hash,owner_user_id,payload_json,encrypted_secret) VALUES (?,?,?,?,?,?,?)',
+        [input.box, version, salt, digest, input.actorId,
+          input.box === 'settings' ? JSON.stringify(settings) : null, encryptedSecret],
+      )
+    }
+    await connection.query(
+      'INSERT INTO admin_control_audit (id,box,actor_user_id,action,version) VALUES (?,?,?,?,?)',
+      [randomUUID(), input.box, input.actorId, row ? 'update' : 'initialize', version],
+    )
+
+    // The active config, audit event and draft consumption are one transaction.
+    // A failed DELETE must roll back the config change and keep the draft usable.
+    const [deleted] = await connection.query<mysql.ResultSetHeader>(
+      'DELETE FROM admin_control_drafts WHERE box = ? AND actor_user_id = ? AND based_on_version = ?',
+      [input.box, input.actorId, input.expectedVersion],
+    )
+    if (deleted.affectedRows !== 1) {
+      throw new ControlError('control_draft_conflict', 409)
+    }
+
+    await connection.commit()
+    committed = true
+    return { box: input.box, version, configured: true }
+  } catch (error) {
+    if (!committed) await connection.rollback()
+    throw error
+  } finally {
+    connection.release()
+  }
+}
 export async function saveControlBox(input: {
   pool: mysql.Pool; box: ControlBox; actorId: string; expectedVersion: number
   currentPin?: string; newPin: string; settings?: AdminSettings

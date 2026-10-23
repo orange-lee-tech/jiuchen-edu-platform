@@ -16,7 +16,19 @@ concurrency:
 jobs:
   verify:
     runs-on: [self-hosted, Linux, X64, orangeleetec-local-linux]
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local_test_only
+          MYSQL_DATABASE: jiuchen_commercial_controls_ci
+        ports: ['127.0.0.1:3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -plocal_test_only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
 
     steps:
       - name: Checkout
@@ -51,3 +63,32 @@ jobs:
           npm run typecheck
           npm test
           npm run build
+      - name: Prepare disposable MySQL fixture for commercial migrations
+        working-directory: services/api
+        env:
+          DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_commercial_controls_ci
+        run: |
+          node --input-type=module <<'JS'
+          import mysql from 'mysql2/promise'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            await db.query('ALTER DATABASE jiuchen_commercial_controls_ci CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci')
+            await db.query('CREATE TABLE users (id VARCHAR(36) NOT NULL PRIMARY KEY) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci')
+            await db.query("INSERT INTO users(id) VALUES ('00000000-0000-4000-8000-000000000001'),('00000000-0000-4000-8000-000000000002')")
+            await db.query('CREATE TABLE payment_orders (id VARCHAR(36) NOT NULL PRIMARY KEY, user_id VARCHAR(36) NOT NULL, KEY payment_orders_user_id_idx (user_id), CONSTRAINT payment_orders_user_fk FOREIGN KEY (user_id) REFERENCES users(id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci')
+          } finally { await db.end() }
+          JS
+      - name: Run new commercial migrations twice on MySQL 8
+        working-directory: services/api
+        env:
+          DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_commercial_controls_ci
+        run: |
+          npm run db:upgrade:virtual-delivery
+          npm run db:upgrade:admin-controls
+          npm run db:upgrade:virtual-delivery
+          npm run db:upgrade:admin-controls
+      - name: Verify commercial migrations and control-box transactions on MySQL 8
+        working-directory: services/api
+        env:
+          DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_commercial_controls_ci
+        run: node dist/db/verify-commercial-controls-mysql.js
