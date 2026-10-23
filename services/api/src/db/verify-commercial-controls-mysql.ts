@@ -107,10 +107,20 @@ try {
     user: 'draft_fault', password: 'fault-test-only', database: databaseName,
   })
   try {
+    const [identityRows] = await faultPool.query<mysql.RowDataPacket[]>(
+      'SELECT CURRENT_USER() AS currentUser, USER() AS connectedUser',
+    )
+    assert.equal(String(identityRows[0]?.currentUser), 'draft_fault@%')
+    const [grantRows] = await faultPool.query<mysql.RowDataPacket[]>('SHOW GRANTS')
+    const grantText = grantRows.map((row) => String(Object.values(row)[0])).join('\\n')
+    assert.ok(!/ALL PRIVILEGES|DELETE ON/i.test(grantText), 'fault account must not have DELETE privilege')
+    console.log('DRAFT_FAULT_ACCOUNT_CONFIRMED: current_user=draft_fault@%; delete_privilege=absent')
+
+    const isDeleteDenied = (error: unknown) =>
+      (error as { code?: string; message?: string }).code === 'ER_TABLEACCESS_DENIED_ERROR' &&
+      /DELETE command denied/i.test(String((error as { message?: string }).message || ''))
     await assert.rejects(() => activateControlDraft({ pool: faultPool, box: 'assessment_key', actorId: adminB,
-      expectedVersion: 1, currentPin: '654321', newPin: '654321', masterKey }),
-    (error: unknown) => (error as { code?: string; message?: string }).code === 'ER_TABLEACCESS_DENIED_ERROR' &&
-      /DELETE command denied/i.test(String((error as { message?: string }).message || '')))
+      expectedVersion: 1, currentPin: '654321', newPin: '654321', masterKey }), isDeleteDenied)
   } finally {
     await faultPool.end()
     await pool.query("DROP USER IF EXISTS 'draft_fault'@'%'")
