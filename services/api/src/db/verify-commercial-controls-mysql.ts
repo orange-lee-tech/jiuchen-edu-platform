@@ -94,11 +94,25 @@ try {
   assert.ok(oldKeyBox)
   assert.equal(unsealKey(String(oldKeyBox.encrypted_secret), masterKey), 'old-model-key')
 
-  await pool.query("CREATE TRIGGER fail_admin_control_draft_delete BEFORE DELETE ON admin_control_drafts FOR EACH ROW BEGIN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'injected draft delete failure'; END")
-  await assert.rejects(() => activateControlDraft({ pool, box: 'assessment_key', actorId: adminB,
-    expectedVersion: 1, currentPin: '654321', newPin: '654321', masterKey }),
-  (error: unknown) => error instanceof Error && error.message.includes('injected draft delete failure'))
-  await pool.query('DROP TRIGGER fail_admin_control_draft_delete')
+  // Fault-inject a real MySQL DELETE permission failure after the active row
+  // and audit insert have executed. The service transaction must roll both back.
+  await pool.query("DROP USER IF EXISTS 'draft_fault'@'%'")
+  await pool.query("CREATE USER 'draft_fault'@'%' IDENTIFIED BY 'fault-test-only'")
+  await pool.query("GRANT SELECT, INSERT, UPDATE ON " + databaseName + ".admin_control_boxes TO 'draft_fault'@'%'")
+  await pool.query("GRANT INSERT ON " + databaseName + ".admin_control_audit TO 'draft_fault'@'%'")
+  await pool.query("GRANT SELECT, INSERT, UPDATE ON " + databaseName + ".admin_control_drafts TO 'draft_fault'@'%'")
+  const faultPool = mysql.createPool({
+    host: parsedUrl.hostname, port: Number(parsedUrl.port || 3306),
+    user: 'draft_fault', password: 'fault-test-only', database: databaseName,
+  })
+  try {
+    await assert.rejects(() => activateControlDraft({ pool: faultPool, box: 'assessment_key', actorId: adminB,
+      expectedVersion: 1, currentPin: '654321', newPin: '654321', masterKey }),
+    (error: unknown) => (error as { code?: string }).code === 'ER_TABLEACCESS_DENIED_ERROR')
+  } finally {
+    await faultPool.end()
+    await pool.query("DROP USER IF EXISTS 'draft_fault'@'%'")
+  }
 
   const afterFailedActivation = await readControlBox(pool, 'assessment_key')
   assert.ok(afterFailedActivation)
