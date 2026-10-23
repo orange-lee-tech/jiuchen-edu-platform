@@ -60,9 +60,9 @@
       <text class="row-desc">十次评估价格（元）</text><input class="input" type="digit" data-name="tenYuan" value="{{tenYuan}}" bindinput="onControlInput" />
       <text class="row-desc">游客首次赠送次数</text><input class="input" type="number" data-name="guestFreeInput" value="{{guestFreeInput}}" bindinput="onControlInput" />
       <text class="row-desc">学员累计赠送次数</text><input class="input" type="number" data-name="studentFreeInput" value="{{studentFreeInput}}" bindinput="onControlInput" />
-      <text class="row-desc">预计每次 AI 模型成本（元，人工核实）</text><input class="input" type="digit" data-name="estimatedCostYuan" value="{{estimatedCostYuan}}" placeholder="从供应商账单核实后填写" bindinput="onControlInput" />
+      <text class="row-desc">预计每次 AI 模型成本（元，官方标价估算）</text><input class="input" type="digit" data-name="estimatedCostYuan" value="{{estimatedCostYuan}}" placeholder="按模型地域与输入/输出 token 估算" bindinput="onControlInput" />
       <view class="id-meta"><switch checked="{{platformPriceConfirmed}}" bindchange="onControlPriceConfirm" /><text>已在微信虚拟商品后台核实两档新售价</text></view>
-      <text class="card-note">新充值需核实微信商品价及模型成本。单次和十次每次售价均须高于人工核实成本至少 20%；这仍是估算，不代表供应商实时余额或已保证盈利。改价后未确认时暂停新下单；已支付订单仍可对账。</text>
+      <text class="card-note">按所用模型与地域的官方输入/输出 token 标价估算成本；免费额度耗尽后也按此估算。新充值须核实微信商品价，单次与十次每次售价至少覆盖估计成本并留 20% 缓冲。这不代表供应商实时余额或已保证盈利。改价后未确认时暂停新下单；已支付订单仍可对账。</text>
       <input wx:if="{{controlSettings.configured}}" class="input" password type="number" maxlength="6" data-name="settingsOldPin" value="{{settingsOldPin}}" placeholder="设置盒现有六位密码" bindinput="onControlInput" />
       <input class="input" password type="number" maxlength="6" data-name="settingsNewPin" value="{{settingsNewPin}}" placeholder="保存本次设置的新六位密码，可与旧密码相同" bindinput="onControlInput" />
       <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onSaveSettings">保存设置并更新密码</button>
