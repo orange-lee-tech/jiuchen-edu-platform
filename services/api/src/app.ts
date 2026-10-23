@@ -21,16 +21,20 @@ import { registerClassroomWorkspaceRoutes } from './routes/classroom-workspace.j
 import { registerGrowthProfileRoutes } from './routes/growth-profile.js'
 import { registerReadOnlyWorkspaceRoutes } from './routes/read-only-workspace.js'
 import { registerCommercialRoutes } from './routes/commercial.js'
+import { registerAdminControlRoutes } from './routes/admin-controls.js'
 import {
   createCustomerServiceAIProvider,
   createScheduleAIProvider,
 } from './services/ai-provider.js'
-import { createAssessmentRuntimeFromEnv } from './services/assessment-runtime.js'
+import { createVaultAssessmentRuntime } from './services/vault-assessment-runtime.js'
 import { createAssessmentBackgroundWorker } from './services/assessment-background.js'
 import { createAssessmentNotificationAdapter } from './services/assessment-notification.js'
 import { createAssessmentImportService } from './services/assessment-import.js'
 import { createCommercialConfig } from './services/commercial-config.js'
+import { loadCommercialConfig } from './services/live-commercial-config.js'
 import { createWechatPayGatewayFromEnv } from './services/wechat-pay.js'
+import { virtualPaymentConfig } from './services/wechat-virtual-payment.js'
+import { createVirtualPaymentRecovery } from './services/virtual-payment-reconciliation.js'
 
 const API_RELEASE = '0.3.0-experience'
 
@@ -41,11 +45,13 @@ export function buildApp(env: AppEnv) {
 
   const database = createDatabaseContext(env)
   registerReadOnlyWriteGuard(app)
-  const assessmentRuntime = createAssessmentRuntimeFromEnv(env)
+  const assessmentVault = createVaultAssessmentRuntime(env, database.configured ? database.pool : null)
+  const assessmentRuntime = assessmentVault.runtime
   const assessmentImport = createAssessmentImportService(env)
   const scheduleAI = createScheduleAIProvider(env)
   const customerAI = createCustomerServiceAIProvider(env)
   const commercialConfig = createCommercialConfig(env)
+  const liveCommercialConfig = () => loadCommercialConfig(database.configured ? database.pool : null, commercialConfig)
   const assessmentCommercial = {
     creditEnforcementEnabled: commercialConfig.creditEnforcementEnabled,
     freeGrant: commercialConfig.freeGrant,
@@ -60,6 +66,10 @@ export function buildApp(env: AppEnv) {
     logger: app.log,
   })
   const wechatPay = createWechatPayGatewayFromEnv(env)
+  const virtualConfig = virtualPaymentConfig(env)
+  const virtualRecovery = database.configured && commercialConfig.creditEnforcementEnabled && virtualConfig
+    ? createVirtualPaymentRecovery({ database, env, config: virtualConfig, logger: app.log })
+    : null
   const cloudbaseCamConfigured = Boolean(
     env.TENCENTCLOUD_SECRETID && env.TENCENTCLOUD_SECRETKEY,
   )
@@ -223,7 +233,11 @@ export function buildApp(env: AppEnv) {
     app,
     database,
     assessmentRuntime,
-    assessmentCommercial,
+    async () => {
+      const current = await liveCommercialConfig()
+      return { creditEnforcementEnabled: current.creditEnforcementEnabled,
+        freeGrant: current.freeGrant, studentBonusGrant: current.studentBonusGrant }
+    },
     assessmentWorker,
     assessmentImport,
   )
@@ -232,15 +246,19 @@ export function buildApp(env: AppEnv) {
   registerClassroomWorkspaceRoutes(app, database, env)
   registerGrowthProfileRoutes(app, database)
   registerReadOnlyWorkspaceRoutes(app, database)
-  registerCommercialRoutes(app, database, commercialConfig, wechatPay, env)
+  registerCommercialRoutes(app, database, liveCommercialConfig, wechatPay, env)
+  registerAdminControlRoutes(app, database, env, assessmentVault.refresh)
   registerAdminRoutes(app, database, env)
 
   app.addHook('onReady', async () => {
+    await assessmentVault.refresh()
     assessmentWorker.start()
+    virtualRecovery?.start()
   })
 
   app.addHook('onClose', async () => {
     assessmentWorker.stop()
+    virtualRecovery?.stop()
     if (database.configured) {
       await database.pool.end()
     }

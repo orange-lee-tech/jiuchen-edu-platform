@@ -10,13 +10,14 @@ const users: Action = { key: 'users', title: '管理用户与编号', descriptio
 const assignments: Action = { key: 'assignments', title: '管理师生分配', description: '查看和维护老师与学员的辅导关系。', url: '/pages/admin/admin?section=admin-assignments' }
 const articles: Action = { key: 'articles', title: '管理资讯与标签', description: '维护文章分类，按需同步服务号内容。', url: '/pages/admin/admin?section=admin-news' }
 const analytics: Action = { key: 'analytics', title: 'AI 评估与充值统计', description: '真实评估次数、充值订单与金额排行榜。', url: '/pages/admin/admin?section=admin-analytics' }
+const controls: Action = { key: 'controls', title: '评估收费与密钥设置', description: '管理两套独立密码、价格、赠送次数和 AI 密钥。', url: '/pages/admin/admin?section=admin-controls' }
 const content: Record<string, { title: string; description: string; actions: Action[] }> = {
   'teacher-home': { title: '从学员的下一步开始', description: '查看学员阶段规划，处理他们提交的更新。', actions: [students, reviews] },
   'teacher-plan': { title: '学员与阶段规划', description: '进入获授权学员的资料与规划，接续日常辅导。', actions: [students] },
   'teacher-opportunity': { title: '跟进学员的规划更新', description: '审核学员提交的版本，或进入学员规划进行调整。', actions: [reviews, students] },
   'admin-home': { title: '九辰管理工作台', description: '高频工作直接进入：身份查阅、账号管理与业务运营不再经过重复菜单。', actions: [mirror, users, assignments, analytics] },
   'admin-plan': { title: '跨身份只读查阅', description: '查看任意学员或老师的档案。只读，不继承被查看人的操作权限。', actions: [mirror] },
-  'admin-opportunity': { title: '业务与数据运营', description: '师生关系、资讯发布、评估与充值统计各自独立进入。', actions: [assignments, articles, analytics] },
+  'admin-opportunity': { title: '业务与数据运营', description: '师生关系、资讯发布、评估与充值统计各自独立进入。', actions: [assignments, articles, analytics, controls] },
 }
 
 Component({

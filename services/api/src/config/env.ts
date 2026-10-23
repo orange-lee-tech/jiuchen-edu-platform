@@ -73,6 +73,7 @@ const envSchema = z.object({
   AI_SUPPLIER_BALANCE_OBSERVED_AT: optionalNonEmptyString,
   AI_COST_ESTIMATE_FEN_PER_RUN: optionalPositiveInteger,
   AI_SUPPLIER_ALERT_DAYS: optionalNumber(1,90),
+  ADMIN_AI_KEY_ENCRYPTION_KEY: optionalNonEmptyString,
   ASSESSMENT_AI_PROVIDER: optionalNonEmptyString,
   ASSESSMENT_AI_BASE_URL: optionalNonEmptyString,
   ASSESSMENT_AI_API_KEY: optionalNonEmptyString,

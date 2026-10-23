@@ -23,6 +23,9 @@ import {
   getAdminReadOnlyRoster,
   getAdminTeachers,
   getAdminUsers,
+  getAdminControls,
+  saveAdminControl,
+  testAdminAssessmentKey,
   syncOfficialAccountNews,
   unbindAdminInternalId,
   updateAdminNewsTags,
@@ -35,12 +38,22 @@ import {
   type NewsRetirementBatch,
   type AdminTeacher,
   type AdminUser,
+  type AdminControlBox,
   type StudentSummary,
 } from '../../utils/request'
 
 import {beijingNewsTime,newsPublicationLabel} from '../../utils/news-date'
 
-type Section = 'admin-users' | 'admin-assignments' | 'admin-news' | 'admin-analytics' | 'admin-readonly'
+type Section = 'admin-users' | 'admin-assignments' | 'admin-news' | 'admin-analytics' | 'admin-readonly' | 'admin-controls'
+function moneyFen(text: string) {
+  return /^\d{1,5}(?:\.\d{1,2})?$/.test(text) ? Math.round(Number(text) * 100) : NaN
+}
+function joinedLabel(createdAt?: string) {
+  if (!createdAt) return '加入时间未记录'
+  const value = new Date(createdAt).getTime()
+  if (!Number.isFinite(value) || value > Date.now()) return '加入时间待核对'
+  return `${new Date(value + 8 * 3600000).toISOString().slice(0, 10)} · 已加入 ${Math.floor((Date.now() - value) / 86400000)} 天`
+}
 type Point = { display:string;key:string;label:string;count:number;x:number;barX:number;height:number;bottom:number;labelBottom:number;prevX:number;prevBottom:number;length:number;angle:number;hasPrev:boolean }
 type Plot = { unit:string;key:string;title:string;width:number;max:number;points:Point[] }
 function makePlot(key:'assessmentCount'|'createdCount'|'rechargeCount'|'rechargeAmountFen'|'consumptionCount'|'releasedCount'|'failedCount'|'runningCount',title:string,rows:AdminAnalytics['buckets']):Plot {
@@ -96,6 +109,11 @@ Page({
     rechargeAmountLabel:'',
     loading: true,
     actionLoading: false,
+    controlSettings: null as AdminControlBox | null,
+    controlKey: null as AdminControlBox | null,
+    singleYuan: '1.90', tenYuan: '16.90', guestFreeInput: '1', studentFreeInput: '5', estimatedCostYuan: '',
+    platformPriceConfirmed: false,
+    settingsOldPin: '', settingsNewPin: '', keyOldPin: '', keyNewPin: '', keyTestPin: '', apiKeyInput: '',
     internalIds: [] as AdminInternalId[],
     visibleIds: [] as ReturnType<typeof internalIdView>[],
     idQuery: '', idFilter: 0, idFilters: ID_FILTERS,
@@ -143,7 +161,7 @@ Page({
     }
 
     const section = String(options.section || 'admin-users') as Section
-    if (['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics', 'admin-readonly'].includes(section)) {
+    if (['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics', 'admin-readonly', 'admin-controls'].includes(section)) {
       this.setData({ section })
     }
 
@@ -173,6 +191,10 @@ Page({
       await this.loadAnalytics()
       return
     }
+    if (this.data.section === 'admin-controls') {
+      await this.loadControls()
+      return
+    }
     try {
       this.setData({ loading: true, loadError: '' })
       if (this.data.section === 'admin-news') {
@@ -191,7 +213,8 @@ Page({
         const [students, teachers, assignments] = await Promise.all([
           getAdminStudents(), getAdminTeachers(), getAdminAssignments(),
         ])
-        this.setData({ students, teachers, assignments,
+        this.setData({ students: students.map(item => ({ ...item, joinedLabel: joinedLabel(item.createdAt) })),
+          teachers: teachers.map(item => ({ ...item, joinedLabel: joinedLabel(item.createdAt) })), assignments,
           studentIndex: Math.min(this.data.studentIndex, Math.max(0, students.length - 1)),
           teacherIndex: Math.min(this.data.teacherIndex, Math.max(0, teachers.length - 1)),
         })
@@ -213,6 +236,91 @@ Page({
     } finally {
       this.setData({ loading: false })
     }
+  },
+  async loadControls() {
+    this.setData({ loading: true, loadError: '' })
+    try {
+      const result = await getAdminControls()
+      const settings = result.settings.settings
+      this.setData({ controlSettings: result.settings, controlKey: result.assessmentKey,
+        singleYuan: ((settings?.singleFen ?? 190) / 100).toFixed(2),
+        tenYuan: ((settings?.tenFen ?? 1690) / 100).toFixed(2),
+        guestFreeInput: String(settings?.guestFree ?? 1),
+        studentFreeInput: String(settings?.studentTotalFree ?? 5),
+        estimatedCostYuan: settings?.estimatedCostFen == null ? '' : (settings.estimatedCostFen / 100).toFixed(2),
+        platformPriceConfirmed: settings?.platformPriceConfirmed ?? false,
+        settingsOldPin: '', settingsNewPin: '', keyOldPin: '', keyNewPin: '', keyTestPin: '', apiKeyInput: '' })
+    } catch (error) { this.setData({ loadError: friendlyRequestError(error, '设置未能读取') }) }
+    finally { this.setData({ loading: false }) }
+  },
+  onControlInput(event: WechatMiniprogram.Input) {
+    const name = String(event.currentTarget.dataset.name)
+    if (!['singleYuan', 'tenYuan', 'guestFreeInput', 'studentFreeInput', 'estimatedCostYuan',
+      'settingsOldPin', 'settingsNewPin', 'keyOldPin', 'keyNewPin', 'keyTestPin', 'apiKeyInput'].includes(name)) return
+    this.setData({ [name]: event.detail.value,
+      ...(name === 'singleYuan' || name === 'tenYuan' ? { platformPriceConfirmed: false } : {}) })
+  },
+  onControlPriceConfirm(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    this.setData({ platformPriceConfirmed: event.detail.value })
+  },
+  async onSaveSettings() {
+    if (this.data.actionLoading || !this.data.controlSettings) return
+    const singleFen = moneyFen(this.data.singleYuan.trim())
+    const tenFen = moneyFen(this.data.tenYuan.trim())
+    const guestFree = Number(this.data.guestFreeInput)
+    const studentTotalFree = Number(this.data.studentFreeInput)
+    const estimatedCostFen = this.data.estimatedCostYuan.trim() ? moneyFen(this.data.estimatedCostYuan.trim()) : null
+    if (!Number.isInteger(singleFen) || singleFen < 1 || !Number.isInteger(tenFen) || tenFen < 1 ||
+      !/^\d{1,3}$/.test(this.data.guestFreeInput) || !/^\d{1,3}$/.test(this.data.studentFreeInput) ||
+      studentTotalFree < guestFree || guestFree > 100 || studentTotalFree > 100 ||
+      (estimatedCostFen !== null && (!Number.isInteger(estimatedCostFen) || estimatedCostFen < 1)) ||
+      (this.data.platformPriceConfirmed && (estimatedCostFen === null ||
+        singleFen * 10 < estimatedCostFen * 12 || tenFen < estimatedCostFen * 12)) ||
+      !/^\d{6}$/.test(this.data.settingsNewPin) ||
+      (this.data.controlSettings.configured && !/^\d{6}$/.test(this.data.settingsOldPin))) {
+      wx.showToast({ title: '请核对金额、次数和六位密码', icon: 'none' }); return
+    }
+    this.setData({ actionLoading: true })
+    try {
+      await saveAdminControl('settings', {
+        expectedVersion: this.data.controlSettings.version,
+        currentPin: this.data.controlSettings.configured ? this.data.settingsOldPin : undefined,
+        newPin: this.data.settingsNewPin,
+        settings: { singleFen, tenFen, guestFree, studentTotalFree,
+          platformPriceConfirmed: this.data.platformPriceConfirmed, estimatedCostFen },
+      })
+      wx.showToast({ title: '设置已保存', icon: 'success' })
+      await this.loadControls()
+    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '设置保存失败'), icon: 'none' }) }
+    finally { this.setData({ actionLoading: false, settingsOldPin: '', settingsNewPin: '' }) }
+  },
+  async onSaveAssessmentKey() {
+    if (this.data.actionLoading || !this.data.controlKey) return
+    if (!/^\d{6}$/.test(this.data.keyNewPin) ||
+      (this.data.controlKey.configured && !/^\d{6}$/.test(this.data.keyOldPin)) ||
+      this.data.apiKeyInput.trim().length < 8) {
+      wx.showToast({ title: '请填写密钥与六位密码', icon: 'none' }); return
+    }
+    this.setData({ actionLoading: true })
+    try {
+      await saveAdminControl('assessment_key', {
+        expectedVersion: this.data.controlKey.version,
+        currentPin: this.data.controlKey.configured ? this.data.keyOldPin : undefined,
+        newPin: this.data.keyNewPin, apiKey: this.data.apiKeyInput.trim(),
+      })
+      wx.showToast({ title: '密钥已加密保存', icon: 'success' })
+      await this.loadControls()
+    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '密钥保存失败'), icon: 'none' }) }
+    finally { this.setData({ actionLoading: false, apiKeyInput: '', keyOldPin: '', keyNewPin: '' }) }
+  },
+  async onTestAssessmentKey() {
+    if (this.data.actionLoading || !/^\d{6}$/.test(this.data.keyTestPin)) return
+    this.setData({ actionLoading: true })
+    try {
+      await testAdminAssessmentKey(this.data.keyTestPin)
+      wx.showToast({ title: '模型接口可用', icon: 'success' })
+    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '接口测试未通过'), icon: 'none' }) }
+    finally { this.setData({ actionLoading: false, keyTestPin: '' }) }
   },
   analyticsGeneration:0,
   async loadAnalytics() {
@@ -270,6 +378,7 @@ Page({
         ...user,
         displayLabel: { user: '普通账号', student: '学员账号', teacher: '老师账号', staff: '内部员工账号', admin: '管理员账号' }[user.role],
         roleLabel: { user: '普通用户', student: '学员', teacher: '老师', staff: '内部员工', admin: '管理员' }[user.role],
+        joinedLabel: joinedLabel(user.createdAt),
         statusLabel: user.status === 'active' ? '正常' : '已停用',
       })),
     })
@@ -306,9 +415,10 @@ Page({
 
   onSectionChange(event: WechatMiniprogram.BaseEvent) {
     const section = String(event.currentTarget.dataset.section) as Section
-    if (!['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics', 'admin-readonly'].includes(section)) return
+    if (!['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics', 'admin-readonly', 'admin-controls'].includes(section)) return
     this.setData({ section })
     if (section === 'admin-analytics') void this.loadAnalytics()
+    else if (section === 'admin-controls') void this.loadControls()
     else if (section === 'admin-readonly') void this.loadReadOnlyRoster()
     else if(section==='admin-news'&&this.data.newsV2Enabled)void this.loadRetirementTasks()
   },

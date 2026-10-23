@@ -24,6 +24,7 @@ export type StudentSummary = {
   university: string | null
   major: string | null
   currentStage: string | null
+  createdAt?: string
 }
 
 export type ClassroomPlanType =
@@ -643,6 +644,7 @@ export type AdminTeacher = {
   name: string
   title: string | null
   status: 'active' | 'inactive'
+  createdAt?: string
   stateLabel?:string;canView?:boolean;businessId?:string|null
 }
 
@@ -888,6 +890,25 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
     '/me/admin/users',
   )
   return result.users
+}
+
+export type AdminControlBox = {
+  configured: boolean; version: number; ownerUserId: string | null
+  settings: { singleFen: number; tenFen: number; guestFree: number;
+    studentTotalFree: number; platformPriceConfirmed: boolean;
+    estimatedCostFen: number | null } | null
+}
+export async function getAdminControls(): Promise<{ settings: AdminControlBox; assessmentKey: AdminControlBox }> {
+  return request('/me/admin/controls')
+}
+export async function saveAdminControl(box: 'settings' | 'assessment_key', payload: {
+  expectedVersion: number; currentPin?: string; newPin: string;
+  settings?: AdminControlBox['settings']; apiKey?: string
+}): Promise<void> {
+  await request('/me/admin/controls/' + box, 'POST', payload)
+}
+export async function testAdminAssessmentKey(pin: string): Promise<void> {
+  await request('/me/admin/controls/assessment-key/test', 'POST', { pin })
 }
 
 export async function bindAdminInternalId(

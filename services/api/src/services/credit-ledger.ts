@@ -221,6 +221,23 @@ export async function grantFreeCredits(input: {
       }
     }
 
+    // A new policy version changes future grants; it must never award the
+    // same account another guest or student-upgrade grant. The user row is
+    // locked above, so two concurrent claims cannot cross this check.
+    const [priorGrants] = await connection.query<mysql.RowDataPacket[]>(
+      `SELECT idempotency_key AS idempotencyKey FROM credit_ledger_entries
+        WHERE user_id = ? AND type = 'free_grant' FOR UPDATE`,
+      [input.userId],
+    )
+    const studentBonus = input.grant!.version.endsWith(':student-bonus')
+    if (priorGrants.some((row) =>
+      String(row.idempotencyKey).startsWith('free-assessment:') &&
+      String(row.idempotencyKey).endsWith(':' + input.userId) &&
+      String(row.idempotencyKey).slice(0, -input.userId.length - 1).endsWith(':student-bonus') === studentBonus
+    )) {
+      return { granted: false, amount: 0, idempotencyKey }
+    }
+
     await connection.query(
       `INSERT INTO credit_ledger_entries
         (id, user_id, type, delta, idempotency_key, note)

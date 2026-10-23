@@ -1,11 +1,11 @@
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import { randomBytes, randomUUID } from 'node:crypto'
-import type mysql from 'mysql2/promise'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import { users } from '../db/schema.js'
 import { eq } from 'drizzle-orm'
-import { buildVirtualPayment, confirmVirtualDelivery, queryVirtualPayment, virtualPaymentConfig } from '../services/wechat-virtual-payment.js'
+import { buildVirtualPayment, virtualPaymentConfig } from '../services/wechat-virtual-payment.js'
+import { readVirtualOrder, reconcileVirtualOrder } from '../services/virtual-payment-reconciliation.js'
 import { exchangeWechatVirtualPaymentCode } from '../services/wechat.js'
 import type { DatabaseContext } from '../db/client.js'
 import { canUseAssessment } from '../domain/auth-policy.js'
@@ -64,14 +64,16 @@ function stringHeader(
 export function registerCommercialRoutes(
   app: FastifyInstance,
   database: DatabaseContext,
-  config: CommercialConfig,
+  getConfig: () => Promise<CommercialConfig & { platformPriceConfirmed: boolean; adminSettingsApplied: boolean }>,
   wechatPay: WechatPayGateway,
   env: AppEnv,
 ) {
   const virtualConfig = virtualPaymentConfig(env)
-  const virtualCheckoutReady = Boolean(config.creditEnforcementEnabled && virtualConfig)
 
-  app.get('/commercial/meta', async () => ({
+  app.get('/commercial/meta', async () => {
+    const config = await getConfig()
+    const virtualCheckoutReady = Boolean(config.creditEnforcementEnabled && virtualConfig && config.platformPriceConfirmed)
+    return ({
     ok: true,
     policy: {
       assessmentCreditCost: 1,
@@ -86,7 +88,12 @@ export function registerCommercialRoutes(
       : {
           configured: false,
         },
-    rolePolicy: { guestFree: GUEST_FREE_COUNT, studentTotalFree: STUDENT_TOTAL_FREE_COUNT },
+    rolePolicy: {
+      guestFree: config.adminSettingsApplied ? config.freeGrant?.amount ?? 0 : GUEST_FREE_COUNT,
+      studentTotalFree: config.adminSettingsApplied
+        ? (config.freeGrant?.amount ?? 0) + (config.studentBonusGrant?.amount ?? 0)
+        : STUDENT_TOTAL_FREE_COUNT,
+    },
     payment: {
       provider: 'wechat_pay',
       providerConfigured: wechatPay.isConfigured(),
@@ -97,7 +104,8 @@ export function registerCommercialRoutes(
       catalog: APPROVED_ASSESSMENT_SKUS,
       skus: config.paymentSkus,
     },
-  }))
+  })
+  })
 
   app.get('/me/credits', async (request, reply) => {
     if (!database.configured) {
@@ -150,6 +158,7 @@ export function registerCommercialRoutes(
 
     try {
       const grants = []
+      const config = await getConfig()
       for (const grantPolicy of freeGrantsForRole(config, user.role)) {
         grants.push(await grantFreeCredits({ database, userId: user.userId, grant: grantPolicy }))
       }
@@ -184,6 +193,8 @@ export function registerCommercialRoutes(
     wechatCode:z.string().min(6).max(1024),
   }).strict()
   app.post<{Body:unknown}>('/me/virtual-payment-orders', async(request,reply)=>{
+    const config = await getConfig()
+    const virtualCheckoutReady = Boolean(config.creditEnforcementEnabled && virtualConfig && config.platformPriceConfirmed)
     if(!virtualCheckoutReady || !virtualConfig)
       return reply.code(503).send({ok:false,error:'wechat_virtual_payment_not_ready'})
     if(!database.configured) return reply.code(503).send({ok:false,error:'database_not_configured'})
@@ -222,53 +233,21 @@ export function registerCommercialRoutes(
   })
 
   app.post<{Params:{id:string}}>('/me/virtual-payment-orders/:id/reconcile',async(request,reply)=>{
-    if(!virtualCheckoutReady || !virtualConfig) return reply.code(503).send({ok:false,error:'wechat_virtual_payment_not_ready'})
+    if(!virtualConfig || !(await getConfig()).creditEnforcementEnabled) return reply.code(503).send({ok:false,error:'wechat_virtual_payment_not_ready'})
     if(!database.configured) return reply.code(503).send({ok:false,error:'database_not_configured'})
     const user=await resolveSessionUser(request,database)
     if(!user) return reply.code(401).send({ok:false,error:'unauthorized'})
     if(!canUseAssessment(user.role)) return reply.code(403).send({ok:false,error:'assessment_not_available_for_role'})
-    const [rows]=await database.pool.query<mysql.RowDataPacket[]>(
-      `SELECT p.id,p.out_trade_no AS outTradeNo,p.amount_fen AS amountFen,p.status,
-              u.wechat_open_id AS openId
-         FROM payment_orders p INNER JOIN users u ON u.id=p.user_id
-        WHERE p.id=? AND p.user_id=? AND p.out_trade_no LIKE 'JCV%' LIMIT 1`,
-      [request.params.id,user.userId],
-    )
-    const order=rows[0]
+    const order=await readVirtualOrder(database.pool,request.params.id,user.userId)
     if(!order) return reply.code(404).send({ok:false,error:'virtual_order_not_found'})
-    if(order.status==='refunded' || order.status==='closed')
-      return {ok:true,state:order.status,credited:false}
     if(!order.openId) return reply.code(409).send({ok:false,error:'wechat_openid_missing'})
-    let verified
-    try { verified=await queryVirtualPayment(env,virtualConfig,String(order.openId),String(order.outTradeNo),Number(order.amountFen)) }
+    try {
+      return {ok:true,...await reconcileVirtualOrder({database,env,config:virtualConfig,order,checkPaidState:true})}
+    }
     catch(error){
       app.log.warn({err:error,orderId:order.id},'virtual payment query not yet verified')
       return reply.code(503).send({ok:false,error:'virtual_payment_query_unavailable'})
     }
-    if(verified.state==='pending') return {ok:true,state:'pending',credited:false}
-    if(verified.state==='refunded' || verified.state==='closed')
-      return {ok:true,state:verified.state,credited:false,requiresFinanceReview:order.status==='paid'}
-    if(!verified.transactionId || !verified.notificationId || !verified.payloadHash)
-      return reply.code(409).send({ok:false,error:'virtual_payment_unverified'})
-    const settlement=await settleVerifiedPaymentNotification({
-      database,
-      notification:{
-        notificationId:verified.notificationId,
-        outTradeNo:String(order.outTradeNo),
-        providerTransactionId:verified.transactionId,
-        amountFen:Number(order.amountFen),
-        currency:'CNY',merchantId:virtualConfig.offerId,appId:env.WECHAT_APP_ID || '',
-        success:true,payloadHash:verified.payloadHash,
-      },
-    })
-    if(settlement.status==='rejected')
-      return reply.code(409).send({ok:false,error:'virtual_payment_settlement_rejected'})
-    // Idempotent recovery for xpay state 2 after granting credits. Notification
-    // failure does NOT reverse an already durably posted credit; next reconcile retries.
-    let deliveryPending=false
-    try { await confirmVirtualDelivery(env,virtualConfig,String(order.outTradeNo)) }
-    catch(error){ deliveryPending=true; app.log.warn({err:error,orderId:order.id},'virtual delivery confirmation pending') }
-    return {ok:true,state:'paid',credited:true,deliveryPending}
   })
 
   app.get<{ Params: { id: string } }>(

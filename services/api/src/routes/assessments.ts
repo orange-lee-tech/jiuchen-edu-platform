@@ -250,7 +250,7 @@ export function registerAssessmentRoutes(
   app: FastifyInstance,
   database: DatabaseContext,
   runtime: AssessmentRuntime = createUnconfiguredAssessmentRuntime(),
-  commercial: AssessmentCommercialOptions = DEFAULT_COMMERCIAL_OPTIONS,
+  commercial: AssessmentCommercialOptions | (() => Promise<AssessmentCommercialOptions>) = DEFAULT_COMMERCIAL_OPTIONS,
   dispatcher: Pick<
     AssessmentRunDispatcher,
     'wake' | 'completionNotification'
@@ -763,9 +763,10 @@ export function registerAssessmentRoutes(
 
       const startedAt = new Date()
 
-      if (commercial.creditEnforcementEnabled) {
+      const activeCommercial = typeof commercial === 'function' ? await commercial() : commercial
+      if (activeCommercial.creditEnforcementEnabled) {
         try {
-          for (const grant of [commercial.freeGrant, user.role === 'student' ? commercial.studentBonusGrant : null]) {
+          for (const grant of [activeCommercial.freeGrant, user.role === 'student' ? activeCommercial.studentBonusGrant : null]) {
             if (grant) await grantFreeCredits({ database, userId: user.userId, grant })
           }
           await beginAssessmentRunWithCredit({

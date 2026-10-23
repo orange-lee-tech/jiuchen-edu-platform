@@ -323,6 +323,7 @@ export function registerMobileAdminRoutes(
         university: students.university,
         major: students.major,
         currentStage: students.currentStage,
+        createdAt: students.createdAt,
       })
       .from(students)
       .orderBy(asc(students.createdAt))
@@ -347,6 +348,7 @@ export function registerMobileAdminRoutes(
         name: teachers.name,
         title: teachers.title,
         status: teachers.status,
+        createdAt: teachers.createdAt,
       })
       .from(teachers)
       .orderBy(asc(teachers.createdAt))

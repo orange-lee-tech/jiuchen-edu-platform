@@ -1,7 +1,7 @@
 <auth-gate />
 <view class="admin-page">
   <view class="admin-head">
-    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : section === 'admin-readonly' ? '只读切换身份' : section === 'admin-analytics' ? 'AI 评估与充值统计' : '资讯运营'}}</text>
+    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : section === 'admin-readonly' ? '只读切换身份' : section === 'admin-analytics' ? 'AI 评估与充值统计' : section === 'admin-controls' ? '评估收费与密钥设置' : '资讯运营'}}</text>
     <text class="admin-desc">当前工作页只处理一类业务。其他功能从底部工作台直接进入，不必在这里重复切换菜单。</text>
   </view>
 
@@ -49,7 +49,34 @@
       </view>
     </view>
     <view class="card visitor-card"><text class="card-title">未绑定身份账号</text><text class="visitor-count">{{unboundAccountCount}}</text><text class="card-note">来自真实普通账号记录，仅展示数量；不把未绑定账号冒充学员，也不展示昵称作为实名。</text></view>
-    <view class="card"><text class="card-title">正式账号</text><text class="card-note">账号显示名不等于实名。正式身份以内部编号与已绑定档案为准；资料缺失时显示待完善。</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的正式账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayLabel}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
+    <view class="card"><text class="card-title">正式账号</text><text class="card-note">账号显示名不等于实名。正式身份以内部编号与已绑定档案为准；资料缺失时显示待完善。</text><input class="input" placeholder="搜索显示名或账号编号" value="{{userQuery}}" bindinput="onUserSearch" /><view wx:if="{{!visibleUsers.length}}" class="card-note">没有匹配的正式账号。</view><view wx:for="{{visibleUsers}}" wx:key="id" class="account-row"><text class="row-title">{{item.displayLabel}}</text><text class="row-desc">{{item.roleLabel}} · {{item.statusLabel}}</text><text class="row-desc">账号加入：{{item.joinedLabel}}</text><text class="account-code" selectable>{{item.id}}</text></view></view>
+  </block>
+
+  <block wx:elif="{{section === 'admin-controls'}}">
+    <view class="card">
+      <text class="card-title">收费与免费次数 · 设置密码盒</text>
+      <text class="card-note">当前版本 {{controlSettings.version || 0}}。两档价格按人民币元填写。更新后仅影响新订单；旧订单以创建时金额和次数结算。免费规则仅影响此后尚未领取的对应阶段，旧余额保留。</text>
+      <text class="row-desc">单次评估价格（元）</text><input class="input" type="digit" data-name="singleYuan" value="{{singleYuan}}" bindinput="onControlInput" />
+      <text class="row-desc">十次评估价格（元）</text><input class="input" type="digit" data-name="tenYuan" value="{{tenYuan}}" bindinput="onControlInput" />
+      <text class="row-desc">游客首次赠送次数</text><input class="input" type="number" data-name="guestFreeInput" value="{{guestFreeInput}}" bindinput="onControlInput" />
+      <text class="row-desc">学员累计赠送次数</text><input class="input" type="number" data-name="studentFreeInput" value="{{studentFreeInput}}" bindinput="onControlInput" />
+      <text class="row-desc">预计每次 AI 模型成本（元，人工核实）</text><input class="input" type="digit" data-name="estimatedCostYuan" value="{{estimatedCostYuan}}" placeholder="从供应商账单核实后填写" bindinput="onControlInput" />
+      <view class="id-meta"><switch checked="{{platformPriceConfirmed}}" bindchange="onControlPriceConfirm" /><text>已在微信虚拟商品后台核实两档新售价</text></view>
+      <text class="card-note">新充值需核实微信商品价及模型成本。单次和十次每次售价均须高于人工核实成本至少 20%；这仍是估算，不代表供应商实时余额或已保证盈利。改价后未确认时暂停新下单；已支付订单仍可对账。</text>
+      <input wx:if="{{controlSettings.configured}}" class="input" password type="number" maxlength="6" data-name="settingsOldPin" value="{{settingsOldPin}}" placeholder="设置盒现有六位密码" bindinput="onControlInput" />
+      <input class="input" password type="number" maxlength="6" data-name="settingsNewPin" value="{{settingsNewPin}}" placeholder="保存本次设置的新六位密码，可与旧密码相同" bindinput="onControlInput" />
+      <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onSaveSettings">保存设置并更新密码</button>
+    </view>
+    <view class="card">
+      <text class="card-title">AI 评估密钥 · 独立密码盒</text>
+      <text class="card-note">{{controlKey.configured ? '密钥已配置，原文不可查看。' : '尚未绑定密钥。'}}录入密钥的管理员负责更换；其他管理员持本盒密码只能做受控连接测试。此盒密码与收费设置密码互不相通。</text>
+      <input class="input" password data-name="apiKeyInput" value="{{apiKeyInput}}" placeholder="输入新的 API Key；保存后不再显示" bindinput="onControlInput" />
+      <input wx:if="{{controlKey.configured}}" class="input" password type="number" maxlength="6" data-name="keyOldPin" value="{{keyOldPin}}" placeholder="密钥盒现有六位密码" bindinput="onControlInput" />
+      <input class="input" password type="number" maxlength="6" data-name="keyNewPin" value="{{keyNewPin}}" placeholder="保存本次密钥的新六位密码" bindinput="onControlInput" />
+      <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onSaveAssessmentKey">加密保存密钥并更新密码</button>
+      <input class="input" password type="number" maxlength="6" data-name="keyTestPin" value="{{keyTestPin}}" placeholder="输入密钥盒密码，测试模型连接" bindinput="onControlInput" />
+      <button class="secondary" disabled="{{actionLoading}}" bindtap="onTestAssessmentKey">测试接口</button>
+    </view>
   </block>
 
   <block wx:elif="{{section === 'admin-readonly'}}">
@@ -81,9 +108,11 @@
       <picker range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="onStudentChange">
         <view class="picker-field">{{students.length ? students[studentIndex].name : '暂无学员'}} ›</view>
       </picker>
+      <text wx:if="{{students.length}}" class="card-note">学员建档：{{students[studentIndex].joinedLabel}}</text>
       <picker range="{{teachers}}" range-key="name" value="{{teacherIndex}}" bindchange="onTeacherChange">
         <view class="picker-field">{{teachers.length ? teachers[teacherIndex].name : '暂无老师'}} ›</view>
       </picker>
+      <text wx:if="{{teachers.length}}" class="card-note">老师建档：{{teachers[teacherIndex].joinedLabel}}（不代表实际入职日期）</text>
       <picker range="{{relationshipOptions}}" value="{{relationship === 'primary' ? 0 : 1}}" bindchange="onRelationshipChange">
         <view class="picker-field">{{relationship === 'primary' ? '主辅导' : '协助'}} ›</view>
       </picker>
