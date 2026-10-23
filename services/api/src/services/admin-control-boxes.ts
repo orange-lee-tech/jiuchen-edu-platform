@@ -60,6 +60,10 @@ type BoxRow = mysql.RowDataPacket & {
   owner_user_id: string; payload_json: unknown; encrypted_secret: string | null
   failed_attempts: number; locked_until: Date | null; updated_at: Date
 }
+type DraftRow = mysql.RowDataPacket & {
+  box: ControlBox; actor_user_id: string; based_on_version: number
+  payload_json: unknown; encrypted_secret: string | null; updated_at: Date
+}
 function decodeSettings(value: unknown): AdminSettings | null {
   try {
     return settingsSchema.parse(typeof value === 'string' ? JSON.parse(value) : value)
@@ -77,6 +81,71 @@ export function publicControlBox(row: BoxRow | null, box: ControlBox) {
     settings: box === 'settings' ? decodeSettings(row.payload_json) : null,
     updatedAt: row.updated_at,
   }
+}
+
+export async function readControlDraft(pool: mysql.Pool, box: ControlBox, actorId: string) {
+  const [rows] = await pool.query<DraftRow[]>(
+    'SELECT * FROM admin_control_drafts WHERE box = ? AND actor_user_id = ? LIMIT 1', [box, actorId],
+  )
+  const row = rows[0]
+  if (!row) return { saved: false, basedOnVersion: null, settings: null }
+  return { saved: true, basedOnVersion: Number(row.based_on_version),
+    settings: box === 'settings' ? decodeSettings(row.payload_json) : null, updatedAt: row.updated_at }
+}
+
+export async function saveControlDraft(input: {
+  pool: mysql.Pool; box: ControlBox; actorId: string; expectedVersion: number
+  settings?: AdminSettings; secret?: string; masterKey?: string
+}) {
+  if (input.box === 'settings' && !settingsSchema.safeParse(input.settings).success) {
+    throw new ControlError('invalid_commercial_settings', 400)
+  }
+  if (input.box === 'assessment_key' && (!input.secret || input.secret.length > 2048)) {
+    throw new ControlError('invalid_assessment_key', 400)
+  }
+  const sealed = input.box === 'assessment_key' ? sealKey(input.secret!, input.masterKey ?? '') : null
+  const connection = await input.pool.getConnection()
+  try {
+    await connection.beginTransaction()
+    const [rows] = await connection.query<BoxRow[]>(
+      'SELECT * FROM admin_control_boxes WHERE box = ? LIMIT 1 FOR UPDATE', [input.box],
+    )
+    if ((rows[0] ? Number(rows[0].version) : 0) !== input.expectedVersion) {
+      throw new ControlError('control_version_conflict', 409)
+    }
+    await connection.query(
+      `INSERT INTO admin_control_drafts (box,actor_user_id,based_on_version,payload_json,encrypted_secret)
+       VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE based_on_version=VALUES(based_on_version),
+       payload_json=VALUES(payload_json),encrypted_secret=VALUES(encrypted_secret)`,
+      [input.box, input.actorId, input.expectedVersion,
+        input.box === 'settings' ? JSON.stringify(input.settings) : null, sealed],
+    )
+    await connection.commit()
+    return { saved: true, active: false, basedOnVersion: input.expectedVersion }
+  } catch (error) { await connection.rollback(); throw error }
+  finally { connection.release() }
+}
+
+export async function activateControlDraft(input: {
+  pool: mysql.Pool; box: ControlBox; actorId: string; expectedVersion: number
+  currentPin?: string; newPin: string; masterKey?: string
+}) {
+  const [rows] = await input.pool.query<DraftRow[]>(
+    'SELECT * FROM admin_control_drafts WHERE box = ? AND actor_user_id = ? LIMIT 1',
+    [input.box, input.actorId],
+  )
+  const draft = rows[0]
+  if (!draft) throw new ControlError('control_draft_missing', 404)
+  if (Number(draft.based_on_version) !== input.expectedVersion) {
+    throw new ControlError('control_version_conflict', 409)
+  }
+  const settings = input.box === 'settings' ? decodeSettings(draft.payload_json) : undefined
+  const secret = input.box === 'assessment_key' && draft.encrypted_secret
+    ? unsealKey(draft.encrypted_secret, input.masterKey ?? '') : undefined
+  const result = await saveControlBox({ ...input, settings: settings ?? undefined, secret })
+  await input.pool.query('DELETE FROM admin_control_drafts WHERE box = ? AND actor_user_id = ?',
+    [input.box, input.actorId])
+  return result
 }
 
 export async function saveControlBox(input: {
@@ -109,9 +178,6 @@ export async function saveControlBox(input: {
       throw new ControlError('control_version_conflict', 409)
     }
     if (row) {
-      if (input.box === 'assessment_key' && row.owner_user_id !== input.actorId) {
-        throw new ControlError('assessment_key_owner_required', 403)
-      }
       if (row.locked_until && new Date(row.locked_until).getTime() > Date.now()) {
         throw new ControlError('control_pin_locked', 429)
       }

@@ -66,14 +66,20 @@
       <input wx:if="{{controlSettings.configured}}" class="input" password type="number" maxlength="6" data-name="settingsOldPin" value="{{settingsOldPin}}" placeholder="设置盒现有六位密码" bindinput="onControlInput" />
       <input class="input" password type="number" maxlength="6" data-name="settingsNewPin" value="{{settingsNewPin}}" placeholder="保存本次设置的新六位密码，可与旧密码相同" bindinput="onControlInput" />
       <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onSaveSettings">保存设置并更新密码</button>
+      <button class="secondary" disabled="{{actionLoading}}" bindtap="onSaveSettingsDraft">保存个人草稿（不生效）</button>
+      <view wx:if="{{settingsDraft.saved && settingsDraft.settings}}" class="card-note">已保存个人草稿，基于设置版本 {{settingsDraft.basedOnVersion}}：单次 ¥{{settingsDraft.settings.singleFen / 100}}，十次 ¥{{settingsDraft.settings.tenFen / 100}}，游客 {{settingsDraft.settings.guestFree}} 次，学员累计 {{settingsDraft.settings.studentTotalFree}} 次。确认后填写上方旧密码和新密码启用。</view>
+      <button wx:if="{{settingsDraft.saved && settingsDraft.settings}}" class="secondary" disabled="{{actionLoading || settingsDraft.basedOnVersion !== controlSettings.version}}" data-box="settings" bindtap="onActivateDraft">启用此草稿并更新密码</button>
     </view>
     <view class="card">
       <text class="card-title">AI 评估密钥 · 独立密码盒</text>
-      <text class="card-note">{{controlKey.configured ? '密钥已配置，原文不可查看。' : '尚未绑定密钥。'}}录入密钥的管理员负责更换；其他管理员持本盒密码只能做受控连接测试。此盒密码与收费设置密码互不相通。</text>
+      <text class="card-note">{{controlKey.configured ? '密钥已配置，原文不可查看。' : '尚未绑定密钥。'}}任意已登录管理员凭本盒旧密码可更换密钥并设置新密码。此盒密码与收费设置密码互不相通。</text>
       <input class="input" password data-name="apiKeyInput" value="{{apiKeyInput}}" placeholder="输入新的 API Key；保存后不再显示" bindinput="onControlInput" />
       <input wx:if="{{controlKey.configured}}" class="input" password type="number" maxlength="6" data-name="keyOldPin" value="{{keyOldPin}}" placeholder="密钥盒现有六位密码" bindinput="onControlInput" />
       <input class="input" password type="number" maxlength="6" data-name="keyNewPin" value="{{keyNewPin}}" placeholder="保存本次密钥的新六位密码" bindinput="onControlInput" />
       <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onSaveAssessmentKey">加密保存密钥并更新密码</button>
+      <button class="secondary" disabled="{{actionLoading}}" bindtap="onSaveKeyDraft">加密保存个人密钥草稿（不生效）</button>
+      <text wx:if="{{keyDraft.saved}}" class="card-note">密钥草稿已加密保存，原文不可查看；基于密钥版本 {{keyDraft.basedOnVersion}}。填写上方旧密码和新密码后启用。</text>
+      <button wx:if="{{keyDraft.saved}}" class="secondary" disabled="{{actionLoading || keyDraft.basedOnVersion !== controlKey.version}}" data-box="assessment_key" bindtap="onActivateDraft">启用密钥草稿并更新密码</button>
       <input class="input" password type="number" maxlength="6" data-name="keyTestPin" value="{{keyTestPin}}" placeholder="输入密钥盒密码，测试模型连接" bindinput="onControlInput" />
       <button class="secondary" disabled="{{actionLoading}}" bindtap="onTestAssessmentKey">测试接口</button>
     </view>

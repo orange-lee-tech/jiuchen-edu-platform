@@ -4,8 +4,8 @@ import type { AppEnv } from '../config/env.js'
 import type { DatabaseContext } from '../db/client.js'
 import { canAccessAdminWorkspace } from '../domain/auth-policy.js'
 import {
-  authorizeKeyUse, ControlError, publicControlBox, readControlBox,
-  saveControlBox, settingsSchema, sixDigitPin, unsealKey,
+  activateControlDraft, authorizeKeyUse, ControlError, publicControlBox, readControlBox,
+  readControlDraft, saveControlBox, saveControlDraft, settingsSchema, sixDigitPin, unsealKey,
 } from '../services/admin-control-boxes.js'
 import { createAssessmentAIProvider } from '../services/ai-provider.js'
 import { resolveSessionUser } from '../services/session.js'
@@ -18,6 +18,8 @@ const changeSchema = z.object({
   apiKey: z.string().trim().min(8).max(2048).optional(),
 }).strict()
 const checkSchema = z.object({ pin: sixDigitPin }).strict()
+const draftSchema = changeSchema.omit({ currentPin: true, newPin: true })
+const activateSchema = changeSchema.omit({ settings: true, apiKey: true })
 
 export function registerAdminControlRoutes(
   app: FastifyInstance, database: DatabaseContext, env: AppEnv,
@@ -42,13 +44,52 @@ export function registerAdminControlRoutes(
     throw error
   }
   app.get('/me/admin/controls', async (request, reply) => {
-    if (!(await admin(request, reply)) || !database.configured) return
+    const user = await admin(request, reply)
+    if (!user || !database.configured) return
     try {
-      const [settings, key] = await Promise.all([
+      const [settings, key, settingsDraft, keyDraft] = await Promise.all([
         readControlBox(database.pool, 'settings'), readControlBox(database.pool, 'assessment_key'),
+        readControlDraft(database.pool, 'settings', user.userId),
+        readControlDraft(database.pool, 'assessment_key', user.userId),
       ])
       return { ok: true, settings: publicControlBox(settings, 'settings'),
-        assessmentKey: publicControlBox(key, 'assessment_key') }
+        assessmentKey: publicControlBox(key, 'assessment_key'),
+        drafts: { settings: settingsDraft, assessmentKey: keyDraft } }
+    } catch (error) { return failure(reply, error) }
+  })
+  app.post<{ Params: { box: string }; Body: unknown }>('/me/admin/controls/:box/draft', async (request, reply) => {
+    const user = await admin(request, reply)
+    if (!user || !database.configured) return
+    const box = request.params.box
+    if (box !== 'settings' && box !== 'assessment_key') {
+      return reply.code(404).send({ ok: false, error: 'control_box_unknown' })
+    }
+    const parsed = draftSchema.safeParse(request.body)
+    if (!parsed.success || (box === 'settings' ? !parsed.data.settings || parsed.data.apiKey !== undefined
+      : !parsed.data.apiKey || parsed.data.settings !== undefined)) {
+      return reply.code(400).send({ ok: false, error: 'invalid_control_draft' })
+    }
+    try {
+      return { ok: true, ...await saveControlDraft({ pool: database.pool, box, actorId: user.userId,
+        expectedVersion: parsed.data.expectedVersion, settings: parsed.data.settings,
+        secret: parsed.data.apiKey, masterKey: env.ADMIN_AI_KEY_ENCRYPTION_KEY }) }
+    } catch (error) { return failure(reply, error) }
+  })
+  app.post<{ Params: { box: string }; Body: unknown }>('/me/admin/controls/:box/activate-draft', async (request, reply) => {
+    const user = await admin(request, reply)
+    if (!user || !database.configured) return
+    const box = request.params.box
+    if (box !== 'settings' && box !== 'assessment_key') {
+      return reply.code(404).send({ ok: false, error: 'control_box_unknown' })
+    }
+    const parsed = activateSchema.safeParse(request.body)
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_control_change' })
+    try {
+      const result = await activateControlDraft({ pool: database.pool, box, actorId: user.userId,
+        expectedVersion: parsed.data.expectedVersion, currentPin: parsed.data.currentPin,
+        newPin: parsed.data.newPin, masterKey: env.ADMIN_AI_KEY_ENCRYPTION_KEY })
+      if (box === 'assessment_key') await onKeyChanged()
+      return { ok: true, ...result }
     } catch (error) { return failure(reply, error) }
   })
   app.post<{ Params: { box: string }; Body: unknown }>('/me/admin/controls/:box', async (request, reply) => {

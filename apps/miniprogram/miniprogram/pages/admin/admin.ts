@@ -24,7 +24,9 @@ import {
   getAdminTeachers,
   getAdminUsers,
   getAdminControls,
+  activateAdminControlDraft,
   saveAdminControl,
+  saveAdminControlDraft,
   testAdminAssessmentKey,
   syncOfficialAccountNews,
   unbindAdminInternalId,
@@ -39,6 +41,7 @@ import {
   type AdminTeacher,
   type AdminUser,
   type AdminControlBox,
+  type AdminControlDraft,
   type StudentSummary,
 } from '../../utils/request'
 
@@ -111,6 +114,8 @@ Page({
     actionLoading: false,
     controlSettings: null as AdminControlBox | null,
     controlKey: null as AdminControlBox | null,
+    settingsDraft: null as AdminControlDraft | null,
+    keyDraft: null as AdminControlDraft | null,
     singleYuan: '1.90', tenYuan: '16.90', guestFreeInput: '1', studentFreeInput: '5', estimatedCostYuan: '',
     platformPriceConfirmed: false,
     settingsOldPin: '', settingsNewPin: '', keyOldPin: '', keyNewPin: '', keyTestPin: '', apiKeyInput: '',
@@ -243,6 +248,7 @@ Page({
       const result = await getAdminControls()
       const settings = result.settings.settings
       this.setData({ controlSettings: result.settings, controlKey: result.assessmentKey,
+        settingsDraft: result.drafts.settings, keyDraft: result.drafts.assessmentKey,
         singleYuan: ((settings?.singleFen ?? 190) / 100).toFixed(2),
         tenYuan: ((settings?.tenFen ?? 1690) / 100).toFixed(2),
         guestFreeInput: String(settings?.guestFree ?? 1),
@@ -262,6 +268,63 @@ Page({
   },
   onControlPriceConfirm(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     this.setData({ platformPriceConfirmed: event.detail.value })
+  },
+  async onSaveSettingsDraft() {
+    if (this.data.actionLoading || !this.data.controlSettings) return
+    const singleFen = moneyFen(this.data.singleYuan.trim())
+    const tenFen = moneyFen(this.data.tenYuan.trim())
+    const estimatedCostFen = this.data.estimatedCostYuan.trim() ? moneyFen(this.data.estimatedCostYuan.trim()) : null
+    const guestFree = Number(this.data.guestFreeInput)
+    const studentTotalFree = Number(this.data.studentFreeInput)
+    if (!Number.isInteger(singleFen) || singleFen < 1 || !Number.isInteger(tenFen) || tenFen < 1 ||
+      !/^\d{1,3}$/.test(this.data.guestFreeInput) || !/^\d{1,3}$/.test(this.data.studentFreeInput) ||
+      guestFree > 100 || studentTotalFree > 100 || studentTotalFree < guestFree ||
+      (estimatedCostFen !== null && (!Number.isInteger(estimatedCostFen) || estimatedCostFen < 1)) ||
+      (this.data.platformPriceConfirmed && (estimatedCostFen === null ||
+        singleFen * 10 < estimatedCostFen * 12 || tenFen < estimatedCostFen * 12))) {
+      wx.showToast({ title: '请核对价格、次数和成本', icon: 'none' }); return
+    }
+    this.setData({ actionLoading: true })
+    try {
+      await saveAdminControlDraft('settings', { expectedVersion: this.data.controlSettings.version,
+        settings: { singleFen, tenFen, guestFree, studentTotalFree,
+          platformPriceConfirmed: this.data.platformPriceConfirmed, estimatedCostFen } })
+      wx.showToast({ title: '草稿已保存，未生效', icon: 'none' })
+      await this.loadControls()
+    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '草稿保存失败'), icon: 'none' }) }
+    finally { this.setData({ actionLoading: false }) }
+  },
+  async onActivateDraft(event: WechatMiniprogram.CustomEvent) {
+    const box = event.currentTarget.dataset.box === 'assessment_key' ? 'assessment_key' : 'settings'
+    const active = box === 'settings' ? this.data.controlSettings : this.data.controlKey
+    const draft = box === 'settings' ? this.data.settingsDraft : this.data.keyDraft
+    const currentPin = box === 'settings' ? this.data.settingsOldPin : this.data.keyOldPin
+    const newPin = box === 'settings' ? this.data.settingsNewPin : this.data.keyNewPin
+    if (this.data.actionLoading || !active || !draft?.saved) return
+    if (!/^\d{6}$/.test(newPin) || (active.configured && !/^\d{6}$/.test(currentPin))) {
+      wx.showToast({ title: '请填写旧密码与新六位密码', icon: 'none' }); return
+    }
+    this.setData({ actionLoading: true })
+    try {
+      await activateAdminControlDraft(box, { expectedVersion: active.version,
+        currentPin: active.configured ? currentPin : undefined, newPin })
+      wx.showToast({ title: '草稿已生效', icon: 'success' })
+      await this.loadControls()
+    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '草稿启用失败'), icon: 'none' }) }
+    finally { this.setData({ actionLoading: false, settingsOldPin: '', settingsNewPin: '', keyOldPin: '', keyNewPin: '' }) }
+  },
+  async onSaveKeyDraft() {
+    if (this.data.actionLoading || !this.data.controlKey || this.data.apiKeyInput.trim().length < 8) {
+      wx.showToast({ title: '请先输入 API Key', icon: 'none' }); return
+    }
+    this.setData({ actionLoading: true })
+    try {
+      await saveAdminControlDraft('assessment_key', { expectedVersion: this.data.controlKey.version,
+        apiKey: this.data.apiKeyInput.trim() })
+      wx.showToast({ title: '密钥草稿已加密保存，未生效', icon: 'none' })
+      await this.loadControls()
+    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '密钥草稿保存失败'), icon: 'none' }) }
+    finally { this.setData({ actionLoading: false, apiKeyInput: '' }) }
   },
   async onSaveSettings() {
     if (this.data.actionLoading || !this.data.controlSettings) return

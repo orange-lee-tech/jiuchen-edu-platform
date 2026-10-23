@@ -31,6 +31,16 @@ try {
     KEY admin_control_audit_box_created (box, created_at),
     CONSTRAINT admin_control_audit_actor_fk FOREIGN KEY (actor_user_id) REFERENCES users (id)
   ) ENGINE=InnoDB`)
+  await connection.query(`CREATE TABLE IF NOT EXISTS admin_control_drafts (
+    box varchar(32) NOT NULL,
+    actor_user_id varchar(36) NOT NULL,
+    based_on_version int unsigned NOT NULL,
+    payload_json json NULL,
+    encrypted_secret text NULL,
+    updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (box, actor_user_id),
+    CONSTRAINT admin_control_drafts_actor_fk FOREIGN KEY (actor_user_id) REFERENCES users (id)
+  ) ENGINE=InnoDB`)
   console.log('ADMIN_CONTROL_BOXES_SCHEMA_READY')
 } finally {
   await connection.end()

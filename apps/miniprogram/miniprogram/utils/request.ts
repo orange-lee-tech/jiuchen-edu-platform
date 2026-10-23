@@ -898,7 +898,9 @@ export type AdminControlBox = {
     studentTotalFree: number; platformPriceConfirmed: boolean;
     estimatedCostFen: number | null } | null
 }
-export async function getAdminControls(): Promise<{ settings: AdminControlBox; assessmentKey: AdminControlBox }> {
+export type AdminControlDraft = { saved: boolean; basedOnVersion: number | null; settings: AdminControlBox['settings'] }
+export async function getAdminControls(): Promise<{ settings: AdminControlBox; assessmentKey: AdminControlBox;
+  drafts: { settings: AdminControlDraft; assessmentKey: AdminControlDraft } }> {
   return request('/me/admin/controls')
 }
 export async function saveAdminControl(box: 'settings' | 'assessment_key', payload: {
@@ -906,6 +908,16 @@ export async function saveAdminControl(box: 'settings' | 'assessment_key', paylo
   settings?: AdminControlBox['settings']; apiKey?: string
 }): Promise<void> {
   await request('/me/admin/controls/' + box, 'POST', payload)
+}
+export async function saveAdminControlDraft(box: 'settings' | 'assessment_key', payload: {
+  expectedVersion: number; settings?: AdminControlBox['settings']; apiKey?: string
+}): Promise<void> {
+  await request('/me/admin/controls/' + box + '/draft', 'POST', payload)
+}
+export async function activateAdminControlDraft(box: 'settings' | 'assessment_key', payload: {
+  expectedVersion: number; currentPin?: string; newPin: string
+}): Promise<void> {
+  await request('/me/admin/controls/' + box + '/activate-draft', 'POST', payload)
 }
 export async function testAdminAssessmentKey(pin: string): Promise<void> {
   await request('/me/admin/controls/assessment-key/test', 'POST', { pin })
