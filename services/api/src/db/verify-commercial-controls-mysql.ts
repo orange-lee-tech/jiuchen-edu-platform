@@ -94,37 +94,31 @@ try {
   assert.ok(oldKeyBox)
   assert.equal(unsealKey(String(oldKeyBox.encrypted_secret), masterKey), 'old-model-key')
 
-  // Fault-inject a real MySQL DELETE permission failure after the active row
-  // and audit insert have executed. The service transaction must roll both back.
-  await pool.query("DROP USER IF EXISTS 'draft_fault'@'%'")
-  await pool.query("CREATE USER 'draft_fault'@'%' IDENTIFIED BY 'fault-test-only'")
-  await pool.query("GRANT SELECT, INSERT, UPDATE ON " + databaseName + ".admin_control_boxes TO 'draft_fault'@'%'")
-  await pool.query("GRANT SELECT ON " + databaseName + ".users TO 'draft_fault'@'%'")
-  await pool.query("GRANT INSERT ON " + databaseName + ".admin_control_audit TO 'draft_fault'@'%'")
-  await pool.query("GRANT SELECT, INSERT, UPDATE ON " + databaseName + ".admin_control_drafts TO 'draft_fault'@'%'")
-  const faultPool = mysql.createPool({
-    host: parsedUrl.hostname, port: Number(parsedUrl.port || 3306),
-    user: 'draft_fault', password: 'fault-test-only', database: databaseName,
-  })
-  try {
-    const [identityRows] = await faultPool.query<mysql.RowDataPacket[]>(
-      'SELECT CURRENT_USER() AS currentUser, USER() AS connectedUser',
-    )
-    assert.equal(String(identityRows[0]?.currentUser), 'draft_fault@%')
-    const [grantRows] = await faultPool.query<mysql.RowDataPacket[]>('SHOW GRANTS')
-    const grantText = grantRows.map((row) => String(Object.values(row)[0])).join('\\n')
-    assert.ok(!/ALL PRIVILEGES|DELETE ON/i.test(grantText), 'fault account must not have DELETE privilege')
-    console.log('DRAFT_FAULT_ACCOUNT_CONFIRMED: current_user=draft_fault@%; delete_privilege=absent')
-
-    const isDeleteDenied = (error: unknown) =>
-      (error as { code?: string; message?: string }).code === 'ER_TABLEACCESS_DENIED_ERROR' &&
-      /DELETE command denied/i.test(String((error as { message?: string }).message || ''))
-    await assert.rejects(() => activateControlDraft({ pool: faultPool, box: 'assessment_key', actorId: adminB,
-      expectedVersion: 1, currentPin: '654321', newPin: '654321', masterKey }), isDeleteDenied)
-  } finally {
-    await faultPool.end()
-    await pool.query("DROP USER IF EXISTS 'draft_fault'@'%'")
-  }
+  // Execute the UPDATE and audit INSERT on real MySQL, then inject a deterministic
+  // driver-level failure at draft consumption. Rollback must restore both writes.
+  const faultPool = {
+    async getConnection() {
+      const connection = await pool.getConnection()
+      return {
+        beginTransaction: () => connection.beginTransaction(),
+        commit: () => connection.commit(),
+        rollback: () => connection.rollback(),
+        release: () => connection.release(),
+        query: (sql: string, values?: unknown[]) => {
+          if (typeof sql === 'string' && sql.startsWith('DELETE FROM admin_control_drafts')) {
+            throw Object.assign(new Error('injected draft delete failure'), {
+              code: 'INJECTED_DRAFT_DELETE_FAILURE',
+            })
+          }
+          return connection.query(sql, values as any)
+        },
+      } as unknown as mysql.PoolConnection
+    },
+  } as unknown as mysql.Pool
+  await assert.rejects(() => activateControlDraft({ pool: faultPool, box: 'assessment_key', actorId: adminB,
+    expectedVersion: 1, currentPin: '654321', newPin: '654321', masterKey }),
+  (error: unknown) => (error as { code?: string; message?: string }).code === 'INJECTED_DRAFT_DELETE_FAILURE' &&
+    String((error as { message?: string }).message || '').includes('injected draft delete failure'))
 
   const afterFailedActivation = await readControlBox(pool, 'assessment_key')
   assert.ok(afterFailedActivation)
