@@ -99,6 +99,7 @@ try {
   await pool.query("DROP USER IF EXISTS 'draft_fault'@'%'")
   await pool.query("CREATE USER 'draft_fault'@'%' IDENTIFIED BY 'fault-test-only'")
   await pool.query("GRANT SELECT, INSERT, UPDATE ON " + databaseName + ".admin_control_boxes TO 'draft_fault'@'%'")
+  await pool.query("GRANT SELECT ON " + databaseName + ".users TO 'draft_fault'@'%'")
   await pool.query("GRANT INSERT ON " + databaseName + ".admin_control_audit TO 'draft_fault'@'%'")
   await pool.query("GRANT SELECT, INSERT, UPDATE ON " + databaseName + ".admin_control_drafts TO 'draft_fault'@'%'")
   const faultPool = mysql.createPool({
@@ -108,7 +109,8 @@ try {
   try {
     await assert.rejects(() => activateControlDraft({ pool: faultPool, box: 'assessment_key', actorId: adminB,
       expectedVersion: 1, currentPin: '654321', newPin: '654321', masterKey }),
-    (error: unknown) => (error as { code?: string }).code === 'ER_TABLEACCESS_DENIED_ERROR')
+    (error: unknown) => (error as { code?: string; message?: string }).code === 'ER_TABLEACCESS_DENIED_ERROR' &&
+      /DELETE command denied/i.test(String((error as { message?: string }).message || '')))
   } finally {
     await faultPool.end()
     await pool.query("DROP USER IF EXISTS 'draft_fault'@'%'")
