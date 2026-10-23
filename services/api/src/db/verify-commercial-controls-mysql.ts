@@ -94,7 +94,7 @@ try {
   assert.ok(oldKeyBox)
   assert.equal(unsealKey(String(oldKeyBox.encrypted_secret), masterKey), 'old-model-key')
 
-  await pool.query("CREATE TRIGGER fail_admin_control_draft_delete BEFORE DELETE ON admin_control_drafts FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'injected draft delete failure'")
+  await pool.query("CREATE TRIGGER fail_admin_control_draft_delete BEFORE DELETE ON admin_control_drafts FOR EACH ROW BEGIN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'injected draft delete failure'; END")
   await assert.rejects(() => activateControlDraft({ pool, box: 'assessment_key', actorId: adminB,
     expectedVersion: 1, currentPin: '654321', newPin: '654321', masterKey }),
   (error: unknown) => error instanceof Error && error.message.includes('injected draft delete failure'))
