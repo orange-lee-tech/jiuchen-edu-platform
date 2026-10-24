@@ -88,7 +88,8 @@ export async function readAssessmentCostFingerprint(
     extraBodyJson: env.ASSESSMENT_AI_EXTRA_BODY_JSON ?? null,
   }
   if (head && Number(head.initialized)) {
-    if (!head.active_object_id || !env.ADMIN_AI_KEY_ENCRYPTION_KEY) return null
+    const masterKey = env.ADMIN_AI_KEY_ENCRYPTION_KEY
+    if (!head.active_object_id || !masterKey) return null
     let row: KeyObjectRow | undefined
     try {
       const [rows] = await executor.query<KeyObjectRow[]>(
@@ -102,7 +103,7 @@ export async function readAssessmentCostFingerprint(
     }
     if (!row || row.status !== 'active' || !row.encrypted_secret) return null
     let secret: string
-    try { secret = unsealKey(row.encrypted_secret, env.ADMIN_AI_KEY_ENCRYPTION_KEY) }
+    try { secret = unsealKey(row.encrypted_secret, masterKey) }
     catch { return null }
     if (!secret) return null
     return fingerprint({
@@ -125,9 +126,10 @@ export async function readAssessmentCostFingerprint(
     if ((error as { code?: string }).code !== 'ER_NO_SUCH_TABLE') throw error
   }
   if (legacy) {
-    if (!legacy.encrypted_secret || !env.ADMIN_AI_KEY_ENCRYPTION_KEY) return null
+    const masterKey = env.ADMIN_AI_KEY_ENCRYPTION_KEY
+    if (!legacy.encrypted_secret || !masterKey) return null
     let secret: string
-    try { secret = unsealKey(legacy.encrypted_secret, env.ADMIN_AI_KEY_ENCRYPTION_KEY) }
+    try { secret = unsealKey(legacy.encrypted_secret, masterKey) }
     catch { return null }
     if (!secret) return null
     return fingerprint({
