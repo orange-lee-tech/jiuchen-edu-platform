@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
 import mysql from 'mysql2/promise'
 import { randomUUID } from 'node:crypto'
+import { fileURLToPath } from 'node:url'
 import type { AppEnv } from '../config/env.js'
 import { pinDigest, sealKey } from '../services/admin-control-boxes.js'
 import { listAssessmentKeys, readActiveAssessmentKey, switchAssessmentKey,
@@ -26,6 +28,29 @@ try {
     "SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='internal_ids'")
   assert.ok(indexes.some(row => row.INDEX_NAME === 'internal_ids_user_type_unique'))
   assert.ok(!indexes.some(row => row.INDEX_NAME === 'internal_ids_user_id_unique'))
+  const adminBindings = async () => {
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+      `SELECT user_id,id,business_id FROM internal_ids
+       WHERE type='admin' AND status='claimed' ORDER BY user_id`)
+    return rows.map(row => ({ userId: String(row.user_id), id: String(row.id),
+      businessId: String(row.business_id) }))
+  }
+  const initialAdmins = await adminBindings()
+  assert.deepEqual(initialAdmins.map(row => row.userId), [adminA,adminB])
+  assert.equal(new Set(initialAdmins.map(row => row.businessId)).size, 2)
+  assert.ok(initialAdmins.every(row => /^JCA-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}$/.test(row.businessId)))
+  // Simulate an interrupted migration: one administrator is already backfilled
+  // and the other is missing. Both the recovery run and a further repeat must
+  // preserve the existing binding and create exactly one new unique number.
+  await pool.query("DELETE FROM internal_ids WHERE user_id=? AND type='admin'", [adminB])
+  const migration = fileURLToPath(new URL('./upgrade-dual-identity.js', import.meta.url))
+  execFileSync(process.execPath, [migration], { env: process.env, timeout: 30_000 })
+  const recoveredAdmins = await adminBindings()
+  assert.deepEqual(recoveredAdmins.map(row => row.userId), [adminA,adminB])
+  assert.deepEqual(recoveredAdmins[0], initialAdmins[0])
+  assert.equal(new Set(recoveredAdmins.map(row => row.businessId)).size, 2)
+  execFileSync(process.execPath, [migration], { env: process.env, timeout: 30_000 })
+  assert.deepEqual(await adminBindings(), recoveredAdmins)
   const keyState = await listAssessmentKeys(pool)
   assert.equal(keyState.head.initialized, true)
   assert.equal(keyState.objects.length, 1)

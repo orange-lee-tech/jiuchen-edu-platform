@@ -1,5 +1,15 @@
+import { randomBytes, randomUUID } from 'node:crypto'
 import mysql from 'mysql2/promise'
 import 'dotenv/config'
+
+// Match generateBusinessId()'s JCA-XXXX-XXXX format and alphabet. Generate
+// outside SQL so each administrator receives an independent random value.
+const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+function adminBusinessId() {
+  const bytes = randomBytes(8)
+  const token = Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('')
+  return `JCA-${token.slice(0, 4)}-${token.slice(4)}`
+}
 
 const url = process.env.DATABASE_URL
 if (!url) throw new Error('DATABASE_URL is required')
@@ -37,12 +47,24 @@ try {
 
   // Give legacy administrators an explicit binding, preserving users.role.
   // This also covers accounts that were provisioned before internal IDs existed.
-  await db.query(`INSERT INTO internal_ids
+  const [admins] = await db.query<mysql.RowDataPacket[]>(`
+    SELECT u.id FROM users u LEFT JOIN internal_ids i
+      ON i.user_id=u.id AND i.type='admin'
+    WHERE u.role='admin' AND u.status='active' AND i.id IS NULL
+    ORDER BY u.id`)
+  for (const admin of admins) {
+    let businessId: string | null = null
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const candidate = adminBusinessId()
+      const [existing] = await db.query<mysql.RowDataPacket[]>(
+        'SELECT id FROM internal_ids WHERE business_id=? LIMIT 1', [candidate])
+      if (!existing.length) { businessId = candidate; break }
+    }
+    if (!businessId) throw new Error('business_id_generation_failed')
+    await db.query(`INSERT INTO internal_ids
       (id,business_id,type,claim_mode,status,user_id,claimed_at)
-    SELECT UUID(), CONCAT('JCA-',UPPER(SUBSTRING(REPLACE(UUID(),'-',''),1,4)),
-      '-',UPPER(SUBSTRING(REPLACE(UUID(),'-',''),1,4))),
-      'admin','admin','claimed',u.id,CURRENT_TIMESTAMP()
-    FROM users u LEFT JOIN internal_ids i ON i.user_id=u.id AND i.type='admin'
-    WHERE u.role='admin' AND u.status='active' AND i.id IS NULL`)
+      VALUES (?,?,'admin','admin','claimed',?,CURRENT_TIMESTAMP())`,
+    [randomUUID(), businessId, admin.id])
+  }
   console.log('DUAL_IDENTITY_SCHEMA_READY')
 } finally { await db.end() }
