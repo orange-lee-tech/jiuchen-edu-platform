@@ -99,6 +99,16 @@ try {
     estimatedCostFen:1,costConfirmed:true,pin:'444444',
   } })
   assert.equal(candidate.active,false)
+  const [clockRows] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT CAST(cost_verified_at AS CHAR) AS verified_at,
+       CAST(CURRENT_TIMESTAMP() AS CHAR) AS db_now,
+       TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),cost_verified_at) AS offset_seconds,
+       (cost_verified_at IS NOT NULL AND cost_verified_at <= CURRENT_TIMESTAMP()
+         AND cost_verified_at >= CURRENT_TIMESTAMP() - INTERVAL 30 DAY) AS cost_fresh
+     FROM credit_plan_objects WHERE id=?`, [candidate.id])
+  console.log('PLAN_COST_CLOCK_DIAGNOSTIC', JSON.stringify({
+    ...clockRows[0], appNow: new Date().toISOString(),
+  }))
   const activated = await activateCreditPlan({ pool,actorId:adminA,id:candidate.id,
     expectedVersion:plans.head.version,currentPin:'333333',targetPin:'444444' })
   assert.equal(activated.activePlanId,candidate.id)
