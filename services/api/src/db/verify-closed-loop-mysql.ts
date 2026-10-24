@@ -214,6 +214,14 @@ try {
   const activePlanAfterSwitch = await readActiveCreditPlan(pool,costEnv)
   assert.equal(activePlanAfterSwitch.costVerified,false)
   assert.equal(activePlanAfterSwitch.costVerificationStatus,'configuration_changed')
+  const [activeSecretRows] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT encrypted_secret FROM assessment_key_objects WHERE id=?',[nextKeyId])
+  const activeCiphertext = String(activeSecretRows[0]!.encrypted_secret)
+  await pool.query("UPDATE assessment_key_objects SET encrypted_secret='not-a-valid-ciphertext' WHERE id=?",[nextKeyId])
+  assert.equal(await readAssessmentCostFingerprint(pool,costEnv),null)
+  assert.equal((await readActiveCreditPlan(pool,costEnv)).costVerificationStatus,'model_unavailable')
+  await pool.query('UPDATE assessment_key_objects SET encrypted_secret=? WHERE id=?',[activeCiphertext,nextKeyId])
+  assert.equal(await readAssessmentCostFingerprint(pool,costEnv),changedCostFingerprint)
   await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:mismatchCandidate.id,env:costEnv,
     expectedVersion:activated.version,currentPin:'444444',targetPin:'666666' }),
   { code:'credit_plan_cost_configuration_changed' })

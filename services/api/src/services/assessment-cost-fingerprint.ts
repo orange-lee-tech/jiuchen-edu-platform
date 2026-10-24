@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto'
 import type mysql from 'mysql2/promise'
 import type { AppEnv } from '../config/env.js'
 import { FIXED_ASSESSMENT_SKUS } from './commercial-config.js'
+import { unsealKey } from './admin-control-boxes.js'
 
-export const ASSESSMENT_COST_POLICY_VERSION = 'assessment-cost-v1'
+export const ASSESSMENT_COST_POLICY_VERSION = 'assessment-cost-v2'
 
 type FingerprintInput = {
   source: 'assessment-key-object' | 'legacy-control-box' | 'environment'
@@ -100,6 +101,10 @@ export async function readAssessmentCostFingerprint(
       throw error
     }
     if (!row || row.status !== 'active' || !row.encrypted_secret) return null
+    let secret: string
+    try { secret = unsealKey(row.encrypted_secret, env.ADMIN_AI_KEY_ENCRYPTION_KEY) }
+    catch { return null }
+    if (!secret) return null
     return fingerprint({
       source: 'assessment-key-object',
       identityVersion: `head:${head.version};object:${row.id};objectVersion:${row.version}`,
@@ -107,7 +112,7 @@ export async function readAssessmentCostFingerprint(
       apiBaseUrl: row.api_base_url ?? env.ASSESSMENT_AI_BASE_URL,
       model: row.model ?? env.ASSESSMENT_AI_MODEL,
       temperature: row.temperature ?? env.ASSESSMENT_AI_TEMPERATURE,
-      secret: row.encrypted_secret, ...runtime,
+      secret, ...runtime,
     })
   }
   let legacy: LegacyKeyRow | undefined
@@ -121,11 +126,15 @@ export async function readAssessmentCostFingerprint(
   }
   if (legacy) {
     if (!legacy.encrypted_secret || !env.ADMIN_AI_KEY_ENCRYPTION_KEY) return null
+    let secret: string
+    try { secret = unsealKey(legacy.encrypted_secret, env.ADMIN_AI_KEY_ENCRYPTION_KEY) }
+    catch { return null }
+    if (!secret) return null
     return fingerprint({
       source: 'legacy-control-box', identityVersion: `legacy:${legacy.version}`,
       provider: env.ASSESSMENT_AI_PROVIDER, apiBaseUrl: env.ASSESSMENT_AI_BASE_URL,
       model: env.ASSESSMENT_AI_MODEL, temperature: env.ASSESSMENT_AI_TEMPERATURE,
-      secret: legacy.encrypted_secret, ...runtime,
+      secret, ...runtime,
     })
   }
   return fingerprint({

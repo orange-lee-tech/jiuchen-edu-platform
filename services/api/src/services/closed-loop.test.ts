@@ -20,11 +20,11 @@ test('four fixed prices are independent from mutable evaluation counts', () => {
 test('cost verification is invalidated by active AI key/model changes without exposing credentials', () => {
   const base = { source: 'assessment-key-object' as const, identityVersion: 'head:3;object:key-a;objectVersion:2',
     provider: 'aliyun-bailian', apiBaseUrl: 'https://api.example.com/v1', model: 'qwen3.8-flash',
-    temperature: 0, secretDigest: 'ciphertext-digest-a', jsonMode: true,
+    temperature: 0, secretDigest: 'key-digest-a', jsonMode: true,
     responseFormat: 'json_schema', extraBodyJson: null }
   const original = buildAssessmentCostFingerprint(base)
   const switchedModel = buildAssessmentCostFingerprint({ ...base, model: 'qwen-next' })
-  const switchedKey = buildAssessmentCostFingerprint({ ...base, secretDigest: 'ciphertext-digest-b',
+  const switchedKey = buildAssessmentCostFingerprint({ ...base, secretDigest: 'key-digest-b',
     identityVersion: 'head:4;object:key-b;objectVersion:1' })
   assert.match(original, /^[a-f0-9]{64}$/)
   assert.notEqual(original, switchedModel)
