@@ -134,9 +134,18 @@ New-Item -ItemType Directory -Force -Path $runtime,$logs | Out-Null
 New-Item -ItemType Directory -Force -Path (Split-Path $caseFile -Parent) | Out-Null
 if (!(Test-Path -LiteralPath $caseFile)) { Set-Content -LiteralPath $caseFile -Value '' -NoNewline }
 if (!(Test-Path -LiteralPath $localEnvFile)) {
-  $dbPassword = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(24)).ToLowerInvariant()
-  $token = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant()
-  $masterKey = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+  $passwordBytes = New-Object byte[] 24
+  $tokenBytes = New-Object byte[] 32
+  $keyBytes = New-Object byte[] 32
+  $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+  try {
+    $rng.GetBytes($passwordBytes)
+    $rng.GetBytes($tokenBytes)
+    $rng.GetBytes($keyBytes)
+  } finally { $rng.Dispose() }
+  $dbPassword = ([BitConverter]::ToString($passwordBytes) -replace '-', '').ToLowerInvariant()
+  $token = ([BitConverter]::ToString($tokenBytes) -replace '-', '').ToLowerInvariant()
+  $masterKey = [Convert]::ToBase64String($keyBytes)
   @(
     'NODE_ENV=test',
     'HOST=127.0.0.1',
@@ -195,7 +204,7 @@ Push-Location $api
 try {
   if ([int]$count -eq 0) {
     $pushLog = Join-Path $logs 'schema-push.log'
-    & npm run db:push -- --force *> $pushLog
+    & npm.cmd run db:push -- --force *> $pushLog
     if ($LASTEXITCODE -ne 0 -or
         (Select-String -LiteralPath $pushLog -Pattern '^Error:|^  code: ' -Quiet)) {
       throw 'Drizzle test schema initialization failed; see runtime/logs/schema-push.log'
@@ -211,12 +220,12 @@ try {
     'db:upgrade:credit-plans','db:upgrade:dual-identity',
     'db:upgrade:growth-profile','db:upgrade:news-experience','db:upgrade:news-v2'
   )) {
-    & npm run $step
+    & npm.cmd run $step
     if ($LASTEXITCODE -ne 0) { throw "Test database migration failed: $step" }
   }
   Set-Content -LiteralPath $schemaReadyFile -Value 'all-test-migrations-complete' -Encoding ascii
   }
-  & npm run build
+  & npm.cmd run build
   if ($LASTEXITCODE -ne 0) { throw 'API build failed' }
 } finally { Pop-Location }
 & node (Join-Path $PSScriptRoot 'seed.mjs')
@@ -226,14 +235,14 @@ Stop-Processes
 $node = (Get-Command node).Source
 $apiOptions = @{
   FilePath=$node; ArgumentList=@('dist/server.js'); WorkingDirectory=$api
-  WindowStyle='Hidden'; PassThru=$true; Environment=$settings
+  WindowStyle='Hidden'; PassThru=$true
   RedirectStandardOutput=(Join-Path $logs 'api.out.log')
   RedirectStandardError=(Join-Path $logs 'api.err.log')
 }
 $apiProcess = Start-Process @apiOptions
 $proxyOptions = @{
   FilePath=$node; ArgumentList=@('tools/device-acceptance/proxy.mjs')
-  WorkingDirectory=$repo; WindowStyle='Hidden'; PassThru=$true; Environment=$settings
+  WorkingDirectory=$repo; WindowStyle='Hidden'; PassThru=$true
   RedirectStandardOutput=(Join-Path $logs 'proxy.out.log')
   RedirectStandardError=(Join-Path $logs 'proxy.err.log')
 }
