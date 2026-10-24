@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import type { DatabaseContext } from '../db/client.js'
 import { internalIds, students, teachers, users } from '../db/schema.js'
 import { unbindMyIdentity } from './identity-roles.js'
@@ -147,30 +147,37 @@ export async function bindInternalIdentity(
   }
 
   await database.db.transaction(async (tx) => {
-    await tx
+    // Claim the user's single-role slot first. Concurrent administrator binds
+    // must not leave two identities on an account whose active role has only one.
+    const [roleClaim] = await tx
+      .update(users)
+      .set({ role: identity.type })
+      .where(and(eq(users.id, userId), eq(users.role, 'user'), eq(users.status, 'active')))
+    if (roleClaim.affectedRows !== 1) throw new Error('user_role_already_assigned')
+
+    const [idClaim] = await tx
       .update(internalIds)
       .set({
         userId,
         status: 'claimed',
         claimedAt: new Date(),
       })
-      .where(eq(internalIds.id, identity.id))
-
-    await tx
-      .update(users)
-      .set({ role: identity.type })
-      .where(eq(users.id, userId))
+      .where(and(eq(internalIds.id, identity.id), eq(internalIds.status, 'available'),
+        isNull(internalIds.userId)))
+    if (idClaim.affectedRows !== 1) throw new Error('internal_id_not_available')
 
     if (identity.type === 'student') {
-      await tx
+      const [entityClaim] = await tx
         .update(students)
         .set({ userId })
-        .where(eq(students.id, identity.entityId!))
+        .where(and(eq(students.id, identity.entityId!), isNull(students.userId)))
+      if (entityClaim.affectedRows !== 1) throw new Error('internal_id_entity_not_available')
     } else if (identity.type === 'teacher') {
-      await tx
+      const [entityClaim] = await tx
         .update(teachers)
         .set({ userId })
-        .where(eq(teachers.id, identity.entityId!))
+        .where(and(eq(teachers.id, identity.entityId!), isNull(teachers.userId)))
+      if (entityClaim.affectedRows !== 1) throw new Error('internal_id_entity_not_available')
     }
   })
 

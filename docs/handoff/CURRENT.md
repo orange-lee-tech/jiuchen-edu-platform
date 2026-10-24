@@ -1,11 +1,11 @@
-# CURRENT — 九辰教育唯一活跃交接（2026-10-23）
+# CURRENT — 九辰教育唯一活跃交接（2026-10-24）
 
-## 2026-10-24：商业闭环 v2.0 候选施工中
+## 2026-10-24：商业闭环 v2.0 分支候选与 CI 状态
 
 - 阶段 A 已完成：管理员控制盒 PIN 锁定改用 MySQL 当前时间判断与写入，避免 Node 与 MySQL 时区偏移；修复提交 `c132646bc62299c408f68d9c366cdecefd015daf` 已推送本地/远端 main，自托管 [CI 40057893804](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/40057893804) 全绿。
-- 阶段 B/C/D 代码候选正在本地校核：多 AI 密钥对象与生效指针、四档固定售价与可变次数方案、订单创建快照、管理员兼任老师或学员的绑定/切换/分别解除。新增独立可重复迁移 `db:upgrade:assessment-keys`、`db:upgrade:credit-plans`、`db:upgrade:dual-identity`；旧密钥、设置控制口令与免费额度保留。首次将旧设置迁至新方案后，成本与微信商品映射标记待核实，新订单须经核实后才可开放。旧订单金额和次数不重算。
+- 阶段 B/C/D 候选已推送施工分支 `codex/commercial-closed-loop-v2`，见 [Draft PR #6](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/6)：多 AI 密钥对象与生效指针、四档固定售价与可变次数方案、订单创建快照、管理员兼任老师或学员的绑定/切换/分别解除。新增独立可重复迁移 `db:upgrade:assessment-keys`、`db:upgrade:credit-plans`、`db:upgrade:dual-identity`；旧密钥、设置控制口令与免费额度保留。首次将旧设置迁至新方案后，成本与微信商品映射标记待核实，新订单须经核实后才可开放。旧订单金额和次数不重算。
 - 上述三个新迁移只可在隔离 MySQL 8 执行并通过重复运行与事务测试；生产 DDL、API 切流、现役密钥、支付开启、微信体验版上传/发布均未执行，仍需分项批准。新方案 JC000 仅在专用临时测试开关及商品 ID 配置齐备时展示，默认关闭。
-- 本地现有 API 225 项、小程序 106 项回归及 TypeScript 已通过；新增 MySQL 8 门禁和完整自托管 CI 仍待候选提交后取得实际回执。此段是代码候选状态，不能据此声称生产收款或真机验收通过。
+- 本地 API 类型检查、构建及 229/229 测试，小程序 TypeScript 与 106/106 回归通过。首个 [自托管 CI 运行 40060984723](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/40060984723) 未到 MySQL 门禁：重试时自托管 Runner 经本机代理下载 `actions/setup-node@v4` 连续超时，属于环境初始化失败，不能记为代码通过或代码失败。新增 MySQL 8 重复迁移及事务门禁仍待真实运行回执；管理端完整 CI 也尚无本候选回执。
 
 **当前状态：** 商业设置与 AI 密钥双 PIN、独立草稿及虚拟订单后台补偿已有代码候选。用户最新回执确认 ECS API `dbd7d9a818523cc3b007afe47a03519510415652`、服务 `active`；0.0.19 本地 `main` 基线为 `d643b12c6cbca6b5ebe0ddf87fc64819705fbac7`。新控制盒代码尚未执行生产迁移或切流，也没有新体验版或真实支付验收。旧段落为历史回执，以本节及下方最新记录为准。
 
