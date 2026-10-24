@@ -13,7 +13,7 @@ test('four fixed prices are independent from mutable evaluation counts', () => {
     [['JC000',10],['JC001',190],['JC002',890],['JC003',1690]])
   assert.deepEqual(DEFAULT_PLAN_COUNTS,{ JC000:2,JC001:1,JC002:5,JC003:10 })
   assert.doesNotThrow(() => validatePlanCost(DEFAULT_PLAN_COUNTS,1,new Date(),'model-a','model-a'))
-  assert.throws(() => validatePlanCost({ ...DEFAULT_PLAN_COUNTS,JC002:100 },10,new Date()))
+  assert.throws(() => validatePlanCost({ ...DEFAULT_PLAN_COUNTS,JC002:100 },10,new Date(),'model-a','model-a'))
   assert.throws(() => validatePlanCost(DEFAULT_PLAN_COUNTS,1,new Date(Date.now()-31*86400000),'model-a','model-a'))
 })
 

@@ -186,7 +186,7 @@ try {
     await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:invalidCandidate.id,env:costEnv,
       expectedVersion:activated.version,currentPin:'444444',targetPin:'555555' }),
     { code:'plan_cost_missing_or_stale' })
-    assert.equal((await listCreditPlans(pool)).head.activePlanId,candidate.id)
+    assert.equal((await listCreditPlans(pool,costEnv)).head.activePlanId,candidate.id)
   }
   const mismatchCandidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
     name:'模型切换后必须重核',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
@@ -221,7 +221,7 @@ try {
   assert.equal(oldRows[0]!.sku_key,null)
   assert.equal(oldRows[0]!.plan_id,null)
   await disableCreditPlan({ pool,actorId:adminA,expectedVersion:activated.version,currentPin:'444444' })
-  assert.equal((await listCreditPlans(pool)).head.activePlanId,null)
+  assert.equal((await listCreditPlans(pool,costEnv)).head.activePlanId,null)
 
   const identities = await listMyIdentities({ configured:true,pool } as any,adminA)
   assert.equal(identities.identities.filter(row=>row.type==='admin').length,1)
