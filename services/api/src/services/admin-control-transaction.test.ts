@@ -10,8 +10,8 @@ test('separate six-digit boxes rotate version and PIN for any authenticated admi
   const conn = {
     async beginTransaction() {}, async commit() {}, async rollback() {}, release() {},
     async query(sql: string, values: unknown[] = []): Promise<[Record<string, unknown>[], unknown]> {
-      if (sql.startsWith('SELECT * FROM admin_control_boxes')) {
-        const row = boxes.get(String(values[0])); return [row ? [row] : [], null]
+      if (sql.startsWith('SELECT *') && sql.includes('FROM admin_control_boxes')) {
+        const row = boxes.get(String(values[0])); return [row ? [{ ...row, pin_locked: 0 }] : [], null]
       }
       if (sql.startsWith('INSERT INTO admin_control_boxes')) {
         const [box, version, salt, digest, owner, payload, secret] = values
@@ -87,8 +87,11 @@ test('encrypted key draft activation is atomic, private, version-bound, and PIN-
     },
     release() {},
     async query(sql: string, values: unknown[] = []): Promise<[any, unknown]> {
-      if (sql.startsWith('SELECT * FROM admin_control_boxes')) {
-        const row = boxes.get(String(values[0])); return [row ? [row] : [], null]
+      if (sql.startsWith('SELECT *') && sql.includes('FROM admin_control_boxes')) {
+        const row = boxes.get(String(values[0]))
+        const pinLocked = row?.pin_locked ?? (row?.locked_until &&
+          new Date(row.locked_until as Date).getTime() > Date.now() ? 1 : 0)
+        return [row ? [{ ...row, pin_locked: pinLocked }] : [], null]
       }
       if (sql.startsWith('SELECT * FROM admin_control_drafts')) {
         const row = drafts.get(String(values[0]) + ':' + String(values[1])); return [row ? [row] : [], null]
@@ -107,7 +110,12 @@ test('encrypted key draft activation is atomic, private, version-bound, and PIN-
         if (row) {
           const attempts = Number(values[0])
           row.failed_attempts = attempts
-          if (attempts >= 5) row.locked_until = new Date(Date.now() + 15 * 60 * 1000)
+          if (attempts >= 5) {
+            // Simulate a TIMESTAMP Date parsed in the wrong client timezone.
+            // The database comparison remains authoritative.
+            row.locked_until = new Date(Date.now() - 8 * 60 * 60 * 1000)
+            row.pin_locked = 1
+          }
         }
       } else if (sql.startsWith('INSERT INTO admin_control_drafts')) {
         const [box, actor, based, payload, secret] = values

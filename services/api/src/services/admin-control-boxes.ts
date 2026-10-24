@@ -58,7 +58,7 @@ export function unsealKey(encoded: string, masterKey: string) {
 type BoxRow = mysql.RowDataPacket & {
   box: ControlBox; version: number; pin_salt: string; pin_hash: string
   owner_user_id: string; payload_json: unknown; encrypted_secret: string | null
-  failed_attempts: number; locked_until: Date | null; updated_at: Date
+  failed_attempts: number; locked_until: Date | null; pin_locked: number | null; updated_at: Date
 }
 type DraftRow = mysql.RowDataPacket & {
   box: ControlBox; actor_user_id: string; based_on_version: number
@@ -70,7 +70,8 @@ function decodeSettings(value: unknown): AdminSettings | null {
   } catch { return null }
 }
 export async function readControlBox(pool: mysql.Pool, box: ControlBox) {
-  const [rows] = await pool.query<BoxRow[]>('SELECT * FROM admin_control_boxes WHERE box = ? LIMIT 1', [box])
+  const [rows] = await pool.query<BoxRow[]>(
+    'SELECT *, (locked_until > CURRENT_TIMESTAMP()) AS pin_locked FROM admin_control_boxes WHERE box = ? LIMIT 1', [box])
   return rows[0] ?? null
 }
 export function publicControlBox(row: BoxRow | null, box: ControlBox) {
@@ -108,7 +109,7 @@ export async function saveControlDraft(input: {
   try {
     await connection.beginTransaction()
     const [rows] = await connection.query<BoxRow[]>(
-      'SELECT * FROM admin_control_boxes WHERE box = ? LIMIT 1 FOR UPDATE', [input.box],
+      'SELECT *, (locked_until > CURRENT_TIMESTAMP()) AS pin_locked FROM admin_control_boxes WHERE box = ? LIMIT 1 FOR UPDATE', [input.box],
     )
     if ((rows[0] ? Number(rows[0].version) : 0) !== input.expectedVersion) {
       throw new ControlError('control_version_conflict', 409)
@@ -144,7 +145,7 @@ export async function activateControlDraft(input: {
     // draft saving therefore serialize against both config changes and edits
     // to the same administrator's draft.
     const [boxRows] = await connection.query<BoxRow[]>(
-      'SELECT * FROM admin_control_boxes WHERE box = ? LIMIT 1 FOR UPDATE', [input.box],
+      'SELECT *, (locked_until > CURRENT_TIMESTAMP()) AS pin_locked FROM admin_control_boxes WHERE box = ? LIMIT 1 FOR UPDATE', [input.box],
     )
     const row = boxRows[0]
     const [draftRows] = await connection.query<DraftRow[]>(
@@ -173,14 +174,14 @@ export async function activateControlDraft(input: {
       ? sealKey(secret!, input.masterKey ?? '') : null
 
     if (row) {
-      if (row.locked_until && new Date(row.locked_until).getTime() > Date.now()) {
+      if (Number(row.pin_locked) === 1) {
         throw new ControlError('control_pin_locked', 429)
       }
       const valid = input.currentPin && verifyPin(input.currentPin, row.pin_salt, row.pin_hash)
       if (!valid) {
         const attempts = Number(row.failed_attempts) + 1
         await connection.query(
-          'UPDATE admin_control_boxes SET failed_attempts = ?, locked_until = CASE WHEN ? >= 5 THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 15 MINUTE) ELSE locked_until END WHERE box = ?',
+          'UPDATE admin_control_boxes SET failed_attempts = ?, locked_until = CASE WHEN ? >= 5 THEN DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL 15 MINUTE) ELSE locked_until END WHERE box = ?',
           [attempts, attempts, input.box],
         )
         await connection.commit()
@@ -255,14 +256,14 @@ export async function saveControlBox(input: {
   try {
     await connection.beginTransaction()
     const [rows] = await connection.query<BoxRow[]>(
-      'SELECT * FROM admin_control_boxes WHERE box = ? LIMIT 1 FOR UPDATE', [input.box],
+      'SELECT *, (locked_until > CURRENT_TIMESTAMP()) AS pin_locked FROM admin_control_boxes WHERE box = ? LIMIT 1 FOR UPDATE', [input.box],
     )
     const row = rows[0]
     if ((row ? Number(row.version) : 0) !== input.expectedVersion) {
       throw new ControlError('control_version_conflict', 409)
     }
     if (row) {
-      if (row.locked_until && new Date(row.locked_until).getTime() > Date.now()) {
+      if (Number(row.pin_locked) === 1) {
         throw new ControlError('control_pin_locked', 429)
       }
       const valid = input.currentPin && verifyPin(input.currentPin, row.pin_salt, row.pin_hash)
@@ -270,7 +271,7 @@ export async function saveControlBox(input: {
         const attempts = Number(row.failed_attempts) + 1
         await connection.query(
           `UPDATE admin_control_boxes SET failed_attempts = ?,
-            locked_until = CASE WHEN ? >= 5 THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 15 MINUTE) ELSE locked_until END
+            locked_until = CASE WHEN ? >= 5 THEN DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL 15 MINUTE) ELSE locked_until END
            WHERE box = ?`, [attempts, attempts, input.box],
         )
         await connection.commit()
@@ -321,18 +322,18 @@ export async function authorizeKeyUse(input: {
   try {
     await connection.beginTransaction()
     const [rows] = await connection.query<BoxRow[]>(
-      "SELECT * FROM admin_control_boxes WHERE box='assessment_key' FOR UPDATE",
+      "SELECT *, (locked_until > CURRENT_TIMESTAMP()) AS pin_locked FROM admin_control_boxes WHERE box='assessment_key' FOR UPDATE",
     )
     const row = rows[0]
     if (!row) throw new ControlError('assessment_key_not_configured', 503)
-    if (row.locked_until && new Date(row.locked_until).getTime() > Date.now()) {
+    if (Number(row.pin_locked) === 1) {
       throw new ControlError('control_pin_locked', 429)
     }
     if (!verifyPin(input.pin, row.pin_salt, row.pin_hash)) {
       const attempts = Number(row.failed_attempts) + 1
       await connection.query(
         `UPDATE admin_control_boxes SET failed_attempts=?,
-         locked_until=CASE WHEN ? >= 5 THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 15 MINUTE) ELSE locked_until END
+         locked_until=CASE WHEN ? >= 5 THEN DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL 15 MINUTE) ELSE locked_until END
          WHERE box='assessment_key'`, [attempts, attempts],
       )
       await connection.commit()
