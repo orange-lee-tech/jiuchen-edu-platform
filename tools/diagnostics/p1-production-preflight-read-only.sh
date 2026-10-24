@@ -2,11 +2,11 @@
 # Read-only: no restart, DDL, sync, timer change, environment output or worker.
 set -euo pipefail
 current_path=$(readlink -f /opt/jiuchen-api/current)
-printf 'CURRENT_PATH=%s\\n' "$current_path"
+printf 'CURRENT_PATH=%s\n' "$current_path"
 if [ -r "$current_path/COMMIT_SHA" ]; then printf 'CURRENT_COMMIT='; cat "$current_path/COMMIT_SHA"; else echo 'CURRENT_COMMIT=UNKNOWN'; fi
 if [ -r /opt/jiuchen-api/shared/previous-release ]; then
   previous_commit=$(cat /opt/jiuchen-api/shared/previous-release)
-  printf 'PREVIOUS_COMMIT=%s\\n' "$previous_commit"
+  printf 'PREVIOUS_COMMIT=%s\n' "$previous_commit"
   if [ -d "/opt/jiuchen-api/releases/$previous_commit" ]; then echo 'PREVIOUS_RELEASE_DIR=EXISTS'; else echo 'PREVIOUS_RELEASE_DIR=MISSING'; fi
 else
   echo 'PREVIOUS_COMMIT=UNREADABLE'
@@ -46,8 +46,7 @@ done
 printf 'WEBSITE_ROOT='
 readlink -f /www/wwwroot/jiuchen-current
 if [ -r /etc/production.env ]; then
-  if grep -Eq '^ADMIN_AI_KEY_ENCRYPTION_KEY=.{40,}
- /etc/production.env; then
+  if grep -Eq '^ADMIN_AI_KEY_ENCRYPTION_KEY=.{40,}$' /etc/production.env; then
     echo 'ADMIN_AI_KEY_ENCRYPTION_KEY=PRESENT_SHAPED'
   else
     echo 'ADMIN_AI_KEY_ENCRYPTION_KEY=MISSING_OR_SHORT'

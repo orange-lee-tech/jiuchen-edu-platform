@@ -30,11 +30,7 @@
 
 必须确认：current 与现场记录一致、previous release 真实存在、服务 active、live/health 通过且 database=ok、内存/磁盘仍有余量、官网根目录保持 `/www/wwwroot/jiuchen-current`。若受限账号无法读取 root-only 的 `previous-release`，不要修改文件权限；由现有授权的 ECS 控制台运维入口只读核对该 SHA 和目录存在性（不使用 root SSH）。若失败，停留在只读诊断，不继续 DDL 或 promote。
 
-另由有权限读取生产环境文件的授权操作人员只输出布尔状态，不输出值：
-```bash
-if grep -Eq '^ADMIN_AI_KEY_ENCRYPTION_KEY=.{40,}$' /etc/production.env; then echo ADMIN_AI_KEY_ENCRYPTION_KEY=PRESENT; else echo ADMIN_AI_KEY_ENCRYPTION_KEY=MISSING_OR_INVALID; fi
-```
-此项必须在切流前确认。密钥应为 32-byte key 的 Base64 编码，权限受限，并在服务器外的受控加密位置保有可恢复副本。不要把值贴到终端回执、GitHub、聊天或日志；不要为了检查而扩大 `jiuchen-deploy` 的 sudo 权限。
+脚本的 `PRESENT_SHAPED` 仅代表变量存在且长度达到粗略门槛，不等于已证明 Base64 解码长度正确或密钥可解密旧密文。切流前由授权操作人员在不输出值的前提下确认 32-byte Base64 格式、受控恢复副本和旧密文可用性。密钥应为 32-byte key 的 Base64 编码，权限受限，并在服务器外的受控加密位置保有可恢复副本。不要把值贴到终端回执、GitHub、聊天或日志；不要为了检查而扩大 `jiuchen-deploy` 的 sudo 权限。
 
 ## B. CloudBase SQL 控制台只读检查
 
