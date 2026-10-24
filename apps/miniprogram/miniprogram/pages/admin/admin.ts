@@ -133,6 +133,7 @@ Page({
     creditPlansReady: false,
     planHead: { initialized: false, version: 0, activePlanId: null } as CreditPlanHead,
     creditPlans: [] as CreditPlan[],
+    planCostConfigFingerprint: null as string | null,
     planName: '', planNote: '', planJc000: '2', planJc001: '1', planJc002: '5', planJc003: '10',
     planCostYuan: '', planCostConfirmed: false, planObjectPin: '', planControlPin: '', planTargetPin: '',
     keyLabel: '', keyProvider: '', keyApiBaseUrl: '', keyModel: '', keyTemperature: '0',
@@ -288,7 +289,11 @@ Page({
       }
       try {
         const plans = await getCreditPlans()
-        this.setData({ creditPlansReady: true, planHead: plans.head, creditPlans: plans.plans })
+        const currentFingerprint = plans.currentCostConfigFingerprint
+        this.setData({ creditPlansReady: true, planHead: plans.head, creditPlans: plans.plans,
+          planCostConfigFingerprint: currentFingerprint,
+          planCostConfirmed: Boolean(currentFingerprint &&
+            currentFingerprint === this.data.planCostConfigFingerprint && this.data.planCostConfirmed) })
       } catch { this.setData({ creditPlansReady: false }) }
     } catch (error) { this.setData({ loadError: friendlyRequestError(error, '设置未能读取') }) }
     finally { this.setData({ loading: false }) }
@@ -310,9 +315,15 @@ Page({
     const name = String(event.currentTarget.dataset.name)
     if (!['planName','planNote','planJc000','planJc001','planJc002','planJc003',
       'planCostYuan','planObjectPin','planControlPin','planTargetPin'].includes(name)) return
-    this.setData({ [name]: event.detail.value })
+    this.setData({ [name]: event.detail.value,
+      ...(name === 'planCostYuan' ? { planCostConfirmed: false } : {}) })
   },
   onPlanCostConfirm(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    if (event.detail.value && !this.data.planCostConfigFingerprint) {
+      wx.showToast({ title: '当前 AI 连接不可用，暂不能确认成本', icon: 'none' })
+      this.setData({ planCostConfirmed: false })
+      return
+    }
     this.setData({ planCostConfirmed: event.detail.value })
   },
   async onCreateCreditPlan() {
@@ -321,6 +332,9 @@ Page({
     const counts = { JC000: Number(data.planJc000), JC001: Number(data.planJc001),
       JC002: Number(data.planJc002), JC003: Number(data.planJc003) }
     const cost = data.planCostYuan.trim() ? moneyFen(data.planCostYuan.trim()) : null
+    if (data.planCostConfirmed && cost === null) {
+      wx.showToast({ title: '请先填写预计单次模型成本', icon: 'none' }); return
+    }
     if (!data.planName.trim() || !/^\d{6}$/.test(data.planObjectPin) ||
       Object.values(counts).some(value => !Number.isInteger(value) || value < 1 || value > 100) ||
       (cost !== null && (!Number.isInteger(cost) || cost < 1))) {
@@ -329,11 +343,19 @@ Page({
     this.setData({ actionLoading: true })
     try {
       const result = await createCreditPlanObject({ name: data.planName.trim(), note: data.planNote.trim(),
-        counts, estimatedCostFen: cost, costConfirmed: data.planCostConfirmed, pin: data.planObjectPin })
+        counts, estimatedCostFen: cost, costConfirmed: data.planCostConfirmed,
+        expectedCostConfigFingerprint: data.planCostConfigFingerprint, pin: data.planObjectPin })
+      this.setData({ planCostConfirmed: false })
       wx.showToast({ title: result.active ? '首套方案已生效' : '候选方案已保存', icon: 'success' })
       await this.loadControls()
-    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '方案保存失败'), icon: 'none' }) }
-    finally { this.setData({ actionLoading: false, planObjectPin: '' }) }
+    } catch (error) {
+      wx.showToast({ title: friendlyRequestError(error, '方案保存失败'), icon: 'none' })
+      try {
+        const plans = await getCreditPlans()
+        this.setData({ creditPlansReady: true, planHead: plans.head, creditPlans: plans.plans,
+          planCostConfigFingerprint: plans.currentCostConfigFingerprint, planCostConfirmed: false })
+      } catch { this.setData({ planCostConfirmed: false }) }
+    } finally { this.setData({ actionLoading: false, planObjectPin: '' }) }
   },
   async onActivateCreditPlan(event: WechatMiniprogram.CustomEvent) {
     const id = String(event.currentTarget.dataset.id || '')

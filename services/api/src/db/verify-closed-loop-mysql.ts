@@ -143,9 +143,13 @@ try {
     [oldOrder,adminA,'JCV-old-order',199,7])
   assert.throws(() => validatePlanCost({ JC000:2,JC001:1,JC002:5,JC003:10 },null,null,null,null))
   assert.throws(() => validatePlanCost({ JC000:100,JC001:1,JC002:5,JC003:10 },1,new Date(),originalCostFingerprint,originalCostFingerprint))
+  await assert.rejects(() => createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
+    name:'旧页面确认不得越过配置切换',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
+    estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:'a'.repeat(64),pin:'333333',
+  } }), { code:'credit_plan_cost_configuration_changed' })
   const candidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
     name:'固定价四档',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
-    estimatedCostFen:1,costConfirmed:true,pin:'444444',
+    estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:originalCostFingerprint,pin:'444444',
   } })
   assert.equal(candidate.active,false)
   const [clockRows] = await pool.query<mysql.RowDataPacket[]>(
@@ -177,7 +181,7 @@ try {
   assert.equal(Number(planPinAfterSuccess[0]!.failed_attempts),0)
   const invalidCandidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
     name:'成本时间拒绝验证',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
-    estimatedCostFen:1,costConfirmed:true,pin:'555555',
+    estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:originalCostFingerprint,pin:'555555',
   } })
   for (const clockValue of ['NULL', 'CURRENT_TIMESTAMP() - INTERVAL 31 DAY',
     'CURRENT_TIMESTAMP() + INTERVAL 1 DAY']) {
@@ -190,7 +194,7 @@ try {
   }
   const mismatchCandidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
     name:'模型切换后必须重核',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
-    estimatedCostFen:1,costConfirmed:true,pin:'666666',
+    estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:originalCostFingerprint,pin:'666666',
   } })
   const nextKeyId = randomUUID()
   const nextKeySalt = '33333333333333333333333333333333'

@@ -18,6 +18,7 @@ export const creditPlanInput = z.object({
   counts: planCountsSchema,
   estimatedCostFen: z.number().int().positive().max(100000).nullable(),
   costConfirmed: z.boolean(),
+  expectedCostConfigFingerprint: z.string().regex(/^[a-f0-9]{64}$/).nullable().default(null),
   pin: sixDigitPin,
 }).strict()
 export type CreditPlanInput = z.infer<typeof creditPlanInput>
@@ -151,6 +152,7 @@ export async function listCreditPlans(pool: mysql.Pool, env: AppEnv) {
   )
   return { head: { initialized: Boolean(heads[0]?.initialized),
     version: Number(heads[0]?.version ?? 0), activePlanId: heads[0]?.active_plan_id ?? null },
+  currentCostConfigFingerprint: currentFingerprint,
   plans: rows.map(row => publicPlan(row, currentFingerprint)), prices: FIXED_ASSESSMENT_SKUS }
 }
 
@@ -164,7 +166,16 @@ export async function createCreditPlan(input: {
     await connection.beginTransaction()
     const head = await headForUpdate(connection)
     const currentFingerprint = await readAssessmentCostFingerprint(connection, input.env, true)
-    const costVerified = data.costConfirmed && data.estimatedCostFen !== null && currentFingerprint !== null
+    if (data.costConfirmed) {
+      if (data.estimatedCostFen === null) throw new ControlError('plan_cost_missing_or_stale', 409)
+      if (!currentFingerprint) throw new ControlError('credit_plan_cost_configuration_unavailable', 409)
+      if (!data.expectedCostConfigFingerprint) throw new ControlError('credit_plan_cost_configuration_unverified', 409)
+      if (data.expectedCostConfigFingerprint !== currentFingerprint) {
+        throw new ControlError('credit_plan_cost_configuration_changed', 409)
+      }
+    }
+    const costVerified = data.costConfirmed && data.estimatedCostFen !== null &&
+      currentFingerprint !== null && data.expectedCostConfigFingerprint === currentFingerprint
     const verifiedFingerprint = costVerified ? currentFingerprint : null
     const verifiedAt = costVerified ? new Date() : null
     let firstActive = false
