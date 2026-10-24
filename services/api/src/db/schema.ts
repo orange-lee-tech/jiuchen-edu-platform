@@ -7,6 +7,7 @@ import {
   mysqlTable,
   timestamp,
   text,
+  uniqueIndex,
   varchar,
 } from 'drizzle-orm/mysql-core'
 
@@ -60,13 +61,13 @@ export const internalIds = mysqlTable('internal_ids', {
   status: mysqlEnum('status', ['available', 'claimed', 'disabled'])
     .notNull()
     .default('available'),
-  userId: varchar('user_id', { length: 36 }).unique().references(() => users.id),
+  userId: varchar('user_id', { length: 36 }).references(() => users.id),
   entityId: varchar('entity_id', { length: 36 }),
   batch: varchar('batch', { length: 40 }),
   claimedAt: timestamp('claimed_at'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
-})
+}, (table) => [uniqueIndex('internal_ids_user_type_unique').on(table.userId, table.type)])
 
 export const students = mysqlTable('students', {
   id: varchar('id', { length: 36 }).primaryKey(),
@@ -226,6 +227,11 @@ export const paymentOrders = mysqlTable('payment_orders', {
     .default('pending'),
   amountFen: int('amount_fen').notNull(),
   creditAmount: int('credit_amount').notNull(),
+  skuKey: varchar('sku_key', { length: 16 }),
+  planId: varchar('plan_id', { length: 36 }),
+  planVersion: int('plan_version'),
+  payEnvironment: varchar('pay_environment', { length: 16 }),
+  wechatProductId: varchar('wechat_product_id', { length: 128 }),
   providerTransactionId: varchar('provider_transaction_id', { length: 64 }).unique(),
   paidAt: timestamp('paid_at'),
   expiresAt: timestamp('expires_at'),

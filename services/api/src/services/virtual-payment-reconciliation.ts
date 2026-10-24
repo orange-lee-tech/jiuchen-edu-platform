@@ -17,6 +17,8 @@ export type VirtualOrder = {
   status: string
   openId: string | null
   deliveryConfirmedAt: Date | null
+  payEnvironment: string | null
+  wechatProductId: string | null
 }
 
 export async function reconcileVirtualOrder(input: {
@@ -27,6 +29,9 @@ export async function reconcileVirtualOrder(input: {
   checkPaidState?: boolean
 }): Promise<{ state: 'paid' | 'pending' | 'refunded' | 'closed'; credited: boolean; deliveryPending?: boolean; requiresFinanceReview?: boolean }> {
   const { database, env, config, order } = input
+  if (order.payEnvironment && order.payEnvironment !== (config.env === 0 ? 'production' : 'sandbox')) {
+    throw new Error('virtual_payment_environment_mismatch')
+  }
   if (order.status === 'refunded' || order.status === 'closed') {
     return { state: order.status, credited: false }
   }
@@ -84,15 +89,23 @@ export async function reconcileVirtualOrder(input: {
 export async function readVirtualOrder(
   pool: mysql.Pool, id: string, userId?: string,
 ): Promise<VirtualOrder | null> {
-  const [rows] = await pool.query<mysql.RowDataPacket[]>(
-    `SELECT p.id, p.out_trade_no AS outTradeNo, p.amount_fen AS amountFen,
+  const base = `SELECT p.id, p.out_trade_no AS outTradeNo, p.amount_fen AS amountFen,
             p.status, u.wechat_open_id AS openId,
-            p.virtual_delivery_confirmed_at AS deliveryConfirmedAt
-       FROM payment_orders p INNER JOIN users u ON u.id = p.user_id
+            p.virtual_delivery_confirmed_at AS deliveryConfirmedAt`
+  const tail = ` FROM payment_orders p INNER JOIN users u ON u.id = p.user_id
       WHERE p.id = ? AND p.out_trade_no LIKE 'JCV%' ${userId ? 'AND p.user_id = ?' : ''}
-      LIMIT 1`,
-    userId ? [id, userId] : [id],
-  )
+      LIMIT 1`
+  const params = userId ? [id, userId] : [id]
+  let rows: mysql.RowDataPacket[] = []
+  try {
+    [rows] = await pool.query<mysql.RowDataPacket[]>(
+      base + ', p.pay_environment AS payEnvironment,p.wechat_product_id AS wechatProductId' + tail, params)
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'ER_BAD_FIELD_ERROR') {
+      throw error instanceof Error ? error : new Error('virtual_order_read_failed')
+    }
+    [rows] = await pool.query<mysql.RowDataPacket[]>(base + tail, params)
+  }
   const row = rows[0]
   return row ? {
     id: String(row.id),
@@ -101,6 +114,8 @@ export async function readVirtualOrder(
     status: String(row.status),
     openId: row.openId ? String(row.openId) : null,
     deliveryConfirmedAt: row.deliveryConfirmedAt instanceof Date ? row.deliveryConfirmedAt : null,
+    payEnvironment: row.payEnvironment ? String(row.payEnvironment) : null,
+    wechatProductId: row.wechatProductId ? String(row.wechatProductId) : null,
   } : null
 }
 

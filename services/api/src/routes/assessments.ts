@@ -257,8 +257,11 @@ export function registerAssessmentRoutes(
   > = DEFAULT_RUN_DISPATCHER,
   importService: AssessmentImportService =
     createUnconfiguredAssessmentImportService(),
+  refreshProvider: () => Promise<void> = async () => {},
 ) {
-  app.get('/assessments/meta', async () => ({
+  app.get('/assessments/meta', async () => {
+    await refreshProvider()
+    return ({
     ok: true,
     versions: {
       inputSchema: ASSESSMENT_INPUT_SCHEMA_VERSION,
@@ -287,7 +290,8 @@ export function registerAssessmentRoutes(
       documentFormats: ['doc', 'docx', 'pdf'],
       imageFormats: ['jpg', 'jpeg', 'png', 'webp'],
     },
-  }))
+  })
+  })
 
   app.post<{ Body: unknown }>('/me/assessments/import-profile', async (request, reply) => {
     if (!database.configured) {
@@ -754,6 +758,7 @@ export function registerAssessmentRoutes(
         return reply.code(409).send({ ok: false, error: 'assessment_academic_profile_outdated' })
       }
 
+      await refreshProvider()
       if (!runtime.provider.isConfigured()) {
         return reply.code(503).send({
           ok: false,

@@ -240,7 +240,7 @@ export function createUnconfiguredAssessmentRuntime(): AssessmentRuntime {
   }
 }
 
-export function createAssessmentRuntimeFromEnv(env: AppEnv): AssessmentRuntime {
+export function createAssessmentRuntimeFromEnv(env: AppEnv, modelProvider?: JsonModelProvider): AssessmentRuntime {
   const mode = env.NODE_ENV === 'production' ? 'production' : 'eval_safe'
   return {
     retriever: new CompositeAssessmentRetriever([
@@ -253,7 +253,7 @@ export function createAssessmentRuntimeFromEnv(env: AppEnv): AssessmentRuntime {
       new HistoricalMoeSchoolSource(),
     ]),
     provider: new JsonAssessmentModelProvider(
-      createAssessmentAIProvider(env),
+      modelProvider ?? createAssessmentAIProvider(env),
     ),
   }
 }

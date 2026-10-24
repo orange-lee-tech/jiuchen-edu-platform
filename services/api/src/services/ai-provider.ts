@@ -44,6 +44,9 @@ export type JsonModelProviderConfig = {
   jsonMode?: boolean
   responseFormat?: 'json_object' | 'json_schema'
   extraBody?: Record<string, unknown>
+  transport?: (endpoint: string, options: {
+    method: 'POST'; headers: Record<string, string>; body: string; signal: AbortSignal
+  }) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>
 }
 
 export class JsonModelProviderUnavailableError extends Error {
@@ -128,6 +131,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
   private readonly jsonMode: boolean
   private readonly responseFormat?: 'json_object' | 'json_schema'
   private readonly extraBody: Record<string, unknown>
+  private readonly transport: NonNullable<JsonModelProviderConfig['transport']>
 
   constructor(config: JsonModelProviderConfig) {
     this.provider = config.provider?.trim() || 'openai-compatible'
@@ -140,6 +144,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
     this.responseFormat =
       config.responseFormat ?? (this.jsonMode ? 'json_object' : undefined)
     this.extraBody = { ...(config.extraBody ?? {}) }
+    this.transport = config.transport ?? ((endpoint, options) => fetch(endpoint, { ...options, redirect: 'error' }))
   }
 
   isConfigured() {
@@ -195,7 +200,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
             ? { type: 'json_object' }
             : undefined
 
-      const response = await fetch(endpoint, {
+      const response = await this.transport(endpoint, {
         method: 'POST',
         headers: {
           Authorization: 'Bearer ' + this.apiKey,
@@ -264,7 +269,7 @@ function parseExtraBodyJson(value?: string) {
   return parsed as Record<string, unknown>
 }
 
-export function createAssessmentAIProvider(env: AppEnv) {
+export function createAssessmentAIProvider(env: AppEnv, transport?: JsonModelProviderConfig['transport']) {
   return createJsonModelProvider({
     provider: env.ASSESSMENT_AI_PROVIDER ?? 'assessment-openai-compatible',
     baseUrl: env.ASSESSMENT_AI_BASE_URL,
@@ -274,6 +279,7 @@ export function createAssessmentAIProvider(env: AppEnv) {
     jsonMode: env.ASSESSMENT_AI_JSON_MODE ?? true,
     responseFormat: env.ASSESSMENT_AI_RESPONSE_FORMAT,
     extraBody: parseExtraBodyJson(env.ASSESSMENT_AI_EXTRA_BODY_JSON),
+    transport,
   })
 }
 

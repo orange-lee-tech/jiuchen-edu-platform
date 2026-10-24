@@ -20,14 +20,20 @@ export type VirtualPaymentParams = {
 export function virtualPaymentConfig(env: AppEnv): VirtualPayConfig | null {
   if (env.WECHAT_VIRTUAL_PAY_ENABLED !== true ||
     !env.WECHAT_VIRTUAL_PAY_APP_KEY || !env.WECHAT_VIRTUAL_PAY_OFFER_ID ||
-    !env.WECHAT_VIRTUAL_PAY_PRODUCT_ONE || !env.WECHAT_VIRTUAL_PAY_PRODUCT_TEN) return null
+    !env.WECHAT_VIRTUAL_PAY_PRODUCT_ONE ||
+    !env.WECHAT_VIRTUAL_PAY_PRODUCT_TEN) return null
   if(env.WECHAT_VIRTUAL_PAY_ENV === 'production' && env.WECHAT_VIRTUAL_PAY_PRODUCTION_APPROVED !== true) return null
   return {
     offerId:env.WECHAT_VIRTUAL_PAY_OFFER_ID,
     appKey:env.WECHAT_VIRTUAL_PAY_APP_KEY,
     env:env.WECHAT_VIRTUAL_PAY_ENV === 'production' ? 0 : 1,
     products:{'assessment-1':env.WECHAT_VIRTUAL_PAY_PRODUCT_ONE,
-      'assessment-10':env.WECHAT_VIRTUAL_PAY_PRODUCT_TEN},
+      'assessment-10':env.WECHAT_VIRTUAL_PAY_PRODUCT_TEN,
+      JC001:env.WECHAT_VIRTUAL_PAY_PRODUCT_ONE,
+      ...(env.WECHAT_VIRTUAL_PAY_PRODUCT_FIVE ? { JC002:env.WECHAT_VIRTUAL_PAY_PRODUCT_FIVE } : {}),
+      JC003:env.WECHAT_VIRTUAL_PAY_PRODUCT_TEN,
+      ...(env.WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED === true && env.WECHAT_VIRTUAL_PAY_PRODUCT_TEST
+        ? { JC000: env.WECHAT_VIRTUAL_PAY_PRODUCT_TEST } : {})},
   }
 }
 export function paySig(uri:string,body:string,key:string) {

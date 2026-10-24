@@ -183,6 +183,14 @@ export function friendlyRequestError(
     credit_payment_schema_not_ready: '充值系统正在准备中，请稍后再试',
     wechat_pay_not_configured: '微信支付尚未开通，请联系九辰客服',
     commercial_checkout_not_enabled: '充值尚未开放，请稍后再试',
+    credit_plan_cost_configuration_changed: 'AI 服务商、模型或密钥已变化，请按当前配置重新核算成本',
+    credit_plan_cost_configuration_unavailable: '当前 AI 连接不可用，暂不能确认套餐成本',
+    credit_plan_cost_configuration_unverified: '请刷新当前 AI 配置后再确认套餐成本',
+    plan_cost_missing_or_stale: '请填写预计单次成本，并在有效期内重新确认',
+    plan_cost_buffer_exceeded_JC000: '临时测试档次数与预计单次成本不匹配，请调整后重试',
+    plan_cost_buffer_exceeded_JC001: '体验包次数与预计单次成本不匹配，请调整后重试',
+    plan_cost_buffer_exceeded_JC002: '五次包次数与预计单次成本不匹配，请调整后重试',
+    plan_cost_buffer_exceeded_JC003: '十次包次数与预计单次成本不匹配，请调整后重试',
     wechat_virtual_payment_not_ready: '虚拟支付尚未开通，请联系九辰客服',
     wechat_virtual_code_expired: '微信登录凭据已失效，请重新发起支付',
     wechat_identity_mismatch: '当前微信与登录账号不一致',
@@ -921,6 +929,94 @@ export async function activateAdminControlDraft(box: 'settings' | 'assessment_ke
 }
 export async function testAdminAssessmentKey(pin: string): Promise<void> {
   await request('/me/admin/controls/assessment-key/test', 'POST', { pin })
+}
+
+export type AssessmentKeyObject = {
+  id: string; label: string; provider: string | null; apiBaseUrl: string | null
+  model: string | null; temperature: number | null; creatorUserId: string
+  note: string | null; status: 'candidate' | 'active' | 'disabled' | 'archived'
+  version: number; hasObjectPin: boolean; lastTestResult: string | null
+  lastTestAt: string | null; createdAt: string
+}
+export type AssessmentKeyHead = { initialized: boolean; version: number; activeObjectId: string | null }
+export async function getAssessmentKeyObjects(): Promise<{
+  head: AssessmentKeyHead; objects: AssessmentKeyObject[]
+}> {
+  return request('/me/admin/assessment-keys')
+}
+export async function createAssessmentKeyObject(payload: {
+  label: string; provider: string; apiBaseUrl: string; model: string
+  temperature: number; apiKey: string; note: string; pin: string
+}) {
+  return request<{ ok: true; id: string; active: boolean; version: number }>(
+    '/me/admin/assessment-keys', 'POST', payload)
+}
+export async function activateAssessmentKeyObject(id: string, payload: {
+  expectedVersion: number; currentPin: string; targetPin: string
+}) {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/activate', 'POST', payload)
+}
+export async function disableActiveAssessmentKey(payload: { expectedVersion: number; currentPin: string }) {
+  return request('/me/admin/assessment-keys/disable', 'POST', payload)
+}
+export async function archiveAssessmentKeyObject(id: string, payload: {
+  expectedVersion: number; currentPin: string
+}) {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/archive', 'POST', payload)
+}
+export async function testAssessmentKeyObject(id: string, pin: string): Promise<{ ok: true; reachable: boolean; mayIncurCost: true }> {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/test', 'POST', { pin })
+}
+export async function revealAssessmentKeyObject(id: string, pin: string): Promise<{ ok: true; apiKey: string }> {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/reveal', 'POST', { pin })
+}
+export async function setupLegacyAssessmentKeyPin(id: string, currentPin: string, newPin: string) {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/setup-pin', 'POST', { currentPin, newPin })
+}
+
+export type MyIdentity = { id: string; businessId: string; type: 'admin' | 'teacher' | 'student'; status: 'claimed' }
+export async function getMyIdentities(): Promise<{ activeRole: string; identities: MyIdentity[] }> {
+  return request('/me/identities')
+}
+export async function bindMyAdditionalIdentity(businessId: string) {
+  return request('/me/identities/bind', 'POST', { businessId })
+}
+export async function switchMyIdentityRole(role: MyIdentity['type']) {
+  return request('/me/identities/switch', 'POST', { role })
+}
+export async function unbindMyIdentityId(id: string) {
+  return request('/me/identities/' + encodeURIComponent(id) + '/unbind', 'POST', {})
+}
+
+export type CreditPlan = { id: string; name: string; version: number; note: string | null;
+  creatorUserId: string; hasObjectPin: boolean; status: string; createdAt: string;
+  counts: { JC000: number; JC001: number; JC002: number; JC003: number };
+  estimatedCostFen: number | null; costVerifiedAt: string | null;
+  costVerificationStatus: 'verified' | 'unverified' | 'expired' | 'model_unavailable' | 'configuration_changed';
+  costVerificationLabel: string; costVerifiedForCurrentConfig: boolean }
+export type CreditPlanHead = { initialized: boolean; version: number; activePlanId: string | null }
+export async function getCreditPlans(): Promise<{ head: CreditPlanHead; plans: CreditPlan[];
+  currentCostConfigFingerprint: string | null;
+  prices: Array<{ key: string; amountFen: number; creditAmount: number }> }> {
+  return request('/me/admin/credit-plans')
+}
+export async function createCreditPlanObject(payload: { name: string; note: string;
+  counts: CreditPlan['counts']; estimatedCostFen: number | null; costConfirmed: boolean;
+  expectedCostConfigFingerprint: string | null; pin: string }) {
+  return request<{ ok: true; id: string; active: boolean; version: number }>('/me/admin/credit-plans', 'POST', payload)
+}
+export async function activateCreditPlanObject(id: string, payload: {
+  expectedVersion: number; currentPin: string; targetPin: string }) {
+  return request('/me/admin/credit-plans/' + encodeURIComponent(id) + '/activate', 'POST', payload)
+}
+export async function disableCurrentCreditPlan(payload: { expectedVersion: number; currentPin: string }) {
+  return request('/me/admin/credit-plans/disable', 'POST', payload)
+}
+export async function archiveCreditPlanObject(id: string, payload: { expectedVersion: number; currentPin: string }) {
+  return request('/me/admin/credit-plans/' + encodeURIComponent(id) + '/archive', 'POST', payload)
+}
+export async function setupLegacyCreditPlanPin(id: string, currentPin: string, newPin: string) {
+  return request('/me/admin/credit-plans/' + encodeURIComponent(id) + '/setup-pin', 'POST', { currentPin, newPin })
 }
 
 export async function bindAdminInternalId(

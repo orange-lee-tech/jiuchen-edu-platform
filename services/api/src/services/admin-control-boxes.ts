@@ -23,7 +23,7 @@ export class ControlError extends Error {
   constructor(public readonly code: string, public readonly status: number) { super(code) }
 }
 
-function pinDigest(pin: string, salt: string) {
+export function pinDigest(pin: string, salt: string) {
   return scryptSync(pin, Buffer.from(salt, 'hex'), 64).toString('hex')
 }
 export function verifyPin(pin: string, salt: string, digest: string) {

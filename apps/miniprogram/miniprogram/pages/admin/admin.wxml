@@ -53,15 +53,42 @@
   </block>
 
   <block wx:elif="{{section === 'admin-controls'}}">
+    <view wx:if="{{creditPlansReady}}" class="card">
+      <text class="card-title">评估次数方案 · 固定售价</text>
+      <text class="card-note">成本核验绑定当前实际生效的 AI 服务商、模型、API 地址与密钥版本。切换密钥或模型后，旧方案核验自动失效；请按当前模型、地域及输入/输出 token 官方标价重新估算，创建并启用新方案。若其他管理员在页面打开期间切换配置，保存会被拒绝，请刷新后重新核算。历史订单快照不受影响。</text>
+      <text class="card-note">全局版本 {{planHead.version}}。价格由服务器固定；新方案保存后不影响现有订单。旧订单继续按订单快照入账。</text>
+      <text class="row-desc">JC000 临时测试 ¥0.10 · 默认隐藏</text><input class="input" type="number" data-name="planJc000" value="{{planJc000}}" bindinput="onPlanInput" placeholder="评估次数" />
+      <text class="row-desc">JC001 体验包 ¥1.90</text><input class="input" type="number" data-name="planJc001" value="{{planJc001}}" bindinput="onPlanInput" placeholder="评估次数" />
+      <text class="row-desc">JC002 五次包 ¥8.90</text><input class="input" type="number" data-name="planJc002" value="{{planJc002}}" bindinput="onPlanInput" placeholder="评估次数" />
+      <text class="row-desc">JC003 十次包 ¥16.90</text><input class="input" type="number" data-name="planJc003" value="{{planJc003}}" bindinput="onPlanInput" placeholder="评估次数" />
+      <input class="input" data-name="planName" value="{{planName}}" bindinput="onPlanInput" placeholder="方案名称" />
+      <input class="input" data-name="planNote" value="{{planNote}}" bindinput="onPlanInput" placeholder="备注" />
+      <input class="input" type="digit" data-name="planCostYuan" value="{{planCostYuan}}" bindinput="onPlanInput" placeholder="预计单次模型成本（元）" />
+      <view class="id-meta"><switch checked="{{planCostConfirmed}}" bindchange="onPlanCostConfirm" /><text>成本已按供应商官方标价确认</text></view>
+      <input class="input" password type="number" maxlength="6" data-name="planObjectPin" value="{{planObjectPin}}" bindinput="onPlanInput" placeholder="新方案独立六位口令" />
+      <button class="primary" disabled="{{actionLoading}}" bindtap="onCreateCreditPlan">保存新方案</button>
+      <text class="row-desc">当前控制口令 [3]</text><input class="input" password type="number" maxlength="6" data-name="planControlPin" value="{{planControlPin}}" bindinput="onPlanInput" />
+      <text class="row-desc">目标方案口令 [4]</text><input class="input" password type="number" maxlength="6" data-name="planTargetPin" value="{{planTargetPin}}" bindinput="onPlanInput" />
+      <button wx:if="{{planHead.activePlanId}}" class="secondary" disabled="{{actionLoading}}" bindtap="onDisableCreditPlan">停用当前方案并暂停新订单</button>
+      <text wx:if="{{planHead.initialized && !planHead.activePlanId}}" class="card-note">当前没有生效方案，新订单已暂停。</text>
+      <view wx:for="{{creditPlans}}" wx:key="id" class="list-row">
+        <view class="row-main"><text class="row-title">{{item.name}} · {{item.status}}</text>
+          <text class="row-desc">版本 {{item.version}} · JC000 {{item.counts.JC000}} 次 / JC001 {{item.counts.JC001}} 次 / JC002 {{item.counts.JC002}} 次 / JC003 {{item.counts.JC003}} 次</text>
+          <text class="row-desc">{{item.note || '无备注'}} · 成本核验：{{item.costVerificationLabel}} · {{item.costVerifiedAt || '无核验时间'}}</text></view>
+        <button wx:if="{{!item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onSetupLegacyPlanPin">设置对象口令</button>
+        <button wx:if="{{item.status !== 'active' && item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onActivateCreditPlan">启用</button>
+        <button wx:if="{{item.status !== 'active' && item.status !== 'archived'}}" class="mini" data-id="{{item.id}}" bindtap="onArchiveCreditPlan">归档</button>
+      </view>
+    </view>
     <view class="card">
-      <text class="card-title">收费与免费次数 · 设置密码盒</text>
-      <text class="card-note">当前版本 {{controlSettings.version || 0}}。两档价格按人民币元填写。更新后仅影响新订单；旧订单以创建时金额和次数结算。免费规则仅影响此后尚未领取的对应阶段，旧余额保留。</text>
-      <text class="row-desc">单次评估价格（元）</text><input class="input" type="digit" data-name="singleYuan" value="{{singleYuan}}" bindinput="onControlInput" />
-      <text class="row-desc">十次评估价格（元）</text><input class="input" type="digit" data-name="tenYuan" value="{{tenYuan}}" bindinput="onControlInput" />
+      <text class="card-title">免费次数 · 原设置密码盒</text>
+      <text class="card-note">当前版本 {{controlSettings.version || 0}}。免费规则仅影响此后尚未领取的对应阶段，旧余额保留。新订单价格由上方固定 SKU 决定。</text>
+      <block wx:if="{{!creditPlansReady}}"><text class="row-desc">原单次评估价格（元）</text><input class="input" type="digit" data-name="singleYuan" value="{{singleYuan}}" bindinput="onControlInput" />
+      <text class="row-desc">原十次评估价格（元）</text><input class="input" type="digit" data-name="tenYuan" value="{{tenYuan}}" bindinput="onControlInput" /></block>
       <text class="row-desc">游客首次赠送次数</text><input class="input" type="number" data-name="guestFreeInput" value="{{guestFreeInput}}" bindinput="onControlInput" />
       <text class="row-desc">学员累计赠送次数</text><input class="input" type="number" data-name="studentFreeInput" value="{{studentFreeInput}}" bindinput="onControlInput" />
       <text class="row-desc">预计每次 AI 模型成本（元，官方标价估算）</text><input class="input" type="digit" data-name="estimatedCostYuan" value="{{estimatedCostYuan}}" placeholder="按模型地域与输入/输出 token 估算" bindinput="onControlInput" />
-      <view class="id-meta"><switch checked="{{platformPriceConfirmed}}" bindchange="onControlPriceConfirm" /><text>已在微信虚拟商品后台核实两档新售价</text></view>
+      <view wx:if="{{!creditPlansReady}}" class="id-meta"><switch checked="{{platformPriceConfirmed}}" bindchange="onControlPriceConfirm" /><text>已在微信虚拟商品后台核实两档新售价</text></view>
       <text class="card-note">按所用模型与地域的官方输入/输出 token 标价估算成本；免费额度耗尽后也按此估算。新充值须核实微信商品价，单次与十次每次售价至少覆盖估计成本并留 20% 缓冲。这不代表供应商实时余额或已保证盈利。改价后未确认时暂停新下单；已支付订单仍可对账。</text>
       <input wx:if="{{controlSettings.configured}}" class="input" password type="number" maxlength="6" data-name="settingsOldPin" value="{{settingsOldPin}}" placeholder="设置盒现有六位密码" bindinput="onControlInput" />
       <input class="input" password type="number" maxlength="6" data-name="settingsNewPin" value="{{settingsNewPin}}" placeholder="保存本次设置的新六位密码，可与旧密码相同" bindinput="onControlInput" />
@@ -70,7 +97,38 @@
       <view wx:if="{{settingsDraft.saved && settingsDraft.settings}}" class="card-note">已保存个人草稿，基于设置版本 {{settingsDraft.basedOnVersion}}：单次 ¥{{settingsDraft.settings.singleFen / 100}}，十次 ¥{{settingsDraft.settings.tenFen / 100}}，游客 {{settingsDraft.settings.guestFree}} 次，学员累计 {{settingsDraft.settings.studentTotalFree}} 次。确认后填写上方旧密码和新密码启用。</view>
       <button wx:if="{{settingsDraft.saved && settingsDraft.settings}}" class="secondary" disabled="{{actionLoading || settingsDraft.basedOnVersion !== controlSettings.version}}" data-box="settings" bindtap="onActivateDraft">启用此草稿并更新密码</button>
     </view>
-    <view class="card">
+    <view wx:if="{{keyObjectsReady}}" class="card">
+      <text class="card-title">AI 评估连接 · 多密钥对象</text>
+      <text class="card-note">全局版本 {{keyHead.version}}。首个密钥保存后自动生效；此后新密钥先作为候选保存。已发布小程序使用服务器当前生效连接。连接测试可能产生 AI 费用，不会切换生效密钥。</text>
+      <text class="row-desc">新连接标签</text><input class="input" data-name="keyLabel" value="{{keyLabel}}" bindinput="onKeyObjectInput" />
+      <text class="row-desc">服务商</text><input class="input" data-name="keyProvider" value="{{keyProvider}}" bindinput="onKeyObjectInput" />
+      <text class="row-desc">HTTPS API 地址</text><input class="input" data-name="keyApiBaseUrl" value="{{keyApiBaseUrl}}" bindinput="onKeyObjectInput" />
+      <text class="row-desc">模型</text><input class="input" data-name="keyModel" value="{{keyModel}}" bindinput="onKeyObjectInput" />
+      <text class="row-desc">温度（0 至 2）</text><input class="input" type="digit" data-name="keyTemperature" value="{{keyTemperature}}" bindinput="onKeyObjectInput" />
+      <text class="row-desc">备注</text><input class="input" data-name="keyNote" value="{{keyNote}}" bindinput="onKeyObjectInput" />
+      <text class="row-desc">API Key</text><input class="input" password data-name="apiKeyInput" value="{{apiKeyInput}}" bindinput="onKeyObjectInput" />
+      <text class="row-desc">新对象独立六位口令</text><input class="input" password type="number" maxlength="6" data-name="keyObjectPin" value="{{keyObjectPin}}" bindinput="onKeyObjectInput" />
+      <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onCreateKeyObject">加密保存新连接</button>
+      <text class="row-desc">当前控制口令 [1]</text><input class="input" password type="number" maxlength="6" data-name="keyControlPin" value="{{keyControlPin}}" bindinput="onKeyObjectInput" />
+      <text class="row-desc">目标对象口令 [2]</text><input class="input" password type="number" maxlength="6" data-name="keyTargetPin" value="{{keyTargetPin}}" bindinput="onKeyObjectInput" />
+      <text class="row-desc">连接测试对象口令（六位；测试后清空）</text><input class="input" password type="number" maxlength="6" data-name="keyTestObjectPin" value="{{keyTestObjectPin}}" bindinput="onKeyObjectInput" />
+      <button wx:if="{{keyHead.activeObjectId}}" class="secondary" disabled="{{actionLoading}}" bindtap="onDisableKeyObject">停用当前生效密钥</button>
+      <text wx:if="{{!keyHead.activeObjectId && keyHead.initialized}}" class="card-note">当前无生效密钥，AI 评估已停止；可凭保留的控制口令启用候选对象。</text>
+      <view wx:for="{{keyObjects}}" wx:key="id" class="list-row">
+        <view class="row-main">
+          <text class="row-title">{{item.label}} · {{item.status}}</text>
+          <text class="row-desc">{{item.provider || '原有服务商'}} · {{item.model || '原有模型'}} · {{item.createdAt}}</text>
+          <text class="row-desc">{{item.note || '无备注'}} · 最近连接测试 {{item.lastTestResult || '未测试'}}</text>
+          <text wx:if="{{!item.hasObjectPin}}" class="row-desc">旧对象需由创建者设置独立口令</text>
+        </view>
+        <button wx:if="{{item.status !== 'active' && item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onActivateKeyObject">启用</button>
+        <button wx:if="{{!item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onSetupLegacyKeyPin">设置对象口令</button>
+        <button wx:if="{{item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onTestKeyObject">验证对象口令并测试连接</button>
+        <button wx:if="{{item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onRevealKeyObject">创建者查看</button>
+        <button wx:if="{{item.status !== 'active' && item.status !== 'archived'}}" class="mini danger" data-id="{{item.id}}" bindtap="onArchiveKeyObject">归档</button>
+      </view>
+    </view>
+    <view wx:else class="card">
       <text class="card-title">AI 评估密钥 · 独立密码盒</text>
       <text class="card-note">{{controlKey.configured ? '密钥已配置，原文不可查看。' : '尚未绑定密钥。'}}任意已登录管理员凭本盒旧密码可更换密钥并设置新密码。此盒密码与收费设置密码互不相通。</text>
       <input class="input" password data-name="apiKeyInput" value="{{apiKeyInput}}" placeholder="输入新的 API Key；保存后不再显示" bindinput="onControlInput" />

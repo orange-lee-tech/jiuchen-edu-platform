@@ -1,0 +1,260 @@
+import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
+import mysql from 'mysql2/promise'
+import { randomUUID } from 'node:crypto'
+import { fileURLToPath } from 'node:url'
+import type { AppEnv } from '../config/env.js'
+import { pinDigest, sealKey } from '../services/admin-control-boxes.js'
+import { listAssessmentKeys, readActiveAssessmentKey, switchAssessmentKey,
+  disableAssessmentKey, testAssessmentKey } from '../services/assessment-key-objects.js'
+import { activateCreditPlan, createCreditPlan, disableCreditPlan, listCreditPlans,
+  readActiveCreditPlan, validatePlanCost } from '../services/credit-plans.js'
+import { readAssessmentCostFingerprint } from '../services/assessment-cost-fingerprint.js'
+import { bindAdditionalIdentity, listMyIdentities, switchMyIdentity,
+  unbindMyIdentity } from '../services/identity-roles.js'
+
+const url = process.env.DATABASE_URL
+if (!url) throw new Error('DATABASE_URL is required')
+const parsed = new URL(url)
+if (!['localhost','127.0.0.1'].includes(parsed.hostname) ||
+    !decodeURIComponent(parsed.pathname).endsWith('_ci')) {
+  throw new Error('Refusing closed-loop verification outside local *_ci database')
+}
+const pool = mysql.createPool(url)
+const adminA = '00000000-0000-4000-8000-000000000001'
+const adminB = '00000000-0000-4000-8000-000000000002'
+const masterKey = Buffer.alloc(32, 7).toString('base64')
+const costEnv = {
+  ADMIN_AI_KEY_ENCRYPTION_KEY: masterKey, ASSESSMENT_AI_PROVIDER: 'openai-compatible',
+  ASSESSMENT_AI_BASE_URL: 'https://api.example.com', ASSESSMENT_AI_MODEL: 'test-model',
+  ASSESSMENT_AI_TEMPERATURE: 0, ASSESSMENT_AI_JSON_MODE: true,
+  ASSESSMENT_AI_RESPONSE_FORMAT: 'json_schema',
+} as AppEnv
+try {
+  const [costFingerprintColumns] = await pool.query<mysql.RowDataPacket[]>(
+    "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='credit_plan_objects' AND COLUMN_NAME='cost_config_fingerprint'")
+  assert.ok(costFingerprintColumns.length)
+  const [indexes] = await pool.query<mysql.RowDataPacket[]>(
+    "SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='internal_ids'")
+  assert.ok(indexes.some(row => row.INDEX_NAME === 'internal_ids_user_type_unique'))
+  assert.ok(!indexes.some(row => row.INDEX_NAME === 'internal_ids_user_id_unique'))
+  const adminBindings = async () => {
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+      `SELECT user_id,id,business_id FROM internal_ids
+       WHERE type='admin' AND status='claimed' ORDER BY user_id`)
+    return rows.map(row => ({ userId: String(row.user_id), id: String(row.id),
+      businessId: String(row.business_id) }))
+  }
+  const initialAdmins = await adminBindings()
+  assert.deepEqual(initialAdmins.map(row => row.userId), [adminA,adminB])
+  assert.equal(new Set(initialAdmins.map(row => row.businessId)).size, 2)
+  assert.ok(initialAdmins.every(row => /^JCA-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}$/.test(row.businessId)))
+  // Simulate an interrupted migration: one administrator is already backfilled
+  // and the other is missing. Both the recovery run and a further repeat must
+  // preserve the existing binding and create exactly one new unique number.
+  await pool.query("DELETE FROM internal_ids WHERE user_id=? AND type='admin'", [adminB])
+  const migration = fileURLToPath(new URL('./upgrade-dual-identity.js', import.meta.url))
+  execFileSync(process.execPath, [migration], { env: process.env, timeout: 30_000 })
+  const recoveredAdmins = await adminBindings()
+  assert.deepEqual(recoveredAdmins.map(row => row.userId), [adminA,adminB])
+  assert.deepEqual(recoveredAdmins[0], initialAdmins[0])
+  assert.equal(new Set(recoveredAdmins.map(row => row.businessId)).size, 2)
+  execFileSync(process.execPath, [migration], { env: process.env, timeout: 30_000 })
+  assert.deepEqual(await adminBindings(), recoveredAdmins)
+  const keyState = await listAssessmentKeys(pool)
+  assert.equal(keyState.head.initialized, true)
+  assert.equal(keyState.objects.length, 1)
+  assert.ok(!JSON.stringify(keyState).includes('old-model-key'))
+  const migrated = await readActiveAssessmentKey(pool, {
+    ADMIN_AI_KEY_ENCRYPTION_KEY: masterKey,
+    ASSESSMENT_AI_PROVIDER: 'openai-compatible',
+    ASSESSMENT_AI_BASE_URL: 'https://api.example.com',
+    ASSESSMENT_AI_MODEL: 'test-model',
+  } as AppEnv)
+  assert.equal(migrated.config?.apiKey, 'new-model-key')
+
+  // The preceding legacy lockout gate intentionally leaves this disposable
+  // control locked. Reset only that test lock before exercising the new model.
+  await pool.query('UPDATE assessment_key_head SET failed_attempts=0,locked_until=NULL WHERE id=1')
+  const keyId = randomUUID()
+  const objectSalt = '22222222222222222222222222222222'
+  await pool.query(
+    `INSERT INTO assessment_key_objects
+      (id,label,provider,api_base_url,model,encrypted_secret,creator_user_id,pin_salt,pin_hash,status)
+     VALUES (?,?,?,?,?,?,?,?,?,'candidate')`,
+    [keyId,'候选模型','openai-compatible','https://api.example.com','model-v2',
+      sealKey('candidate-secret',masterKey),adminB,objectSalt,pinDigest('222222',objectSalt)],
+  )
+  await assert.rejects(() => switchAssessmentKey({ pool,actorId:adminA,id:keyId,
+    expectedVersion:keyState.head.version,currentPin:'000000',targetPin:'222222' }),
+  { code:'control_pin_invalid' })
+  await assert.rejects(() => switchAssessmentKey({ pool,actorId:adminA,id:keyId,
+    expectedVersion:keyState.head.version,currentPin:'654321',targetPin:'000000' }))
+  const [keyPinAfterFailures] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT failed_attempts FROM assessment_key_head WHERE id=1')
+  assert.equal(Number(keyPinAfterFailures[0]!.failed_attempts),0)
+  assert.equal((await listAssessmentKeys(pool)).head.activeObjectId,keyState.head.activeObjectId)
+  const keySwitch = await switchAssessmentKey({ pool,actorId:adminA,id:keyId,
+    expectedVersion:keyState.head.version,currentPin:'654321',targetPin:'222222' })
+  assert.equal(keySwitch.activeObjectId,keyId)
+  assert.equal((await readActiveAssessmentKey(pool,{ ADMIN_AI_KEY_ENCRYPTION_KEY:masterKey } as AppEnv))
+    .config?.apiKey,'candidate-secret')
+  await disableAssessmentKey({ pool,actorId:adminA,expectedVersion:keySwitch.version,currentPin:'222222' })
+  assert.equal((await readActiveAssessmentKey(pool,{ ADMIN_AI_KEY_ENCRYPTION_KEY:masterKey } as AppEnv))
+    .config,null)
+  let probeCalls = 0
+  const testInput = { pool,actorId:adminA,id:keyId,
+    env:{ ADMIN_AI_KEY_ENCRYPTION_KEY:masterKey } as AppEnv,
+    probe: async () => { probeCalls += 1; return true } }
+  await assert.rejects(() => testAssessmentKey({ ...testInput,pin:'123' }),
+    { code:'pin_must_be_six_digits' })
+  await assert.rejects(() => testAssessmentKey({ ...testInput,pin:'000000' }),
+    { code:'object_pin_invalid' })
+  assert.equal(probeCalls,0)
+  const [afterBadTestPin] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT failed_attempts,last_test_result,last_test_at FROM assessment_key_objects WHERE id=?',[keyId])
+  assert.equal(Number(afterBadTestPin[0]!.failed_attempts),1)
+  assert.equal(afterBadTestPin[0]!.last_test_result,null)
+  assert.equal(afterBadTestPin[0]!.last_test_at,null)
+  assert.equal((await testAssessmentKey({ ...testInput,pin:'222222' })).reachable,true)
+  assert.equal(probeCalls,1)
+  const [afterGoodTestPin] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT failed_attempts,last_test_result FROM assessment_key_objects WHERE id=?',[keyId])
+  assert.equal(Number(afterGoodTestPin[0]!.failed_attempts),0)
+  assert.equal(afterGoodTestPin[0]!.last_test_result,'passed')
+  for (let attempt=0;attempt<5;attempt+=1) {
+    await assert.rejects(() => testAssessmentKey({ ...testInput,pin:'000000' }),
+      { code:'object_pin_invalid' })
+  }
+  await assert.rejects(() => testAssessmentKey({ ...testInput,pin:'222222' }),
+    { code:'object_pin_locked' })
+  assert.equal(probeCalls,1)
+  await pool.query('UPDATE assessment_key_objects SET failed_attempts=0,locked_until=NULL WHERE id=?',[keyId])
+  const reenableHead = (await listAssessmentKeys(pool)).head
+  await switchAssessmentKey({ pool,actorId:adminA,id:keyId,
+    expectedVersion:reenableHead.version,currentPin:'222222',targetPin:'222222' })
+  const originalCostFingerprint = await readAssessmentCostFingerprint(pool,costEnv)
+  assert.ok(originalCostFingerprint)
+
+  const plans = await listCreditPlans(pool,costEnv)
+  assert.equal(plans.head.initialized,true)
+  const oldOrder = randomUUID()
+  await pool.query('INSERT INTO payment_orders (id,user_id,out_trade_no,amount_fen,credit_amount) VALUES (?,?,?,?,?)',
+    [oldOrder,adminA,'JCV-old-order',199,7])
+  assert.throws(() => validatePlanCost({ JC000:2,JC001:1,JC002:5,JC003:10 },null,null,null,null))
+  assert.throws(() => validatePlanCost({ JC000:100,JC001:1,JC002:5,JC003:10 },1,new Date(),originalCostFingerprint,originalCostFingerprint))
+  await assert.rejects(() => createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
+    name:'旧页面确认不得越过配置切换',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
+    estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:'a'.repeat(64),pin:'333333',
+  } }), { code:'credit_plan_cost_configuration_changed' })
+  const candidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
+    name:'固定价四档',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
+    estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:originalCostFingerprint,pin:'444444',
+  } })
+  assert.equal(candidate.active,false)
+  const [clockRows] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT CAST(cost_verified_at AS CHAR) AS verified_at,
+       CAST(CURRENT_TIMESTAMP() AS CHAR) AS db_now,
+       TIMESTAMPDIFF(SECOND,CURRENT_TIMESTAMP(),cost_verified_at) AS offset_seconds,
+       (cost_verified_at IS NOT NULL AND cost_verified_at <= CURRENT_TIMESTAMP()
+         AND cost_verified_at >= CURRENT_TIMESTAMP() - INTERVAL 30 DAY) AS cost_fresh
+     FROM credit_plan_objects WHERE id=?`, [candidate.id])
+  console.log('PLAN_COST_CLOCK_DIAGNOSTIC', JSON.stringify({
+    ...clockRows[0], appNow: new Date().toISOString(),
+  }))
+  assert.equal(Number(clockRows[0]?.cost_fresh), 1)
+  assert.ok(Math.abs(Number(clockRows[0]?.offset_seconds)) <= 1)
+  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:candidate.id,env:costEnv,
+    expectedVersion:plans.head.version,currentPin:'000000',targetPin:'444444' }),
+  { code:'control_pin_invalid' })
+  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:candidate.id,env:costEnv,
+    expectedVersion:plans.head.version,currentPin:'333333',targetPin:'000000' }),
+  { code:'object_pin_invalid' })
+  const [planPinAfterFailures] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT failed_attempts FROM credit_plan_head WHERE id=1')
+  assert.equal(Number(planPinAfterFailures[0]!.failed_attempts),0)
+  const activated = await activateCreditPlan({ pool,actorId:adminA,id:candidate.id,env:costEnv,
+    expectedVersion:plans.head.version,currentPin:'333333',targetPin:'444444' })
+  assert.equal(activated.activePlanId,candidate.id)
+  const [planPinAfterSuccess] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT failed_attempts FROM credit_plan_objects WHERE id=?',[candidate.id])
+  assert.equal(Number(planPinAfterSuccess[0]!.failed_attempts),0)
+  const invalidCandidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
+    name:'成本时间拒绝验证',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
+    estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:originalCostFingerprint,pin:'555555',
+  } })
+  for (const clockValue of ['NULL', 'CURRENT_TIMESTAMP() - INTERVAL 31 DAY',
+    'CURRENT_TIMESTAMP() + INTERVAL 1 DAY']) {
+    await pool.query(`UPDATE credit_plan_objects SET cost_verified_at=${clockValue} WHERE id=?`,
+      [invalidCandidate.id])
+    await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:invalidCandidate.id,env:costEnv,
+      expectedVersion:activated.version,currentPin:'444444',targetPin:'555555' }),
+    { code:'plan_cost_missing_or_stale' })
+    assert.equal((await listCreditPlans(pool,costEnv)).head.activePlanId,candidate.id)
+  }
+  const mismatchCandidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
+    name:'模型切换后必须重核',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
+    estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:originalCostFingerprint,pin:'666666',
+  } })
+  const nextKeyId = randomUUID()
+  const nextKeySalt = '33333333333333333333333333333333'
+  await pool.query(
+    `INSERT INTO assessment_key_objects
+      (id,label,provider,api_base_url,model,encrypted_secret,creator_user_id,pin_salt,pin_hash,status)
+     VALUES (?,?,?,?,?,?,?,?,?,'candidate')`,
+    [nextKeyId,'切换后模型','openai-compatible','https://api.example.com','model-v3',
+      sealKey('next-model-secret',masterKey),adminB,nextKeySalt,pinDigest('777777',nextKeySalt)],
+  )
+  const headBeforeModelSwitch = (await listAssessmentKeys(pool)).head
+  await switchAssessmentKey({ pool,actorId:adminA,id:nextKeyId,
+    expectedVersion:headBeforeModelSwitch.version,currentPin:'222222',targetPin:'777777' })
+  const changedCostFingerprint = await readAssessmentCostFingerprint(pool,costEnv)
+  assert.ok(changedCostFingerprint)
+  assert.notEqual(changedCostFingerprint,originalCostFingerprint)
+  const activePlanAfterSwitch = await readActiveCreditPlan(pool,costEnv)
+  assert.equal(activePlanAfterSwitch.costVerified,false)
+  assert.equal(activePlanAfterSwitch.costVerificationStatus,'configuration_changed')
+  const [activeSecretRows] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT encrypted_secret FROM assessment_key_objects WHERE id=?',[nextKeyId])
+  const activeCiphertext = String(activeSecretRows[0]!.encrypted_secret)
+  await pool.query("UPDATE assessment_key_objects SET encrypted_secret='not-a-valid-ciphertext' WHERE id=?",[nextKeyId])
+  assert.equal(await readAssessmentCostFingerprint(pool,costEnv),null)
+  assert.equal((await readActiveCreditPlan(pool,costEnv)).costVerificationStatus,'model_unavailable')
+  await pool.query('UPDATE assessment_key_objects SET encrypted_secret=? WHERE id=?',[activeCiphertext,nextKeyId])
+  assert.equal(await readAssessmentCostFingerprint(pool,costEnv),changedCostFingerprint)
+  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:mismatchCandidate.id,env:costEnv,
+    expectedVersion:activated.version,currentPin:'444444',targetPin:'666666' }),
+  { code:'credit_plan_cost_configuration_changed' })
+
+  const [oldRows] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT amount_fen,credit_amount,sku_key,plan_id FROM payment_orders WHERE id=?',[oldOrder])
+  assert.equal(Number(oldRows[0]!.amount_fen),199)
+  assert.equal(Number(oldRows[0]!.credit_amount),7)
+  assert.equal(oldRows[0]!.sku_key,null)
+  assert.equal(oldRows[0]!.plan_id,null)
+  await disableCreditPlan({ pool,actorId:adminA,expectedVersion:activated.version,currentPin:'444444' })
+  assert.equal((await listCreditPlans(pool,costEnv)).head.activePlanId,null)
+
+  const identities = await listMyIdentities({ configured:true,pool } as any,adminA)
+  assert.equal(identities.identities.filter(row=>row.type==='admin').length,1)
+  const teacherId = randomUUID()
+  await pool.query('INSERT INTO teachers (id) VALUES (?)',[teacherId])
+  const identityId = randomUUID()
+  await pool.query(`INSERT INTO internal_ids
+    (id,business_id,type,claim_mode,status,entity_id) VALUES (?,?,'teacher','self','available',?)`,
+    [identityId,'JCT-TEST-0001',teacherId])
+  await bindAdditionalIdentity({configured:true,pool} as any,adminA,'JCT-TEST-0001')
+  assert.equal((await listMyIdentities({configured:true,pool} as any,adminA)).identities.length,2)
+  await switchMyIdentity({configured:true,pool} as any,adminA,'teacher')
+  const [roles] = await pool.query<mysql.RowDataPacket[]>('SELECT role FROM users WHERE id=?',[adminA])
+  assert.equal(roles[0]!.role,'teacher')
+  await unbindMyIdentity({configured:true,pool} as any,adminA,identityId)
+  const [afterUnbind] = await pool.query<mysql.RowDataPacket[]>('SELECT role FROM users WHERE id=?',[adminA])
+  assert.equal(afterUnbind[0]!.role,'admin')
+  const adminIdentity = identities.identities.find(row=>row.type==='admin')!
+  await unbindMyIdentity({configured:true,pool} as any,adminA,adminIdentity.id)
+  const last = await listMyIdentities({configured:true,pool} as any,adminB)
+  await assert.rejects(() => unbindMyIdentity({configured:true,pool} as any,adminB,
+    last.identities.find(row=>row.type==='admin')!.id))
+  console.log('CLOSED_LOOP_MYSQL_GATE_PASS: repeatable migrations, key/plan switches, old order, dual identity, last admin')
+} finally { await pool.end() }

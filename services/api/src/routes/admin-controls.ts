@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import type mysql from 'mysql2/promise'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import type { DatabaseContext } from '../db/client.js'
@@ -43,6 +44,18 @@ export function registerAdminControlRoutes(
     }
     throw error
   }
+  async function keyObjectsAuthoritative() {
+    if (!database.configured) return false
+    try {
+      const [rows] = await database.pool.query<mysql.RowDataPacket[]>(
+        'SELECT initialized FROM assessment_key_head WHERE id=1',
+      )
+      return Boolean(rows[0]?.initialized)
+    } catch (error) {
+      if ((error as { code?: string }).code === 'ER_NO_SUCH_TABLE') return false
+      throw error
+    }
+  }
   app.get('/me/admin/controls', async (request, reply) => {
     const user = await admin(request, reply)
     if (!user || !database.configured) return
@@ -64,6 +77,9 @@ export function registerAdminControlRoutes(
     if (box !== 'settings' && box !== 'assessment_key') {
       return reply.code(404).send({ ok: false, error: 'control_box_unknown' })
     }
+    if (box === 'assessment_key' && await keyObjectsAuthoritative()) {
+      return reply.code(409).send({ ok: false, error: 'assessment_key_objects_authoritative' })
+    }
     const parsed = draftSchema.safeParse(request.body)
     if (!parsed.success || (box === 'settings' ? !parsed.data.settings || parsed.data.apiKey !== undefined
       : !parsed.data.apiKey || parsed.data.settings !== undefined)) {
@@ -82,6 +98,9 @@ export function registerAdminControlRoutes(
     if (box !== 'settings' && box !== 'assessment_key') {
       return reply.code(404).send({ ok: false, error: 'control_box_unknown' })
     }
+    if (box === 'assessment_key' && await keyObjectsAuthoritative()) {
+      return reply.code(409).send({ ok: false, error: 'assessment_key_objects_authoritative' })
+    }
     const parsed = activateSchema.safeParse(request.body)
     if (!parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_control_change' })
     try {
@@ -98,6 +117,9 @@ export function registerAdminControlRoutes(
     const box = request.params.box
     if (box !== 'settings' && box !== 'assessment_key') {
       return reply.code(404).send({ ok: false, error: 'control_box_unknown' })
+    }
+    if (box === 'assessment_key' && await keyObjectsAuthoritative()) {
+      return reply.code(409).send({ ok: false, error: 'assessment_key_objects_authoritative' })
     }
     const parsed = changeSchema.safeParse(request.body)
     if (!parsed.success || (box === 'settings' ? !parsed.data?.settings || parsed.data.apiKey !== undefined
@@ -123,6 +145,9 @@ export function registerAdminControlRoutes(
     if (!user || !database.configured) return
     const parsed = checkSchema.safeParse(request.body)
     if (!parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_key_test' })
+    if (await keyObjectsAuthoritative()) {
+      return reply.code(409).send({ ok: false, error: 'assessment_key_objects_authoritative' })
+    }
     try {
       const sealed = await authorizeKeyUse({ pool: database.pool, actorId: user.userId, pin: parsed.data.pin })
       if (!sealed || !env.ADMIN_AI_KEY_ENCRYPTION_KEY) throw new ControlError('key_vault_unavailable', 503)

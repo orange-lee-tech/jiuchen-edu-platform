@@ -61,7 +61,7 @@ export async function resolveSessionUser(
     })
     .from(userSessions)
     .innerJoin(users, eq(userSessions.userId, users.id))
-    .leftJoin(internalIds, eq(internalIds.userId, users.id))
+    .leftJoin(internalIds, and(eq(internalIds.userId, users.id), eq(internalIds.type, users.role)))
     .where(
       and(
         capability?eq(userSessions.id,capability.operatorSessionId):eq(userSessions.tokenHash, hashToken(token)),
