@@ -82,6 +82,8 @@ async function requireHeadPin(connection: mysql.PoolConnection, head: HeadRow, p
     await connection.commit()
     throw new ControlError('control_pin_invalid', 403)
   }
+  await connection.query(
+    'UPDATE assessment_key_head SET failed_attempts=0,locked_until=NULL WHERE id=1')
 }
 async function requireObjectPin(connection: mysql.PoolConnection, row: KeyRow, pin: string) {
   if (Number(row.pin_locked) === 1) throw new ControlError('object_pin_locked', 429)
@@ -96,6 +98,8 @@ async function requireObjectPin(connection: mysql.PoolConnection, row: KeyRow, p
     await connection.commit()
     throw new ControlError('object_pin_invalid', 403)
   }
+  await connection.query(
+    'UPDATE assessment_key_objects SET failed_attempts=0,locked_until=NULL WHERE id=?', [row.id])
 }
 async function audit(connection: mysql.PoolConnection, actorId: string,
   action: string, objectId: string | null, version: number) {
@@ -357,27 +361,40 @@ export async function readActiveAssessmentKey(pool: mysql.Pool, env: AppEnv) {
 }
 
 export async function testAssessmentKey(input: {
-  pool: mysql.Pool; actorId: string; id: string; env: AppEnv
+  pool: mysql.Pool; actorId: string; id: string; pin: string; env: AppEnv
+  probe?: (config: { provider: string | undefined; baseUrl: string; model: string;
+    apiKey: string }) => Promise<boolean>
 }) {
-  const [rows] = await input.pool.query<KeyRow[]>(
-    "SELECT * FROM assessment_key_objects WHERE id=? AND status<>'archived' LIMIT 1", [input.id],
-  )
-  const row = rows[0]
-  if (!row) throw new ControlError('assessment_key_not_found', 404)
+  if (!sixDigitPin.safeParse(input.pin).success) throw new ControlError('pin_must_be_six_digits', 400)
+  const authorization = await input.pool.getConnection()
+  let row: KeyRow
+  try {
+    await authorization.beginTransaction()
+    const selected = await selectKey(authorization, input.id)
+    if (!selected || selected.status === 'archived') throw new ControlError('assessment_key_not_found', 404)
+    await requireObjectPin(authorization, selected, input.pin)
+    row = selected
+    await authorization.commit()
+  } catch (error) { await authorization.rollback(); throw error }
+  finally { authorization.release() }
   if (!input.env.ADMIN_AI_KEY_ENCRYPTION_KEY) throw new ControlError('key_vault_master_key_missing', 503)
   const baseUrl = row.api_base_url ?? input.env.ASSESSMENT_AI_BASE_URL
   if (!baseUrl || !row.model) throw new ControlError('assessment_key_connection_incomplete', 409)
-  await validateAssessmentApiUrl(baseUrl)
-  const provider = createJsonModelProvider({
-    provider: row.provider ?? input.env.ASSESSMENT_AI_PROVIDER,
-    baseUrl, model: row.model, apiKey: unsealKey(row.encrypted_secret, input.env.ADMIN_AI_KEY_ENCRYPTION_KEY),
-    timeoutMs: 5000, jsonMode: true, temperature: 0,
-    transport: secureAssessmentModelFetch,
-  })
+  const config = { provider: row.provider ?? input.env.ASSESSMENT_AI_PROVIDER,
+    baseUrl, model: row.model,
+    apiKey: unsealKey(row.encrypted_secret, input.env.ADMIN_AI_KEY_ENCRYPTION_KEY) }
   let passed = false
   try {
-    await provider.generateJson({ system: '只返回 JSON 对象 {"ok":true}。', user: '连接测试', maxTokens: 32 })
-    passed = true
+    if (input.probe) passed = await input.probe(config)
+    else {
+      await validateAssessmentApiUrl(baseUrl)
+      const provider = createJsonModelProvider({
+        ...config, timeoutMs: 5000, jsonMode: true, temperature: 0,
+        transport: secureAssessmentModelFetch,
+      })
+      await provider.generateJson({ system: '只返回 JSON 对象 {"ok":true}。', user: '连接测试', maxTokens: 32 })
+      passed = true
+    }
   } catch { /* Only the bounded result is persisted or returned. */ }
   const connection = await input.pool.getConnection()
   try {

@@ -80,7 +80,10 @@ async function planForUpdate(connection: mysql.PoolConnection, id: string) {
 }
 async function checkHeadPin(connection: mysql.PoolConnection, head: PlanHead, pin: string) {
   if (Number(head.pin_locked) === 1) throw new ControlError('control_pin_locked', 429)
-  if (head.pin_salt && head.pin_hash && verifyPin(pin, head.pin_salt, head.pin_hash)) return
+  if (head.pin_salt && head.pin_hash && verifyPin(pin, head.pin_salt, head.pin_hash)) {
+    await connection.query('UPDATE credit_plan_head SET failed_attempts=0,locked_until=NULL WHERE id=1')
+    return
+  }
   const attempts = Number(head.failed_attempts) + 1
   await connection.query(
     `UPDATE credit_plan_head SET failed_attempts=?,
@@ -102,6 +105,8 @@ async function checkObjectPin(connection: mysql.PoolConnection, row: PlanRow, pi
     await connection.commit()
     throw new ControlError('object_pin_invalid', 403)
   }
+  await connection.query(
+    'UPDATE credit_plan_objects SET failed_attempts=0,locked_until=NULL WHERE id=?', [row.id])
 }
 async function event(connection: mysql.PoolConnection, actorId: string,
   action: string, planId: string | null, version: number) {

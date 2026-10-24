@@ -136,7 +136,7 @@ Page({
     planName: '', planNote: '', planJc000: '2', planJc001: '1', planJc002: '5', planJc003: '10',
     planCostYuan: '', planCostConfirmed: false, planObjectPin: '', planControlPin: '', planTargetPin: '',
     keyLabel: '', keyProvider: '', keyApiBaseUrl: '', keyModel: '', keyTemperature: '0',
-    keyNote: '', keyObjectPin: '', keyControlPin: '', keyTargetPin: '',
+    keyNote: '', keyObjectPin: '', keyControlPin: '', keyTargetPin: '', keyTestObjectPin: '',
     settingsDraft: null as AdminControlDraft | null,
     keyDraft: null as AdminControlDraft | null,
     singleYuan: '1.90', tenYuan: '16.90', guestFreeInput: '1', studentFreeInput: '5', estimatedCostYuan: '',
@@ -303,7 +303,7 @@ Page({
   onKeyObjectInput(event: WechatMiniprogram.Input) {
     const name = String(event.currentTarget.dataset.name)
     if (!['keyLabel', 'keyProvider', 'keyApiBaseUrl', 'keyModel', 'keyTemperature',
-      'keyNote', 'keyObjectPin', 'keyControlPin', 'keyTargetPin', 'apiKeyInput'].includes(name)) return
+      'keyNote', 'keyObjectPin', 'keyControlPin', 'keyTargetPin', 'keyTestObjectPin', 'apiKeyInput'].includes(name)) return
     this.setData({ [name]: event.detail.value })
   },
   onPlanInput(event: WechatMiniprogram.Input) {
@@ -443,13 +443,16 @@ Page({
   async onTestKeyObject(event: WechatMiniprogram.CustomEvent) {
     const id = String(event.currentTarget.dataset.id || '')
     if (this.data.actionLoading) return
+    if (!/^\d{6}$/.test(this.data.keyTestObjectPin)) {
+      wx.showToast({ title: '请输入该对象的六位口令', icon: 'none' }); return
+    }
     this.setData({ actionLoading: true })
     try {
-      const result = await testAssessmentKeyObject(id)
+      const result = await testAssessmentKeyObject(id, this.data.keyTestObjectPin)
       wx.showToast({ title: result.reachable ? '连接通过' : '连接未通过', icon: 'none' })
       await this.loadControls()
     } catch (error) { wx.showToast({ title: friendlyRequestError(error, '连接测试失败'), icon: 'none' }) }
-    finally { this.setData({ actionLoading: false }) }
+    finally { this.setData({ actionLoading: false, keyTestObjectPin: '' }) }
   },
   async onRevealKeyObject(event: WechatMiniprogram.CustomEvent) {
     const id = String(event.currentTarget.dataset.id || '')

@@ -110,6 +110,7 @@
       <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onCreateKeyObject">加密保存新连接</button>
       <text class="row-desc">当前控制口令 [1]</text><input class="input" password type="number" maxlength="6" data-name="keyControlPin" value="{{keyControlPin}}" bindinput="onKeyObjectInput" />
       <text class="row-desc">目标对象口令 [2]</text><input class="input" password type="number" maxlength="6" data-name="keyTargetPin" value="{{keyTargetPin}}" bindinput="onKeyObjectInput" />
+      <text class="row-desc">连接测试对象口令（六位；测试后清空）</text><input class="input" password type="number" maxlength="6" data-name="keyTestObjectPin" value="{{keyTestObjectPin}}" bindinput="onKeyObjectInput" />
       <button wx:if="{{keyHead.activeObjectId}}" class="secondary" disabled="{{actionLoading}}" bindtap="onDisableKeyObject">停用当前生效密钥</button>
       <text wx:if="{{!keyHead.activeObjectId && keyHead.initialized}}" class="card-note">当前无生效密钥，AI 评估已停止；可凭保留的控制口令启用候选对象。</text>
       <view wx:for="{{keyObjects}}" wx:key="id" class="list-row">
@@ -121,7 +122,7 @@
         </view>
         <button wx:if="{{item.status !== 'active' && item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onActivateKeyObject">启用</button>
         <button wx:if="{{!item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onSetupLegacyKeyPin">设置对象口令</button>
-        <button wx:if="{{item.status !== 'archived'}}" class="mini" data-id="{{item.id}}" bindtap="onTestKeyObject">测试连接</button>
+        <button wx:if="{{item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onTestKeyObject">验证对象口令并测试连接</button>
         <button wx:if="{{item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onRevealKeyObject">创建者查看</button>
         <button wx:if="{{item.status !== 'active' && item.status !== 'archived'}}" class="mini danger" data-id="{{item.id}}" bindtap="onArchiveKeyObject">归档</button>
       </view>

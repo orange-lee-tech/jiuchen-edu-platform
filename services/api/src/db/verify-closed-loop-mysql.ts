@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import type { AppEnv } from '../config/env.js'
 import { pinDigest, sealKey } from '../services/admin-control-boxes.js'
 import { listAssessmentKeys, readActiveAssessmentKey, switchAssessmentKey,
-  disableAssessmentKey } from '../services/assessment-key-objects.js'
+  disableAssessmentKey, testAssessmentKey } from '../services/assessment-key-objects.js'
 import { activateCreditPlan, createCreditPlan, disableCreditPlan, listCreditPlans,
   validatePlanCost } from '../services/credit-plans.js'
 import { bindAdditionalIdentity, listMyIdentities, switchMyIdentity,
@@ -76,7 +76,13 @@ try {
       sealKey('candidate-secret',masterKey),adminB,objectSalt,pinDigest('222222',objectSalt)],
   )
   await assert.rejects(() => switchAssessmentKey({ pool,actorId:adminA,id:keyId,
+    expectedVersion:keyState.head.version,currentPin:'000000',targetPin:'222222' }),
+  { code:'control_pin_invalid' })
+  await assert.rejects(() => switchAssessmentKey({ pool,actorId:adminA,id:keyId,
     expectedVersion:keyState.head.version,currentPin:'654321',targetPin:'000000' }))
+  const [keyPinAfterFailures] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT failed_attempts FROM assessment_key_head WHERE id=1')
+  assert.equal(Number(keyPinAfterFailures[0]!.failed_attempts),0)
   assert.equal((await listAssessmentKeys(pool)).head.activeObjectId,keyState.head.activeObjectId)
   const keySwitch = await switchAssessmentKey({ pool,actorId:adminA,id:keyId,
     expectedVersion:keyState.head.version,currentPin:'654321',targetPin:'222222' })
@@ -86,6 +92,33 @@ try {
   await disableAssessmentKey({ pool,actorId:adminA,expectedVersion:keySwitch.version,currentPin:'222222' })
   assert.equal((await readActiveAssessmentKey(pool,{ ADMIN_AI_KEY_ENCRYPTION_KEY:masterKey } as AppEnv))
     .config,null)
+  let probeCalls = 0
+  const testInput = { pool,actorId:adminA,id:keyId,
+    env:{ ADMIN_AI_KEY_ENCRYPTION_KEY:masterKey } as AppEnv,
+    probe: async () => { probeCalls += 1; return true } }
+  await assert.rejects(() => testAssessmentKey({ ...testInput,pin:'123' }),
+    { code:'pin_must_be_six_digits' })
+  await assert.rejects(() => testAssessmentKey({ ...testInput,pin:'000000' }),
+    { code:'object_pin_invalid' })
+  assert.equal(probeCalls,0)
+  const [afterBadTestPin] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT failed_attempts,last_test_result,last_test_at FROM assessment_key_objects WHERE id=?',[keyId])
+  assert.equal(Number(afterBadTestPin[0]!.failed_attempts),1)
+  assert.equal(afterBadTestPin[0]!.last_test_result,null)
+  assert.equal(afterBadTestPin[0]!.last_test_at,null)
+  assert.equal((await testAssessmentKey({ ...testInput,pin:'222222' })).reachable,true)
+  assert.equal(probeCalls,1)
+  const [afterGoodTestPin] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT failed_attempts,last_test_result FROM assessment_key_objects WHERE id=?',[keyId])
+  assert.equal(Number(afterGoodTestPin[0]!.failed_attempts),0)
+  assert.equal(afterGoodTestPin[0]!.last_test_result,'passed')
+  for (let attempt=0;attempt<5;attempt+=1) {
+    await assert.rejects(() => testAssessmentKey({ ...testInput,pin:'000000' }),
+      { code:'object_pin_invalid' })
+  }
+  await assert.rejects(() => testAssessmentKey({ ...testInput,pin:'222222' }),
+    { code:'object_pin_locked' })
+  assert.equal(probeCalls,1)
 
   const plans = await listCreditPlans(pool)
   assert.equal(plans.head.initialized,true)
@@ -111,9 +144,21 @@ try {
   }))
   assert.equal(Number(clockRows[0]?.cost_fresh), 1)
   assert.ok(Math.abs(Number(clockRows[0]?.offset_seconds)) <= 1)
+  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:candidate.id,
+    expectedVersion:plans.head.version,currentPin:'000000',targetPin:'444444' }),
+  { code:'control_pin_invalid' })
+  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:candidate.id,
+    expectedVersion:plans.head.version,currentPin:'333333',targetPin:'000000' }),
+  { code:'object_pin_invalid' })
+  const [planPinAfterFailures] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT failed_attempts FROM credit_plan_head WHERE id=1')
+  assert.equal(Number(planPinAfterFailures[0]!.failed_attempts),0)
   const activated = await activateCreditPlan({ pool,actorId:adminA,id:candidate.id,
     expectedVersion:plans.head.version,currentPin:'333333',targetPin:'444444' })
   assert.equal(activated.activePlanId,candidate.id)
+  const [planPinAfterSuccess] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT failed_attempts FROM credit_plan_objects WHERE id=?',[candidate.id])
+  assert.equal(Number(planPinAfterSuccess[0]!.failed_attempts),0)
   const invalidCandidate = await createCreditPlan({ pool,actorId:adminB,data: {
     name:'成本时间拒绝验证',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
     estimatedCostFen:1,costConfirmed:true,pin:'555555',

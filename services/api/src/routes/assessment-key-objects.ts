@@ -112,14 +112,15 @@ export function registerAssessmentKeyObjectRoutes(
       actorId: user.userId, id: request.params.id, ...parsed.data }) } }
     catch (error) { return failure(reply, error) }
   })
-  app.post<{ Params: { id: string } }>('/me/admin/assessment-keys/:id/test', async (request, reply) => {
+  app.post<{ Params: { id: string }; Body: unknown }>('/me/admin/assessment-keys/:id/test', async (request, reply) => {
     const user = await admin(request, reply)
     if (!user || !database.configured) return
-    if (!idSchema.safeParse(request.params.id).success) {
+    const parsed = revealSchema.safeParse(request.body)
+    if (!idSchema.safeParse(request.params.id).success || !parsed.success) {
       return reply.code(400).send({ ok: false, error: 'invalid_assessment_key_request' })
     }
     try { return { ok: true, ...await testAssessmentKey({ pool: database.pool,
-      actorId: user.userId, id: request.params.id, env }) } }
+      actorId: user.userId, id: request.params.id, pin: parsed.data.pin, env }) } }
     catch (error) { return failure(reply, error) }
   })
 }

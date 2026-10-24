@@ -956,8 +956,8 @@ export async function archiveAssessmentKeyObject(id: string, payload: {
 }) {
   return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/archive', 'POST', payload)
 }
-export async function testAssessmentKeyObject(id: string): Promise<{ ok: true; reachable: boolean; mayIncurCost: true }> {
-  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/test', 'POST', {})
+export async function testAssessmentKeyObject(id: string, pin: string): Promise<{ ok: true; reachable: boolean; mayIncurCost: true }> {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/test', 'POST', { pin })
 }
 export async function revealAssessmentKeyObject(id: string, pin: string): Promise<{ ok: true; apiKey: string }> {
   return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/reveal', 'POST', { pin })

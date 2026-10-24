@@ -7,6 +7,7 @@ import {
   mysqlTable,
   timestamp,
   text,
+  uniqueIndex,
   varchar,
 } from 'drizzle-orm/mysql-core'
 
@@ -66,7 +67,7 @@ export const internalIds = mysqlTable('internal_ids', {
   claimedAt: timestamp('claimed_at'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
-})
+}, (table) => [uniqueIndex('internal_ids_user_type_unique').on(table.userId, table.type)])
 
 export const students = mysqlTable('students', {
   id: varchar('id', { length: 36 }).primaryKey(),
