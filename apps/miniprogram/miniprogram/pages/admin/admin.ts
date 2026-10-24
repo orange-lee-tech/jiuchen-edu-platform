@@ -10,6 +10,7 @@ import {
   deleteAdminInternalId,
   pauseAdminInternalId,
   restoreAdminInternalId,
+  ApiRequestError,
   friendlyRequestError,
   getAdminAssignments,
   getAdminAnalytics,
@@ -61,6 +62,17 @@ import {
 import {beijingNewsTime,newsPublicationLabel} from '../../utils/news-date'
 
 type Section = 'admin-users' | 'admin-assignments' | 'admin-news' | 'admin-analytics' | 'admin-readonly' | 'admin-controls'
+function controlLoadError(error: unknown) {
+  if (error instanceof ApiRequestError) {
+    if (error.code === 'backend_version_mismatch') {
+      return '当前 API 尚未部署商业闭环 v2。多密钥对象与评估次数方案暂不可操作，需完成后端迁移和发布后再试。'
+    }
+    if (error.code === 'schema_missing') {
+      return '当前 API 的商业闭环 v2 数据结构尚未就绪，需完成后端迁移后再试。'
+    }
+  }
+  return friendlyRequestError(error, '设置未能读取')
+}
 function moneyFen(text: string) {
   return /^\d{1,5}(?:\.\d{1,2})?$/.test(text) ? Math.round(Number(text) * 100) : NaN
 }
@@ -267,9 +279,11 @@ Page({
     }
   },
   async loadControls() {
-    this.setData({ loading: true, loadError: '' })
+    this.setData({ loading: true, loadError: '', keyObjectsReady: false, creditPlansReady: false })
     try {
-      const result = await getAdminControls()
+      const [result, keys, plans] = await Promise.all([
+        getAdminControls(), getAssessmentKeyObjects(), getCreditPlans(),
+      ])
       const settings = result.settings.settings
       this.setData({ controlSettings: result.settings, controlKey: result.assessmentKey,
         settingsDraft: result.drafts.settings, keyDraft: result.drafts.assessmentKey,
@@ -279,23 +293,13 @@ Page({
         studentFreeInput: String(settings?.studentTotalFree ?? 5),
         estimatedCostYuan: settings?.estimatedCostFen == null ? '' : (settings.estimatedCostFen / 100).toFixed(2),
         platformPriceConfirmed: settings?.platformPriceConfirmed ?? false,
-        settingsOldPin: '', settingsNewPin: '', keyOldPin: '', keyNewPin: '', keyTestPin: '', apiKeyInput: '' })
-      try {
-        const keys = await getAssessmentKeyObjects()
-        this.setData({ keyObjectsReady: true, keyHead: keys.head, keyObjects: keys.objects })
-      } catch {
-        // Before the separately approved migration, retain the legacy controls.
-        this.setData({ keyObjectsReady: false })
-      }
-      try {
-        const plans = await getCreditPlans()
-        const currentFingerprint = plans.currentCostConfigFingerprint
-        this.setData({ creditPlansReady: true, planHead: plans.head, creditPlans: plans.plans,
-          planCostConfigFingerprint: currentFingerprint,
-          planCostConfirmed: Boolean(currentFingerprint &&
-            currentFingerprint === this.data.planCostConfigFingerprint && this.data.planCostConfirmed) })
-      } catch { this.setData({ creditPlansReady: false }) }
-    } catch (error) { this.setData({ loadError: friendlyRequestError(error, '设置未能读取') }) }
+        settingsOldPin: '', settingsNewPin: '', keyOldPin: '', keyNewPin: '', keyTestPin: '', apiKeyInput: '',
+        keyObjectsReady: true, keyHead: keys.head, keyObjects: keys.objects,
+        creditPlansReady: true, planHead: plans.head, creditPlans: plans.plans,
+        planCostConfigFingerprint: plans.currentCostConfigFingerprint,
+        planCostConfirmed: Boolean(plans.currentCostConfigFingerprint &&
+          plans.currentCostConfigFingerprint === this.data.planCostConfigFingerprint && this.data.planCostConfirmed) })
+    } catch (error) { this.setData({ loadError: controlLoadError(error) }) }
     finally { this.setData({ loading: false }) }
   },
   onControlInput(event: WechatMiniprogram.Input) {
