@@ -1,5 +1,7 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import type mysql from 'mysql2/promise'
+import type { AppEnv } from '../config/env.js'
+import { readAssessmentCostFingerprint } from './assessment-cost-fingerprint.js'
 import { z } from 'zod'
 import { ControlError, pinDigest, sixDigitPin, verifyPin } from './admin-control-boxes.js'
 import { FIXED_ASSESSMENT_SKUS, type PlannedCreditSku } from './commercial-config.js'
@@ -27,8 +29,9 @@ type PlanRow = mysql.RowDataPacket & {
   failed_attempts: number; pin_locked?: number | null
   count_jc000: number; count_jc001: number; count_jc002: number; count_jc003: number
   estimated_cost_fen: number | null; cost_verified_at: Date | null
+  cost_config_fingerprint: string | null
   status: 'candidate' | 'active' | 'disabled' | 'archived'; created_at: Date
-  cost_fresh?: number
+  cost_fresh?: number | null
 }
 type PlanHead = mysql.RowDataPacket & {
   active_plan_id: string | null; version: number; pin_salt: string | null
@@ -42,26 +45,49 @@ function planCounts(row: PlanRow) {
   return { JC000: Number(row.count_jc000), JC001: Number(row.count_jc001),
     JC002: Number(row.count_jc002), JC003: Number(row.count_jc003) }
 }
-export function validatePlanCost(counts: z.infer<typeof planCountsSchema>, costFen: number | null,
-  confirmedAt: Date | null, now = new Date()) {
+export function validatePlanCostFingerprint(
+  currentFingerprint: string | null, verifiedFingerprint: string | null,
+) {
+  if (!currentFingerprint) throw new ControlError('credit_plan_cost_configuration_unavailable', 409)
+  if (!verifiedFingerprint) throw new ControlError('credit_plan_cost_configuration_unverified', 409)
+  if (currentFingerprint !== verifiedFingerprint) throw new ControlError('credit_plan_cost_configuration_changed', 409)
+}
+
+export function validatePlanCost(
+  counts: z.infer<typeof planCountsSchema>, costFen: number | null, confirmedAt: Date | null,
+  currentFingerprint: string | null, verifiedFingerprint: string | null, now = new Date(),
+) {
   if (costFen === null || !confirmedAt ||
       now.getTime() - confirmedAt.getTime() > 30 * 24 * 60 * 60 * 1000 ||
-      confirmedAt.getTime() > now.getTime()) {
-    throw new ControlError('plan_cost_missing_or_stale', 409)
-  }
+      confirmedAt.getTime() > now.getTime()) throw new ControlError('plan_cost_missing_or_stale', 409)
+  validatePlanCostFingerprint(currentFingerprint, verifiedFingerprint)
   for (const sku of FIXED_ASSESSMENT_SKUS) {
     const count = counts[sku.key as keyof typeof counts]
-    if (sku.amountFen * 10 < costFen * count * 12) {
-      throw new ControlError('plan_cost_buffer_exceeded_' + sku.key, 409)
-    }
+    if (sku.amountFen * 10 < costFen * count * 12) throw new ControlError('plan_cost_buffer_exceeded_' + sku.key, 409)
   }
 }
-function publicPlan(row: PlanRow) {
+function publicPlan(row: PlanRow, currentFingerprint: string | null) {
+  const costVerificationStatus = !row.cost_verified_at || row.estimated_cost_fen === null
+    ? 'unverified'
+    : Number(row.cost_fresh) !== 1
+      ? 'expired'
+      : !currentFingerprint
+        ? 'model_unavailable'
+        : row.cost_config_fingerprint !== currentFingerprint
+          ? 'configuration_changed'
+          : 'verified'
+  const costVerificationLabel = ({
+    verified: '有效', unverified: '待核实', expired: '已过期或时间无效',
+    model_unavailable: '当前 AI 连接不可用', configuration_changed: 'AI 配置已变更，需重新核算',
+  } as const)[costVerificationStatus]
   return { id: row.id, name: row.name, version: Number(row.version), note: row.note,
     creatorUserId: row.creator_user_id, hasObjectPin: Boolean(row.pin_hash),
     counts: planCounts(row), estimatedCostFen: row.estimated_cost_fen === null ? null : Number(row.estimated_cost_fen),
-    costVerifiedAt: row.cost_verified_at, status: row.status, createdAt: row.created_at }
+    costVerifiedAt: row.cost_verified_at, costVerificationStatus, costVerificationLabel,
+    costVerifiedForCurrentConfig: costVerificationStatus === 'verified',
+    status: row.status, createdAt: row.created_at }
 }
+
 async function headForUpdate(connection: mysql.PoolConnection) {
   await connection.query('INSERT IGNORE INTO credit_plan_head (id) VALUES (1)')
   const [rows] = await connection.query<PlanHead[]>(
@@ -115,27 +141,38 @@ async function event(connection: mysql.PoolConnection, actorId: string,
     [randomUUID(), planId, actorId, action, version],
   )
 }
-export async function listCreditPlans(pool: mysql.Pool) {
-  const [heads] = await pool.query<PlanHead[]>(
-    'SELECT active_plan_id,version,initialized FROM credit_plan_head WHERE id=1',
+export async function listCreditPlans(pool: mysql.Pool, env: AppEnv) {
+  const currentFingerprint = await readAssessmentCostFingerprint(pool, env)
+  const [heads] = await pool.query<PlanHead[]>('SELECT active_plan_id,version,initialized FROM credit_plan_head WHERE id=1')
+  const [rows] = await pool.query<PlanRow[]>(
+    `SELECT *, (cost_verified_at IS NOT NULL AND cost_verified_at <= CURRENT_TIMESTAMP()
+       AND cost_verified_at >= CURRENT_TIMESTAMP() - INTERVAL 30 DAY) AS cost_fresh
+     FROM credit_plan_objects ORDER BY created_at DESC,id DESC`,
   )
-  const [rows] = await pool.query<PlanRow[]>('SELECT * FROM credit_plan_objects ORDER BY created_at DESC,id DESC')
   return { head: { initialized: Boolean(heads[0]?.initialized),
     version: Number(heads[0]?.version ?? 0), activePlanId: heads[0]?.active_plan_id ?? null },
-  plans: rows.map(publicPlan), prices: FIXED_ASSESSMENT_SKUS }
+  plans: rows.map(row => publicPlan(row, currentFingerprint)), prices: FIXED_ASSESSMENT_SKUS }
 }
-export async function createCreditPlan(input: { pool: mysql.Pool; actorId: string; data: CreditPlanInput }) {
+
+export async function createCreditPlan(input: {
+  pool: mysql.Pool; actorId: string; data: CreditPlanInput; env: AppEnv
+}) {
   const data = creditPlanInput.parse(input.data)
   const connection = await input.pool.getConnection()
   const id = randomUUID()
   try {
     await connection.beginTransaction()
     const head = await headForUpdate(connection)
-    const costVerified = data.costConfirmed && data.estimatedCostFen !== null
+    const currentFingerprint = await readAssessmentCostFingerprint(connection, input.env, true)
+    const costVerified = data.costConfirmed && data.estimatedCostFen !== null && currentFingerprint !== null
+    const verifiedFingerprint = costVerified ? currentFingerprint : null
     const verifiedAt = costVerified ? new Date() : null
     let firstActive = false
     if (!Number(head.initialized)) {
-      try { validatePlanCost(data.counts, data.estimatedCostFen, verifiedAt); firstActive = true }
+      try {
+        validatePlanCost(data.counts, data.estimatedCostFen, verifiedAt, currentFingerprint, verifiedFingerprint)
+        firstActive = true
+      }
       catch (error) { if (!(error instanceof ControlError)) throw error }
     }
     const objectPin = independentPin(data.pin)
@@ -144,11 +181,11 @@ export async function createCreditPlan(input: { pool: mysql.Pool; actorId: strin
     await connection.query(
       `INSERT INTO credit_plan_objects
        (id,name,note,creator_user_id,pin_salt,pin_hash,count_jc000,count_jc001,count_jc002,count_jc003,
-        estimated_cost_fen,cost_verified_at,status)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,IF(?,CURRENT_TIMESTAMP(),NULL),?)`,
+        estimated_cost_fen,cost_verified_at,cost_config_fingerprint,status)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,IF(?,CURRENT_TIMESTAMP(),NULL),?,?)`,
       [id, data.name, data.note, input.actorId, objectPin.salt, objectPin.hash,
         data.counts.JC000, data.counts.JC001, data.counts.JC002, data.counts.JC003,
-        data.estimatedCostFen, costVerified, firstActive ? 'active' : 'candidate'],
+        data.estimatedCostFen, costVerified, verifiedFingerprint, firstActive ? 'active' : 'candidate'],
     )
     if (firstActive) {
       const controlPin = independentPin(data.pin)
@@ -165,7 +202,7 @@ export async function createCreditPlan(input: { pool: mysql.Pool; actorId: strin
   finally { connection.release() }
 }
 export async function activateCreditPlan(input: { pool: mysql.Pool; actorId: string; id: string;
-  expectedVersion: number; currentPin: string; targetPin: string }) {
+  expectedVersion: number; currentPin: string; targetPin: string; env: AppEnv }) {
   if (!sixDigitPin.safeParse(input.currentPin).success || !sixDigitPin.safeParse(input.targetPin).success) {
     throw new ControlError('pin_must_be_six_digits', 400)
   }
@@ -174,13 +211,14 @@ export async function activateCreditPlan(input: { pool: mysql.Pool; actorId: str
     await connection.beginTransaction()
     const head = await headForUpdate(connection)
     if (Number(head.version) !== input.expectedVersion) throw new ControlError('control_version_conflict', 409)
+    const currentFingerprint = await readAssessmentCostFingerprint(connection, input.env, true)
     if (Number(head.initialized)) await checkHeadPin(connection, head, input.currentPin)
     const plan = await planForUpdate(connection, input.id)
     if (!plan || plan.status === 'archived') throw new ControlError('credit_plan_not_found', 404)
     await checkObjectPin(connection, plan, input.targetPin)
     if (!Number(plan.cost_fresh)) throw new ControlError('plan_cost_missing_or_stale', 409)
     validatePlanCost(planCounts(plan), plan.estimated_cost_fen === null ? null : Number(plan.estimated_cost_fen),
-      new Date())
+      new Date(), currentFingerprint, plan.cost_config_fingerprint)
     if (head.active_plan_id && head.active_plan_id !== input.id) {
       await connection.query("UPDATE credit_plan_objects SET status='candidate' WHERE id=?", [head.active_plan_id])
     }
@@ -236,10 +274,9 @@ export async function archiveCreditPlan(input: { pool: mysql.Pool; actorId: stri
   } catch (error) { await connection.rollback(); throw error }
   finally { connection.release() }
 }
-export async function readActiveCreditPlan(pool: mysql.Pool) {
-  const [heads] = await pool.query<PlanHead[]>(
-    'SELECT active_plan_id,version,initialized FROM credit_plan_head WHERE id=1',
-  )
+export async function readActiveCreditPlan(pool: mysql.Pool, env: AppEnv) {
+  const currentFingerprint = await readAssessmentCostFingerprint(pool, env)
+  const [heads] = await pool.query<PlanHead[]>('SELECT active_plan_id,version,initialized FROM credit_plan_head WHERE id=1')
   const head = heads[0]
   if (!head || !Number(head.initialized)) return { initialized: false as const, skus: [] as PlannedCreditSku[] }
   if (!head.active_plan_id) return { initialized: true as const, skus: [] as PlannedCreditSku[] }
@@ -252,11 +289,19 @@ export async function readActiveCreditPlan(pool: mysql.Pool) {
   if (!plan) throw new ControlError('credit_plan_pointer_invalid', 503)
   const counts = planCounts(plan)
   const skus: PlannedCreditSku[] = FIXED_ASSESSMENT_SKUS.map((sku) => ({
-    ...sku, creditAmount: counts[sku.key as keyof typeof counts],
-    planId: plan.id, planVersion: Number(plan.version),
+    ...sku, creditAmount: counts[sku.key as keyof typeof counts], planId: plan.id, planVersion: Number(plan.version),
   }))
-  return { initialized: true as const, skus, costVerified: Boolean(Number(plan.cost_fresh)),
-    costVerifiedAt: plan.cost_verified_at }
+  const costVerificationStatus = !plan.cost_verified_at || plan.estimated_cost_fen === null
+    ? 'unverified'
+    : Number(plan.cost_fresh) !== 1
+      ? 'expired'
+      : !currentFingerprint
+        ? 'model_unavailable'
+        : plan.cost_config_fingerprint !== currentFingerprint
+          ? 'configuration_changed'
+          : 'verified'
+  return { initialized: true as const, skus, costVerified: costVerificationStatus === 'verified',
+    costVerificationStatus, costVerifiedAt: plan.cost_verified_at }
 }
 
 export async function setLegacyCreditPlanPin(input: { pool: mysql.Pool; actorId: string;

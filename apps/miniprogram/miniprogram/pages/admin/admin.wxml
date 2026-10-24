@@ -55,6 +55,7 @@
   <block wx:elif="{{section === 'admin-controls'}}">
     <view wx:if="{{creditPlansReady}}" class="card">
       <text class="card-title">评估次数方案 · 固定售价</text>
+      <text class="card-note">成本核验绑定当前实际生效的 AI 服务商、模型、API 地址与密钥版本。切换密钥或模型后，旧方案核验自动失效；请按当前模型、地域及输入/输出 token 官方标价重新估算，创建并启用新方案。历史订单快照不受影响。</text>
       <text class="card-note">全局版本 {{planHead.version}}。价格由服务器固定；新方案保存后不影响现有订单。旧订单继续按订单快照入账。</text>
       <text class="row-desc">JC000 临时测试 ¥0.10 · 默认隐藏</text><input class="input" type="number" data-name="planJc000" value="{{planJc000}}" bindinput="onPlanInput" placeholder="评估次数" />
       <text class="row-desc">JC001 体验包 ¥1.90</text><input class="input" type="number" data-name="planJc001" value="{{planJc001}}" bindinput="onPlanInput" placeholder="评估次数" />
@@ -73,7 +74,7 @@
       <view wx:for="{{creditPlans}}" wx:key="id" class="list-row">
         <view class="row-main"><text class="row-title">{{item.name}} · {{item.status}}</text>
           <text class="row-desc">版本 {{item.version}} · JC000 {{item.counts.JC000}} 次 / JC001 {{item.counts.JC001}} 次 / JC002 {{item.counts.JC002}} 次 / JC003 {{item.counts.JC003}} 次</text>
-          <text class="row-desc">{{item.note || '无备注'}} · 成本确认 {{item.costVerifiedAt || '待核实'}}</text></view>
+          <text class="row-desc">{{item.note || '无备注'}} · 成本核验：{{item.costVerificationLabel}} · {{item.costVerifiedAt || '无核验时间'}}</text></view>
         <button wx:if="{{!item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onSetupLegacyPlanPin">设置对象口令</button>
         <button wx:if="{{item.status !== 'active' && item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onActivateCreditPlan">启用</button>
         <button wx:if="{{item.status !== 'active' && item.status !== 'archived'}}" class="mini" data-id="{{item.id}}" bindtap="onArchiveCreditPlan">归档</button>

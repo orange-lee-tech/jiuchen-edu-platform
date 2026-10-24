@@ -53,7 +53,7 @@ export function buildApp(env: AppEnv) {
   const scheduleAI = createScheduleAIProvider(env)
   const customerAI = createCustomerServiceAIProvider(env)
   const commercialConfig = createCommercialConfig(env)
-  const liveCommercialConfig = () => loadCommercialConfig(database.configured ? database.pool : null, commercialConfig)
+  const liveCommercialConfig = () => loadCommercialConfig(database.configured ? database.pool : null, commercialConfig, env)
   const assessmentCommercial = {
     creditEnforcementEnabled: commercialConfig.creditEnforcementEnabled,
     freeGrant: commercialConfig.freeGrant,
@@ -252,7 +252,7 @@ export function buildApp(env: AppEnv) {
   registerCommercialRoutes(app, database, liveCommercialConfig, wechatPay, env)
   registerAdminControlRoutes(app, database, env, assessmentVault.refresh)
   registerAssessmentKeyObjectRoutes(app, database, env, assessmentVault.refresh)
-  registerCreditPlanRoutes(app, database)
+  registerCreditPlanRoutes(app, database, env)
   registerAdminRoutes(app, database, env)
 
   app.addHook('onReady', async () => {

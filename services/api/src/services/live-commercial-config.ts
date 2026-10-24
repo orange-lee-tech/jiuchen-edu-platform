@@ -1,4 +1,5 @@
 import type mysql from 'mysql2/promise'
+import type { AppEnv } from '../config/env.js'
 import type { CommercialConfig } from './commercial-config.js'
 import { APPROVED_ASSESSMENT_SKUS } from './commercial-config.js'
 import { readControlBox, settingsSchema } from './admin-control-boxes.js'
@@ -7,13 +8,13 @@ import { readActiveCreditPlan } from './credit-plans.js'
 /** The legacy environment configuration remains the initial policy until a
  * separately migrated and initialized settings box is present. */
 export async function loadCommercialConfig(
-  pool: mysql.Pool | null, baseline: CommercialConfig,
+  pool: mysql.Pool | null, baseline: CommercialConfig, env: AppEnv,
 ): Promise<CommercialConfig & { platformPriceConfirmed: boolean; adminSettingsApplied: boolean }> {
   if (!pool) return { ...baseline, platformPriceConfirmed: true, adminSettingsApplied: false }
   const visiblePlanSkus = (skus: CommercialConfig['paymentSkus']) =>
     skus.filter((sku) => sku.key !== 'JC000' || baseline.testSkuEnabled === true)
   let activePlan: Awaited<ReturnType<typeof readActiveCreditPlan>> | null = null
-  try { activePlan = await readActiveCreditPlan(pool) }
+  try { activePlan = await readActiveCreditPlan(pool, env) }
   catch (error) {
     if ((error as { code?: string }).code !== 'ER_NO_SUCH_TABLE') throw error
   }

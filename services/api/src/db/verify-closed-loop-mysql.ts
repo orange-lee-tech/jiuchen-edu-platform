@@ -8,7 +8,8 @@ import { pinDigest, sealKey } from '../services/admin-control-boxes.js'
 import { listAssessmentKeys, readActiveAssessmentKey, switchAssessmentKey,
   disableAssessmentKey, testAssessmentKey } from '../services/assessment-key-objects.js'
 import { activateCreditPlan, createCreditPlan, disableCreditPlan, listCreditPlans,
-  validatePlanCost } from '../services/credit-plans.js'
+  readActiveCreditPlan, validatePlanCost } from '../services/credit-plans.js'
+import { readAssessmentCostFingerprint } from '../services/assessment-cost-fingerprint.js'
 import { bindAdditionalIdentity, listMyIdentities, switchMyIdentity,
   unbindMyIdentity } from '../services/identity-roles.js'
 
@@ -23,7 +24,16 @@ const pool = mysql.createPool(url)
 const adminA = '00000000-0000-4000-8000-000000000001'
 const adminB = '00000000-0000-4000-8000-000000000002'
 const masterKey = Buffer.alloc(32, 7).toString('base64')
+const costEnv = {
+  ADMIN_AI_KEY_ENCRYPTION_KEY: masterKey, ASSESSMENT_AI_PROVIDER: 'openai-compatible',
+  ASSESSMENT_AI_BASE_URL: 'https://api.example.com', ASSESSMENT_AI_MODEL: 'test-model',
+  ASSESSMENT_AI_TEMPERATURE: 0, ASSESSMENT_AI_JSON_MODE: true,
+  ASSESSMENT_AI_RESPONSE_FORMAT: 'json_schema',
+} as AppEnv
 try {
+  const [costFingerprintColumns] = await pool.query<mysql.RowDataPacket[]>(
+    "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='credit_plan_objects' AND COLUMN_NAME='cost_config_fingerprint'")
+  assert.ok(costFingerprintColumns.length)
   const [indexes] = await pool.query<mysql.RowDataPacket[]>(
     "SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='internal_ids'")
   assert.ok(indexes.some(row => row.INDEX_NAME === 'internal_ids_user_type_unique'))
@@ -119,15 +129,21 @@ try {
   await assert.rejects(() => testAssessmentKey({ ...testInput,pin:'222222' }),
     { code:'object_pin_locked' })
   assert.equal(probeCalls,1)
+  await pool.query('UPDATE assessment_key_objects SET failed_attempts=0,locked_until=NULL WHERE id=?',[keyId])
+  const reenableHead = (await listAssessmentKeys(pool)).head
+  await switchAssessmentKey({ pool,actorId:adminA,id:keyId,
+    expectedVersion:reenableHead.version,currentPin:'222222',targetPin:'222222' })
+  const originalCostFingerprint = await readAssessmentCostFingerprint(pool,costEnv)
+  assert.ok(originalCostFingerprint)
 
-  const plans = await listCreditPlans(pool)
+  const plans = await listCreditPlans(pool,costEnv)
   assert.equal(plans.head.initialized,true)
   const oldOrder = randomUUID()
   await pool.query('INSERT INTO payment_orders (id,user_id,out_trade_no,amount_fen,credit_amount) VALUES (?,?,?,?,?)',
     [oldOrder,adminA,'JCV-old-order',199,7])
-  assert.throws(() => validatePlanCost({ JC000:2,JC001:1,JC002:5,JC003:10 },null,null))
-  assert.throws(() => validatePlanCost({ JC000:100,JC001:1,JC002:5,JC003:10 },1,new Date()))
-  const candidate = await createCreditPlan({ pool,actorId:adminB,data: {
+  assert.throws(() => validatePlanCost({ JC000:2,JC001:1,JC002:5,JC003:10 },null,null,null,null))
+  assert.throws(() => validatePlanCost({ JC000:100,JC001:1,JC002:5,JC003:10 },1,new Date(),originalCostFingerprint,originalCostFingerprint))
+  const candidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
     name:'固定价四档',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
     estimatedCostFen:1,costConfirmed:true,pin:'444444',
   } })
@@ -144,22 +160,22 @@ try {
   }))
   assert.equal(Number(clockRows[0]?.cost_fresh), 1)
   assert.ok(Math.abs(Number(clockRows[0]?.offset_seconds)) <= 1)
-  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:candidate.id,
+  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:candidate.id,env:costEnv,
     expectedVersion:plans.head.version,currentPin:'000000',targetPin:'444444' }),
   { code:'control_pin_invalid' })
-  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:candidate.id,
+  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:candidate.id,env:costEnv,
     expectedVersion:plans.head.version,currentPin:'333333',targetPin:'000000' }),
   { code:'object_pin_invalid' })
   const [planPinAfterFailures] = await pool.query<mysql.RowDataPacket[]>(
     'SELECT failed_attempts FROM credit_plan_head WHERE id=1')
   assert.equal(Number(planPinAfterFailures[0]!.failed_attempts),0)
-  const activated = await activateCreditPlan({ pool,actorId:adminA,id:candidate.id,
+  const activated = await activateCreditPlan({ pool,actorId:adminA,id:candidate.id,env:costEnv,
     expectedVersion:plans.head.version,currentPin:'333333',targetPin:'444444' })
   assert.equal(activated.activePlanId,candidate.id)
   const [planPinAfterSuccess] = await pool.query<mysql.RowDataPacket[]>(
     'SELECT failed_attempts FROM credit_plan_objects WHERE id=?',[candidate.id])
   assert.equal(Number(planPinAfterSuccess[0]!.failed_attempts),0)
-  const invalidCandidate = await createCreditPlan({ pool,actorId:adminB,data: {
+  const invalidCandidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
     name:'成本时间拒绝验证',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
     estimatedCostFen:1,costConfirmed:true,pin:'555555',
   } })
@@ -167,11 +183,37 @@ try {
     'CURRENT_TIMESTAMP() + INTERVAL 1 DAY']) {
     await pool.query(`UPDATE credit_plan_objects SET cost_verified_at=${clockValue} WHERE id=?`,
       [invalidCandidate.id])
-    await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:invalidCandidate.id,
+    await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:invalidCandidate.id,env:costEnv,
       expectedVersion:activated.version,currentPin:'444444',targetPin:'555555' }),
     { code:'plan_cost_missing_or_stale' })
     assert.equal((await listCreditPlans(pool)).head.activePlanId,candidate.id)
   }
+  const mismatchCandidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
+    name:'模型切换后必须重核',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
+    estimatedCostFen:1,costConfirmed:true,pin:'666666',
+  } })
+  const nextKeyId = randomUUID()
+  const nextKeySalt = '33333333333333333333333333333333'
+  await pool.query(
+    `INSERT INTO assessment_key_objects
+      (id,label,provider,api_base_url,model,encrypted_secret,creator_user_id,pin_salt,pin_hash,status)
+     VALUES (?,?,?,?,?,?,?,?,?,'candidate')`,
+    [nextKeyId,'切换后模型','openai-compatible','https://api.example.com','model-v3',
+      sealKey('next-model-secret',masterKey),adminB,nextKeySalt,pinDigest('777777',nextKeySalt)],
+  )
+  const headBeforeModelSwitch = (await listAssessmentKeys(pool)).head
+  await switchAssessmentKey({ pool,actorId:adminA,id:nextKeyId,
+    expectedVersion:headBeforeModelSwitch.version,currentPin:'222222',targetPin:'777777' })
+  const changedCostFingerprint = await readAssessmentCostFingerprint(pool,costEnv)
+  assert.ok(changedCostFingerprint)
+  assert.notEqual(changedCostFingerprint,originalCostFingerprint)
+  const activePlanAfterSwitch = await readActiveCreditPlan(pool,costEnv)
+  assert.equal(activePlanAfterSwitch.costVerified,false)
+  assert.equal(activePlanAfterSwitch.costVerificationStatus,'configuration_changed')
+  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:mismatchCandidate.id,env:costEnv,
+    expectedVersion:activated.version,currentPin:'444444',targetPin:'666666' }),
+  { code:'credit_plan_cost_configuration_changed' })
+
   const [oldRows] = await pool.query<mysql.RowDataPacket[]>(
     'SELECT amount_fen,credit_amount,sku_key,plan_id FROM payment_orders WHERE id=?',[oldOrder])
   assert.equal(Number(oldRows[0]!.amount_fen),199)

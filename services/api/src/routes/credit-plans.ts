@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import type { AppEnv } from '../config/env.js'
 import { z } from 'zod'
 import type { DatabaseContext } from '../db/client.js'
 import { canAccessAdminWorkspace } from '../domain/auth-policy.js'
@@ -12,7 +13,7 @@ const control = z.object({ expectedVersion: z.number().int().nonnegative(), curr
 const activate = control.extend({ targetPin: sixDigitPin }).strict()
 const setup = z.object({ currentPin: sixDigitPin, newPin: sixDigitPin }).strict()
 
-export function registerCreditPlanRoutes(app: FastifyInstance, database: DatabaseContext) {
+export function registerCreditPlanRoutes(app: FastifyInstance, database: DatabaseContext, env: AppEnv) {
   async function admin(request: FastifyRequest, reply: FastifyReply) {
     if (!database.configured) { reply.code(503).send({ ok: false, error: 'database_not_configured' }); return null }
     const user = await resolveSessionUser(request, database)
@@ -32,7 +33,7 @@ export function registerCreditPlanRoutes(app: FastifyInstance, database: Databas
   app.get('/me/admin/credit-plans', async (request, reply) => {
     const user = await admin(request, reply)
     if (!user || !database.configured) return
-    try { return { ok: true, ...await listCreditPlans(database.pool) } }
+    try { return { ok: true, ...await listCreditPlans(database.pool, env) } }
     catch (error) { return failure(reply, error) }
   })
   app.post<{ Body: unknown }>('/me/admin/credit-plans', async (request, reply) => {
@@ -41,7 +42,7 @@ export function registerCreditPlanRoutes(app: FastifyInstance, database: Databas
     const parsed = creditPlanInput.safeParse(request.body)
     if (!parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_credit_plan' })
     try { return reply.code(201).send({ ok: true, ...await createCreditPlan({
-      pool: database.pool, actorId: user.userId, data: parsed.data,
+      pool: database.pool, actorId: user.userId, data: parsed.data, env,
     }) }) } catch (error) { return failure(reply, error) }
   })
   app.post<{ Params: { id: string }; Body: unknown }>('/me/admin/credit-plans/:id/setup-pin', async (request, reply) => {
@@ -59,7 +60,7 @@ export function registerCreditPlanRoutes(app: FastifyInstance, database: Databas
     const parsed = activate.safeParse(request.body)
     if (!id.safeParse(request.params.id).success || !parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_credit_plan_request' })
     try { return { ok: true, ...await activateCreditPlan({ pool: database.pool,
-      actorId: user.userId, id: request.params.id, ...parsed.data }) } }
+      actorId: user.userId, id: request.params.id, ...parsed.data, env }) } }
     catch (error) { return failure(reply, error) }
   })
   app.post<{ Body: unknown }>('/me/admin/credit-plans/disable', async (request, reply) => {

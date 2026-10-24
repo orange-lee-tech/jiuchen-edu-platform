@@ -21,12 +21,20 @@ try {
     count_jc003 int unsigned NOT NULL,
     estimated_cost_fen int unsigned NULL,
     cost_verified_at timestamp NULL,
+    cost_config_fingerprint char(64) NULL,
     status enum('candidate','active','disabled','archived') NOT NULL DEFAULT 'candidate',
     created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     CONSTRAINT credit_plan_creator_fk FOREIGN KEY (creator_user_id) REFERENCES users (id)
   ) ENGINE=InnoDB`)
+  const [fingerprintColumns] = await connection.query<mysql.RowDataPacket[]>(
+    "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='credit_plan_objects' AND COLUMN_NAME='cost_config_fingerprint'",
+  )
+  if (!fingerprintColumns.length) {
+    await connection.query('ALTER TABLE credit_plan_objects ADD COLUMN cost_config_fingerprint char(64) NULL AFTER cost_verified_at')
+  }
+
   await connection.query(`CREATE TABLE IF NOT EXISTS credit_plan_head (
     id tinyint unsigned NOT NULL,
     active_plan_id varchar(36) NULL,
