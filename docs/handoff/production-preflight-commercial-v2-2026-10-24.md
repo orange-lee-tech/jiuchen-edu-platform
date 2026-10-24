@@ -15,7 +15,7 @@ set -eu
 date -Is
 printf 'CURRENT_PATH='; readlink -f /opt/jiuchen-api/current
 printf 'CURRENT_COMMIT='; cat /opt/jiuchen-api/current/COMMIT_SHA 2>/dev/null || echo UNKNOWN
-printf 'PREVIOUS_COMMIT='; cat /opt/jiuchen-api/shared/previous-release 2>/dev/null || echo UNKNOWN
+if [ -r /opt/jiuchen-api/shared/previous-release ]; then printf 'PREVIOUS_COMMIT='; cat /opt/jiuchen-api/shared/previous-release; else echo 'PREVIOUS_COMMIT=NOT_READABLE_AS_DEPLOY_USER'; fi
 printf 'SERVICE_STATE='; systemctl is-active jiuchen-api.service
 systemctl show jiuchen-api.service --no-pager --property=MainPID,NRestarts,MemoryCurrent,MemoryMax,CPUQuotaPerSecUSec,TasksMax,User
 printf 'HEALTH_LIVE='
@@ -32,7 +32,7 @@ printf '\nWEBSITE_ROOT='
 readlink -f /www/wwwroot/jiuchen-current
 ```
 
-必须确认：current 与现场记录一致、previous release 真实存在、服务 active、live/health 通过且 database=ok、内存/磁盘仍有余量、官网根目录保持 `/www/wwwroot/jiuchen-current`。若失败，停留在只读诊断，不继续 DDL 或 promote。
+必须确认：current 与现场记录一致、previous release 真实存在、服务 active、live/health 通过且 database=ok、内存/磁盘仍有余量、官网根目录保持 `/www/wwwroot/jiuchen-current`。若受限账号无法读取 root-only 的 `previous-release`，不要修改文件权限；由现有授权的 ECS 控制台运维入口只读核对该 SHA 和目录存在性（不使用 root SSH）。若失败，停留在只读诊断，不继续 DDL 或 promote。
 
 另由有权限读取生产环境文件的授权操作人员只输出布尔状态，不输出值：
 ```bash
