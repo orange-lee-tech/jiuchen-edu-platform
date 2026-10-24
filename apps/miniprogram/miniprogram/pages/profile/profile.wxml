@@ -14,6 +14,20 @@
         <view wx:if="{{!readOnly}}" class="identity-control identity-primary" bindtap="onIdentityTap" hover-class="identity-control-pressed" aria-role="button">{{!loggedIn ? '登录并绑定身份' : role === 'admin' || role === 'teacher' || role === 'staff' ? '查看身份与绑定' : '编辑我的学业资料'}}</view>
       </view>
     </view>
+    <view wx:if="{{loggedIn && !readOnly && identities.length}}" class="card">
+      <text class="section-heading">我的身份</text>
+      <text class="card-note">当前使用：{{roleLabel}}。切换后服务器按新身份验证权限。</text>
+      <view wx:for="{{identities}}" wx:key="id" class="menu-row">
+        <view class="menu-main"><text class="menu-title">{{item.type === 'admin' ? '管理员' : item.type === 'teacher' ? '老师' : '学员'}} · {{item.businessId}}</text></view>
+        <button wx:if="{{role !== item.type}}" class="mini" disabled="{{identityBusy}}" data-role="{{item.type}}" bindtap="onSwitchIdentity">切换身份</button>
+        <button class="mini" disabled="{{identityBusy}}" data-id="{{item.id}}" bindtap="onUnbindIdentity">解除</button>
+      </view>
+      <view wx:if="{{identities.length === 1 && identities[0].type === 'admin'}}">
+        <input class="input" value="{{identityInput}}" placeholder="输入可用老师或学员内部编号" bindinput="onAdditionalIdInput" />
+        <button disabled="{{identityBusy}}" bindtap="onBindAdditionalIdentity">绑定兼任身份</button>
+      </view>
+      <text wx:if="{{identityError}}" class="card-note">{{identityError}}</text>
+    </view>
     <text class="section-heading">{{shellKind === 'student' ? '我的资料与记录' : '我的账号与支持'}}</text>
     <view class="menu-list">
       <block wx:for="{{menus}}" wx:key="key">

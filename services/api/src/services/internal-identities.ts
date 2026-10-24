@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import type { DatabaseContext } from '../db/client.js'
 import { internalIds, students, teachers, users } from '../db/schema.js'
+import { unbindMyIdentity } from './identity-roles.js'
 
 export type InternalIdType = 'student' | 'teacher' | 'admin'
 
@@ -199,14 +200,12 @@ export async function unbindInternalIdentity(
     throw new Error('internal_id_not_found')
   }
 
-  await database.db.transaction(async (tx) => {
-    if (identity.userId) {
-      await tx
-        .update(users)
-        .set({ role: 'user' })
-        .where(eq(users.id, identity.userId))
-    }
+  if (identity.userId) {
+    await unbindMyIdentity(database, identity.userId, identity.id)
+    return
+  }
 
+  await database.db.transaction(async (tx) => {
     if (identity.type === 'student' && identity.entityId) {
       await tx
         .update(students)

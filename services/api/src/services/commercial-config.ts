@@ -10,6 +10,14 @@ const skuSchema = z.object({
 }).strict()
 
 export type CreditSku = z.infer<typeof skuSchema>
+export type PlannedCreditSku = CreditSku & { planId?: string; planVersion?: number }
+
+export const FIXED_ASSESSMENT_SKUS: readonly CreditSku[] = Object.freeze([
+  { key: 'JC000', description: 'AI评估临时支付测试', amountFen: 10, creditAmount: 2 },
+  { key: 'JC001', description: 'AI评估体验包', amountFen: 190, creditAmount: 1 },
+  { key: 'JC002', description: 'AI评估五次包', amountFen: 890, creditAmount: 5 },
+  { key: 'JC003', description: 'AI评估十次包', amountFen: 1690, creditAmount: 10 },
+])
 
 // Only AI evaluations may be sold; canonical WeChat payment description.
 export const APPROVED_ASSESSMENT_SKUS: readonly CreditSku[] = Object.freeze([
@@ -22,9 +30,11 @@ export type FreeGrant = { version: string; amount: number }
 
 export type CommercialConfig = {
   creditEnforcementEnabled: boolean
+  testSkuEnabled?: boolean
+  fixedCatalogConfirmed?: boolean
   freeGrant: FreeGrant | null
   studentBonusGrant: FreeGrant | null
-  paymentSkus: readonly CreditSku[]
+  paymentSkus: readonly PlannedCreditSku[]
 }
 
 function parsePaymentSkus(raw: string | undefined): CreditSku[] {
@@ -83,6 +93,8 @@ export function createCommercialConfig(env: AppEnv): CommercialConfig {
 
   return {
     creditEnforcementEnabled: enabled,
+    testSkuEnabled: env.WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED === true,
+    fixedCatalogConfirmed: env.WECHAT_VIRTUAL_PAY_FIXED_CATALOG_CONFIRMED === true,
     freeGrant,
     // Grant one to everyone; upgrading an account to student adds four.
     // Distinct stable versions prevent student upgrades from yielding six credits.
@@ -96,7 +108,7 @@ export function createCommercialConfig(env: AppEnv): CommercialConfig {
 export function findCreditSku(
   config: CommercialConfig,
   key: string,
-): CreditSku | null {
+): PlannedCreditSku | null {
   return config.paymentSkus.find((sku) => sku.key === key) ?? null
 }
 

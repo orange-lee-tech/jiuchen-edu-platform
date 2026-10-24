@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
@@ -85,17 +85,13 @@ async function loadBusinessIdentity(
   database: DatabaseContext & { configured: true },
   userId: string,
 ) {
-  const [identity] = await database.db
-    .select({
-      businessId: internalIds.businessId,
-      type: internalIds.type,
-      status: internalIds.status,
-    })
-    .from(internalIds)
-    .where(eq(internalIds.userId, userId))
-    .limit(1)
-
-  return identity ?? null
+  const [rows] = await database.pool.query<import('mysql2/promise').RowDataPacket[]>(
+    `SELECT i.business_id AS businessId,i.type,i.status FROM users u
+     JOIN internal_ids i ON i.user_id=u.id AND i.type=u.role
+     WHERE u.id=? LIMIT 1`, [userId])
+  return rows[0] ? { businessId: String(rows[0].businessId),
+    type: rows[0].type as 'admin' | 'teacher' | 'student',
+    status: rows[0].status as 'available' | 'claimed' | 'disabled' } : null
 }
 
 async function loadWechatUserByOpenId(
@@ -440,7 +436,23 @@ export function registerAuthRoutes(
 
     const now = new Date()
 
-    await database.db.transaction(async (tx) => {
+    try { await database.db.transaction(async (tx) => {
+      try {
+        await tx.execute(sql`SELECT id FROM identity_admin_guard WHERE id=1 FOR UPDATE`)
+        const [adminBinding] = await tx.select({ id: internalIds.id }).from(internalIds)
+          .where(and(eq(internalIds.userId, user.userId), eq(internalIds.type, 'admin'),
+            eq(internalIds.status, 'claimed'))).limit(1)
+        if (adminBinding) {
+          const [adminCount] = await tx.select({ n: sql<number>`COUNT(*)` }).from(internalIds)
+            .where(and(eq(internalIds.type, 'admin'), eq(internalIds.status, 'claimed'),
+              isNotNull(internalIds.userId)))
+          if (Number(adminCount?.n ?? 0) <= 1) {
+            throw new Error('last_admin_identity')
+          }
+        }
+      } catch (error) {
+        if ((error as {code?: string}).code !== 'ER_NO_SUCH_TABLE') throw error
+      }
       await tx
         .update(userSessions)
         .set({ revokedAt: now })
@@ -478,7 +490,12 @@ export function registerAuthRoutes(
           deletedAt: now,
         })
         .where(eq(users.id, user.userId))
-    })
+    }) } catch (error) {
+      if (error instanceof Error && error.message === 'last_admin_identity') {
+        return reply.code(409).send({ ok: false, error: 'last_admin_identity' })
+      }
+      throw error
+    }
 
     // Native phone auth is rolled out with a separate idempotent schema upgrade.
     // Clear verified phone identity when those columns already exist, while

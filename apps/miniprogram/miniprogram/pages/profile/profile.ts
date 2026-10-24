@@ -1,5 +1,7 @@
-import { deleteCurrentAccount, getSavedAuthResult, logoutWechatUser, type UserRole } from '../../utils/auth'
-import { friendlyRequestError, getMyNewsFavorites, type NewsFavorite } from '../../utils/request'
+import { deleteCurrentAccount, getSavedAuthResult, logoutWechatUser, refreshAuthResult, type UserRole } from '../../utils/auth'
+import { bindMyAdditionalIdentity, friendlyRequestError, getMyIdentities,
+  getMyNewsFavorites, switchMyIdentityRole, unbindMyIdentityId,
+  type MyIdentity, type NewsFavorite } from '../../utils/request'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { openOfficialArticle } from '../../utils/official-article'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
@@ -27,6 +29,7 @@ Page({
     ...INITIAL_SHELL, loggedIn: false, role: '' as UserRole | '', roleLabel: '未登录',
     businessId: '', userName: '', menus: PERSONAL_MENUS, loggingOut: false, deleting: false,
     favoritesVisible:false,favoritesLoading:false,favoritesError:'',favorites:[] as NewsFavorite[],
+    identities: [] as MyIdentity[], identityInput: '', identityBusy: false, identityError: '',
   },
   stopShell: undefined as (() => void) | undefined,
   onShow() {
@@ -42,6 +45,57 @@ Page({
         menus: role === 'admin' ? ADMIN_MENUS : role === 'teacher' || role === 'staff' ? TEACHER_MENUS : PERSONAL_MENUS,
       })
     })
+    if (getSavedAuthResult() && !isReadOnly()) void this.loadIdentities()
+  },
+  async loadIdentities() {
+    try {
+      const result = await getMyIdentities()
+      this.setData({ identities: result.identities, identityError: '' })
+    } catch (error) { this.setData({ identityError: friendlyRequestError(error, '身份列表暂不可用') }) }
+  },
+  onAdditionalIdInput(event: WechatMiniprogram.Input) {
+    this.setData({ identityInput: event.detail.value })
+  },
+  async onBindAdditionalIdentity() {
+    if (this.data.identityBusy || !this.data.identityInput.trim()) return
+    this.setData({ identityBusy: true })
+    try {
+      await bindMyAdditionalIdentity(this.data.identityInput.trim())
+      this.setData({ identityInput: '' })
+      await this.loadIdentities()
+      wx.showToast({ title: '兼任身份已绑定', icon: 'success' })
+    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '身份绑定失败'), icon: 'none' }) }
+    finally { this.setData({ identityBusy: false }) }
+  },
+  async onSwitchIdentity(event: WechatMiniprogram.BaseEvent) {
+    const role = String(event.currentTarget.dataset.role) as MyIdentity['type']
+    if (this.data.identityBusy || !this.data.identities.some(item => item.type === role)) return
+    this.setData({ identityBusy: true })
+    try {
+      await switchMyIdentityRole(role)
+      await refreshAuthResult()
+      await this.loadIdentities()
+      wx.showToast({ title: '身份已切换', icon: 'success' })
+    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '身份切换失败'), icon: 'none' }) }
+    finally { this.setData({ identityBusy: false }) }
+  },
+  onUnbindIdentity(event: WechatMiniprogram.BaseEvent) {
+    const id = String(event.currentTarget.dataset.id)
+    const identity = this.data.identities.find(item => item.id === id)
+    if (!identity || this.data.identityBusy) return
+    wx.showModal({ title: '解除身份绑定',
+      content: `确定解除 ${identity.businessId}？其他身份会保留。`,
+      success: result => { if (result.confirm) void this.unbindIdentity(id) } })
+  },
+  async unbindIdentity(id: string) {
+    this.setData({ identityBusy: true })
+    try {
+      await unbindMyIdentityId(id)
+      await refreshAuthResult()
+      await this.loadIdentities()
+      wx.showToast({ title: '身份已解除', icon: 'success' })
+    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '解除身份失败'), icon: 'none' }) }
+    finally { this.setData({ identityBusy: false }) }
   },
   onHide() { this.stopShell?.(); this.setData({ shellPhase: 'loading' }) },
   onUnload() { this.stopShell?.() },
@@ -49,6 +103,10 @@ Page({
   onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },
   onIdentityTap() {
     if(isReadOnly()){wx.showToast({title:'当前为只读查看，不能编辑资料',icon:'none'});return}
+    if (this.data.loggedIn && this.data.identities.some(item => item.type === 'admin')) {
+      wx.pageScrollTo({ scrollTop: 220, duration: 200 })
+      return
+    }
     if (this.data.loggedIn) openPage('/pages/profile-edit/profile-edit')
     else loginFor('pages/profile-edit/profile-edit')
   },

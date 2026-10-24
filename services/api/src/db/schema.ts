@@ -60,7 +60,7 @@ export const internalIds = mysqlTable('internal_ids', {
   status: mysqlEnum('status', ['available', 'claimed', 'disabled'])
     .notNull()
     .default('available'),
-  userId: varchar('user_id', { length: 36 }).unique().references(() => users.id),
+  userId: varchar('user_id', { length: 36 }).references(() => users.id),
   entityId: varchar('entity_id', { length: 36 }),
   batch: varchar('batch', { length: 40 }),
   claimedAt: timestamp('claimed_at'),
@@ -226,6 +226,11 @@ export const paymentOrders = mysqlTable('payment_orders', {
     .default('pending'),
   amountFen: int('amount_fen').notNull(),
   creditAmount: int('credit_amount').notNull(),
+  skuKey: varchar('sku_key', { length: 16 }),
+  planId: varchar('plan_id', { length: 36 }),
+  planVersion: int('plan_version'),
+  payEnvironment: varchar('pay_environment', { length: 16 }),
+  wechatProductId: varchar('wechat_product_id', { length: 128 }),
   providerTransactionId: varchar('provider_transaction_id', { length: 64 }).unique(),
   paidAt: timestamp('paid_at'),
   expiresAt: timestamp('expires_at'),

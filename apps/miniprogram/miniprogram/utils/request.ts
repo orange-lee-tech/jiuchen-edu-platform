@@ -923,6 +923,90 @@ export async function testAdminAssessmentKey(pin: string): Promise<void> {
   await request('/me/admin/controls/assessment-key/test', 'POST', { pin })
 }
 
+export type AssessmentKeyObject = {
+  id: string; label: string; provider: string | null; apiBaseUrl: string | null
+  model: string | null; temperature: number | null; creatorUserId: string
+  note: string | null; status: 'candidate' | 'active' | 'disabled' | 'archived'
+  version: number; hasObjectPin: boolean; lastTestResult: string | null
+  lastTestAt: string | null; createdAt: string
+}
+export type AssessmentKeyHead = { initialized: boolean; version: number; activeObjectId: string | null }
+export async function getAssessmentKeyObjects(): Promise<{
+  head: AssessmentKeyHead; objects: AssessmentKeyObject[]
+}> {
+  return request('/me/admin/assessment-keys')
+}
+export async function createAssessmentKeyObject(payload: {
+  label: string; provider: string; apiBaseUrl: string; model: string
+  temperature: number; apiKey: string; note: string; pin: string
+}) {
+  return request<{ ok: true; id: string; active: boolean; version: number }>(
+    '/me/admin/assessment-keys', 'POST', payload)
+}
+export async function activateAssessmentKeyObject(id: string, payload: {
+  expectedVersion: number; currentPin: string; targetPin: string
+}) {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/activate', 'POST', payload)
+}
+export async function disableActiveAssessmentKey(payload: { expectedVersion: number; currentPin: string }) {
+  return request('/me/admin/assessment-keys/disable', 'POST', payload)
+}
+export async function archiveAssessmentKeyObject(id: string, payload: {
+  expectedVersion: number; currentPin: string
+}) {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/archive', 'POST', payload)
+}
+export async function testAssessmentKeyObject(id: string): Promise<{ ok: true; reachable: boolean; mayIncurCost: true }> {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/test', 'POST', {})
+}
+export async function revealAssessmentKeyObject(id: string, pin: string): Promise<{ ok: true; apiKey: string }> {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/reveal', 'POST', { pin })
+}
+export async function setupLegacyAssessmentKeyPin(id: string, currentPin: string, newPin: string) {
+  return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/setup-pin', 'POST', { currentPin, newPin })
+}
+
+export type MyIdentity = { id: string; businessId: string; type: 'admin' | 'teacher' | 'student'; status: 'claimed' }
+export async function getMyIdentities(): Promise<{ activeRole: string; identities: MyIdentity[] }> {
+  return request('/me/identities')
+}
+export async function bindMyAdditionalIdentity(businessId: string) {
+  return request('/me/identities/bind', 'POST', { businessId })
+}
+export async function switchMyIdentityRole(role: MyIdentity['type']) {
+  return request('/me/identities/switch', 'POST', { role })
+}
+export async function unbindMyIdentityId(id: string) {
+  return request('/me/identities/' + encodeURIComponent(id) + '/unbind', 'POST', {})
+}
+
+export type CreditPlan = { id: string; name: string; version: number; note: string | null;
+  creatorUserId: string; hasObjectPin: boolean; status: string; createdAt: string;
+  counts: { JC000: number; JC001: number; JC002: number; JC003: number };
+  estimatedCostFen: number | null; costVerifiedAt: string | null }
+export type CreditPlanHead = { initialized: boolean; version: number; activePlanId: string | null }
+export async function getCreditPlans(): Promise<{ head: CreditPlanHead; plans: CreditPlan[];
+  prices: Array<{ key: string; amountFen: number; creditAmount: number }> }> {
+  return request('/me/admin/credit-plans')
+}
+export async function createCreditPlanObject(payload: { name: string; note: string;
+  counts: CreditPlan['counts']; estimatedCostFen: number | null; costConfirmed: boolean; pin: string }) {
+  return request<{ ok: true; id: string; active: boolean; version: number }>('/me/admin/credit-plans', 'POST', payload)
+}
+export async function activateCreditPlanObject(id: string, payload: {
+  expectedVersion: number; currentPin: string; targetPin: string }) {
+  return request('/me/admin/credit-plans/' + encodeURIComponent(id) + '/activate', 'POST', payload)
+}
+export async function disableCurrentCreditPlan(payload: { expectedVersion: number; currentPin: string }) {
+  return request('/me/admin/credit-plans/disable', 'POST', payload)
+}
+export async function archiveCreditPlanObject(id: string, payload: { expectedVersion: number; currentPin: string }) {
+  return request('/me/admin/credit-plans/' + encodeURIComponent(id) + '/archive', 'POST', payload)
+}
+export async function setupLegacyCreditPlanPin(id: string, currentPin: string, newPin: string) {
+  return request('/me/admin/credit-plans/' + encodeURIComponent(id) + '/setup-pin', 'POST', { currentPin, newPin })
+}
+
 export async function bindAdminInternalId(
   id: string,
   userId: string,

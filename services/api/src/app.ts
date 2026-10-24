@@ -22,6 +22,8 @@ import { registerGrowthProfileRoutes } from './routes/growth-profile.js'
 import { registerReadOnlyWorkspaceRoutes } from './routes/read-only-workspace.js'
 import { registerCommercialRoutes } from './routes/commercial.js'
 import { registerAdminControlRoutes } from './routes/admin-controls.js'
+import { registerAssessmentKeyObjectRoutes } from './routes/assessment-key-objects.js'
+import { registerCreditPlanRoutes } from './routes/credit-plans.js'
 import {
   createCustomerServiceAIProvider,
   createScheduleAIProvider,
@@ -240,6 +242,7 @@ export function buildApp(env: AppEnv) {
     },
     assessmentWorker,
     assessmentImport,
+    assessmentVault.refresh,
   )
   registerProductRoutes(app, database)
   registerBrandRoutes(app)
@@ -248,6 +251,8 @@ export function buildApp(env: AppEnv) {
   registerReadOnlyWorkspaceRoutes(app, database)
   registerCommercialRoutes(app, database, liveCommercialConfig, wechatPay, env)
   registerAdminControlRoutes(app, database, env, assessmentVault.refresh)
+  registerAssessmentKeyObjectRoutes(app, database, env, assessmentVault.refresh)
+  registerCreditPlanRoutes(app, database)
   registerAdminRoutes(app, database, env)
 
   app.addHook('onReady', async () => {
