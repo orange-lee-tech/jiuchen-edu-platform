@@ -96,29 +96,40 @@ try {
 
   // Execute the UPDATE and audit INSERT on real MySQL, then inject a deterministic
   // driver-level failure at draft consumption. Rollback must restore both writes.
+  let deleteIntercepts = 0
   const faultPool = {
     async getConnection() {
       const connection = await pool.getConnection()
-      return {
-        beginTransaction: () => connection.beginTransaction(),
-        commit: () => connection.commit(),
-        rollback: () => connection.rollback(),
-        release: () => connection.release(),
-        query: (sql: string, values?: unknown[]) => {
-          if (typeof sql === 'string' && sql.startsWith('DELETE FROM admin_control_drafts')) {
-            throw Object.assign(new Error('injected draft delete failure'), {
-              code: 'INJECTED_DRAFT_DELETE_FAILURE',
-            })
+      return new Proxy(connection, {
+        get(target, property, receiver) {
+          if (property === 'query') {
+            return (sql: unknown, values?: unknown[]) => {
+              const statement = typeof sql === 'string' ? sql.trim().replace(/\\s+/g, ' ') : String(sql)
+              if (statement.startsWith('DELETE FROM admin_control_drafts')) {
+                deleteIntercepts += 1
+                throw Object.assign(new Error('injected draft delete failure'), {
+                  code: 'INJECTED_DRAFT_DELETE_FAILURE',
+                })
+              }
+              return target.query(sql as any, values as any)
+            }
           }
-          return connection.query(sql, values as any)
+          const value = Reflect.get(target, property, receiver)
+          return typeof value === 'function' ? value.bind(target) : value
         },
-      } as unknown as mysql.PoolConnection
+      })
     },
   } as unknown as mysql.Pool
-  await assert.rejects(() => activateControlDraft({ pool: faultPool, box: 'assessment_key', actorId: adminB,
-    expectedVersion: 1, currentPin: '654321', newPin: '654321', masterKey }),
-  (error: unknown) => (error as { code?: string; message?: string }).code === 'INJECTED_DRAFT_DELETE_FAILURE' &&
-    String((error as { message?: string }).message || '').includes('injected draft delete failure'))
+  let injectedFailure: unknown
+  try {
+    await activateControlDraft({ pool: faultPool, box: 'assessment_key', actorId: adminB,
+      expectedVersion: 1, currentPin: '654321', newPin: '654321', masterKey })
+  } catch (error) {
+    injectedFailure = error
+  }
+  assert.equal(deleteIntercepts, 1, 'fault injection must run at draft deletion')
+  assert.equal((injectedFailure as { code?: string })?.code, 'INJECTED_DRAFT_DELETE_FAILURE')
+  assert.ok(String((injectedFailure as { message?: string })?.message || '').includes('injected draft delete failure'))
 
   const afterFailedActivation = await readControlBox(pool, 'assessment_key')
   assert.ok(afterFailedActivation)
