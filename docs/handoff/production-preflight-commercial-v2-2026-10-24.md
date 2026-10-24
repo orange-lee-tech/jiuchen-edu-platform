@@ -21,28 +21,11 @@
 
 ## A. ECS 只读现场回执
 
-通过现有受限运维账号执行；不 SSH root、不读取/打印任何密钥，不改文件、不重启服务、不触碰官网。
+在现有授权的 ECS 运维终端执行仓库只读脚本 [p1-production-preflight-read-only.sh](../../tools/diagnostics/p1-production-preflight-read-only.sh)。脚本会动态发现 API 实际监听地址，不硬编码猜测的 172.25.* 地址；输出 current/previous、服务状态、资源、三个健康端点、官网真实目录，以及主密钥变量的布尔形状检查。不要改 sudo 权限，不打印密钥，不写文件、不重启服务、不触碰官网。
 
 ```bash
-set -eu
-date -Is
-printf 'CURRENT_PATH='; readlink -f /opt/jiuchen-api/current
-printf 'CURRENT_COMMIT='; cat /opt/jiuchen-api/current/COMMIT_SHA 2>/dev/null || echo UNKNOWN
-if [ -r /opt/jiuchen-api/shared/previous-release ]; then printf 'PREVIOUS_COMMIT='; cat /opt/jiuchen-api/shared/previous-release; else echo 'PREVIOUS_COMMIT=NOT_READABLE_AS_DEPLOY_USER'; fi
-printf 'SERVICE_STATE='; systemctl is-active jiuchen-api.service
-systemctl show jiuchen-api.service --no-pager --property=MainPID,NRestarts,MemoryCurrent,MemoryMax,CPUQuotaPerSecUSec,TasksMax,User
-printf 'HEALTH_LIVE='
-curl -fsS --max-time 3 http://172.25.80.203:3100/health/live
-printf '\nHEALTH_READY='
-curl -fsS --max-time 5 http://172.25.80.203:3100/health
-printf '\nHEALTH_CONFIG='
-curl -fsS --max-time 5 http://172.25.80.203:3100/health/config
-printf '\nDISK='
-df -h /opt/jiuchen-api
-printf '\nMEMORY='
-free -h
-printf '\nWEBSITE_ROOT='
-readlink -f /www/wwwroot/jiuchen-current
+# 在仓库根目录的受控运维终端按上方链接执行只读脚本。
+# 若需通过既有终端会话传送脚本，确保只执行该文件，不使用远程脚本管道安装或改动主机。
 ```
 
 必须确认：current 与现场记录一致、previous release 真实存在、服务 active、live/health 通过且 database=ok、内存/磁盘仍有余量、官网根目录保持 `/www/wwwroot/jiuchen-current`。若受限账号无法读取 root-only 的 `previous-release`，不要修改文件权限；由现有授权的 ECS 控制台运维入口只读核对该 SHA 和目录存在性（不使用 root SSH）。若失败，停留在只读诊断，不继续 DDL 或 promote。
@@ -133,7 +116,7 @@ ORDER BY box;
 
 ## C. 恢复点和迁移闸门
 
-已知备份 `/home/orangelee-tech/jiuchen-backups/20261016-134131-cf772f`：加密下载和校验已记录，隔离导入 17 张表通过；旧迁移演练曾达到 28 表。它距当前 8 天，且没有覆盖 PR #6 三项新迁移，因此不能单独作为本轮生产 DDL 的最终恢复证明。
+已知备份 `/home/orangelee-tech/jiuchen-backups/20261016-134131-cf772f`：加密下载和校验已记录，隔离导入 17 张表通过；旧迁移演练曾达到 28 表。它距当前 8 天，且没有覆盖 PR #6 的五个候选迁移脚本，因此不能单独作为本轮生产 DDL 的最终恢复证明。
 
 生产 DDL 前须：
 1. 从当前生产数据库取得一份新鲜加密备份；不使用旧 root-SSH 备份命令绕过既有限权。

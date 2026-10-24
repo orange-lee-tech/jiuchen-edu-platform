@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
 # Read-only: no restart, DDL, sync, timer change, environment output or worker.
 set -euo pipefail
-readlink -f /opt/jiuchen-api/current
-cat /opt/jiuchen-api/shared/previous-release
+current_path=$(readlink -f /opt/jiuchen-api/current)
+printf 'CURRENT_PATH=%s\\n' "$current_path"
+if [ -r "$current_path/COMMIT_SHA" ]; then printf 'CURRENT_COMMIT='; cat "$current_path/COMMIT_SHA"; else echo 'CURRENT_COMMIT=UNKNOWN'; fi
+if [ -r /opt/jiuchen-api/shared/previous-release ]; then
+  previous_commit=$(cat /opt/jiuchen-api/shared/previous-release)
+  printf 'PREVIOUS_COMMIT=%s\\n' "$previous_commit"
+  if [ -d "/opt/jiuchen-api/releases/$previous_commit" ]; then echo 'PREVIOUS_RELEASE_DIR=EXISTS'; else echo 'PREVIOUS_RELEASE_DIR=MISSING'; fi
+else
+  echo 'PREVIOUS_COMMIT=UNREADABLE'
+  echo 'PREVIOUS_RELEASE_DIR=UNVERIFIED'
+fi
 systemctl show jiuchen-api.service -p ActiveState -p MainPID -p User -p Group -p NRestarts -p MemoryCurrent -p MemoryMax -p CPUQuotaPerSecUSec -p TasksMax
 systemctl show jiuchen-news-sync.timer -p ActiveState -p Unit
 df -h /opt/jiuchen-api
@@ -30,8 +39,20 @@ api_port="${api_socket##*:}"
 case "$api_port" in 80|443|8088) echo 'BLOCKED: protected port; do not modify any service'; exit 1;; esac
 api_host="${api_socket%:*}"
 case "$api_host" in '*'|'0.0.0.0') api_host='127.0.0.1';; '[::]') api_host='[::1]';; esac
-for endpoint in health/live health; do
+for endpoint in health/live health health/config; do
   curl --fail --silent --show-error --max-time 5 "http://${api_host}:${api_port}/${endpoint}"
   printf '\n'
 done
+printf 'WEBSITE_ROOT='
+readlink -f /www/wwwroot/jiuchen-current
+if [ -r /etc/production.env ]; then
+  if grep -Eq '^ADMIN_AI_KEY_ENCRYPTION_KEY=.{40,}
+ /etc/production.env; then
+    echo 'ADMIN_AI_KEY_ENCRYPTION_KEY=PRESENT_SHAPED'
+  else
+    echo 'ADMIN_AI_KEY_ENCRYPTION_KEY=MISSING_OR_SHORT'
+  fi
+else
+  echo 'ADMIN_AI_KEY_ENCRYPTION_KEY=UNVERIFIED'
+fi
 echo 'ACTUAL_LISTENER_HEALTH_PASS (not business/device acceptance)'

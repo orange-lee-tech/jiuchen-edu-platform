@@ -12,7 +12,7 @@
 - 下一步必须先确认生产恢复点与迁移前提，再由用户单独授权生产变更。禁止把隔离 MySQL 通过或 CI 通过写成生产迁移、真实支付或真机验收通过。
 - 发布范围核对：生产候选 `1b6bce08860a4521771c194097f477a1621b333f` 相对最后记录的生产版本有 190 个变更文件；其中小程序 53 文件/3417 行变更、API 38 文件/2748 行变更、管理端 5 文件/353 行变更。此为当前整合发布候选，不能描述为只含 PR #6 的单独补丁。具体范围见预检文档。
 - 最新生产准备审计：最近一次有记录的 API 现场版本为 `dbd7d9a818523cc3b007afe47a03519510415652`；GitHub compare 确认合并候选是其后代（ahead 310 / behind 0）。本轮尚无新的 ECS 只读回执，切流前必须重查 current、previous、服务状态、健康、资源及官网未变。
-- 数据恢复证据：管理员 WSL 备份目录 `/home/orangelee-tech/jiuchen-backups/20261016-134131-cf772f`，已记录加密下载/校验及 17 表隔离 SQL 导入；既有迁移演练曾将该备份恢复到隔离 MySQL 并执行旧版 Profile/News/商业迁移，得到 28 表。但备份时间为 10 月 16 日，导入回执不证明当前生产行等价，也没有覆盖 PR #6 的三项新迁移；生产 DDL 前必须取得新鲜备份并在隔离副本完成恢复和新迁移演练。
+- 数据恢复证据：管理员 WSL 备份目录 `/home/orangelee-tech/jiuchen-backups/20261016-134131-cf772f`，已记录加密下载/校验及 17 表隔离 SQL 导入；既有迁移演练曾将该备份恢复到隔离 MySQL 并执行旧版 Profile/News/商业迁移，得到 28 表。但备份时间为 10 月 16 日，导入回执不证明当前生产行等价，也没有覆盖 PR #6 的五个候选迁移脚本；生产 DDL 前必须取得新鲜备份并在隔离副本完成恢复和新迁移演练。
 - PR #6 生产迁移待核顺序：确认既有商业四表（`payment_orders`、`credit_ledger_entries`、`credit_reservations`、`payment_notifications`）仍在且结构兼容；再按需执行 `db:upgrade:virtual-delivery`、`db:upgrade:admin-controls`、`db:upgrade:assessment-keys`、`db:upgrade:credit-plans`、`db:upgrade:dual-identity`。`db:upgrade:credit-payment` 已有 10 月 18 日生产执行记录，先核验、不盲目重跑。
 - 切流前必须确认 `ADMIN_AI_KEY_ENCRYPTION_KEY` 已安全配置且可恢复，密钥值不进入日志/Git/聊天。若旧 `admin_control_boxes` 中存在密文，需确认其可用主密钥；否则新对象初始化可能阻断 AI 调用。没有现役密钥对象时，首次新密钥保存也依赖该主密钥。
 - `db:upgrade:credit-plans` 会为新订单添加 nullable 快照列，旧订单金额/次数保持不变；若旧设置盒存在，会初始化旧次数方案（迁移默认次数需人工核实）但成本核验未确认时新订单不能开放。`db:upgrade:dual-identity` 会变更 `internal_ids` 唯一索引并为缺少 admin 绑定的活跃管理员生成绑定；它不是可简单反向撤销的纯新增 DDL，必须先在真实结构副本演练并检查回滚 API 兼容性。
