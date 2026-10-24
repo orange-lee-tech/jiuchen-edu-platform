@@ -142,7 +142,10 @@ export async function secureAssessmentModelFetch(endpoint: string, options: {
   return new Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>((resolve, reject) => {
     const request = httpsRequest(url, {
       method: options.method, headers: options.headers, signal: options.signal,
-      lookup: (_hostname, _options, callback) => callback(null, address.address, address.family),
+      lookup: (_hostname, lookupOptions, callback) => {
+        if (lookupOptions.all) callback(null, [address])
+        else callback(null, address.address, address.family)
+      },
     }, (response) => {
       const chunks: Buffer[] = []
       let size = 0
@@ -389,7 +392,7 @@ export async function testAssessmentKey(input: {
     else {
       await validateAssessmentApiUrl(baseUrl)
       const provider = createJsonModelProvider({
-        ...config, timeoutMs: 5000, jsonMode: true, temperature: 0,
+        ...config, timeoutMs: 20_000, jsonMode: true, temperature: 0,
         transport: secureAssessmentModelFetch,
       })
       await provider.generateJson({ system: '只返回 JSON 对象 {"ok":true}。', user: '连接测试', maxTokens: 32 })

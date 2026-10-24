@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm'
 import {
   boolean,
+  foreignKey,
+  index,
   int,
   json,
   mysqlEnum,
@@ -164,8 +166,7 @@ export const productKnowledgeDocuments = mysqlTable('product_knowledge_documents
 export const productKnowledgeChunks = mysqlTable('product_knowledge_chunks', {
   id: varchar('id', { length: 36 }).primaryKey(),
   documentId: varchar('document_id', { length: 36 })
-    .notNull()
-    .references(() => productKnowledgeDocuments.id),
+    .notNull(),
   chunkKey: varchar('chunk_key', { length: 220 }).notNull().unique(),
   kind: mysqlEnum('kind', [
     'product',
@@ -188,7 +189,13 @@ export const productKnowledgeChunks = mysqlTable('product_knowledge_chunks', {
   metadataJson: json('metadata_json'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
-})
+}, (table) => [
+  foreignKey({
+    name: 'product_chunks_document_fk',
+    columns: [table.documentId],
+    foreignColumns: [productKnowledgeDocuments.id],
+  }),
+])
 
 export const assessments = mysqlTable('assessments', {
   id: varchar('id', { length: 36 }).primaryKey(),
@@ -213,7 +220,10 @@ export const assessments = mysqlTable('assessments', {
   completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
-})
+}, (table) => [
+  index('assessments_user_id_idx').on(table.userId),
+  index('assessments_status_idx').on(table.status),
+])
 
 export const paymentOrders = mysqlTable('payment_orders', {
   id: varchar('id', { length: 36 }).primaryKey(),
