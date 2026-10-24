@@ -70,6 +70,10 @@ export async function readAssessmentCostFingerprint(
   const lockClause = lock ? ' FOR SHARE' : ''
   let head: KeyHeadRow | undefined
   try {
+    // A missing singleton row cannot be locked by SELECT ... FOR SHARE.
+    // Create it first in transactional callers, so first-time key initialization
+    // serializes with plan confirmation and order creation just like later switches.
+    if (lock) await executor.query('INSERT IGNORE INTO assessment_key_head (id) VALUES (1)')
     const [rows] = await executor.query<KeyHeadRow[]>(
       `SELECT active_object_id,version,initialized FROM assessment_key_head WHERE id=1${lockClause}`,
     )
