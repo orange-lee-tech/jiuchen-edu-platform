@@ -109,9 +109,24 @@ try {
   console.log('PLAN_COST_CLOCK_DIAGNOSTIC', JSON.stringify({
     ...clockRows[0], appNow: new Date().toISOString(),
   }))
+  assert.equal(Number(clockRows[0]?.cost_fresh), 1)
+  assert.ok(Math.abs(Number(clockRows[0]?.offset_seconds)) <= 1)
   const activated = await activateCreditPlan({ pool,actorId:adminA,id:candidate.id,
     expectedVersion:plans.head.version,currentPin:'333333',targetPin:'444444' })
   assert.equal(activated.activePlanId,candidate.id)
+  const invalidCandidate = await createCreditPlan({ pool,actorId:adminB,data: {
+    name:'成本时间拒绝验证',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
+    estimatedCostFen:1,costConfirmed:true,pin:'555555',
+  } })
+  for (const clockValue of ['NULL', 'CURRENT_TIMESTAMP() - INTERVAL 31 DAY',
+    'CURRENT_TIMESTAMP() + INTERVAL 1 DAY']) {
+    await pool.query(`UPDATE credit_plan_objects SET cost_verified_at=${clockValue} WHERE id=?`,
+      [invalidCandidate.id])
+    await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:invalidCandidate.id,
+      expectedVersion:activated.version,currentPin:'444444',targetPin:'555555' }),
+    { code:'plan_cost_missing_or_stale' })
+    assert.equal((await listCreditPlans(pool)).head.activePlanId,candidate.id)
+  }
   const [oldRows] = await pool.query<mysql.RowDataPacket[]>(
     'SELECT amount_fen,credit_amount,sku_key,plan_id FROM payment_orders WHERE id=?',[oldOrder])
   assert.equal(Number(oldRows[0]!.amount_fen),199)

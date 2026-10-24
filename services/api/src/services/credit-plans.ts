@@ -126,21 +126,24 @@ export async function createCreditPlan(input: { pool: mysql.Pool; actorId: strin
   try {
     await connection.beginTransaction()
     const head = await headForUpdate(connection)
-    const verifiedAt = data.costConfirmed && data.estimatedCostFen !== null ? new Date() : null
+    const costVerified = data.costConfirmed && data.estimatedCostFen !== null
+    const verifiedAt = costVerified ? new Date() : null
     let firstActive = false
     if (!Number(head.initialized)) {
       try { validatePlanCost(data.counts, data.estimatedCostFen, verifiedAt); firstActive = true }
       catch (error) { if (!(error instanceof ControlError)) throw error }
     }
     const objectPin = independentPin(data.pin)
+    // MySQL also evaluates freshness, so persist its own clock rather than a
+    // mysql2-formatted JavaScript Date from a potentially different time zone.
     await connection.query(
       `INSERT INTO credit_plan_objects
        (id,name,note,creator_user_id,pin_salt,pin_hash,count_jc000,count_jc001,count_jc002,count_jc003,
         estimated_cost_fen,cost_verified_at,status)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,IF(?,CURRENT_TIMESTAMP(),NULL),?)`,
       [id, data.name, data.note, input.actorId, objectPin.salt, objectPin.hash,
         data.counts.JC000, data.counts.JC001, data.counts.JC002, data.counts.JC003,
-        data.estimatedCostFen, verifiedAt, firstActive ? 'active' : 'candidate'],
+        data.estimatedCostFen, costVerified, firstActive ? 'active' : 'candidate'],
     )
     if (firstActive) {
       const controlPin = independentPin(data.pin)
