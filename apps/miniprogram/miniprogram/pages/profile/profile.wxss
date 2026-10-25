@@ -36,3 +36,22 @@
 .delete-button{margin-top:12rpx;color:#b23b36;background:#fff4f2;}
 button::after{border:0;}
 .account-note{margin-top:12rpx;font-size:21rpx;line-height:1.55;color:#526579;}
+
+/* 兼任身份编号输入框 */
+.identity-bind-input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 88rpx;
+  padding: 0 24rpx;
+  margin: 20rpx 0;
+  background: #ffffff;
+  border: 2rpx solid #4777b5;
+  border-radius: 10rpx;
+  color: #122640;
+  font-size: 27rpx;
+}
+
+.identity-bind-input-placeholder {
+  color: #78899b;
+}

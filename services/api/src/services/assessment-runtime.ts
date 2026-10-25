@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { ZodError } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import type {
   AssessmentEvidenceItem,
@@ -72,10 +73,36 @@ export class AssessmentProviderUnavailableError extends Error {
 }
 
 export class AssessmentEvidenceReferenceError extends Error {
-  constructor(message = 'assessment_evidence_reference_invalid') {
+  constructor(message = 'assessment_evidence_reference_invalid', readonly fieldPath = 'evidenceRefs') {
     super(message)
     this.name = 'AssessmentEvidenceReferenceError'
   }
+}
+
+// Diagnostic paths contain schema keys and array positions only. Never log
+// Zod's message, which can contain values from the provider response.
+const diagnosticFields = new Set([
+  'profileSummary', 'strengths', 'risks', 'targetAssessments', 'recommendedActions',
+  'similarCases', 'uncertainties', 'disclaimer', 'title', 'detail', 'evidenceRefs',
+  'schoolName', 'programName', 'tier', 'rationale', 'gapItems', 'actions',
+  'priority', 'timeframe', 'caseId', 'sourceType', 'similarityReason',
+  'resultSummary', 'evidenceRef',
+])
+
+export function assessmentValidationDiagnostic(error: unknown) {
+  if (error instanceof ZodError) {
+    return error.issues.slice(0, 8).map(issue => ({
+      errorType: 'schema',
+      fieldPath: issue.path.map(part => typeof part === 'number' ? String(part) :
+        diagnosticFields.has(String(part)) ? String(part) : '*').join('.') || '$',
+      ruleCode: issue.code === 'custom' ? 'precise_probability' : issue.code,
+    }))
+  }
+  if (error instanceof AssessmentEvidenceReferenceError) {
+    return [{ errorType: 'evidence', fieldPath: error.fieldPath,
+      ruleCode: error.message }]
+  }
+  return []
 }
 
 export class AssessmentEvidenceConflictError extends Error {
@@ -193,7 +220,7 @@ class JsonAssessmentModelProvider implements AssessmentModelProvider {
         '顶层必须是 object；第一个非空白字符必须是 {，最后一个非空白字符必须是 }。禁止只输出数字、字符串、数组、布尔值或 null。' +
         '输出必须匹配 assessment-output-v1。以下仅是字段与类型骨架，不是事实示例：' +
         outputShape +
-        '。可使用空数组，但已提供获奖或科研产出时必须审查并列出有输入引用支持的真实优势；不能凭参与经历虚构比较优势。不得省略顶层字段。' +
+        '。可使用空数组；已提供获奖或科研产出时应审查有输入引用支持的真实优势，证据不足则保持 strengths 为空并在 uncertainties 写明待核查，不得凭参与经历虚构比较优势。不得省略顶层字段。' +
         '禁止生成精确录取概率。禁止发明 evidence ref、案例、院校事实或来源。' +
         '任何关于院校/项目竞争强度、典型生源、分数阈值、论文竞赛门槛、通常要求等外部事实，只有在 knowledge.evidence 明确支持时才能陈述并引用对应 ref。' +
         '如果只有用户输入或历史案例证据，只能写成基于当前输入/案例的有限推断，不得包装成普遍事实；不得自行添加证据中没有出现的分数阈值、论文等级或硬性要求。' +
@@ -303,7 +330,13 @@ function conservativelySanitizeEvidenceReferences(
       return evidenceRefs.length ? [{ ...finding, evidenceRefs }] : []
     })
 
-  const targetAssessments = output.targetAssessments.map((target, index) => {
+  const targetAssessments = output.targetAssessments.map((target) => {
+    const index = input.targets.findIndex(item =>
+      item.schoolName.trim().toLocaleLowerCase('zh-CN') ===
+        target.schoolName.trim().toLocaleLowerCase('zh-CN') &&
+      (item.programName?.trim().toLocaleLowerCase('zh-CN') || '') ===
+        (target.programName?.trim().toLocaleLowerCase('zh-CN') || ''))
+    if (index < 0) return target
     const evidenceRefs = sanitizeRefs(target.evidenceRefs)
     const hasRetrievedTargetEvidence = evidenceRefs.some((ref) => {
       const evidence = evidenceByRef.get(ref)
@@ -323,7 +356,7 @@ function conservativelySanitizeEvidenceReferences(
     return {
       ...target,
       tier: 'insufficient_data' as const,
-      rationale: '当前检索证据不足，无法对该目标作出可靠梯度判断。',
+      rationale: '当前检索证据不足，无法对该目标作出可靠梯度判断；请核对目标项目官方招生要求。',
       gapItems: [],
       actions: [],
       evidenceRefs:
@@ -357,6 +390,39 @@ function hasDocumentedAchievement(input: AssessmentInput): boolean {
     input.competitions.some(item => Boolean(item.award?.trim()))
 }
 
+// A model may claim a confident tier with only the student's own target entry.
+// Replace that unsupported conclusion before spending a second model request.
+// Unknown references still fail normal validation and use the bounded repair.
+function downgradeUnprovenTargets(rawOutput: unknown,
+  input: AssessmentInput, knowledge: AssessmentKnowledgeContext): AssessmentOutput {
+  const output = validateAssessmentOutput(rawOutput)
+  const key = (school: string, program?: string | null) =>
+    `${school.trim().toLocaleLowerCase('zh-CN')}|${program?.trim().toLocaleLowerCase('zh-CN') ?? ''}`
+  const expected = input.targets.map(target => key(target.schoolName, target.programName))
+  const actual = output.targetAssessments.map(target => key(target.schoolName, target.programName))
+  const unexpected = actual.some((item, index) =>
+    actual.indexOf(item) !== index || !expected.includes(item))
+  const missing = unexpected ? [] : input.targets.flatMap((target, index) =>
+    actual.includes(expected[index]) ? [] : [{
+      schoolName: target.schoolName, programName: target.programName,
+      tier: 'insufficient_data' as const,
+      rationale: '该目标缺少可靠的检索证据，尚不能作出梯度判断；请核对官方招生要求。',
+      gapItems: [], actions: [], evidenceRefs: [`input:target:${index + 1}`],
+    }])
+  const allowed = new Set([...getAllowedInputEvidenceRefs(input),
+    ...knowledge.evidence.map(item => item.ref)])
+  const retrieved = new Set(knowledge.evidence.filter(item =>
+    ['school', 'program', 'case'].includes(item.kind)).map(item => item.ref))
+  return { ...output, targetAssessments: [...output.targetAssessments, ...missing].map(target => {
+    if (target.tier === 'insufficient_data' ||
+      target.evidenceRefs.some(ref => !allowed.has(ref) || retrieved.has(ref))) return target
+    return { ...target, tier: 'insufficient_data' as const,
+      rationale: '当前检索证据不足，无法对该目标作出可靠梯度判断；请核对目标项目官方招生要求。',
+      gapItems: [], actions: [],
+    }
+  }) }
+}
+
 function validateAssessmentResult(
   rawOutput: unknown,
   input: AssessmentInput,
@@ -376,25 +442,28 @@ function validateAssessmentResult(
 
   if (JSON.stringify(expectedTargets) !== JSON.stringify(actualTargets)) {
     throw new AssessmentEvidenceReferenceError(
-      'assessment_target_coverage_invalid',
+      'assessment_target_coverage_invalid', 'targetAssessments',
     )
   }
 
-  const validateGeneralRefs = (refs: string[]) => {
+  const validateGeneralRefs = (refs: string[], fieldPath: string) => {
     for (const ref of refs) {
       if (allowedInputEvidence.has(ref)) continue
       if (!evidenceByRef.has(ref)) {
-        throw new AssessmentEvidenceReferenceError()
+        throw new AssessmentEvidenceReferenceError('assessment_evidence_reference_invalid', fieldPath)
       }
     }
   }
 
-  for (const finding of [...output.strengths, ...output.risks]) {
-    validateGeneralRefs(finding.evidenceRefs)
+  for (const [index, finding] of output.strengths.entries()) {
+    validateGeneralRefs(finding.evidenceRefs, `strengths.${index}.evidenceRefs`)
+  }
+  for (const [index, finding] of output.risks.entries()) {
+    validateGeneralRefs(finding.evidenceRefs, `risks.${index}.evidenceRefs`)
   }
 
-  for (const target of output.targetAssessments) {
-    validateGeneralRefs(target.evidenceRefs)
+  for (const [index, target] of output.targetAssessments.entries()) {
+    validateGeneralRefs(target.evidenceRefs, `targetAssessments.${index}.evidenceRefs`)
     const hasRetrievedTargetEvidence = target.evidenceRefs.some((ref) => {
       const evidence = evidenceByRef.get(ref)
       return evidence && ['school', 'program', 'case'].includes(evidence.kind)
@@ -403,11 +472,12 @@ function validateAssessmentResult(
     if (!hasRetrievedTargetEvidence && target.tier !== 'insufficient_data') {
       throw new AssessmentEvidenceReferenceError(
         'target_assessment_requires_retrieved_evidence',
+        `targetAssessments.${index}.evidenceRefs`,
       )
     }
   }
 
-  for (const similarCase of output.similarCases) {
+  for (const [index, similarCase] of output.similarCases.entries()) {
     const evidence = evidenceByRef.get(similarCase.evidenceRef)
     if (
       !evidence ||
@@ -416,7 +486,7 @@ function validateAssessmentResult(
       evidence.sourceType !== similarCase.sourceType
     ) {
       throw new AssessmentEvidenceReferenceError(
-        'similar_case_reference_invalid',
+        'similar_case_reference_invalid', `similarCases.${index}.evidenceRef`,
       )
     }
   }
@@ -429,6 +499,8 @@ export async function executeAssessment(
   input: AssessmentInput,
   accountEvidence: AssessmentEvidenceItem[] = [],
   onStage?: (stage: 'knowledge_retrieval' | 'model_request' | 'report_validation') => void,
+  onModelCall?: (event: { phase: 'initial' | 'repair'; requestCount: number;
+    outcome: 'started' | 'completed' | 'failed' }) => void,
 ): Promise<{
   output: AssessmentOutput
   evidence: AssessmentEvidenceItem[]
@@ -459,13 +531,26 @@ export async function executeAssessment(
   } : retrieved
   let rawOutput: unknown
   let repairUsed = false
+  let requestCount = 0
+  const callModel = async (phase: 'initial' | 'repair', call: () => Promise<unknown>) => {
+    requestCount += 1
+    onStage?.('model_request')
+    onModelCall?.({ phase, requestCount, outcome: 'started' })
+    try {
+      const value = await call()
+      onModelCall?.({ phase, requestCount, outcome: 'completed' })
+      return value
+    } catch (error) {
+      onModelCall?.({ phase, requestCount, outcome: 'failed' })
+      throw error
+    }
+  }
 
   try {
-    onStage?.('model_request')
-    rawOutput = await runtime.provider.analyze({
+    rawOutput = await callModel('initial', () => runtime.provider.analyze({
       assessment: input,
       knowledge,
-    })
+    }))
   } catch (error) {
     if (
       !(error instanceof JsonModelProviderInvalidJsonError) ||
@@ -475,36 +560,36 @@ export async function executeAssessment(
     }
 
     repairUsed = true
-    onStage?.('model_request')
-    rawOutput = await runtime.provider.repair({
+    rawOutput = await callModel('repair', () => runtime.provider.repair!({
       assessment: input,
       knowledge,
       invalidOutput: error.rawText,
       validationError: error.message,
-    })
+    }))
   }
 
   let output: AssessmentOutput
 
   try {
     onStage?.('report_validation')
-    output = validateAssessmentResult(rawOutput, input, knowledge)
+    output = validateAssessmentResult(
+      downgradeUnprovenTargets(rawOutput, input, knowledge), input, knowledge)
   } catch (error) {
     if (!runtime.provider.repair || repairUsed) throw error
 
     repairUsed = true
-    onStage?.('model_request')
-    rawOutput = await runtime.provider.repair({
+    rawOutput = await callModel('repair', () => runtime.provider.repair!({
       assessment: input,
       knowledge,
       invalidOutput: rawOutput,
       validationError:
         error instanceof Error ? error.message : 'assessment_output_invalid',
-    })
+    }))
 
     try {
       onStage?.('report_validation')
-      output = validateAssessmentResult(rawOutput, input, knowledge)
+      output = validateAssessmentResult(
+        downgradeUnprovenTargets(rawOutput, input, knowledge), input, knowledge)
     } catch (repairError) {
       if (
         !(repairError instanceof AssessmentEvidenceReferenceError) ||
@@ -523,24 +608,22 @@ export async function executeAssessment(
     }
   }
 
-  // A documented award or research output must receive a real evidence-backed
-  // strengths review before this report can be marked succeeded and charged.
-  // This uses the existing single repair budget and never manufactures a finding.
+  // Self-reported achievements are not automatically a verified competitive
+  // advantage. A cautious empty strengths list is valid; make the gap explicit
+  // instead of charging for a second call that may invent an advantage.
   if (output.strengths.length === 0 && hasDocumentedAchievement(input)) {
-    if (runtime.provider.repair && !repairUsed) {
-      repairUsed = true
-      onStage?.('model_request')
-      rawOutput = await runtime.provider.repair({
-        assessment: input,
-        knowledge,
-        invalidOutput: rawOutput,
-        validationError: 'assessment_strengths_missing_for_documented_achievement',
-      })
-      onStage?.('report_validation')
-      output = validateAssessmentResult(rawOutput, input, knowledge)
-    }
-    if (output.strengths.length === 0) {
-      throw new AssessmentEvidenceReferenceError('assessment_strengths_missing')
+    output = {
+      ...output,
+      uncertainties: output.uncertainties.length < 12 ? [
+        ...output.uncertainties,
+        '自填科研或获奖材料尚不足以核实比较优势；需核对成果、个人贡献和证明材料。',
+      ] : output.uncertainties,
+      recommendedActions: output.recommendedActions.length < 20 ? [
+        ...output.recommendedActions,
+        { priority: 'medium', title: '核实科研与获奖材料',
+          rationale: '整理可验证的成果、个人贡献及证明材料，再判断是否构成申请优势。',
+          timeframe: null },
+      ] : output.recommendedActions,
     }
   }
 

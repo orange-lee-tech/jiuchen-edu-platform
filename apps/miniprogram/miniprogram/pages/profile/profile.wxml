@@ -23,7 +23,7 @@
         <button class="mini" disabled="{{identityBusy}}" data-id="{{item.id}}" bindtap="onUnbindIdentity">解除</button>
       </view>
       <view wx:if="{{identities.length === 1 && identities[0].type === 'admin'}}">
-        <input class="input" value="{{identityInput}}" placeholder="输入可用老师或学员内部编号" bindinput="onAdditionalIdInput" />
+        <input class="identity-bind-input" placeholder-class="identity-bind-input-placeholder" value="{{identityInput}}" placeholder="请填写未认领的学员或老师内部编号" bindinput="onAdditionalIdInput" />
         <button disabled="{{identityBusy}}" bindtap="onBindAdditionalIdentity">绑定兼任身份</button>
       </view>
       <text wx:if="{{identityError}}" class="card-note">{{identityError}}</text>

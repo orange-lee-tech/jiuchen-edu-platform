@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildCreditBalance, persistAssessmentFailureAndReleaseCredit,
+import { buildCreditBalance, CommercialStateError, persistAssessmentFailureAndReleaseCredit,
   persistAssessmentSuccessAndConsumeCredit } from './credit-ledger.js'
 
 test('available credit subtracts held reservations from settled ledger balance', () => {
@@ -42,7 +42,11 @@ test('terminal persistence consumes once, while failed assessment releases its h
       }
       if (sql.includes("SET status = 'consumed'")) state.reservation = 'consumed'
       if (sql.includes("SET status = 'failed'")) state.status = 'failed'
-      if (sql.includes("SET status = 'released'")) state.reservation = 'released'
+      if (sql.includes("SET status = 'released'")) {
+        const affectedRows = state.reservation === 'held' ? 1 : 0
+        state.reservation = 'released'
+        return [{ affectedRows }]
+      }
       return [[]]
     },
   }
@@ -56,10 +60,20 @@ test('terminal persistence consumes once, while failed assessment releases its h
     { consumed: false, idempotent: true })
   assert.equal(state.debitInserts, 1)
   assert.equal(state.reservation, 'consumed')
+  await assert.rejects(persistAssessmentFailureAndReleaseCredit({ database,
+    userId: 'user', assessmentId: 'assessment', failureCode: 'late_failure',
+    completedAt: new Date() }),
+  (error: unknown) => error instanceof CommercialStateError &&
+    error.code === 'assessment_credit_state_conflict')
+  assert.equal(state.status, 'succeeded')
+  assert.equal(state.debitInserts, 1)
+  assert.equal(state.reservation, 'consumed')
 
   state.status = 'running'; state.consumed = false; state.reservation = 'held'; state.debit = false
-  await persistAssessmentFailureAndReleaseCredit({ database, userId: 'user',
-    assessmentId: 'assessment', failureCode: 'assessment_ai_timeout', completedAt: new Date() })
+  const failureInput = { database, userId: 'user', assessmentId: 'assessment',
+    failureCode: 'assessment_ai_timeout', completedAt: new Date() }
+  assert.deepEqual(await persistAssessmentFailureAndReleaseCredit(failureInput), { released: true })
+  assert.deepEqual(await persistAssessmentFailureAndReleaseCredit(failureInput), { released: false })
   assert.equal(state.status, 'failed')
   assert.equal(state.reservation, 'released')
   assert.equal(state.debitInserts, 1)

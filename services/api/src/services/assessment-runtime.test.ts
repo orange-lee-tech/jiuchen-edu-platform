@@ -4,6 +4,7 @@ import { JsonModelProviderInvalidJsonError } from './ai-provider.js'
 import {
   AssessmentEvidenceConflictError,
   AssessmentEvidenceReferenceError,
+  assessmentValidationDiagnostic,
   AssessmentProviderUnavailableError,
   CompositeAssessmentRetriever,
   createAssessmentRuntimeFromEnv,
@@ -105,7 +106,7 @@ test('assessment runtime passes retrieved evidence into provider and validates o
 })
 
 
-test('assessment runtime rejects target analysis without retrieved evidence', async () => {
+test('assessment runtime downgrades unsupported target tier without another supplier call', async () => {
   const retriever: AssessmentRetriever = {
     async retrieve() {
       return {
@@ -148,12 +149,9 @@ test('assessment runtime rejects target analysis without retrieved evidence', as
     },
   }
 
-  await assert.rejects(
-    executeAssessment({ retriever, provider }, input),
-    (error: unknown) =>
-      error instanceof AssessmentEvidenceReferenceError &&
-      error.message === 'target_assessment_requires_retrieved_evidence',
-  )
+  const result = await executeAssessment({ retriever, provider }, input)
+  assert.equal(result.output.targetAssessments[0].tier, 'insufficient_data')
+  assert.match(result.output.targetAssessments[0].rationale, /证据不足/)
 })
 
 test('assessment runtime allows insufficient_data without retrieved target evidence', async () => {
@@ -752,7 +750,7 @@ test('assessment runtime conservatively downgrades target when repeated invalid 
 
   assert.equal(repairs, 1)
   assert.equal(target.tier, 'insufficient_data')
-  assert.equal(target.rationale, '当前检索证据不足，无法对该目标作出可靠梯度判断。')
+  assert.match(target.rationale, /当前检索证据不足，无法对该目标作出可靠梯度判断/)
   assert.deepEqual(target.gapItems, [])
   assert.deepEqual(target.actions, [])
   assert.deepEqual(target.evidenceRefs, ['input:target:1'])
@@ -873,7 +871,7 @@ test('assessment runtime does not sanitize target coverage mismatches', async ()
   assert.equal(repairs, 1)
 })
 
-test('documented award with empty strengths gets one evidence-backed repair', async () => {
+test('documented award without a verified advantage yields a limitation without extra call', async () => {
   const assessment = { ...input, competitions: [{ name: '校内赛事', award: '一等奖' }] }
   const emptyOutput = {
     profileSummary: '用户提供了获奖记录。',
@@ -893,24 +891,17 @@ test('documented award with empty strengths gets one evidence-backed repair', as
     provider: {
       provider: 'mock', model: 'mock', isConfigured: () => true,
       async analyze() { return emptyOutput },
-      async repair({ validationError }) {
-        repairs += 1
-        assert.equal(validationError, 'assessment_strengths_missing_for_documented_achievement')
-        return { ...emptyOutput, strengths: [{
-          title: '有可核实的获奖经历',
-          detail: '用户记录了一项校内赛事一等奖，具体竞争水平仍需核实。',
-          evidenceRefs: ['input:competition:1'],
-        }] }
-      },
+      async repair() { repairs += 1; throw new Error('repair not required') },
     },
   }
   const result = await executeAssessment(runtime, assessment)
-  assert.equal(repairs, 1)
-  assert.equal(result.output.strengths.length, 1)
-  assert.deepEqual(result.output.strengths[0].evidenceRefs, ['input:competition:1'])
+  assert.equal(repairs, 0)
+  assert.equal(result.output.strengths.length, 0)
+  assert.match(result.output.uncertainties.at(-1)!, /需核对成果/)
+  assert.equal(result.output.recommendedActions.at(-1)?.title, '核实科研与获奖材料')
 })
 
-test('documented achievement cannot be persisted as a successful empty-strength report', async () => {
+test('documented research without proven advantage remains truthful and reportable', async () => {
   const assessment = { ...input, research: [{ title: '校内研究项目', output: '完成项目报告' }] }
   const emptyOutput = {
     profileSummary: '用户提供了科研产出。',
@@ -933,10 +924,43 @@ test('documented achievement cannot be persisted as a successful empty-strength 
       async repair() { repairs += 1; return emptyOutput },
     },
   }
-  await assert.rejects(
-    executeAssessment(runtime, assessment),
-    (error: unknown) => error instanceof AssessmentEvidenceReferenceError &&
-      error.message === 'assessment_strengths_missing',
-  )
-  assert.equal(repairs, 1)
+  const result = await executeAssessment(runtime, assessment)
+  assert.equal(repairs, 0)
+  assert.equal(result.output.strengths.length, 0)
+  assert.match(result.output.uncertainties.at(-1)!, /比较优势/)
+})
+
+test('a valid partial report covers every requested target without inventing an admission judgment', async () => {
+  const assessment = { ...input, targets: [
+    { schoolName: '目标大学' }, { schoolName: '第二目标大学', programName: '计算机' },
+  ] }
+  const modelCalls: string[] = []
+  const result = await executeAssessment({
+    retriever: { async retrieve() { return { version: 'empty-v1', evidence: [] } } },
+    provider: {
+      provider: 'mock', model: 'mock', isConfigured: () => true,
+      async analyze() { return {
+        profileSummary: '仅依据学员填写的背景。', strengths: [], risks: [],
+        targetAssessments: [{ schoolName: '目标大学', tier: 'insufficient_data',
+          rationale: '尚无官方项目依据。', gapItems: [], actions: [],
+          evidenceRefs: ['input:target:1'] }],
+        recommendedActions: [], similarCases: [], uncertainties: [],
+        disclaimer: '规划辅助，不保证录取。',
+      } },
+      async repair() { throw new Error('repair must not run') },
+    },
+  }, assessment, [], undefined, event => {
+    if (event.outcome === 'started') modelCalls.push(event.phase)
+  })
+  assert.deepEqual(modelCalls, ['initial'])
+  assert.equal(result.output.targetAssessments.length, 2)
+  assert.equal(result.output.targetAssessments[1].tier, 'insufficient_data')
+  assert.deepEqual(result.output.targetAssessments[1].evidenceRefs, ['input:target:2'])
+})
+
+test('assessment validation diagnostic has field and rule but no provider values', () => {
+  const diagnostic = assessmentValidationDiagnostic(new AssessmentEvidenceReferenceError(
+    'similar_case_reference_invalid', 'similarCases.0.evidenceRef'))
+  assert.deepEqual(diagnostic, [{ errorType: 'evidence',
+    fieldPath: 'similarCases.0.evidenceRef', ruleCode: 'similar_case_reference_invalid' }])
 })

@@ -46,6 +46,7 @@ Page({
       })
     })
     if (getSavedAuthResult() && !isReadOnly()) void this.loadIdentities()
+    else this.setData({ identities: [], identityError: '', identityInput: '' })
   },
   async loadIdentities() {
     try {
@@ -57,7 +58,11 @@ Page({
     this.setData({ identityInput: event.detail.value })
   },
   async onBindAdditionalIdentity() {
-    if (this.data.identityBusy || !this.data.identityInput.trim()) return
+    if (this.data.identityBusy) return
+    if (!this.data.identityInput.trim()) {
+      wx.showToast({ title: '请先填写内部编号', icon: 'none' })
+      return
+    }
     this.setData({ identityBusy: true })
     try {
       await bindMyAdditionalIdentity(this.data.identityInput.trim())
@@ -73,7 +78,11 @@ Page({
     this.setData({ identityBusy: true })
     try {
       await switchMyIdentityRole(role)
-      await refreshAuthResult()
+      const refreshed = await refreshAuthResult()
+      if (refreshed?.user.role !== role) {
+        this.setData({ identityError: '身份已切换，但页面未完成刷新。请重新打开小程序后确认当前身份。' })
+        return
+      }
       await this.loadIdentities()
       wx.showToast({ title: '身份已切换', icon: 'success' })
     } catch (error) { wx.showToast({ title: friendlyRequestError(error, '身份切换失败'), icon: 'none' }) }

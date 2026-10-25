@@ -535,12 +535,13 @@ export async function persistAssessmentFailureAndReleaseCredit(input: {
         input.userId,
       ],
     )
-    await connection.query(
+    const [released] = await connection.query<mysql.ResultSetHeader>(
       `UPDATE credit_reservations
        SET status = 'released'
        WHERE assessment_id = ? AND user_id = ? AND status = 'held'`,
       [input.assessmentId, input.userId],
     )
+    return { released: released.affectedRows === 1 }
   })
 }
 

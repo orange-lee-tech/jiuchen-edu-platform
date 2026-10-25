@@ -1,5 +1,6 @@
 import { and, asc, eq } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
+import type mysql from 'mysql2/promise'
 import type { FastifyBaseLogger } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
 import { assessments } from '../db/schema.js'
@@ -12,6 +13,7 @@ import {
 import {
   AssessmentEvidenceReferenceError,
   AssessmentProviderUnavailableError,
+  assessmentValidationDiagnostic,
   executeAssessment,
   type AssessmentRuntime,
 } from './assessment-runtime.js'
@@ -41,6 +43,7 @@ export type AssessmentBackgroundJob = {
   id: string
   userId: string
   inputJson: unknown
+  releaseLease?: () => Promise<void>
 }
 
 export interface AssessmentBackgroundStore {
@@ -54,10 +57,70 @@ export interface AssessmentBackgroundStore {
     job: AssessmentBackgroundJob,
     failureCode: string,
     completedAt: Date,
-  ): Promise<void>
+  ): Promise<{ creditSettlement: 'release_committed' | 'no_held_reservation' | 'not_enforced' } | void>
 }
 
 type WorkerLogger = Pick<FastifyBaseLogger, 'error' | 'info' | 'warn'>
+
+export async function acquireAssessmentLease(
+  pool: Pick<mysql.Pool, 'getConnection'>, assessmentId: string,
+): Promise<(AssessmentBackgroundJob & { releaseLease: () => Promise<void> }) | null> {
+  const lease = await pool.getConnection()
+  const name = `jiuchen:assessment:${assessmentId}`
+  let acquired = false
+  let closed = false
+  const releaseLease = async () => {
+    if (closed) return
+    closed = true
+    try {
+      const [rows] = await lease.query<mysql.RowDataPacket[]>(
+        'SELECT RELEASE_LOCK(?) AS released', [name])
+      if (Number(rows[0]?.released) !== 1) {
+        throw new Error('assessment_lease_release_failed')
+      }
+      lease.release()
+    } catch (error) {
+      // A possibly held named lock must never go back into the pool.
+      lease.destroy()
+      throw error
+    }
+  }
+  try {
+    const [locks] = await lease.query<mysql.RowDataPacket[]>(
+      'SELECT GET_LOCK(?, 0) AS acquired', [name])
+    const lockResult = Number(locks[0]?.acquired)
+    if (lockResult !== 1) {
+      closed = true
+      if (lockResult === 0) {
+        try { lease.release() }
+        catch (error) { lease.destroy(); throw error }
+      } else lease.destroy()
+      return null
+    }
+    acquired = true
+    // Read on the lock-owning connection. The earlier scan may already be stale.
+    const [rows] = await lease.query<mysql.RowDataPacket[]>(
+      `SELECT id, user_id AS userId, input_json AS inputJson, status
+       FROM assessments WHERE id = ? LIMIT 1`, [assessmentId])
+    const row = rows[0]
+    if (!row || row.status !== 'running') {
+      await releaseLease()
+      return null
+    }
+    return { id: String(row.id), userId: String(row.userId),
+      inputJson: row.inputJson, releaseLease }
+  } catch (error) {
+    if (!closed) {
+      if (acquired) {
+        try { await releaseLease() } catch { /* releaseLease destroyed the connection */ }
+      } else {
+        closed = true
+        lease.destroy()
+      }
+    }
+    throw error
+  }
+}
 
 export type AssessmentRunDispatcher = {
   start(): void
@@ -144,6 +207,9 @@ export async function processAssessmentBackgroundJob(input: {
   let result: Awaited<ReturnType<typeof executeAssessment>>
   let failureStage: 'account_context' | 'knowledge_retrieval' | 'model_request' |
     'report_validation' = 'account_context'
+  let modelRequestCount = 0
+  let repairRequestCount = 0
+  let repairOutcome: 'not_attempted' | 'started' | 'completed' | 'failed' = 'not_attempted'
   try {
     const accountEvidence = input.accountContextLoader ? await input.accountContextLoader({
       userId: job.userId,
@@ -152,7 +218,16 @@ export async function processAssessmentBackgroundJob(input: {
       includeRecentAssessments: normalizedInput.contextOptions?.includeRecentAssessments !== false,
     }) : []
     result = await executeAssessment(runtime, normalizedInput, accountEvidence,
-      stage => { failureStage = stage })
+      stage => { failureStage = stage }, event => {
+        modelRequestCount = event.requestCount
+        if (event.phase === 'repair') {
+          repairRequestCount = 1
+          repairOutcome = event.outcome
+        }
+        logger.info({ assessmentId: job.id, requestId, modelCallPhase: event.phase,
+          modelRequestCount, repairRequestCount, modelCallOutcome: event.outcome,
+          ...diagnostics() }, 'Assessment model call stage')
+      })
   } catch (error) {
     const completedAt = new Date()
     const classified = classifyAssessmentFailure(error)
@@ -167,14 +242,22 @@ export async function processAssessmentBackgroundJob(input: {
     logger.warn(
       { assessmentId: job.id, requestId, failureStage,
         errorCategory: category, providerHttpStatus: classified.httpStatus,
+        validationIssues: assessmentValidationDiagnostic(error),
+        modelRequestCount, repairRequestCount, repairOutcome,
+        repairResult: repairRequestCount === 0 ? 'not_attempted' :
+          String(failureStage) === 'report_validation' ? 'report_invalid' : repairOutcome,
         ...diagnostics(), failureCode, elapsedMs: Date.now() - startedAt },
       'Assessment background execution failed',
     )
-    await store.persistFailure(job, failureCode, completedAt)
+    const settlement = await store.persistFailure(job, failureCode, completedAt)
     logger.info({ assessmentId: job.id, requestId, failureStage: 'terminal_persistence',
-      reportPersisted: false, creditReleased: input.creditEnforcementEnabled === true ? true : null,
+      reportPersisted: false,
+      creditSettlement: settlement?.creditSettlement ?? 'not_observed',
+      modelRequestCount, repairRequestCount, repairOutcome,
+      repairResult: repairRequestCount === 0 ? 'not_attempted' :
+        String(failureStage) === 'report_validation' ? 'report_invalid' : repairOutcome,
       elapsedMs: Date.now() - startedAt },
-    'Assessment failure persisted and credit released')
+    'Assessment failure persisted with credit settlement state')
     await notifyTerminalState({
       adapter: notification,
       event: {
@@ -191,7 +274,10 @@ export async function processAssessmentBackgroundJob(input: {
 
   const completedAt = new Date()
   logger.info({ assessmentId: job.id, requestId, ...diagnostics(),
-    reportSchemaValid: true, reportPersisted: false, elapsedMs: Date.now() - startedAt },
+    reportSchemaValid: true, reportPersisted: false, modelRequestCount,
+    repairRequestCount, repairOutcome,
+    repairResult: repairRequestCount === 0 ? 'not_attempted' : 'report_valid',
+    elapsedMs: Date.now() - startedAt },
   'Assessment report validated before persistence')
   try {
     await store.persistSuccess(job, result, completedAt)
@@ -203,6 +289,8 @@ export async function processAssessmentBackgroundJob(input: {
   }
   logger.info({ assessmentId: job.id, requestId, ...diagnostics(),
     reportSchemaValid: true, reportPersisted: true,
+    modelRequestCount, repairRequestCount, repairOutcome,
+    repairResult: repairRequestCount === 0 ? 'not_attempted' : 'report_valid',
     creditConsumed: input.creditEnforcementEnabled === true ? true : null,
     elapsedMs: Date.now() - startedAt }, 'Assessment report persisted')
   await notifyTerminalState({
@@ -219,24 +307,33 @@ export async function processAssessmentBackgroundJob(input: {
   return 'succeeded'
 }
 
-function createConfiguredStore(
+export function createConfiguredStore(
   database: Extract<DatabaseContext, { configured: true }>,
   commercial: AssessmentCommercialOptions,
 ): AssessmentBackgroundStore {
+  const batchSize = 32
+  let scanOffset = 0
   return {
     async nextRunning() {
-      const [row] = await database.db
-        .select({
-          id: assessments.id,
-          userId: assessments.userId,
-          inputJson: assessments.inputJson,
-        })
+      const rows = await database.db
+        .select({ id: assessments.id })
         .from(assessments)
         .where(eq(assessments.status, 'running'))
-        .orderBy(asc(assessments.startedAt), asc(assessments.createdAt))
-        .limit(1)
+        .orderBy(asc(assessments.startedAt), asc(assessments.createdAt), asc(assessments.id))
+        .limit(batchSize)
+        .offset(scanOffset)
 
-      return row ?? null
+      for (const row of rows) {
+        // Other workers may hold earlier candidates; try later jobs in this
+        // bounded batch, then rotate to the next batch on the next poll.
+        const job = await acquireAssessmentLease(database.pool, row.id)
+        if (job) {
+          scanOffset = 0
+          return job
+        }
+      }
+      scanOffset = rows.length === batchSize ? scanOffset + batchSize : 0
+      return null
     },
 
     async persistSuccess(job, result, completedAt) {
@@ -278,14 +375,15 @@ function createConfiguredStore(
 
     async persistFailure(job, failureCode, completedAt) {
       if (commercial.creditEnforcementEnabled) {
-        await persistAssessmentFailureAndReleaseCredit({
+        const result = await persistAssessmentFailureAndReleaseCredit({
           database,
           userId: job.userId,
           assessmentId: job.id,
           failureCode,
           completedAt,
         })
-        return
+        return { creditSettlement: result.released ? 'release_committed' as const :
+          'no_held_reservation' as const }
       }
 
       await database.db
@@ -301,6 +399,7 @@ function createConfiguredStore(
           eq(assessments.userId, job.userId),
           eq(assessments.status, 'running'),
         ))
+      return { creditSettlement: 'not_enforced' as const }
     },
   }
 }
@@ -358,6 +457,10 @@ export function createAssessmentBackgroundWorker(input: {
             'Assessment background worker could not persist terminal state',
           )
           break
+        } finally {
+          try { await job.releaseLease?.() }
+          catch { input.logger.error({ assessmentId: job.id,
+            failureStage: 'worker_lease' }, 'Assessment worker lease release failed') }
         }
       }
     } catch (error) {

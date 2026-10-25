@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  acquireAssessmentLease,
+  createConfiguredStore,
   processAssessmentBackgroundJob,
   type AssessmentBackgroundStore,
 } from './assessment-background.js'
@@ -236,4 +238,160 @@ test('background account-context preferences can disable both sources', async ()
   })
   assert.equal(result,'succeeded')
   assert.deepEqual(calls,[{userId:'owner',assessmentId:'skip',includePlanning:false,includeRecentAssessments:false}])
+})
+
+test('invalid report after one repair logs only schema paths and exact call count', async () => {
+  const logs: unknown[] = []
+  let repairs = 0
+  const runtime = createSuccessRuntime()
+  runtime.provider.analyze = async () => ({ secretStudentText: 'private student details' })
+  runtime.provider.repair = async () => {
+    repairs += 1
+    return { secretStudentText: 'private student details' }
+  }
+  const result = await processAssessmentBackgroundJob({
+    job: { id: 'assessment-schema', userId: 'user', inputJson: assessmentInput },
+    runtime,
+    store: { async nextRunning() { return null },
+      async persistSuccess() { assert.fail('invalid report must not persist') },
+      async persistFailure(_job, code) {
+        assert.equal(code, 'assessment_ai_invalid_schema')
+        return { creditSettlement: 'release_committed' }
+      } },
+    notification: { channel: 'none', isConfigured: () => false,
+      async notify() { return { delivered: false, channel: 'none', reason: 'not_configured' } } },
+    logger: { info(value: unknown) { logs.push(value) },
+      warn(value: unknown) { logs.push(value) }, error(value: unknown) { logs.push(value) } } as any,
+    creditEnforcementEnabled: true,
+  })
+  assert.equal(result, 'failed')
+  assert.equal(repairs, 1)
+  const failure = logs.find(value => (value as { failureCode?: string }).failureCode ===
+    'assessment_ai_invalid_schema') as Record<string, unknown>
+  assert.equal(failure.failureStage, 'report_validation')
+  assert.equal(failure.modelRequestCount, 2)
+  assert.equal(failure.repairResult, 'report_invalid')
+  const issues = failure.validationIssues as Array<{ fieldPath: string; ruleCode: string }>
+  assert.ok(issues.some(issue => issue.fieldPath === 'targetAssessments' &&
+    issue.ruleCode === 'invalid_type'))
+  assert.doesNotMatch(JSON.stringify(logs), /private student details|secretStudentText/)
+})
+
+function leaseFixture() {
+  const status = new Map<string, string>([['job-1', 'running']])
+  const held = new Set<string>()
+  const state = { releases: 0, destroys: 0,
+    failAcquire: false, failStatus: false, failRelease: false,
+    failPoolRelease: false }
+  const pool = { async getConnection() { return {
+    async query(sql: string, params: unknown[] = []) {
+      const id = String(params[0]).replace('jiuchen:assessment:', '')
+      if (sql.includes('GET_LOCK')) {
+        if (state.failAcquire) throw new Error('lock query failed')
+        if (held.has(id)) return [[{ acquired: 0 }]]
+        held.add(id)
+        return [[{ acquired: 1 }]]
+      }
+      if (sql.includes('FROM assessments')) {
+        if (state.failStatus) throw new Error('status query failed')
+        return [status.has(id) ? [{ id, userId: 'user',
+          inputJson: assessmentInput, status: status.get(id) }] : []]
+      }
+      if (sql.includes('RELEASE_LOCK')) {
+        if (state.failRelease) throw new Error('release query failed')
+        held.delete(id)
+        return [[{ released: 1 }]]
+      }
+      assert.fail('unexpected SQL')
+    },
+    release() {
+      if (state.failPoolRelease) throw new Error('pool release failed')
+      state.releases += 1
+    },
+    destroy() { state.destroys += 1; held.clear() },
+  } } } as any
+  return { pool, status, held, state }
+}
+
+test('stale scanned task is rechecked under the lock and never claimed', async () => {
+  const fixture = leaseFixture()
+  fixture.status.set('job-1', 'succeeded')
+  assert.equal(await acquireAssessmentLease(fixture.pool, 'job-1'), null)
+  assert.equal(fixture.held.size, 0)
+  assert.equal(fixture.state.releases, 1)
+  assert.equal(fixture.state.destroys, 0)
+})
+
+test('duplicate claimant skips held task; final state blocks a later claimant', async () => {
+  const fixture = leaseFixture()
+  const first = await acquireAssessmentLease(fixture.pool, 'job-1')
+  assert.ok(first)
+  assert.equal(first.inputJson, assessmentInput)
+  assert.equal(await acquireAssessmentLease(fixture.pool, 'job-1'), null)
+  fixture.status.set('job-1', 'succeeded')
+  await first.releaseLease()
+  await first.releaseLease()
+  assert.equal(await acquireAssessmentLease(fixture.pool, 'job-1'), null)
+  assert.equal(fixture.held.size, 0)
+  assert.equal(fixture.state.releases, 3)
+})
+
+test('contended lock with pool release failure destroys the connection', async () => {
+  const fixture = leaseFixture()
+  fixture.held.add('job-1')
+  fixture.state.failPoolRelease = true
+  await assert.rejects(acquireAssessmentLease(fixture.pool, 'job-1'), /pool release failed/)
+  assert.equal(fixture.state.releases, 0)
+  assert.equal(fixture.state.destroys, 1)
+})
+
+test('lock or status query failure cannot return a named lock to the pool', async () => {
+  const lockFailure = leaseFixture()
+  lockFailure.state.failAcquire = true
+  await assert.rejects(acquireAssessmentLease(lockFailure.pool, 'job-1'), /lock query failed/)
+  assert.equal(lockFailure.state.releases, 0)
+  assert.equal(lockFailure.state.destroys, 1)
+
+  const statusFailure = leaseFixture()
+  statusFailure.state.failStatus = true
+  await assert.rejects(acquireAssessmentLease(statusFailure.pool, 'job-1'), /status query failed/)
+  assert.equal(statusFailure.held.size, 0)
+  assert.equal(statusFailure.state.releases, 1)
+})
+
+test('release failure destroys the lock-owning connection', async () => {
+  const fixture = leaseFixture()
+  const job = await acquireAssessmentLease(fixture.pool, 'job-1')
+  assert.ok(job)
+  fixture.state.failRelease = true
+  await assert.rejects(job.releaseLease(), /release query failed/)
+  assert.equal(fixture.state.releases, 0)
+  assert.equal(fixture.state.destroys, 1)
+  assert.equal(fixture.held.size, 0)
+})
+
+test('bounded candidate scan reaches a later job when first batch is held', async () => {
+  const fixture = leaseFixture()
+  const ids = Array.from({ length: 33 }, (_, index) => `job-${index + 1}`)
+  ids.forEach(id => fixture.status.set(id, 'running'))
+  ids.slice(0, 32).forEach(id => fixture.held.add(id))
+  const offsets: number[] = []
+  const query = {
+    from() { return this }, where() { return this }, orderBy() { return this },
+    limit() { return this },
+    async offset(value: number) {
+      offsets.push(value)
+      return ids.slice(value, value + 32).map(id => ({ id }))
+    },
+  }
+  const database = { configured: true, pool: fixture.pool,
+    db: { select() { return query } } } as any
+  const store = createConfiguredStore(database, {
+    creditEnforcementEnabled: false, freeGrant: null,
+  })
+  assert.equal(await store.nextRunning(), null)
+  const next = await store.nextRunning()
+  assert.equal(next?.id, 'job-33')
+  assert.deepEqual(offsets, [0, 32])
+  await next?.releaseLease?.()
 })

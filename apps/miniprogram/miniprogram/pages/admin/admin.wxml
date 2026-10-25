@@ -203,7 +203,7 @@
         <view class="supplier-monitor-head"><text>AI 供应商余额预警</text><text class="supplier-status">{{analytics.supplier.status === 'normal' ? '常规监测' : analytics.supplier.status === 'critical' ? '紧急补充' : analytics.supplier.status === 'warning' ? '提前预警' : analytics.supplier.status === 'early_stage' ? '样本不足' : '需要核实'}}</text></view>
         <text class="supplier-message">{{analytics.supplier.message}}</text>
         <view wx:if="{{analytics.supplier.availableFen !== null}}" class="supplier-metrics">
-          <text>参考可用余额 ¥{{(analytics.supplier.availableFen / 100)}}</text>
+          <text>人工记录参考余额 ¥{{(analytics.supplier.availableFen / 100)}}（{{analytics.supplier.observedAt || '时间待核实'}}）</text>
           <text wx:if="{{analytics.supplier.estimatedRunwayDays !== null}}">预计可支撑 {{analytics.supplier.estimatedRunwayDays}} 天</text>
         </view>
         <text class="supplier-tip">公司运营管理 API 服务商余额；这里不是用户充值余额。读数尚未自动同步时，不可将展示视为实时保障。</text>
@@ -230,7 +230,8 @@
 </text>
         <text>成功但无完成时间：{{analytics.gaps.successWithoutCompletedAt}}（全历史）；成功但无消费账本：{{analytics.gaps.successWithoutDebit === null ? '未能核对' : analytics.gaps.successWithoutDebit}}；完成时间疑似时区偏移：{{analytics.gaps.suspectEightHourCompletionCount}} 条（待核对日期归桶）。
 </text>
-        <text>历史每次运行请求、逐次扣减金额及实际 API 成本尚未记录。次数对比仅为经营辅助，不能当作资金收支。</text>
+        <text>本系统首次生成/自动修复请求次数：未接入历史持久化明细；新版本仅在脱敏运行日志中按评估编号记录。</text>
+        <text>DeepSeek 实际请求数和人民币消费：待供应商账单核实，未计入学点。当前余额为人工记录或未接入，不是实时账单。</text>
       </view>
       <text class="card-note">周为近7天、月为近12个月、年为近5年。计数以服务器真实成功记录为准，零值也显示。</text>
     </view>
