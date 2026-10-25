@@ -430,8 +430,17 @@ export function createAssessmentBackgroundWorker(input: {
   const accountContextLoader = createAssessmentAccountContextLoader(input.database)
   const pollIntervalMs = Math.max(input.pollIntervalMs ?? 3000, 500)
   let active = false
+  let halted = false
   let draining = false
   let timer: ReturnType<typeof setInterval> | null = null
+
+  const stopPolling = () => {
+    active = false
+    if (timer) {
+      clearInterval(timer)
+      timer = null
+    }
+  }
 
   const drain = async () => {
     if (!active || draining) return
@@ -451,10 +460,13 @@ export function createAssessmentBackgroundWorker(input: {
             creditEnforcementEnabled: input.commercial.creditEnforcementEnabled,
           })
         } catch (error) {
+          halted = true
+          stopPolling()
           input.logger.error(
             { assessmentId: job.id, failureStage: 'terminal_persistence',
-              errorCategory: 'internal' },
-            'Assessment background worker could not persist terminal state',
+              errorCategory: 'internal', workerStopped: true,
+              manualReviewRequired: true },
+            'Assessment worker stopped: verify terminal state and credit reservation before restart',
           )
           break
         } finally {
@@ -478,7 +490,7 @@ export function createAssessmentBackgroundWorker(input: {
 
   return {
     start() {
-      if (active) return
+      if (active || halted) return
       active = true
       timer = setInterval(wake, pollIntervalMs)
       timer.unref?.()
@@ -489,11 +501,7 @@ export function createAssessmentBackgroundWorker(input: {
       )
     },
     stop() {
-      active = false
-      if (timer) {
-        clearInterval(timer)
-        timer = null
-      }
+      stopPolling()
     },
     wake,
     completionNotification,

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   acquireAssessmentLease,
+  createAssessmentBackgroundWorker,
   createConfiguredStore,
   processAssessmentBackgroundJob,
   type AssessmentBackgroundStore,
@@ -282,7 +283,7 @@ function leaseFixture() {
   const held = new Set<string>()
   const state = { releases: 0, destroys: 0,
     failAcquire: false, failStatus: false, failRelease: false,
-    failPoolRelease: false }
+    failPoolRelease: false, inputJson: assessmentInput as unknown }
   const pool = { async getConnection() { return {
     async query(sql: string, params: unknown[] = []) {
       const id = String(params[0]).replace('jiuchen:assessment:', '')
@@ -295,7 +296,7 @@ function leaseFixture() {
       if (sql.includes('FROM assessments')) {
         if (state.failStatus) throw new Error('status query failed')
         return [status.has(id) ? [{ id, userId: 'user',
-          inputJson: assessmentInput, status: status.get(id) }] : []]
+          inputJson: state.inputJson, status: status.get(id) }] : []]
       }
       if (sql.includes('RELEASE_LOCK')) {
         if (state.failRelease) throw new Error('release query failed')
@@ -394,4 +395,125 @@ test('bounded candidate scan reaches a later job when first batch is held', asyn
   assert.equal(next?.id, 'job-33')
   assert.deepEqual(offsets, [0, 32])
   await next?.releaseLease?.()
+})
+
+function workerDatabase(ids: string[], failPersistId?: string) {
+  const fixture = leaseFixture()
+  fixture.state.inputJson = { ...assessmentInput,
+    contextOptions: { includePlanning: false, includeRecentAssessments: false } }
+  fixture.status.clear()
+  ids.forEach(id => fixture.status.set(id, 'running'))
+  const query = {
+    from() { return this }, where() { return this }, orderBy() { return this },
+    limit() { return this },
+    async offset(value: number) {
+      return ids.filter(id => fixture.status.get(id) === 'running')
+        .slice(value, value + 32).map(id => ({ id }))
+    },
+  }
+  const database = { configured: true, pool: fixture.pool,
+    db: {
+      select() { return query },
+      update() { return { set(values: { status: string }) { return {
+        async where() {
+          const [id] = fixture.held
+          assert.ok(id, 'terminal write must happen while the lease is held')
+          if (id === failPersistId) throw new Error('private sql details')
+          fixture.status.set(id, values.status)
+        },
+      } } } },
+    },
+  } as any
+  return { database, ...fixture }
+}
+
+async function waitUntil(check: () => boolean) {
+  const deadline = Date.now() + 3000
+  while (!check()) {
+    if (Date.now() > deadline) assert.fail('worker did not reach expected state')
+    await new Promise(resolve => setTimeout(resolve, 10))
+  }
+}
+
+function workerOptions(database: any, runtime: AssessmentRuntime, logger: any = silentLogger) {
+  return { database, runtime,
+    commercial: { creditEnforcementEnabled: false, freeGrant: null },
+    notification: { channel: 'none' as const, isConfigured: () => false,
+      async notify() { return { delivered: false as const, channel: 'none' as const,
+        reason: 'not_configured' as const } } },
+    logger: logger as any, pollIntervalMs: 500 }
+}
+
+test('terminal persistence failure stops polling and prevents another provider call', async () => {
+  const fixture = workerDatabase(['job-1'], 'job-1')
+  const runtime = createSuccessRuntime()
+  let providerCalls = 0
+  const analyze = runtime.provider.analyze
+  runtime.provider.analyze = async request => {
+    providerCalls += 1
+    return analyze(request)
+  }
+  const errors: unknown[] = []
+  const worker = createAssessmentBackgroundWorker(workerOptions(fixture.database, runtime, {
+    info() {}, warn() {}, error(value: unknown) { errors.push(value) },
+  }))
+  worker.start()
+  try {
+    await waitUntil(() => errors.some(value =>
+      (value as { workerStopped?: boolean }).workerStopped === true))
+    worker.wake()
+    worker.start()
+    await new Promise(resolve => setTimeout(resolve, 600))
+    assert.equal(providerCalls, 1)
+    assert.equal(fixture.status.get('job-1'), 'running')
+    assert.equal(fixture.held.size, 0)
+    assert.deepEqual(errors.filter(value =>
+      (value as { workerStopped?: boolean }).workerStopped === true), [{ assessmentId: 'job-1',
+      failureStage: 'terminal_persistence', errorCategory: 'internal',
+      workerStopped: true, manualReviewRequired: true }])
+    assert.doesNotMatch(JSON.stringify(errors), /private sql details/)
+  } finally {
+    worker.stop()
+  }
+})
+
+test('successful terminal writes allow the worker to claim the next assessment', async () => {
+  const fixture = workerDatabase(['job-1', 'job-2'])
+  const runtime = createSuccessRuntime()
+  let providerCalls = 0
+  const analyze = runtime.provider.analyze
+  runtime.provider.analyze = async request => {
+    providerCalls += 1
+    return analyze(request)
+  }
+  const worker = createAssessmentBackgroundWorker(workerOptions(fixture.database, runtime))
+  worker.start()
+  try {
+    await waitUntil(() => fixture.status.get('job-2') === 'succeeded')
+    assert.equal(fixture.status.get('job-1'), 'succeeded')
+    assert.equal(providerCalls, 2)
+  } finally {
+    worker.stop()
+  }
+})
+
+test('persisted failed assessment does not halt later work', async () => {
+  const fixture = workerDatabase(['job-1', 'job-2'])
+  const runtime = createSuccessRuntime()
+  let providerCalls = 0
+  const analyze = runtime.provider.analyze
+  runtime.provider.analyze = async request => {
+    providerCalls += 1
+    if (providerCalls === 1) throw new Error('provider failure')
+    return analyze(request)
+  }
+  const worker = createAssessmentBackgroundWorker(workerOptions(fixture.database, runtime))
+  worker.start()
+  try {
+    await waitUntil(() => fixture.status.get('job-2') === 'succeeded')
+    assert.equal(fixture.status.get('job-1'), 'failed')
+    assert.equal(providerCalls, 2)
+  } finally {
+    worker.stop()
+  }
 })
