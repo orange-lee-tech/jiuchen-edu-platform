@@ -11,11 +11,6 @@ export const settingsSchema = z.object({
   platformPriceConfirmed: z.boolean(),
   estimatedCostFen: z.number().int().positive().max(100000).nullable(),
 }).strict().refine((value) => value.studentTotalFree >= value.guestFree, 'student_total_below_guest')
-  .refine((value) => !value.platformPriceConfirmed ||
-    (value.estimatedCostFen !== null &&
-      value.singleFen * 10 >= value.estimatedCostFen * 12 &&
-      value.tenFen >= value.estimatedCostFen * 12),
-  'price_below_estimated_cost_reserve')
 export type AdminSettings = z.infer<typeof settingsSchema>
 export type ControlBox = 'settings' | 'assessment_key'
 

@@ -60,6 +60,7 @@ import {
 } from '../../utils/request'
 
 import {beijingNewsTime,newsPublicationLabel} from '../../utils/news-date'
+import { AI_SERVICE_PRESETS, rigorToTemperature } from '../../utils/ai-service-catalog'
 
 type Section = 'admin-users' | 'admin-assignments' | 'admin-news' | 'admin-analytics' | 'admin-readonly' | 'admin-controls'
 function controlLoadError(error: unknown) {
@@ -75,6 +76,14 @@ function controlLoadError(error: unknown) {
 }
 function moneyFen(text: string) {
   return /^\d{1,5}(?:\.\d{1,2})?$/.test(text) ? Math.round(Number(text) * 100) : NaN
+}
+const FIXED_PRICES = { JC000: 10, JC001: 190, JC002: 890, JC003: 1690 }
+function costEstimateNotice(counts: Record<keyof typeof FIXED_PRICES, number>, costFen: number | null) {
+  if (costFen === null) return '尚未填写单次模型成本；估算状态，仍可凭口令启用。'
+  const warnings = (Object.keys(FIXED_PRICES) as Array<keyof typeof FIXED_PRICES>)
+    .filter(key => FIXED_PRICES[key] * 10 < costFen * counts[key] * 12)
+  return warnings.length ? `按填写的成本估算，${warnings.join('、')} 的售价可能不足以覆盖成本及 20% 缓冲；仍可凭口令启用。` :
+    '按填写的成本估算，当前四档售价均留有 20% 缓冲；这不是供应商账单或实时余额。'
 }
 function joinedLabel(createdAt?: string) {
   if (!createdAt) return '加入时间未记录'
@@ -137,6 +146,18 @@ Page({
     rechargeAmountLabel:'',
     loading: true,
     actionLoading: false,
+    controlModule: 'ai' as 'ai' | 'credits',
+    keyFormOpen: false, planFormOpen: false,
+    aiServices: AI_SERVICE_PRESETS,
+    keyProviderIndex: 0, keyModelIndex: 0,
+    keyModelOptions: AI_SERVICE_PRESETS[0]!.models,
+    keyPresetNote: AI_SERVICE_PRESETS[0]!.note,
+    keyRigor: 7,
+    activeKey: null as AssessmentKeyObject | null,
+    activePlan: null as CreditPlan | null,
+    planPriceLabels: { JC000: '读取中', JC001: '读取中', JC002: '读取中', JC003: '读取中' },
+    fixedPriceCatalogOk: false,
+    planCostNotice: '尚未填写单次模型成本；估算状态，仍可凭口令启用。',
     controlSettings: null as AdminControlBox | null,
     controlKey: null as AdminControlBox | null,
     keyObjectsReady: false,
@@ -148,7 +169,9 @@ Page({
     planCostConfigFingerprint: null as string | null,
     planName: '', planNote: '', planJc000: '2', planJc001: '1', planJc002: '5', planJc003: '10',
     planCostYuan: '', planCostConfirmed: false, planObjectPin: '', planControlPin: '', planTargetPin: '',
-    keyLabel: '', keyProvider: '', keyApiBaseUrl: '', keyModel: '', keyTemperature: '0',
+    keyLabel: '', keyProvider: AI_SERVICE_PRESETS[0]!.id,
+    keyApiBaseUrl: AI_SERVICE_PRESETS[0]!.baseUrl,
+    keyModel: AI_SERVICE_PRESETS[0]!.models[0]!.id,
     keyNote: '', keyObjectPin: '', keyControlPin: '', keyTargetPin: '', keyTestObjectPin: '',
     settingsDraft: null as AdminControlDraft | null,
     keyDraft: null as AdminControlDraft | null,
@@ -295,7 +318,13 @@ Page({
         platformPriceConfirmed: settings?.platformPriceConfirmed ?? false,
         settingsOldPin: '', settingsNewPin: '', keyOldPin: '', keyNewPin: '', keyTestPin: '', apiKeyInput: '',
         keyObjectsReady: true, keyHead: keys.head, keyObjects: keys.objects,
+        activeKey: keys.objects.find(item => item.id === keys.head.activeObjectId) ?? null,
         creditPlansReady: true, planHead: plans.head, creditPlans: plans.plans,
+        activePlan: plans.plans.find(item => item.id === plans.head.activePlanId) ?? null,
+        planPriceLabels: Object.fromEntries(plans.prices.map(item => [item.key,
+          `¥${(item.amountFen / 100).toFixed(2)}`])) as typeof this.data.planPriceLabels,
+        fixedPriceCatalogOk: (Object.keys(FIXED_PRICES) as Array<keyof typeof FIXED_PRICES>)
+          .every(key => plans.prices.some(item => item.key === key && item.amountFen === FIXED_PRICES[key])),
         planCostConfigFingerprint: plans.currentCostConfigFingerprint,
         planCostConfirmed: Boolean(plans.currentCostConfigFingerprint &&
           plans.currentCostConfigFingerprint === this.data.planCostConfigFingerprint && this.data.planCostConfirmed) })
@@ -311,16 +340,47 @@ Page({
   },
   onKeyObjectInput(event: WechatMiniprogram.Input) {
     const name = String(event.currentTarget.dataset.name)
-    if (!['keyLabel', 'keyProvider', 'keyApiBaseUrl', 'keyModel', 'keyTemperature',
+    if (!['keyLabel', 'keyProvider', 'keyApiBaseUrl', 'keyModel',
       'keyNote', 'keyObjectPin', 'keyControlPin', 'keyTargetPin', 'keyTestObjectPin', 'apiKeyInput'].includes(name)) return
     this.setData({ [name]: event.detail.value })
+  },
+  onControlModule(event: WechatMiniprogram.CustomEvent) {
+    this.setData({ controlModule: event.currentTarget.dataset.module === 'credits' ? 'credits' : 'ai' })
+  },
+  onToggleKeyForm() { this.setData({ keyFormOpen: !this.data.keyFormOpen }) },
+  onTogglePlanForm() { this.setData({ planFormOpen: !this.data.planFormOpen }) },
+  onProviderChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const index = Number(event.detail.value)
+    const preset = AI_SERVICE_PRESETS[index]
+    if (!preset) return
+    this.setData({ keyProviderIndex: index, keyModelIndex: 0,
+      keyModelOptions: preset.models, keyProvider: preset.id,
+      keyApiBaseUrl: preset.baseUrl, keyModel: preset.models[0]!.id,
+      keyPresetNote: preset.note,
+      keyLabel: this.data.keyLabel.trim() || `${preset.name} 评估服务` })
+  },
+  onModelChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const index = Number(event.detail.value)
+    const model = this.data.keyModelOptions[index]
+    if (model) this.setData({ keyModelIndex: index, keyModel: model.id })
+  },
+  onRigorChange(event: WechatMiniprogram.CustomEvent<{ value: number }>) {
+    const value = Number(event.detail.value)
+    if (Number.isInteger(value) && value >= 1 && value <= 10) this.setData({ keyRigor: value })
   },
   onPlanInput(event: WechatMiniprogram.Input) {
     const name = String(event.currentTarget.dataset.name)
     if (!['planName','planNote','planJc000','planJc001','planJc002','planJc003',
       'planCostYuan','planObjectPin','planControlPin','planTargetPin'].includes(name)) return
     this.setData({ [name]: event.detail.value,
-      ...(name === 'planCostYuan' ? { planCostConfirmed: false } : {}) })
+      ...(name === 'planCostYuan' ? { planCostConfirmed: false } : {}),
+      planCostNotice: costEstimateNotice({
+        JC000: Number(name === 'planJc000' ? event.detail.value : this.data.planJc000),
+        JC001: Number(name === 'planJc001' ? event.detail.value : this.data.planJc001),
+        JC002: Number(name === 'planJc002' ? event.detail.value : this.data.planJc002),
+        JC003: Number(name === 'planJc003' ? event.detail.value : this.data.planJc003),
+      }, (name === 'planCostYuan' ? event.detail.value : this.data.planCostYuan).trim() ?
+        moneyFen((name === 'planCostYuan' ? event.detail.value : this.data.planCostYuan).trim()) : null) })
   },
   onPlanCostConfirm(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     if (event.detail.value && !this.data.planCostConfigFingerprint) {
@@ -331,14 +391,11 @@ Page({
     this.setData({ planCostConfirmed: event.detail.value })
   },
   async onCreateCreditPlan() {
-    if (this.data.actionLoading || !this.data.creditPlansReady) return
+    if (this.data.actionLoading || !this.data.creditPlansReady || !this.data.fixedPriceCatalogOk) return
     const data = this.data
     const counts = { JC000: Number(data.planJc000), JC001: Number(data.planJc001),
       JC002: Number(data.planJc002), JC003: Number(data.planJc003) }
     const cost = data.planCostYuan.trim() ? moneyFen(data.planCostYuan.trim()) : null
-    if (data.planCostConfirmed && cost === null) {
-      wx.showToast({ title: '请先填写预计单次模型成本', icon: 'none' }); return
-    }
     if (!data.planName.trim() || !/^\d{6}$/.test(data.planObjectPin) ||
       Object.values(counts).some(value => !Number.isInteger(value) || value < 1 || value > 100) ||
       (cost !== null && (!Number.isInteger(cost) || cost < 1))) {
@@ -347,7 +404,7 @@ Page({
     this.setData({ actionLoading: true })
     try {
       const result = await createCreditPlanObject({ name: data.planName.trim(), note: data.planNote.trim(),
-        counts, estimatedCostFen: cost, costConfirmed: data.planCostConfirmed,
+        counts, estimatedCostFen: cost, costConfirmed: data.planCostConfirmed && cost !== null,
         expectedCostConfigFingerprint: data.planCostConfigFingerprint, pin: data.planObjectPin })
       this.setData({ planCostConfirmed: false })
       wx.showToast({ title: result.active ? '首套方案已生效' : '候选方案已保存', icon: 'success' })
@@ -412,7 +469,7 @@ Page({
     const data = this.data
     if (!/^\d{6}$/.test(data.keyObjectPin) || data.apiKeyInput.trim().length < 8 ||
       !data.keyLabel.trim() || !data.keyProvider.trim() || !data.keyApiBaseUrl.trim() ||
-      !data.keyModel.trim() || !Number.isFinite(Number(data.keyTemperature))) {
+      !data.keyModel.trim()) {
       wx.showToast({ title: '请填写连接参数、密钥和六位对象口令', icon: 'none' }); return
     }
     this.setData({ actionLoading: true })
@@ -420,7 +477,7 @@ Page({
       const result = await createAssessmentKeyObject({
         label: data.keyLabel.trim(), provider: data.keyProvider.trim(),
         apiBaseUrl: data.keyApiBaseUrl.trim(), model: data.keyModel.trim(),
-        temperature: Number(data.keyTemperature), apiKey: data.apiKeyInput.trim(),
+        temperature: rigorToTemperature(data.keyRigor), apiKey: data.apiKeyInput.trim(),
         note: data.keyNote.trim(), pin: data.keyObjectPin,
       })
       wx.showToast({ title: result.active ? '首个密钥已生效' : '候选密钥已保存', icon: 'success' })
@@ -475,7 +532,9 @@ Page({
     this.setData({ actionLoading: true })
     try {
       const result = await testAssessmentKeyObject(id, this.data.keyTestObjectPin)
-      wx.showToast({ title: result.reachable ? '连接通过' : '连接未通过', icon: 'none' })
+      if (result.reportSchemaValid) wx.showModal({ title: '报告格式通过',
+        content: '候选模型已返回可解析的九辰报告格式。真实学员落库、扣次及全局切换仍需完整评估验证。此次测试可能产生模型费用。', showCancel: false })
+      else wx.showToast({ title: '报告格式未通过', icon: 'none' })
       await this.loadControls()
     } catch (error) { wx.showToast({ title: friendlyRequestError(error, '连接测试失败'), icon: 'none' }) }
     finally { this.setData({ actionLoading: false, keyTestObjectPin: '' }) }
@@ -515,9 +574,7 @@ Page({
     if (!Number.isInteger(singleFen) || singleFen < 1 || !Number.isInteger(tenFen) || tenFen < 1 ||
       !/^\d{1,3}$/.test(this.data.guestFreeInput) || !/^\d{1,3}$/.test(this.data.studentFreeInput) ||
       guestFree > 100 || studentTotalFree > 100 || studentTotalFree < guestFree ||
-      (estimatedCostFen !== null && (!Number.isInteger(estimatedCostFen) || estimatedCostFen < 1)) ||
-      (this.data.platformPriceConfirmed && (estimatedCostFen === null ||
-        singleFen * 10 < estimatedCostFen * 12 || tenFen < estimatedCostFen * 12))) {
+      (estimatedCostFen !== null && (!Number.isInteger(estimatedCostFen) || estimatedCostFen < 1))) {
       wx.showToast({ title: '请核对价格、次数和成本', icon: 'none' }); return
     }
     this.setData({ actionLoading: true })
@@ -573,8 +630,6 @@ Page({
       !/^\d{1,3}$/.test(this.data.guestFreeInput) || !/^\d{1,3}$/.test(this.data.studentFreeInput) ||
       studentTotalFree < guestFree || guestFree > 100 || studentTotalFree > 100 ||
       (estimatedCostFen !== null && (!Number.isInteger(estimatedCostFen) || estimatedCostFen < 1)) ||
-      (this.data.platformPriceConfirmed && (estimatedCostFen === null ||
-        singleFen * 10 < estimatedCostFen * 12 || tenFen < estimatedCostFen * 12)) ||
       !/^\d{6}$/.test(this.data.settingsNewPin) ||
       (this.data.controlSettings.configured && !/^\d{6}$/.test(this.data.settingsOldPin))) {
       wx.showToast({ title: '请核对金额、次数和六位密码', icon: 'none' }); return

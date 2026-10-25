@@ -964,7 +964,7 @@ export async function archiveAssessmentKeyObject(id: string, payload: {
 }) {
   return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/archive', 'POST', payload)
 }
-export async function testAssessmentKeyObject(id: string, pin: string): Promise<{ ok: true; reachable: boolean; mayIncurCost: true }> {
+export async function testAssessmentKeyObject(id: string, pin: string): Promise<{ ok: true; reachable: boolean; reportSchemaValid: boolean; persistenceTested: false; mayIncurCost: true }> {
   return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/test', 'POST', { pin })
 }
 export async function revealAssessmentKeyObject(id: string, pin: string): Promise<{ ok: true; apiKey: string }> {
@@ -992,6 +992,7 @@ export type CreditPlan = { id: string; name: string; version: number; note: stri
   creatorUserId: string; hasObjectPin: boolean; status: string; createdAt: string;
   counts: { JC000: number; JC001: number; JC002: number; JC003: number };
   estimatedCostFen: number | null; costVerifiedAt: string | null;
+  costWarnings: string[];
   costVerificationStatus: 'verified' | 'unverified' | 'expired' | 'model_unavailable' | 'configuration_changed';
   costVerificationLabel: string; costVerifiedForCurrentConfig: boolean }
 export type CreditPlanHead = { initialized: boolean; version: number; activePlanId: string | null }

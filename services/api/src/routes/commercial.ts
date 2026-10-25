@@ -32,8 +32,6 @@ import {
   type WechatPayGateway,
 } from '../services/wechat-pay.js'
 import { resolveSessionUser } from '../services/session.js'
-import { readAssessmentCostFingerprint } from '../services/assessment-cost-fingerprint.js'
-import { validatePlanCostFingerprint } from '../services/credit-plans.js'
 
 function commercialErrorReply(
   reply: FastifyReply,
@@ -244,19 +242,11 @@ export function registerCommercialRoutes(
             const fixed=FIXED_ASSESSMENT_SKUS.find(item=>item.key===parsed.data.skuKey)
             if(!fixed) throw new Error('credit_plan_sku_invalid')
             const [plans]=await connection.query<import('mysql2/promise').RowDataPacket[]>(
-              `SELECT *, (cost_verified_at IS NOT NULL AND cost_verified_at <= CURRENT_TIMESTAMP()
-                 AND cost_verified_at >= CURRENT_TIMESTAMP() - INTERVAL 30 DAY) AS cost_fresh
-               FROM credit_plan_objects WHERE id=? AND status='active' FOR UPDATE`,[head.active_plan_id])
+              "SELECT * FROM credit_plan_objects WHERE id=? AND status='active' FOR UPDATE",[head.active_plan_id])
             const plan=plans[0]
-            if(!plan || !Number(plan.cost_fresh)) throw new Error('credit_plan_cost_unverified')
-            const currentFingerprint = await readAssessmentCostFingerprint(connection, env, true)
-            validatePlanCostFingerprint(currentFingerprint,
-              typeof plan.cost_config_fingerprint === 'string' ? plan.cost_config_fingerprint : null)
+            if(!plan) throw new Error('credit_plan_pointer_invalid')
             const count=Number(plan['count_'+fixed.key.toLowerCase()])
-            if(!Number.isInteger(count) || count<1 ||
-              fixed.amountFen*10<Number(plan.estimated_cost_fen)*count*12) {
-              throw new Error('credit_plan_cost_buffer_exceeded')
-            }
+            if(!Number.isInteger(count) || count<1 || count>100) throw new Error('credit_plan_count_invalid')
             orderSku={...fixed,creditAmount:count,planId:String(plan.id),planVersion:Number(plan.version)}
           }
         } catch(error) {

@@ -41,6 +41,7 @@ export type JsonModelProviderConfig = {
   model?: string
   timeoutMs?: number
   temperature?: number
+  sendTemperature?: boolean
   jsonMode?: boolean
   responseFormat?: 'json_object' | 'json_schema'
   extraBody?: Record<string, unknown>
@@ -128,6 +129,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
   private readonly apiKey?: string
   private readonly timeoutMs: number
   private readonly temperature: number
+  private readonly sendTemperature: boolean
   private readonly jsonMode: boolean
   private readonly responseFormat?: 'json_object' | 'json_schema'
   private readonly extraBody: Record<string, unknown>
@@ -140,6 +142,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
     this.apiKey = config.apiKey?.trim()
     this.timeoutMs = config.timeoutMs ?? 60_000
     this.temperature = config.temperature ?? 0.1
+    this.sendTemperature = config.sendTemperature ?? true
     this.jsonMode = config.jsonMode ?? false
     this.responseFormat =
       config.responseFormat ?? (this.jsonMode ? 'json_object' : undefined)
@@ -210,7 +213,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
           ...this.extraBody,
           model: this.model,
           messages,
-          temperature: this.temperature,
+          ...(this.sendTemperature ? { temperature: this.temperature } : {}),
           ...(responseFormat ? { response_format: responseFormat } : {}),
           ...(request.maxTokens ? { max_tokens: request.maxTokens } : {}),
         }),
@@ -252,6 +255,18 @@ export function createJsonModelProvider(config: JsonModelProviderConfig) {
   return new ChatCompletionsJsonModelProvider(config)
 }
 
+// These documented Chat Completions models accept temperature. Other services
+// still receive the rigor instruction in the assessment prompt, without an
+// unsupported API parameter.
+export function assessmentModelSupportsTemperature(provider: string | undefined) {
+  return ['aliyun-bailian', 'baidu-qianfan', 'zhipu', 'xfyun-spark', 'baichuan'].includes(provider ?? '')
+}
+
+const PRESET_ASSESSMENT_PROVIDERS = new Set([
+  'aliyun-bailian', 'deepseek', 'moonshot', 'volc-ark', 'tencent-hunyuan',
+  'baidu-qianfan', 'zhipu', 'minimax', 'xfyun-spark', 'baichuan',
+])
+
 function parseExtraBodyJson(value?: string) {
   if (!value) return undefined
 
@@ -276,8 +291,11 @@ export function createAssessmentAIProvider(env: AppEnv, transport?: JsonModelPro
     apiKey: env.ASSESSMENT_AI_API_KEY,
     model: env.ASSESSMENT_AI_MODEL,
     temperature: env.ASSESSMENT_AI_TEMPERATURE ?? 0,
-    jsonMode: env.ASSESSMENT_AI_JSON_MODE ?? true,
-    responseFormat: env.ASSESSMENT_AI_RESPONSE_FORMAT,
+    sendTemperature: assessmentModelSupportsTemperature(env.ASSESSMENT_AI_PROVIDER),
+    jsonMode: PRESET_ASSESSMENT_PROVIDERS.has(env.ASSESSMENT_AI_PROVIDER ?? '')
+      ? false : env.ASSESSMENT_AI_JSON_MODE ?? true,
+    responseFormat: PRESET_ASSESSMENT_PROVIDERS.has(env.ASSESSMENT_AI_PROVIDER ?? '')
+      ? undefined : env.ASSESSMENT_AI_RESPONSE_FORMAT,
     extraBody: parseExtraBodyJson(env.ASSESSMENT_AI_EXTRA_BODY_JSON),
     transport,
   })

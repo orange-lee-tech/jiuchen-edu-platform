@@ -4,7 +4,7 @@ import type { AppEnv } from '../config/env.js'
 import { pinDigest } from './admin-control-boxes.js'
 import { validateAssessmentApiUrl } from './assessment-key-objects.js'
 import { FIXED_ASSESSMENT_SKUS } from './commercial-config.js'
-import { DEFAULT_PLAN_COUNTS, validatePlanCost, validatePlanCostFingerprint } from './credit-plans.js'
+import { DEFAULT_PLAN_COUNTS, planCostWarnings } from './credit-plans.js'
 import { buildAssessmentCostFingerprint } from './assessment-cost-fingerprint.js'
 import { buildVirtualPayment, virtualPaymentConfig } from './wechat-virtual-payment.js'
 
@@ -12,9 +12,9 @@ test('four fixed prices are independent from mutable evaluation counts', () => {
   assert.deepEqual(FIXED_ASSESSMENT_SKUS.map(({ key, amountFen }) => [key, amountFen]),
     [['JC000',10],['JC001',190],['JC002',890],['JC003',1690]])
   assert.deepEqual(DEFAULT_PLAN_COUNTS,{ JC000:2,JC001:1,JC002:5,JC003:10 })
-  assert.doesNotThrow(() => validatePlanCost(DEFAULT_PLAN_COUNTS,1,new Date(),'model-a','model-a'))
-  assert.throws(() => validatePlanCost({ ...DEFAULT_PLAN_COUNTS,JC002:100 },10,new Date(),'model-a','model-a'))
-  assert.throws(() => validatePlanCost(DEFAULT_PLAN_COUNTS,1,new Date(Date.now()-31*86400000),'model-a','model-a'))
+  assert.deepEqual(planCostWarnings(DEFAULT_PLAN_COUNTS, null), ['cost_not_estimated'])
+  assert.deepEqual(planCostWarnings(DEFAULT_PLAN_COUNTS, 1), [])
+  assert.ok(planCostWarnings({ ...DEFAULT_PLAN_COUNTS, JC002: 100 }, 10).includes('cost_buffer_exceeded_JC002'))
 })
 
 test('cost verification is invalidated by active AI key/model changes without exposing credentials', () => {
@@ -29,11 +29,7 @@ test('cost verification is invalidated by active AI key/model changes without ex
   assert.match(original, /^[a-f0-9]{64}$/)
   assert.notEqual(original, switchedModel)
   assert.notEqual(original, switchedKey)
-  assert.doesNotThrow(() => validatePlanCostFingerprint(original, original))
-  assert.throws(() => validatePlanCostFingerprint(switchedModel, original),
-    { code: 'credit_plan_cost_configuration_changed' })
-  assert.throws(() => validatePlanCostFingerprint(null, original),
-    { code: 'credit_plan_cost_configuration_unavailable' })
+  assert.equal(original === switchedModel, false)
 })
 
 test('object and control PINs can share digits but have independent salted hashes', () => {

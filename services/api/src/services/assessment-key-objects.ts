@@ -6,7 +6,8 @@ import type mysql from 'mysql2/promise'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import { ControlError, pinDigest, sealKey, sixDigitPin, unsealKey, verifyPin } from './admin-control-boxes.js'
-import { createJsonModelProvider } from './ai-provider.js'
+import { assessmentModelSupportsTemperature, createJsonModelProvider } from './ai-provider.js'
+import { validateAssessmentOutput } from '../domain/assessment.js'
 
 export const assessmentKeyInput = z.object({
   label: z.string().trim().min(1).max(120),
@@ -389,10 +390,16 @@ export async function testAssessmentKey(input: {
     else {
       await validateAssessmentApiUrl(baseUrl)
       const provider = createJsonModelProvider({
-        ...config, timeoutMs: 5000, jsonMode: true, temperature: 0,
+        ...config, timeoutMs: 30000, jsonMode: false, temperature: 0,
+        sendTemperature: assessmentModelSupportsTemperature(config.provider),
         transport: secureAssessmentModelFetch,
       })
-      await provider.generateJson({ system: '只返回 JSON 对象 {"ok":true}。', user: '连接测试', maxTokens: 32 })
+      const report = await provider.generateJson({
+        system: '你是九辰教育评估引擎。只输出符合 assessment-output-v1 的完整 JSON 对象。不得编造院校事实或录取概率。',
+        user: '合成格式探针，不代表真实学员评估。请输出完整 JSON：profileSummary 为资料不足说明；strengths、risks、recommendedActions、similarCases 为空数组；targetAssessments 仅一项，schoolName 为「示例大学」、programName 为 null、tier 为 insufficient_data、rationale 为资料不足、gapItems 与 actions 为空数组、evidenceRefs 为 ["probe:synthetic"]；uncertainties 至少一条；disclaimer 为仅测试报告格式。不得编造真实院校事实。',
+        maxTokens: 1024,
+      })
+      validateAssessmentOutput(report)
       passed = true
     }
   } catch { /* Only the bounded result is persisted or returned. */ }
@@ -408,5 +415,5 @@ export async function testAssessmentKey(input: {
     await connection.commit()
   } catch (error) { await connection.rollback(); throw error }
   finally { connection.release() }
-  return { reachable: passed, mayIncurCost: true }
+  return { reachable: passed, reportSchemaValid: passed, persistenceTested: false, mayIncurCost: true }
 }

@@ -8,7 +8,7 @@ import { pinDigest, sealKey } from '../services/admin-control-boxes.js'
 import { listAssessmentKeys, readActiveAssessmentKey, switchAssessmentKey,
   disableAssessmentKey, testAssessmentKey } from '../services/assessment-key-objects.js'
 import { activateCreditPlan, createCreditPlan, disableCreditPlan, listCreditPlans,
-  readActiveCreditPlan, validatePlanCost } from '../services/credit-plans.js'
+  readActiveCreditPlan, planCostWarnings } from '../services/credit-plans.js'
 import { readAssessmentCostFingerprint } from '../services/assessment-cost-fingerprint.js'
 import { bindAdditionalIdentity, listMyIdentities, switchMyIdentity,
   unbindMyIdentity } from '../services/identity-roles.js'
@@ -141,12 +141,13 @@ try {
   const oldOrder = randomUUID()
   await pool.query('INSERT INTO payment_orders (id,user_id,out_trade_no,amount_fen,credit_amount) VALUES (?,?,?,?,?)',
     [oldOrder,adminA,'JCV-old-order',199,7])
-  assert.throws(() => validatePlanCost({ JC000:2,JC001:1,JC002:5,JC003:10 },null,null,null,null))
-  assert.throws(() => validatePlanCost({ JC000:100,JC001:1,JC002:5,JC003:10 },1,new Date(),originalCostFingerprint,originalCostFingerprint))
-  await assert.rejects(() => createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
-    name:'旧页面确认不得越过配置切换',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
-    estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:'a'.repeat(64),pin:'333333',
-  } }), { code:'credit_plan_cost_configuration_changed' })
+  assert.deepEqual(planCostWarnings({ JC000:2,JC001:1,JC002:5,JC003:10 },null),['cost_not_estimated'])
+  assert.ok(planCostWarnings({ JC000:100,JC001:1,JC002:5,JC003:10 },1).length>0)
+  const unverified = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
+    name:'未核验成本仍可候选',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
+    estimatedCostFen:null,costConfirmed:false,expectedCostConfigFingerprint:null,pin:'333333',
+  } })
+  assert.equal(unverified.active,false)
   const candidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
     name:'固定价四档',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
     estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:originalCostFingerprint,pin:'444444',
@@ -180,18 +181,23 @@ try {
     'SELECT failed_attempts FROM credit_plan_objects WHERE id=?',[candidate.id])
   assert.equal(Number(planPinAfterSuccess[0]!.failed_attempts),0)
   const invalidCandidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
-    name:'成本时间拒绝验证',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
+    name:'成本时间仅作提示',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
     estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:originalCostFingerprint,pin:'555555',
   } })
+  let latestPlanVersion = activated.version
   for (const clockValue of ['NULL', 'CURRENT_TIMESTAMP() - INTERVAL 31 DAY',
     'CURRENT_TIMESTAMP() + INTERVAL 1 DAY']) {
     await pool.query(`UPDATE credit_plan_objects SET cost_verified_at=${clockValue} WHERE id=?`,
       [invalidCandidate.id])
-    await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:invalidCandidate.id,env:costEnv,
-      expectedVersion:activated.version,currentPin:'444444',targetPin:'555555' }),
-    { code:'plan_cost_missing_or_stale' })
-    assert.equal((await listCreditPlans(pool,costEnv)).head.activePlanId,candidate.id)
+    const listed = await listCreditPlans(pool,costEnv)
+    assert.notEqual(listed.plans.find(plan=>plan.id===invalidCandidate.id)?.costVerificationStatus,'verified')
+    const switched = await activateCreditPlan({ pool,actorId:adminA,id:invalidCandidate.id,env:costEnv,
+      expectedVersion:latestPlanVersion,currentPin:clockValue==='NULL'?'444444':'555555',targetPin:'555555' })
+    latestPlanVersion = switched.version
+    assert.equal((await listCreditPlans(pool,costEnv)).head.activePlanId,invalidCandidate.id)
   }
+  await pool.query('UPDATE credit_plan_objects SET cost_verified_at=CURRENT_TIMESTAMP() WHERE id=?',
+    [invalidCandidate.id])
   const mismatchCandidate = await createCreditPlan({ pool,actorId:adminB,env:costEnv,data: {
     name:'模型切换后必须重核',note:'隔离验证',counts:{ JC000:2,JC001:1,JC002:5,JC003:10 },
     estimatedCostFen:1,costConfirmed:true,expectedCostConfigFingerprint:originalCostFingerprint,pin:'666666',
@@ -222,9 +228,12 @@ try {
   assert.equal((await readActiveCreditPlan(pool,costEnv)).costVerificationStatus,'model_unavailable')
   await pool.query('UPDATE assessment_key_objects SET encrypted_secret=? WHERE id=?',[activeCiphertext,nextKeyId])
   assert.equal(await readAssessmentCostFingerprint(pool,costEnv),changedCostFingerprint)
-  await assert.rejects(() => activateCreditPlan({ pool,actorId:adminA,id:mismatchCandidate.id,env:costEnv,
-    expectedVersion:activated.version,currentPin:'444444',targetPin:'666666' }),
-  { code:'credit_plan_cost_configuration_changed' })
+  const mismatchListed = await listCreditPlans(pool,costEnv)
+  assert.equal(mismatchListed.plans.find(plan=>plan.id===mismatchCandidate.id)?.costVerificationStatus,
+    'configuration_changed')
+  const afterMismatchSwitch = await activateCreditPlan({ pool,actorId:adminA,id:mismatchCandidate.id,env:costEnv,
+    expectedVersion:latestPlanVersion,currentPin:'555555',targetPin:'666666' })
+  assert.equal((await listCreditPlans(pool,costEnv)).head.activePlanId,mismatchCandidate.id)
 
   const [oldRows] = await pool.query<mysql.RowDataPacket[]>(
     'SELECT amount_fen,credit_amount,sku_key,plan_id FROM payment_orders WHERE id=?',[oldOrder])
@@ -232,7 +241,7 @@ try {
   assert.equal(Number(oldRows[0]!.credit_amount),7)
   assert.equal(oldRows[0]!.sku_key,null)
   assert.equal(oldRows[0]!.plan_id,null)
-  await disableCreditPlan({ pool,actorId:adminA,expectedVersion:activated.version,currentPin:'444444' })
+  await disableCreditPlan({ pool,actorId:adminA,expectedVersion:afterMismatchSwitch.version,currentPin:'666666' })
   assert.equal((await listCreditPlans(pool,costEnv)).head.activePlanId,null)
 
   const identities = await listMyIdentities({ configured:true,pool } as any,adminA)

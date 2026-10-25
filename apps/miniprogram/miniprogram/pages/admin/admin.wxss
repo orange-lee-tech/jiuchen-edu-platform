@@ -86,3 +86,14 @@ button::after { border:0; }
 .verified-date picker{flex:1;min-width:0;}
 
 .verified-body{box-sizing:border-box;width:100%;min-height:300rpx;padding:20rpx;margin-top:12rpx;line-height:1.6;white-space:pre-wrap;}
+
+.control-switch{display:flex;gap:12rpx;margin-bottom:22rpx;}
+.control-switch-item{flex:1;text-align:center;padding:21rpx 8rpx;border-radius:9rpx;background:#e5ecf5;color:#24486d;font-size:25rpx;font-weight:700;}
+.control-switch-item.selected{background:#173b73;color:#fff;box-shadow:inset 0 -5rpx #d9aa4a;}
+.control-status{background:#173b73;color:#fff;border-color:#173b73;border-left:7rpx solid #d9aa4a;}
+.control-status .card-note{color:#e0e9f5;}
+.control-eyebrow{display:block;color:#e8c577;font-size:22rpx;font-weight:700;letter-spacing:2rpx;}
+.control-active-title{display:block;margin:12rpx 0;font-size:34rpx;font-weight:800;}
+.control-form,.control-pin-panel{border-top:1rpx solid #d8dee6;margin-top:14rpx;padding-top:18rpx;}
+.control-warning{display:block;padding:15rpx 18rpx;margin:12rpx 0;background:#fff4da;border-left:5rpx solid #ca9230;color:#775414;font-size:23rpx;line-height:1.6;}
+.rigor-range{display:flex;justify-content:space-between;color:#667587;font-size:22rpx;margin:-10rpx 5rpx 16rpx;}

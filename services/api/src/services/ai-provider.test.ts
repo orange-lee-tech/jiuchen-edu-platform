@@ -40,6 +40,24 @@ test('AI provider configuration is isolated by workload', () => {
   assert.equal(createScheduleAIProvider(env).isConfigured(), false)
 })
 
+test('preset models receive only supported generation parameters', async () => {
+  const bodies: Record<string, unknown>[] = []
+  const transport = async (_endpoint: string, options: { body: string }) => {
+    bodies.push(JSON.parse(options.body) as Record<string, unknown>)
+    return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: '{"ok":true}' } }] }) }
+  }
+  for (const provider of ['deepseek', 'aliyun-bailian']) {
+    await createAssessmentAIProvider({ ASSESSMENT_AI_PROVIDER: provider,
+      ASSESSMENT_AI_BASE_URL: 'https://example.invalid/v1', ASSESSMENT_AI_API_KEY: 'test-key',
+      ASSESSMENT_AI_MODEL: 'text-model', ASSESSMENT_AI_TEMPERATURE: 0.3 } as any,
+    transport).generateJson({ user: 'test' })
+  }
+  assert.equal('temperature' in bodies[0]!, false)
+  assert.equal('response_format' in bodies[0]!, false)
+  assert.equal(bodies[1]!.temperature, 0.3)
+  assert.equal('response_format' in bodies[1]!, false)
+})
+
 test('assessment provider can reproduce evaluated generation contract', async () => {
   const originalFetch = globalThis.fetch
   let capturedBody: Record<string, unknown> | undefined

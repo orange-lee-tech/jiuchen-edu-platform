@@ -24,7 +24,7 @@ export async function loadCommercialConfig(
     if ((error as { code?: string }).code === 'ER_NO_SUCH_TABLE') {
       return activePlan?.initialized ? { ...baseline,
         paymentSkus: visiblePlanSkus(activePlan.skus),
-        platformPriceConfirmed: activePlan.costVerified === true && baseline.fixedCatalogConfirmed === true,
+        platformPriceConfirmed: baseline.fixedCatalogConfirmed === true,
         adminSettingsApplied: false } :
         { ...baseline, platformPriceConfirmed: true, adminSettingsApplied: false }
     }
@@ -33,7 +33,7 @@ export async function loadCommercialConfig(
   if (!row && !activePlan?.initialized) return { ...baseline, platformPriceConfirmed: true, adminSettingsApplied: false }
   if (!row) return { ...baseline,
     paymentSkus: visiblePlanSkus(activePlan!.skus),
-    platformPriceConfirmed: activePlan!.costVerified === true && baseline.fixedCatalogConfirmed === true,
+    platformPriceConfirmed: baseline.fixedCatalogConfirmed === true,
     adminSettingsApplied: false }
   const raw = typeof row.payload_json === 'string' ? JSON.parse(row.payload_json) : row.payload_json
   const settings = settingsSchema.parse(raw)
@@ -52,7 +52,7 @@ export async function loadCommercialConfig(
         ...sku, amountFen: sku.key === 'assessment-1' ? settings.singleFen : settings.tenFen,
       })) : [],
     platformPriceConfirmed: activePlan?.initialized ?
-      activePlan.costVerified === true && baseline.fixedCatalogConfirmed === true :
+      baseline.fixedCatalogConfirmed === true :
       settings.platformPriceConfirmed,
     adminSettingsApplied: true,
   }

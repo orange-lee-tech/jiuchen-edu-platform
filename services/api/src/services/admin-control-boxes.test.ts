@@ -15,6 +15,10 @@ test('settings PIN shape, numerical policy and isolated key encryption', () => {
     singleFen: 0, tenFen: 1690, guestFree: 5, studentTotalFree: 1,
     platformPriceConfirmed: true, estimatedCostFen: 100,
   }).success, false)
+  assert.equal(settingsSchema.safeParse({
+    singleFen: 190, tenFen: 1690, guestFree: 1, studentTotalFree: 5,
+    platformPriceConfirmed: true, estimatedCostFen: 10000,
+  }).success, true)
 
   const masterKey = randomBytes(32).toString('base64')
   const ciphertext = sealKey('private-test-key', masterKey)
