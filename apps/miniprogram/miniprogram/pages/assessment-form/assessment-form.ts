@@ -251,6 +251,7 @@ Page({
     skuChoices: [] as Array<{ key: string; price: string; count: number }>,
     materialImportConfigured: false,
     draftId: '',
+    retryNotice: '',
     profile: {
       university: '',
       major: '',
@@ -414,15 +415,16 @@ Page({
 
     try {
       const requestedDraftId = query.id ? decodeURIComponent(query.id) : ''
+      const retryFrom = query.retryFrom ? decodeURIComponent(query.retryFrom) : ''
       const [profile, meta, draft] = await Promise.all([
         getMyAcademicProfile(),
         getAssessmentMeta(),
-        requestedDraftId
-          ? getMyAssessment(requestedDraftId)
+        requestedDraftId || retryFrom
+          ? getMyAssessment(requestedDraftId || retryFrom)
           : Promise.resolve(null),
       ])
 
-      if (draft && draft.status !== 'draft') {
+      if (draft && draft.status !== (retryFrom ? 'failed' : 'draft')) {
         wx.showToast({ title: '该记录已不能作为草稿编辑', icon: 'none' })
         safeBack()
         return
@@ -434,7 +436,8 @@ Page({
       this.setData({
         providerConfigured: meta.providerConfigured,
         materialImportConfigured: meta.materialImport.enabled,
-        draftId: draft?.id || '',
+        draftId: retryFrom ? '' : draft?.id || '',
+        retryNotice: retryFrom ? `已带入失败评估的输入。请核对后提交；新评估将另建任务，原记录保留。原诊断编号：${retryFrom}` : '',
         profileReady: true,
         includePlanning: draftInput?.contextOptions?.includePlanning !== false,
         includeRecentAssessments: draftInput?.contextOptions?.includeRecentAssessments !== false,
@@ -463,8 +466,8 @@ Page({
       })
       void this.loadCredits()
     } catch (error) {
-      console.info('Assessment form bootstrap failed.', error)
-      wx.showToast({ title: '评估资料暂时无法加载', icon: 'none' })
+      console.info('Assessment form bootstrap failed.')
+      wx.showToast({ title: friendlyRequestError(error, '评估资料暂时无法加载，请重试'), icon: 'none' })
     } finally {
       this.setData({ loading: false })
       if (focusSection) {
@@ -965,6 +968,7 @@ Page({
   },
 
   async onSaveDraft() {
+    if (this.data.saving) return
     try {
       this.setData({ saving: true })
       const input = this.buildInput()
@@ -985,6 +989,7 @@ Page({
   },
 
   async onRunAssessment() {
+    if (this.data.saving) return
     if (!this.data.providerConfigured) {
       wx.showModal({
         title: 'AI 模型尚未接入',

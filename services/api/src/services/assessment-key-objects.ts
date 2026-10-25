@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto'
-import { isIP } from 'node:net'
+import { isIP, type LookupFunction } from 'node:net'
 import { lookup } from 'node:dns/promises'
 import { request as httpsRequest } from 'node:https'
 import type mysql from 'mysql2/promise'
@@ -7,6 +7,7 @@ import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import { ControlError, pinDigest, sealKey, sixDigitPin, unsealKey, verifyPin } from './admin-control-boxes.js'
 import { assessmentModelSupportsTemperature, createJsonModelProvider } from './ai-provider.js'
+import { classifyAssessmentFailure, type AssessmentFailureCategory } from './assessment-failure.js'
 import { validateAssessmentOutput } from '../domain/assessment.js'
 
 export const assessmentKeyInput = z.object({
@@ -131,6 +132,14 @@ export async function validateAssessmentApiUrl(raw: string) {
 
 /** Resolve once per request, reject private answers, then pin the TLS socket to
  * that checked address. No redirect is followed. */
+export function pinnedAssessmentLookup(answer: { address: string; family: number }): LookupFunction {
+  return (_hostname, options, callback) => {
+    // Node 22's automatic family selection requests `all: true`. Its callback
+    // then requires an address array; returning a string causes ERR_INVALID_IP_ADDRESS.
+    callback(null, options.all ? [answer] : answer.address, options.all ? undefined : answer.family)
+  }
+}
+
 export async function secureAssessmentModelFetch(endpoint: string, options: {
   method: 'POST'; headers: Record<string, string>; body: string; signal: AbortSignal
 }) {
@@ -143,7 +152,7 @@ export async function secureAssessmentModelFetch(endpoint: string, options: {
   return new Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>((resolve, reject) => {
     const request = httpsRequest(url, {
       method: options.method, headers: options.headers, signal: options.signal,
-      lookup: (_hostname, _options, callback) => callback(null, address.address, address.family),
+      lookup: pinnedAssessmentLookup(address),
     }, (response) => {
       const chunks: Buffer[] = []
       let size = 0
@@ -340,11 +349,13 @@ export async function archiveAssessmentKey(input: {
 
 export async function readActiveAssessmentKey(pool: mysql.Pool, env: AppEnv) {
   const [heads] = await pool.query<HeadRow[]>(
-    'SELECT active_object_id,initialized FROM assessment_key_head WHERE id=1',
+    'SELECT active_object_id,initialized,version FROM assessment_key_head WHERE id=1',
   )
   const head = heads[0]
-  if (!head || !Number(head.initialized)) return { initialized: false as const, config: null }
-  if (!head.active_object_id) return { initialized: true as const, config: null }
+  if (!head || !Number(head.initialized)) return { initialized: false as const, config: null,
+    objectId: null, version: null }
+  if (!head.active_object_id) return { initialized: true as const, config: null,
+    objectId: null, version: Number(head.version) }
   const [rows] = await pool.query<KeyRow[]>(
     "SELECT * FROM assessment_key_objects WHERE id=? AND status='active' LIMIT 1", [head.active_object_id],
   )
@@ -352,7 +363,7 @@ export async function readActiveAssessmentKey(pool: mysql.Pool, env: AppEnv) {
   if (!row || !env.ADMIN_AI_KEY_ENCRYPTION_KEY) {
     throw new ControlError('assessment_key_vault_unavailable', 503)
   }
-  return { initialized: true as const, config: {
+  return { initialized: true as const, objectId: row.id, version: Number(head.version), config: {
     provider: row.provider ?? env.ASSESSMENT_AI_PROVIDER,
     apiBaseUrl: row.api_base_url ?? env.ASSESSMENT_AI_BASE_URL,
     model: row.model ?? env.ASSESSMENT_AI_MODEL,
@@ -384,36 +395,51 @@ export async function testAssessmentKey(input: {
   const config = { provider: row.provider ?? input.env.ASSESSMENT_AI_PROVIDER,
     baseUrl, model: row.model,
     apiKey: unsealKey(row.encrypted_secret, input.env.ADMIN_AI_KEY_ENCRYPTION_KEY) }
-  let passed = false
+  const diagnosticId = randomUUID()
+  let reachable = false
+  let reportSchemaValid = false
+  let errorCategory: AssessmentFailureCategory | null = null
+  let providerHttpStatus: number | null = null
   try {
-    if (input.probe) passed = await input.probe(config)
+    if (input.probe) {
+      reportSchemaValid = await input.probe(config)
+      reachable = reportSchemaValid
+      if (!reportSchemaValid) errorCategory = 'invalid_schema'
+    }
     else {
       await validateAssessmentApiUrl(baseUrl)
       const provider = createJsonModelProvider({
-        ...config, timeoutMs: 30000, jsonMode: false, temperature: 0,
+        ...config, timeoutMs: 60000, jsonMode: config.provider === 'deepseek', temperature: 0,
         sendTemperature: assessmentModelSupportsTemperature(config.provider),
         transport: secureAssessmentModelFetch,
       })
       const report = await provider.generateJson({
         system: '你是九辰教育评估引擎。只输出符合 assessment-output-v1 的完整 JSON 对象。不得编造院校事实或录取概率。',
         user: '合成格式探针，不代表真实学员评估。请输出完整 JSON：profileSummary 为资料不足说明；strengths、risks、recommendedActions、similarCases 为空数组；targetAssessments 仅一项，schoolName 为「示例大学」、programName 为 null、tier 为 insufficient_data、rationale 为资料不足、gapItems 与 actions 为空数组、evidenceRefs 为 ["probe:synthetic"]；uncertainties 至少一条；disclaimer 为仅测试报告格式。不得编造真实院校事实。',
-        maxTokens: 1024,
+        maxTokens: 4096,
       })
+      reachable = true
       validateAssessmentOutput(report)
-      passed = true
+      reportSchemaValid = true
     }
-  } catch { /* Only the bounded result is persisted or returned. */ }
+  } catch (error) {
+    const classified = classifyAssessmentFailure(error)
+    reachable ||= classified.reachable
+    errorCategory = classified.category
+    providerHttpStatus = classified.httpStatus
+  }
   const connection = await input.pool.getConnection()
   try {
     await connection.beginTransaction()
     await connection.query(
       'UPDATE assessment_key_objects SET last_test_result=?,last_test_at=CURRENT_TIMESTAMP() WHERE id=?',
-      [passed ? 'passed' : 'failed', input.id],
+      [reportSchemaValid ? 'passed' : 'failed', input.id],
     )
     const [heads] = await connection.query<HeadRow[]>('SELECT version FROM assessment_key_head WHERE id=1')
     await audit(connection, input.actorId, 'test', input.id, Number(heads[0]?.version ?? 0))
     await connection.commit()
   } catch (error) { await connection.rollback(); throw error }
   finally { connection.release() }
-  return { reachable: passed, reportSchemaValid: passed, persistenceTested: false, mayIncurCost: true }
+  return { reachable, reportSchemaValid, persistenceTested: false, mayIncurCost: true,
+    errorCategory, providerHttpStatus, diagnosticId }
 }

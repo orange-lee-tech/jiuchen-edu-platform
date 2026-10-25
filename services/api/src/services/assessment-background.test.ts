@@ -10,6 +10,8 @@ import type {
   AssessmentRetriever,
   AssessmentRuntime,
 } from './assessment-runtime.js'
+import { JsonModelProviderHttpError, JsonModelProviderInvalidJsonError,
+  JsonModelProviderTimeoutError } from './ai-provider.js'
 
 const assessmentInput = {
   profile: {
@@ -142,6 +144,58 @@ test('background assessment persists failed state instead of surfacing model err
   assert.equal(result, 'failed')
   assert.equal(failureCode, 'assessment_execution_failed')
   assert.deepEqual(events, ['assessment-2:failed'])
+})
+
+test('background classifies provider failures, releases reservation through store, and never logs raw output', async () => {
+  const failures: Array<[Error, string]> = [
+    [new JsonModelProviderHttpError(401), 'assessment_ai_authentication'],
+    [new JsonModelProviderHttpError(429), 'assessment_ai_quota_limited'],
+    [new JsonModelProviderTimeoutError(), 'assessment_ai_timeout'],
+    [new JsonModelProviderInvalidJsonError('private student and model output'), 'assessment_ai_invalid_json'],
+  ]
+  for (const [failure, expectedCode] of failures) {
+    const logs: unknown[] = []
+    const runtime = createSuccessRuntime()
+    runtime.provider.analyze = async () => { throw failure }
+    let released = false
+    let notificationStatus = ''
+    const result = await processAssessmentBackgroundJob({
+      job: { id: 'assessment-failure', userId: 'user', inputJson: assessmentInput },
+      runtime,
+      store: { async nextRunning() { return null },
+        async persistSuccess() { assert.fail('must not consume') },
+        async persistFailure(_job, code) { assert.equal(code, expectedCode); released = true } },
+      notification: { channel: 'none', isConfigured: () => false,
+        async notify(event) { notificationStatus = event.status
+          return { delivered: false, channel: 'none', reason: 'not_configured' } } },
+      logger: { info(value: unknown) { logs.push(value) }, warn(value: unknown) { logs.push(value) },
+        error(value: unknown) { logs.push(value) } } as any,
+      creditEnforcementEnabled: true,
+    })
+    assert.equal(result, 'failed')
+    assert.equal(released, true)
+    assert.equal(notificationStatus, 'failed')
+    assert.ok(logs.some(value => (value as { failureStage?: string }).failureStage === 'model_request'))
+    assert.doesNotMatch(JSON.stringify(logs), /private student|private details/)
+  }
+})
+
+test('database persistence error never emits success or claims a debit', async () => {
+  const logs: unknown[] = []
+  let notified = false
+  await assert.rejects(processAssessmentBackgroundJob({
+    job: { id: 'assessment-db-error', userId: 'user', inputJson: assessmentInput },
+    runtime: createSuccessRuntime(),
+    store: { async nextRunning() { return null },
+      async persistSuccess() { throw new Error('private sql details') },
+      async persistFailure() { assert.fail('ambiguous commit must not be blindly reversed') } },
+    notification: { channel: 'none', isConfigured: () => false,
+      async notify() { notified = true; return { delivered: false, channel: 'none', reason: 'not_configured' } } },
+    logger: { info(value: unknown) { logs.push(value) }, warn(value: unknown) { logs.push(value) },
+      error(value: unknown) { logs.push(value) } } as any,
+  }), /private sql details/)
+  assert.equal(notified, false)
+  assert.doesNotMatch(JSON.stringify(logs), /private sql details|"creditConsumed":true/)
 })
 
 test('background context includes only server loader result with default-on toggles', async () => {

@@ -3,6 +3,9 @@ import test from 'node:test'
 import {
   ChatCompletionsJsonModelProvider,
   JsonModelProviderInvalidJsonError,
+  JsonModelProviderHttpError,
+  JsonModelProviderTimeoutError,
+  JsonModelProviderTruncatedError,
   createAssessmentAIProvider,
   createCustomerServiceAIProvider,
   createScheduleAIProvider,
@@ -14,6 +17,24 @@ test('extractJsonObject accepts JSON surrounded by model prose', () => {
     extractJsonObject('prefix\n{"ok":true,"items":[1,2]}\nsuffix'),
     { ok: true, items: [1, 2] },
   )
+})
+
+test('provider preserves only structured HTTP code and detects truncated output', async () => {
+  const base = { baseUrl: 'https://api.deepseek.com', apiKey: 'test-key', model: 'deepseek-v4-pro' }
+  const rejected = new ChatCompletionsJsonModelProvider({ ...base,
+    transport: async () => ({ ok: false, status: 429,
+      json: async () => ({ error: { code: 'rate_limit_exceeded', message: 'private details' } }) }) })
+  await assert.rejects(rejected.generateJson({ user: 'json' }), (error: unknown) =>
+    error instanceof JsonModelProviderHttpError && error.status === 429 &&
+    error.providerCode === 'rate_limit_exceeded' && !error.message.includes('private'))
+
+  const truncated = new ChatCompletionsJsonModelProvider({ ...base,
+    transport: async () => ({ ok: true, status: 200,
+      json: async () => ({ choices: [{ finish_reason: 'length', message: { content: '{' } }] }) }) })
+  await assert.rejects(truncated.generateJson({ user: 'json' }), JsonModelProviderTruncatedError)
+  const timeout = new ChatCompletionsJsonModelProvider({ ...base,
+    transport: async () => { throw new DOMException('private details', 'AbortError') } })
+  await assert.rejects(timeout.generateJson({ user: 'json' }), JsonModelProviderTimeoutError)
 })
 
 test('extractJsonObject preserves valid JSON primitives for schema validation', () => {
@@ -53,7 +74,7 @@ test('preset models receive only supported generation parameters', async () => {
     transport).generateJson({ user: 'test' })
   }
   assert.equal('temperature' in bodies[0]!, false)
-  assert.equal('response_format' in bodies[0]!, false)
+  assert.deepEqual(bodies[0]!.response_format, { type: 'json_object' })
   assert.equal(bodies[1]!.temperature, 0.3)
   assert.equal('response_format' in bodies[1]!, false)
 })

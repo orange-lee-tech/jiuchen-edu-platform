@@ -61,8 +61,11 @@
       <view class="card control-status">
         <text class="control-eyebrow">当前全局 AI · 版本 {{keyHead.version}}</text>
         <text class="control-active-title">{{activeKey ? activeKey.label : '尚无生效服务'}}</text>
-        <text class="card-note">{{activeKey ? activeKey.provider + ' · ' + activeKey.model : '保存第一个服务后自动生效'}}。后续新发起的评估读取服务器现役配置。</text>
+        <text class="card-note">状态：{{keyCurrentStatus}} · 实际来源：{{keySourceLabel}}</text>
+        <text class="card-note">{{activeKey ? activeKey.provider + ' · ' + activeKey.model + ' · 对象版本 ' + activeKey.version : '保存第一个服务后自动生效'}}。后续新发起的评估读取服务器现役配置。</text>
+        <text wx:if="{{activeKey}}" class="card-note">生效对象 ID：{{activeKey.id}} · 最近报告格式测试：{{activeKey.lastTestResult === 'passed' ? '通过' : activeKey.lastTestResult === 'failed' ? '失败' : '未测试'}}</text>
         <text class="card-note">密钥由服务端加密保存。连接测试会调用供应商，可能产生费用。</text>
+        <button wx:if="{{keyHead.activeObjectId}}" class="secondary" data-action="disable" data-id="{{keyHead.activeObjectId}}" disabled="{{actionLoading}}" bindtap="onOpenKeyAction">停用服务</button>
       </view>
       <view class="card" wx:if="{{keyObjectsReady}}">
         <view class="list-toolbar"><text class="card-title">服务对象</text><button class="mini" bindtap="onToggleKeyForm">{{keyFormOpen ? '收起' : '＋ 新增服务'}}</button></view>
@@ -81,19 +84,23 @@
           <text class="row-desc">新对象六位口令</text><input class="input" password type="number" maxlength="6" data-name="keyObjectPin" value="{{keyObjectPin}}" bindinput="onKeyObjectInput" />
           <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onCreateKeyObject">加密保存{{keyHead.initialized ? '候选服务' : '并启用首个服务'}}</button>
         </view>
-        <view wx:if="{{keyObjects.length}}" class="control-pin-panel">
-          <text class="row-desc">切换 / 停用：当前生效对象口令</text><input class="input" password type="number" maxlength="6" data-name="keyControlPin" value="{{keyControlPin}}" bindinput="onKeyObjectInput" />
-          <text class="row-desc">切换 / 查看：目标对象口令</text><input class="input" password type="number" maxlength="6" data-name="keyTargetPin" value="{{keyTargetPin}}" bindinput="onKeyObjectInput" />
-          <text class="row-desc">连接测试：该对象口令</text><input class="input" password type="number" maxlength="6" data-name="keyTestObjectPin" value="{{keyTestObjectPin}}" bindinput="onKeyObjectInput" />
-          <button wx:if="{{keyHead.activeObjectId}}" class="secondary" disabled="{{actionLoading}}" bindtap="onDisableKeyObject">停用现役服务</button>
+        <view wx:if="{{keyAction}}" id="key-action-panel" class="control-pin-panel">
+          <text class="card-title">{{keyAction === 'activate' ? '启用服务' : keyAction === 'disable' ? '停用服务' : keyAction === 'test' ? '验证连接及报告格式' : keyAction === 'reveal' ? '创建者查看' : keyAction === 'archive' ? '归档服务' : '设置对象口令'}} · {{keyActionLabel}}</text>
+          <text class="card-note" wx:if="{{keyAction === 'reveal'}}">此操作仅限该服务对象的创建管理员，请输入该对象的六位口令。</text>
+          <text class="card-note" wx:elif="{{keyAction === 'test'}}">测试会调用供应商，可能产生费用；通过后仍需真实评估验证报告入库。</text>
+          <text class="row-desc">{{keyAction === 'activate' || keyAction === 'disable' || keyAction === 'archive' || keyAction === 'setup' ? '当前控制口令' : '该对象六位口令'}}</text>
+          <input class="input" password type="number" maxlength="6" data-name="keyActionPin" value="{{keyActionPin}}" bindinput="onKeyActionPinInput" />
+          <block wx:if="{{keyAction === 'activate' || keyAction === 'setup'}}"><text class="row-desc">{{keyAction === 'activate' ? '目标对象口令' : '新对象口令'}}</text><input class="input" password type="number" maxlength="6" data-name="keyActionTargetPin" value="{{keyActionTargetPin}}" bindinput="onKeyActionPinInput" /></block>
+          <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onConfirmKeyAction">确认本次操作</button>
+          <button class="secondary" disabled="{{actionLoading}}" bindtap="onCancelKeyAction">取消</button>
         </view>
         <view wx:for="{{keyObjects}}" wx:key="id" class="list-row">
-          <view class="row-main"><text class="row-title">{{item.label}} · {{item.status}}</text><text class="row-desc">{{item.provider}} · {{item.model}} · 版本 {{item.version}}</text><text class="row-desc">{{item.note || '无备注'}} · 测试 {{item.lastTestResult || '未测试'}}</text></view>
-          <button wx:if="{{item.status !== 'active' && item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onActivateKeyObject">启用</button>
-          <button wx:if="{{!item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onSetupLegacyKeyPin">设置对象口令</button>
-          <button wx:if="{{item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onTestKeyObject">验证报告格式</button>
-          <button wx:if="{{item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onRevealKeyObject">创建者查看</button>
-          <button wx:if="{{item.status !== 'active' && item.status !== 'archived'}}" class="mini danger" data-id="{{item.id}}" bindtap="onArchiveKeyObject">归档</button>
+          <view class="row-main"><text class="row-title">{{item.label}} · {{item.status === 'active' ? '当前已启用' : item.status === 'candidate' ? '候选服务' : item.status === 'disabled' ? '已停用' : '已归档'}}</text><text class="row-desc">{{item.provider}} · {{item.model}} · 版本 {{item.version}}</text><text class="row-desc">{{item.note || '无备注'}} · 最近测试 {{item.lastTestResult === 'passed' ? '通过' : item.lastTestResult === 'failed' ? '失败' : '未测试'}}</text></view>
+          <button wx:if="{{item.status !== 'active' && item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-action="activate" data-id="{{item.id}}" bindtap="onOpenKeyAction">启用此服务</button>
+          <button wx:if="{{!item.hasObjectPin}}" class="mini" data-action="setup" data-id="{{item.id}}" bindtap="onOpenKeyAction">设置对象口令</button>
+          <button wx:if="{{item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-action="test" data-id="{{item.id}}" bindtap="onOpenKeyAction">验证连接及报告格式</button>
+          <button wx:if="{{item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-action="reveal" data-id="{{item.id}}" bindtap="onOpenKeyAction">创建者查看</button>
+          <button wx:if="{{item.status !== 'active' && item.status !== 'archived'}}" class="mini danger" data-action="archive" data-id="{{item.id}}" bindtap="onOpenKeyAction">归档</button>
         </view>
       </view>
     </block>

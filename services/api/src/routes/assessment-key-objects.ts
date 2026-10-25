@@ -119,8 +119,15 @@ export function registerAssessmentKeyObjectRoutes(
     if (!idSchema.safeParse(request.params.id).success || !parsed.success) {
       return reply.code(400).send({ ok: false, error: 'invalid_assessment_key_request' })
     }
-    try { return { ok: true, ...await testAssessmentKey({ pool: database.pool,
-      actorId: user.userId, id: request.params.id, pin: parsed.data.pin, env }) } }
+    try {
+      const result = await testAssessmentKey({ pool: database.pool,
+        actorId: user.userId, id: request.params.id, pin: parsed.data.pin, env })
+      request.log.info({ diagnosticId: result.diagnosticId, objectId: request.params.id,
+        reachable: result.reachable, reportSchemaValid: result.reportSchemaValid,
+        errorCategory: result.errorCategory, providerHttpStatus: result.providerHttpStatus },
+      'Assessment key format probe completed')
+      return { ok: true, ...result }
+    }
     catch (error) { return failure(reply, error) }
   })
 }

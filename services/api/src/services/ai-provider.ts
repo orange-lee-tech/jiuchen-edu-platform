@@ -59,12 +59,22 @@ export class JsonModelProviderUnavailableError extends Error {
 
 export class JsonModelProviderHttpError extends Error {
   readonly status: number
+  readonly providerCode: string | null
 
-  constructor(status: number) {
+  constructor(status: number, providerCode: string | null = null) {
     super('ai_provider_http_' + status)
     this.name = 'JsonModelProviderHttpError'
     this.status = status
+    this.providerCode = providerCode
   }
+}
+
+export class JsonModelProviderTimeoutError extends Error {
+  constructor() { super('ai_provider_timeout'); this.name = 'JsonModelProviderTimeoutError' }
+}
+
+export class JsonModelProviderTruncatedError extends Error {
+  constructor() { super('ai_provider_truncated'); this.name = 'JsonModelProviderTruncatedError' }
 }
 
 export class JsonModelProviderInvalidJsonError extends Error {
@@ -221,15 +231,28 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
       })
 
       if (!response.ok) {
-        throw new JsonModelProviderHttpError(response.status)
+        let providerCode: string | null = null
+        try {
+          const body = (await response.json()) as { error?: { code?: unknown; type?: unknown } }
+          const candidate = body?.error?.code ?? body?.error?.type
+          if (typeof candidate === 'string' && /^[a-z0-9_-]{1,80}$/i.test(candidate)) providerCode = candidate
+        } catch { /* Error bodies are optional and never logged. */ }
+        throw new JsonModelProviderHttpError(response.status, providerCode)
       }
 
-      const payload = (await response.json()) as {
+      let payload: {
         choices?: Array<{
+          finish_reason?: string
           message?: {
             content?: unknown
           }
         }>
+      }
+      try { payload = (await response.json()) as typeof payload }
+      catch { throw new JsonModelProviderInvalidJsonError('') }
+
+      if (payload.choices?.[0]?.finish_reason === 'length') {
+        throw new JsonModelProviderTruncatedError()
       }
 
       const text = responseText(payload.choices?.[0]?.message?.content)
@@ -242,7 +265,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('ai_provider_timeout')
+        throw new JsonModelProviderTimeoutError()
       }
       throw error
     } finally {
@@ -292,10 +315,12 @@ export function createAssessmentAIProvider(env: AppEnv, transport?: JsonModelPro
     model: env.ASSESSMENT_AI_MODEL,
     temperature: env.ASSESSMENT_AI_TEMPERATURE ?? 0,
     sendTemperature: assessmentModelSupportsTemperature(env.ASSESSMENT_AI_PROVIDER),
-    jsonMode: PRESET_ASSESSMENT_PROVIDERS.has(env.ASSESSMENT_AI_PROVIDER ?? '')
-      ? false : env.ASSESSMENT_AI_JSON_MODE ?? true,
-    responseFormat: PRESET_ASSESSMENT_PROVIDERS.has(env.ASSESSMENT_AI_PROVIDER ?? '')
-      ? undefined : env.ASSESSMENT_AI_RESPONSE_FORMAT,
+    jsonMode: env.ASSESSMENT_AI_PROVIDER === 'deepseek' ? true :
+      PRESET_ASSESSMENT_PROVIDERS.has(env.ASSESSMENT_AI_PROVIDER ?? '')
+        ? false : env.ASSESSMENT_AI_JSON_MODE ?? true,
+    responseFormat: env.ASSESSMENT_AI_PROVIDER === 'deepseek' ? 'json_object' :
+      PRESET_ASSESSMENT_PROVIDERS.has(env.ASSESSMENT_AI_PROVIDER ?? '')
+        ? undefined : env.ASSESSMENT_AI_RESPONSE_FORMAT,
     extraBody: parseExtraBodyJson(env.ASSESSMENT_AI_EXTRA_BODY_JSON),
     transport,
   })

@@ -154,6 +154,9 @@ Page({
     keyPresetNote: AI_SERVICE_PRESETS[0]!.note,
     keyRigor: 7,
     activeKey: null as AssessmentKeyObject | null,
+    keySourceLabel: '读取中', keyCurrentStatus: '读取中',
+    keyAction: '' as '' | 'activate' | 'disable' | 'archive' | 'test' | 'reveal' | 'setup',
+    keyActionId: '', keyActionLabel: '', keyActionPin: '', keyActionTargetPin: '',
     activePlan: null as CreditPlan | null,
     planPriceLabels: { JC000: '读取中', JC001: '读取中', JC002: '读取中', JC003: '读取中' },
     fixedPriceCatalogOk: false,
@@ -172,7 +175,7 @@ Page({
     keyLabel: '', keyProvider: AI_SERVICE_PRESETS[0]!.id,
     keyApiBaseUrl: AI_SERVICE_PRESETS[0]!.baseUrl,
     keyModel: AI_SERVICE_PRESETS[0]!.models[0]!.id,
-    keyNote: '', keyObjectPin: '', keyControlPin: '', keyTargetPin: '', keyTestObjectPin: '',
+    keyNote: '', keyObjectPin: '',
     settingsDraft: null as AdminControlDraft | null,
     keyDraft: null as AdminControlDraft | null,
     singleYuan: '1.90', tenYuan: '16.90', guestFreeInput: '1', studentFreeInput: '5', estimatedCostYuan: '',
@@ -319,6 +322,10 @@ Page({
         settingsOldPin: '', settingsNewPin: '', keyOldPin: '', keyNewPin: '', keyTestPin: '', apiKeyInput: '',
         keyObjectsReady: true, keyHead: keys.head, keyObjects: keys.objects,
         activeKey: keys.objects.find(item => item.id === keys.head.activeObjectId) ?? null,
+        keySourceLabel: keys.head.initialized ? '管理员后台' :
+          result.assessmentKey.configured ? '兼容配置' : 'ECS 环境变量',
+        keyCurrentStatus: keys.head.initialized && !keys.head.activeObjectId ? '已停用' :
+          keys.head.activeObjectId ? '已启用' : '待确认',
         creditPlansReady: true, planHead: plans.head, creditPlans: plans.plans,
         activePlan: plans.plans.find(item => item.id === plans.head.activePlanId) ?? null,
         planPriceLabels: Object.fromEntries(plans.prices.map(item => [item.key,
@@ -341,7 +348,7 @@ Page({
   onKeyObjectInput(event: WechatMiniprogram.Input) {
     const name = String(event.currentTarget.dataset.name)
     if (!['keyLabel', 'keyProvider', 'keyApiBaseUrl', 'keyModel',
-      'keyNote', 'keyObjectPin', 'keyControlPin', 'keyTargetPin', 'keyTestObjectPin', 'apiKeyInput'].includes(name)) return
+      'keyNote', 'keyObjectPin', 'apiKeyInput'].includes(name)) return
     this.setData({ [name]: event.detail.value })
   },
   onControlModule(event: WechatMiniprogram.CustomEvent) {
@@ -420,8 +427,10 @@ Page({
   },
   async onActivateCreditPlan(event: WechatMiniprogram.CustomEvent) {
     const id = String(event.currentTarget.dataset.id || '')
-    if (this.data.actionLoading || !/^\d{6}$/.test(this.data.planControlPin) ||
-      !/^\d{6}$/.test(this.data.planTargetPin)) return
+    if (this.data.actionLoading) return
+    if (!/^\d{6}$/.test(this.data.planControlPin) || !/^\d{6}$/.test(this.data.planTargetPin)) {
+      wx.showToast({ title: '请输入当前方案与目标方案的六位口令', icon: 'none' }); return
+    }
     this.setData({ actionLoading: true })
     try {
       await activateCreditPlanObject(id, { expectedVersion: this.data.planHead.version,
@@ -432,7 +441,10 @@ Page({
     finally { this.setData({ actionLoading: false, planControlPin: '', planTargetPin: '' }) }
   },
   async onDisableCreditPlan() {
-    if (this.data.actionLoading || !/^\d{6}$/.test(this.data.planControlPin)) return
+    if (this.data.actionLoading) return
+    if (!/^\d{6}$/.test(this.data.planControlPin)) {
+      wx.showToast({ title: '请输入当前方案控制口令', icon: 'none' }); return
+    }
     this.setData({ actionLoading: true })
     try {
       await disableCurrentCreditPlan({ expectedVersion: this.data.planHead.version,
@@ -444,7 +456,10 @@ Page({
   },
   async onArchiveCreditPlan(event: WechatMiniprogram.CustomEvent) {
     const id = String(event.currentTarget.dataset.id || '')
-    if (this.data.actionLoading || !/^\d{6}$/.test(this.data.planControlPin)) return
+    if (this.data.actionLoading) return
+    if (!/^\d{6}$/.test(this.data.planControlPin)) {
+      wx.showToast({ title: '请输入当前方案控制口令', icon: 'none' }); return
+    }
     this.setData({ actionLoading: true })
     try {
       await archiveCreditPlanObject(id, { expectedVersion: this.data.planHead.version,
@@ -455,8 +470,10 @@ Page({
   },
   async onSetupLegacyPlanPin(event: WechatMiniprogram.CustomEvent) {
     const id = String(event.currentTarget.dataset.id || '')
-    if (this.data.actionLoading || !/^\d{6}$/.test(this.data.planControlPin) ||
-      !/^\d{6}$/.test(this.data.planTargetPin)) return
+    if (this.data.actionLoading) return
+    if (!/^\d{6}$/.test(this.data.planControlPin) || !/^\d{6}$/.test(this.data.planTargetPin)) {
+      wx.showToast({ title: '请输入当前方案与目标方案的六位口令', icon: 'none' }); return
+    }
     this.setData({ actionLoading: true })
     try {
       await setupLegacyCreditPlanPin(id, this.data.planControlPin, this.data.planTargetPin)
@@ -485,81 +502,87 @@ Page({
     } catch (error) { wx.showToast({ title: friendlyRequestError(error, '密钥保存失败'), icon: 'none' }) }
     finally { this.setData({ actionLoading: false, apiKeyInput: '', keyObjectPin: '' }) }
   },
-  async onActivateKeyObject(event: WechatMiniprogram.CustomEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
-    if (this.data.actionLoading || !/^\d{6}$/.test(this.data.keyControlPin) ||
-      !/^\d{6}$/.test(this.data.keyTargetPin)) {
-      wx.showToast({ title: '请输入当前控制口令与目标对象口令', icon: 'none' }); return
-    }
-    this.setData({ actionLoading: true })
-    try {
-      await activateAssessmentKeyObject(id, { expectedVersion: this.data.keyHead.version,
-        currentPin: this.data.keyControlPin, targetPin: this.data.keyTargetPin })
-      wx.showToast({ title: '密钥已切换', icon: 'success' })
-      await this.loadControls()
-    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '密钥切换失败'), icon: 'none' }) }
-    finally { this.setData({ actionLoading: false, keyControlPin: '', keyTargetPin: '' }) }
-  },
-  async onDisableKeyObject() {
-    if (this.data.actionLoading || !/^\d{6}$/.test(this.data.keyControlPin)) return
-    this.setData({ actionLoading: true })
-    try {
-      await disableActiveAssessmentKey({ expectedVersion: this.data.keyHead.version,
-        currentPin: this.data.keyControlPin })
-      wx.showToast({ title: '评估密钥已停用', icon: 'success' })
-      await this.loadControls()
-    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '停用失败'), icon: 'none' }) }
-    finally { this.setData({ actionLoading: false, keyControlPin: '' }) }
-  },
-  async onArchiveKeyObject(event: WechatMiniprogram.CustomEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
-    if (this.data.actionLoading || !/^\d{6}$/.test(this.data.keyControlPin)) return
-    this.setData({ actionLoading: true })
-    try {
-      await archiveAssessmentKeyObject(id, { expectedVersion: this.data.keyHead.version,
-        currentPin: this.data.keyControlPin })
-      wx.showToast({ title: '对象已归档', icon: 'success' })
-      await this.loadControls()
-    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '归档失败'), icon: 'none' }) }
-    finally { this.setData({ actionLoading: false, keyControlPin: '' }) }
-  },
-  async onTestKeyObject(event: WechatMiniprogram.CustomEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
+  onOpenKeyAction(event: WechatMiniprogram.CustomEvent) {
     if (this.data.actionLoading) return
-    if (!/^\d{6}$/.test(this.data.keyTestObjectPin)) {
-      wx.showToast({ title: '请输入该对象的六位口令', icon: 'none' }); return
+    const action = String(event.currentTarget.dataset.action || '')
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!['activate', 'disable', 'archive', 'test', 'reveal', 'setup'].includes(action)) return
+    const target = this.data.keyObjects.find(item => item.id === id)
+    this.setData({ keyAction: action as typeof this.data.keyAction, keyActionId: id,
+      keyActionLabel: target?.label || this.data.activeKey?.label || '当前服务',
+      keyActionPin: '', keyActionTargetPin: '' }, () => {
+      wx.pageScrollTo({ selector: '#key-action-panel', duration: 200 })
+    })
+  },
+  onCancelKeyAction() {
+    this.setData({ keyAction: '', keyActionId: '', keyActionPin: '', keyActionTargetPin: '' })
+  },
+  onKeyActionPinInput(event: WechatMiniprogram.Input) {
+    const name = String(event.currentTarget.dataset.name)
+    if (name === 'keyActionPin' || name === 'keyActionTargetPin')
+      this.setData({ [name]: event.detail.value })
+  },
+  async onConfirmKeyAction() {
+    const { keyAction: action, keyActionId: id, keyActionPin: pin,
+      keyActionTargetPin: targetPin } = this.data
+    if (this.data.actionLoading || !action) return
+    if (!/^\d{6}$/.test(pin) ||
+      ((action === 'activate' || action === 'setup') && !/^\d{6}$/.test(targetPin))) {
+      wx.showToast({ title: '请输入本次操作所需的六位口令', icon: 'none' }); return
+    }
+    if (action === 'disable') {
+      const confirmed = await new Promise<boolean>(resolve => wx.showModal({
+        title: '确认停用 AI 服务',
+        content: '停用后可能无法发起新的 AI 评估。已有报告会保留。确认停用吗？',
+        confirmText: '确认停用', confirmColor: '#b54747',
+        success: result => resolve(result.confirm), fail: () => resolve(false),
+      }))
+      if (!confirmed) return
     }
     this.setData({ actionLoading: true })
     try {
-      const result = await testAssessmentKeyObject(id, this.data.keyTestObjectPin)
-      if (result.reportSchemaValid) wx.showModal({ title: '报告格式通过',
-        content: '候选模型已返回可解析的九辰报告格式。真实学员落库、扣次及全局切换仍需完整评估验证。此次测试可能产生模型费用。', showCancel: false })
-      else wx.showToast({ title: '报告格式未通过', icon: 'none' })
+      if (action === 'activate') {
+        await activateAssessmentKeyObject(id, { expectedVersion: this.data.keyHead.version,
+          currentPin: pin, targetPin })
+        wx.showToast({ title: '服务已启用', icon: 'success' })
+      } else if (action === 'disable') {
+        await disableActiveAssessmentKey({ expectedVersion: this.data.keyHead.version, currentPin: pin })
+        wx.showToast({ title: '服务已停用', icon: 'success' })
+      } else if (action === 'archive') {
+        await archiveAssessmentKeyObject(id, { expectedVersion: this.data.keyHead.version, currentPin: pin })
+        wx.showToast({ title: '对象已归档', icon: 'success' })
+      } else if (action === 'setup') {
+        await setupLegacyAssessmentKeyPin(id, pin, targetPin)
+        wx.showToast({ title: '对象口令已设置', icon: 'success' })
+      } else if (action === 'reveal') {
+        const result = await revealAssessmentKeyObject(id, pin)
+        wx.showModal({ title: '仅创建者查看密钥', content: result.apiKey, showCancel: false })
+      } else {
+        const result = await testAssessmentKeyObject(id, pin)
+        const messages: Record<string, string> = {
+          authentication: '密钥验证失败，请检查密钥',
+          model_unavailable: '当前模型不可用，请检查模型名称',
+          quota_limited: '供应商额度不足或请求受限',
+          connection: '无法连接供应商，请检查服务地址',
+          timeout: '模型响应超时',
+          truncated: '模型输出达到上限，请检查输出长度',
+          invalid_json: '模型返回内容不是有效 JSON',
+          invalid_schema: '已收到模型响应，但报告结构不符合要求',
+          internal: '服务处理失败，请记录诊断编号',
+        }
+        wx.showModal({ title: result.reportSchemaValid ? '报告格式通过' : '报告格式未通过',
+          content: result.reportSchemaValid
+            ? `供应商已返回符合要求的测试报告。真实学员报告尚未验证持久化及扣次。诊断编号：${result.diagnosticId || '旧版 API 未提供'}`
+            : `${messages[result.errorCategory || 'internal']}。${result.reachable ? '供应商已有响应。' : '未收到可用响应。'}诊断编号：${result.diagnosticId || '旧版 API 未提供'}`,
+          showCancel: false })
+      }
       await this.loadControls()
-    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '连接测试失败'), icon: 'none' }) }
-    finally { this.setData({ actionLoading: false, keyTestObjectPin: '' }) }
-  },
-  async onRevealKeyObject(event: WechatMiniprogram.CustomEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
-    if (this.data.actionLoading || !/^\d{6}$/.test(this.data.keyTargetPin)) return
-    this.setData({ actionLoading: true })
-    try {
-      const result = await revealAssessmentKeyObject(id, this.data.keyTargetPin)
-      wx.showModal({ title: '仅创建者查看密钥', content: result.apiKey, showCancel: false })
-    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '查看失败'), icon: 'none' }) }
-    finally { this.setData({ actionLoading: false, keyTargetPin: '' }) }
-  },
-  async onSetupLegacyKeyPin(event: WechatMiniprogram.CustomEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
-    if (this.data.actionLoading || !/^\d{6}$/.test(this.data.keyControlPin) ||
-      !/^\d{6}$/.test(this.data.keyTargetPin)) return
-    this.setData({ actionLoading: true })
-    try {
-      await setupLegacyAssessmentKeyPin(id, this.data.keyControlPin, this.data.keyTargetPin)
-      wx.showToast({ title: '对象口令已设置', icon: 'success' })
-      await this.loadControls()
-    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '设置对象口令失败'), icon: 'none' }) }
-    finally { this.setData({ actionLoading: false, keyControlPin: '', keyTargetPin: '' }) }
+      this.onCancelKeyAction()
+    } catch (error) {
+      wx.showModal({ title: '操作未完成',
+        content: `${friendlyRequestError(error, '操作失败，请稍后重试')}。请核对口令及权限后重试。`,
+        showCancel: false })
+    } finally { this.setData({ actionLoading: false, keyActionPin: '', keyActionTargetPin: '' }) }
   },
   onControlPriceConfirm(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     this.setData({ platformPriceConfirmed: event.detail.value })

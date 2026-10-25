@@ -9,6 +9,7 @@
   <view wx:if="{{loading}}" class="card">正在加载资料…</view>
 
   <block wx:else>
+    <view wx:if="{{retryNotice}}" class="card"><text class="card-note">{{retryNotice}}</text></view>
     <view wx:if="{{billingEnabled}}" class="card credit-panel">
       <view class="section-head"><text class="section-title">AI 评估额度</text><text class="link" bindtap="loadCredits">刷新次数 ›</text></view>
       <text wx:if="{{creditAvailable !== null}}" class="credit-balance">可用 {{creditAvailable}} 次</text>

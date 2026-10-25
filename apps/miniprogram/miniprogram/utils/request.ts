@@ -198,6 +198,22 @@ export function friendlyRequestError(
     growth_profile_schema_not_ready: '成长履历服务正在准备中，请稍后重试',
     assessment_or_growth_schema_not_ready: '成长履历与评估数据正在准备中，请稍后重试',
     assessment_provider_not_configured: 'AI模型尚未接入，暂时不能运行评估',
+    assessment_ai_authentication: 'AI 密钥验证失败，请联系管理员检查当前服务',
+    assessment_ai_model_unavailable: '当前模型不可用，请联系管理员检查模型名称',
+    assessment_ai_quota_limited: '供应商额度不足或请求受限，请稍后重试或联系管理员',
+    assessment_ai_connection: '暂时无法连接 AI 供应商，请稍后重试',
+    assessment_ai_timeout: '模型响应超时，请稍后重新发起',
+    assessment_ai_truncated: '模型输出超出长度，请联系管理员检查配置',
+    assessment_ai_invalid_json: '模型未返回有效报告，请稍后重试',
+    assessment_ai_invalid_schema: '模型报告结构未通过校验，请稍后重试',
+    assessment_execution_failed: '评估执行失败，请记录诊断编号并联系管理员',
+    assessment_input_invalid: '原评估输入已无效，请核对资料后重新发起',
+    assessment_key_creator_required: '仅该服务对象的创建管理员可以查看，请联系创建者',
+    object_pin_invalid: '对象口令不正确，请核对后重试；连续五次错误会锁定',
+    object_pin_locked: '对象口令已暂时锁定，请稍后再试',
+    control_pin_invalid: '当前控制口令不正确，请核对后重试；连续五次错误会锁定',
+    control_pin_locked: '当前控制口令已暂时锁定，请稍后再试',
+    control_version_conflict: '服务版本已变化，请刷新管理页后重试',
     assessment_import_provider_not_configured: '材料结构化模型尚未配置',
     assessment_import_parser_not_configured: '材料解析服务尚未配置',
     assessment_import_parser_not_enabled: '腾讯云文档解析服务尚未开通，请联系管理员开通后重试',
@@ -964,7 +980,11 @@ export async function archiveAssessmentKeyObject(id: string, payload: {
 }) {
   return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/archive', 'POST', payload)
 }
-export async function testAssessmentKeyObject(id: string, pin: string): Promise<{ ok: true; reachable: boolean; reportSchemaValid: boolean; persistenceTested: false; mayIncurCost: true }> {
+export async function testAssessmentKeyObject(id: string, pin: string): Promise<{
+  ok: true; reachable: boolean; reportSchemaValid: boolean; persistenceTested: false;
+  mayIncurCost: true; errorCategory: string | null; providerHttpStatus: number | null;
+  diagnosticId: string
+}> {
   return request('/me/admin/assessment-keys/' + encodeURIComponent(id) + '/test', 'POST', { pin })
 }
 export async function revealAssessmentKeyObject(id: string, pin: string): Promise<{ ok: true; apiKey: string }> {

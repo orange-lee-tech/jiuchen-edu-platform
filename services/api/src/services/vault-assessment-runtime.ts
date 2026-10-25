@@ -12,18 +12,25 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
   let vaultUsable = false
   let activeProviderName = baseline.provider.provider
   let activeModel = baseline.provider.model
+  let selectedProvider: typeof baseline.provider | null = null
+  let selectedSource: ReturnType<NonNullable<AssessmentRuntime['diagnostics']>> = {
+    source: 'environment', objectId: null, version: null,
+    provider: activeProviderName, model: activeModel,
+  }
   const runtime: AssessmentRuntime = {
     retriever: baseline.retriever,
+    diagnostics: () => ({ ...selectedSource }),
     provider: {
       get provider() { return activeProviderName },
       get model() { return activeModel },
       isConfigured() { return vaultPresent ? vaultUsable : baseline.provider.isConfigured() },
       async analyze(input) {
         const provider = await activeProvider()
+        selectedProvider = provider
         return provider.analyze(input)
       },
       async repair(input) {
-        const provider = await activeProvider()
+        const provider = selectedProvider ?? await activeProvider()
         if (!provider.repair) throw new Error('assessment_repair_not_available')
         return provider.repair(input)
       },
@@ -34,7 +41,16 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
     try {
       const active = await readActiveAssessmentKey(pool, env)
       if (active.initialized) {
-        if (!active.config) throw new Error('assessment_key_disabled')
+        if (!active.config) {
+          selectedSource = { source: 'disabled', objectId: null, version: active.version,
+            provider: null, model: null }
+          throw new Error('assessment_key_disabled')
+        }
+        selectedSource = { source: 'admin_vault', objectId: active.objectId,
+          version: active.version, provider: active.config.provider ?? null,
+          model: active.config.model ?? null }
+        activeProviderName = active.config.provider ?? baseline.provider.provider
+        activeModel = active.config.model ?? baseline.provider.model
         await validateAssessmentApiUrl(active.config.apiBaseUrl ?? '')
         const activeEnv = { ...env,
           ASSESSMENT_AI_PROVIDER: active.config.provider,
@@ -49,12 +65,18 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
     } catch (error) {
       if ((error as { code?: string }).code !== 'ER_NO_SUCH_TABLE') throw error
     }
-    if (!vaultPresent) return baseline.provider
+    if (!vaultPresent) {
+      selectedSource = { source: 'environment', objectId: null, version: null,
+        provider: baseline.provider.provider, model: baseline.provider.model }
+      return baseline.provider
+    }
     const row = await readControlBox(pool, 'assessment_key')
     if (!row?.encrypted_secret || !env.ADMIN_AI_KEY_ENCRYPTION_KEY) {
       throw new Error('assessment_key_vault_unavailable')
     }
     const key = unsealKey(row.encrypted_secret, env.ADMIN_AI_KEY_ENCRYPTION_KEY)
+    selectedSource = { source: 'legacy_control', objectId: null, version: null,
+      provider: baseline.provider.provider, model: baseline.provider.model }
     return createAssessmentRuntimeFromEnv({ ...env, ASSESSMENT_AI_API_KEY: key }).provider
   }
   async function refresh() {
@@ -66,6 +88,11 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
         vaultUsable = Boolean(active.config)
         activeProviderName = active.config?.provider ?? baseline.provider.provider
         activeModel = active.config?.model ?? baseline.provider.model
+        selectedSource = active.config ? {
+          source: 'admin_vault', objectId: active.objectId, version: active.version,
+          provider: active.config.provider ?? null, model: active.config.model ?? null,
+        } : { source: 'disabled', objectId: null, version: active.version,
+          provider: null, model: null }
         return
       }
     } catch (error) {
@@ -75,6 +102,10 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
       const row = await readControlBox(pool, 'assessment_key')
       vaultPresent = Boolean(row)
       vaultUsable = Boolean(row?.encrypted_secret && env.ADMIN_AI_KEY_ENCRYPTION_KEY)
+      selectedSource = row ? { source: 'legacy_control', objectId: null, version: null,
+        provider: baseline.provider.provider, model: baseline.provider.model } :
+        { source: 'environment', objectId: null, version: null,
+          provider: baseline.provider.provider, model: baseline.provider.model }
     } catch (error) {
       if ((error as { code?: string }).code !== 'ER_NO_SUCH_TABLE') throw error
     }

@@ -55,6 +55,13 @@ export interface AssessmentModelProvider {
 export type AssessmentRuntime = {
   retriever: AssessmentRetriever
   provider: AssessmentModelProvider
+  diagnostics?: () => {
+    source: 'admin_vault' | 'legacy_control' | 'environment' | 'disabled' | 'unknown'
+    objectId: string | null
+    version: number | null
+    provider: string | null
+    model: string | null
+  }
 }
 
 export class AssessmentProviderUnavailableError extends Error {
@@ -421,6 +428,7 @@ export async function executeAssessment(
   runtime: AssessmentRuntime,
   input: AssessmentInput,
   accountEvidence: AssessmentEvidenceItem[] = [],
+  onStage?: (stage: 'knowledge_retrieval' | 'model_request' | 'report_validation') => void,
 ): Promise<{
   output: AssessmentOutput
   evidence: AssessmentEvidenceItem[]
@@ -428,10 +436,12 @@ export async function executeAssessment(
   provider: string
   model: string
 }> {
+  onStage?.('model_request')
   if (!runtime.provider.isConfigured()) {
     throw new AssessmentProviderUnavailableError()
   }
 
+  onStage?.('knowledge_retrieval')
   const retrieved = await runtime.retriever.retrieve(input)
   // These are trusted server-owned evidence items, never client-supplied input.
   // Persisting the bounded excerpts with the report preserves its evidence snapshot.
@@ -451,6 +461,7 @@ export async function executeAssessment(
   let repairUsed = false
 
   try {
+    onStage?.('model_request')
     rawOutput = await runtime.provider.analyze({
       assessment: input,
       knowledge,
@@ -464,6 +475,7 @@ export async function executeAssessment(
     }
 
     repairUsed = true
+    onStage?.('model_request')
     rawOutput = await runtime.provider.repair({
       assessment: input,
       knowledge,
@@ -475,11 +487,13 @@ export async function executeAssessment(
   let output: AssessmentOutput
 
   try {
+    onStage?.('report_validation')
     output = validateAssessmentResult(rawOutput, input, knowledge)
   } catch (error) {
     if (!runtime.provider.repair || repairUsed) throw error
 
     repairUsed = true
+    onStage?.('model_request')
     rawOutput = await runtime.provider.repair({
       assessment: input,
       knowledge,
@@ -489,6 +503,7 @@ export async function executeAssessment(
     })
 
     try {
+      onStage?.('report_validation')
       output = validateAssessmentResult(rawOutput, input, knowledge)
     } catch (repairError) {
       if (
@@ -503,6 +518,7 @@ export async function executeAssessment(
         input,
         knowledge,
       )
+      onStage?.('report_validation')
       output = validateAssessmentResult(sanitized, input, knowledge)
     }
   }
@@ -513,12 +529,14 @@ export async function executeAssessment(
   if (output.strengths.length === 0 && hasDocumentedAchievement(input)) {
     if (runtime.provider.repair && !repairUsed) {
       repairUsed = true
+      onStage?.('model_request')
       rawOutput = await runtime.provider.repair({
         assessment: input,
         knowledge,
         invalidOutput: rawOutput,
         validationError: 'assessment_strengths_missing_for_documented_achievement',
       })
+      onStage?.('report_validation')
       output = validateAssessmentResult(rawOutput, input, knowledge)
     }
     if (output.strengths.length === 0) {

@@ -1,4 +1,5 @@
 import { and, asc, eq } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
 import type { FastifyBaseLogger } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
 import { assessments } from '../db/schema.js'
@@ -9,10 +10,12 @@ import {
   normalizeAssessmentInput,
 } from '../domain/assessment.js'
 import {
+  AssessmentEvidenceReferenceError,
   AssessmentProviderUnavailableError,
   executeAssessment,
   type AssessmentRuntime,
 } from './assessment-runtime.js'
+import { classifyAssessmentFailure } from './assessment-failure.js'
 import {
   persistAssessmentFailureAndReleaseCredit,
   persistAssessmentSuccessAndConsumeCredit,
@@ -86,7 +89,6 @@ async function notifyTerminalState(input: {
   } catch (error) {
     input.logger.warn(
       {
-        err: error,
         assessmentId: input.event.assessmentId,
         notificationChannel: input.adapter.channel,
       },
@@ -101,11 +103,18 @@ export async function processAssessmentBackgroundJob(input: {
   runtime: AssessmentRuntime
   notification: AssessmentNotificationAdapter
   logger: WorkerLogger
+  creditEnforcementEnabled?: boolean
   accountContextLoader?: (input: {
     userId: string; assessmentId: string; includePlanning: boolean; includeRecentAssessments: boolean
   }) => Promise<AssessmentEvidenceItem[]>
 }): Promise<'succeeded' | 'failed'> {
   const { job, store, runtime, notification, logger } = input
+  const requestId = randomUUID()
+  const startedAt = Date.now()
+  const diagnostics = () => runtime.diagnostics?.() ?? {
+    source: 'unknown' as const, objectId: null, version: null,
+    provider: runtime.provider.provider, model: runtime.provider.model,
+  }
 
   let normalizedInput: ReturnType<typeof normalizeAssessmentInput>
   try {
@@ -113,7 +122,8 @@ export async function processAssessmentBackgroundJob(input: {
   } catch (error) {
     const completedAt = new Date()
     logger.warn(
-      { err: error, assessmentId: job.id },
+      { assessmentId: job.id, requestId, failureStage: 'input',
+        errorCategory: 'invalid_schema' },
       'Persisted Assessment input is invalid in background worker',
     )
     await store.persistFailure(job, 'assessment_input_invalid', completedAt)
@@ -132,6 +142,8 @@ export async function processAssessmentBackgroundJob(input: {
   }
 
   let result: Awaited<ReturnType<typeof executeAssessment>>
+  let failureStage: 'account_context' | 'knowledge_retrieval' | 'model_request' |
+    'report_validation' = 'account_context'
   try {
     const accountEvidence = input.accountContextLoader ? await input.accountContextLoader({
       userId: job.userId,
@@ -139,19 +151,30 @@ export async function processAssessmentBackgroundJob(input: {
       includePlanning: normalizedInput.contextOptions?.includePlanning !== false,
       includeRecentAssessments: normalizedInput.contextOptions?.includeRecentAssessments !== false,
     }) : []
-    result = await executeAssessment(runtime, normalizedInput, accountEvidence)
+    result = await executeAssessment(runtime, normalizedInput, accountEvidence,
+      stage => { failureStage = stage })
   } catch (error) {
     const completedAt = new Date()
+    const classified = classifyAssessmentFailure(error)
+    const category = error instanceof AssessmentEvidenceReferenceError
+      ? 'invalid_schema' : classified.category
     const failureCode =
       error instanceof AssessmentProviderUnavailableError
         ? 'assessment_provider_not_configured'
+        : category !== 'internal' ? `assessment_ai_${category}`
         : 'assessment_execution_failed'
 
     logger.warn(
-      { err: error, assessmentId: job.id, failureCode },
+      { assessmentId: job.id, requestId, failureStage,
+        errorCategory: category, providerHttpStatus: classified.httpStatus,
+        ...diagnostics(), failureCode, elapsedMs: Date.now() - startedAt },
       'Assessment background execution failed',
     )
     await store.persistFailure(job, failureCode, completedAt)
+    logger.info({ assessmentId: job.id, requestId, failureStage: 'terminal_persistence',
+      reportPersisted: false, creditReleased: input.creditEnforcementEnabled === true ? true : null,
+      elapsedMs: Date.now() - startedAt },
+    'Assessment failure persisted and credit released')
     await notifyTerminalState({
       adapter: notification,
       event: {
@@ -167,7 +190,21 @@ export async function processAssessmentBackgroundJob(input: {
   }
 
   const completedAt = new Date()
-  await store.persistSuccess(job, result, completedAt)
+  logger.info({ assessmentId: job.id, requestId, ...diagnostics(),
+    reportSchemaValid: true, reportPersisted: false, elapsedMs: Date.now() - startedAt },
+  'Assessment report validated before persistence')
+  try {
+    await store.persistSuccess(job, result, completedAt)
+  } catch (error) {
+    logger.error({ assessmentId: job.id, requestId, failureStage: 'terminal_persistence',
+      errorCategory: 'internal', reportPersisted: false,
+      elapsedMs: Date.now() - startedAt }, 'Assessment result persistence failed')
+    throw error
+  }
+  logger.info({ assessmentId: job.id, requestId, ...diagnostics(),
+    reportSchemaValid: true, reportPersisted: true,
+    creditConsumed: input.creditEnforcementEnabled === true ? true : null,
+    elapsedMs: Date.now() - startedAt }, 'Assessment report persisted')
   await notifyTerminalState({
     adapter: notification,
     event: {
@@ -312,17 +349,20 @@ export function createAssessmentBackgroundWorker(input: {
             accountContextLoader,
             notification: input.notification,
             logger: input.logger,
+            creditEnforcementEnabled: input.commercial.creditEnforcementEnabled,
           })
         } catch (error) {
           input.logger.error(
-            { err: error, assessmentId: job.id },
+            { assessmentId: job.id, failureStage: 'terminal_persistence',
+              errorCategory: 'internal' },
             'Assessment background worker could not persist terminal state',
           )
           break
         }
       }
     } catch (error) {
-      input.logger.error({ err: error }, 'Assessment background worker scan failed')
+      input.logger.error({ failureStage: 'worker_scan', errorCategory: 'internal' },
+        'Assessment background worker scan failed')
     } finally {
       draining = false
     }

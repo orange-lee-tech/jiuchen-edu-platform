@@ -26,13 +26,15 @@
         <text class="status {{item.statusTone}}">{{item.statusLabel}}</text>
       </view>
       <text class="targets">目标：{{item.targetSummary}}</text>
+      <text wx:if="{{item.status === 'failed'}}" class="targets">{{item.failureText}} · 诊断编号 {{item.id}}</text>
       <view class="card-foot">
         <text>{{item.dateLabel}}</text>
         <text wx:if="{{item.status === 'succeeded'}}" class="link">查看报告 ›</text>
         <text wx:elif="{{item.status === 'draft'}}" class="link">继续编辑 ›</text>
         <text wx:elif="{{item.status === 'running'}}" class="link">后台分析中…</text>
-        <text wx:elif="{{item.status === 'failed'}}" class="link">运行失败</text>
+        <text wx:elif="{{item.status === 'failed'}}" class="link">检查后重新发起 ›</text>
       </view>
+      <button wx:if="{{item.status === 'failed' && canCreateAssessment}}" class="primary" data-id="{{item.id}}" catchtap="onRetryAssessment">重新发起评估</button>
     </view>
   </view>
 </view>

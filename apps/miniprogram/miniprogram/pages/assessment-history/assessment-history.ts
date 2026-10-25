@@ -2,6 +2,7 @@ import { getSavedAuthResult } from '../../utils/auth'
 import { authorizePage } from '../../utils/navigation'
 import {isReadOnly} from '../../utils/read-only-context'
 import {
+  friendlyRequestError,
   getMyAssessments,
   type AssessmentRecord,
 } from '../../utils/request'
@@ -11,6 +12,7 @@ type AssessmentListItem = AssessmentRecord & {
   statusLabel: string
   statusTone: string
   dateLabel: string
+  failureText: string
 }
 
 const STATUS_VIEW = {
@@ -80,6 +82,9 @@ Page({
             .join('、'),
           statusLabel: status.label,
           statusTone: status.tone,
+          failureText: row.status === 'failed'
+            ? friendlyRequestError(new Error(row.failureCode || ''),
+              '评估未完成，请检查输入后重新发起') : '',
           dateLabel: formatDate(
             row.status === 'draft'
               ? row.updatedAt
@@ -97,9 +102,9 @@ Page({
         }, RUNNING_POLL_MS)
       }
     } catch (error) {
-      console.info('Assessment history load failed.', error)
+      console.info('Assessment history load failed.')
       if (!silent) {
-        wx.showToast({ title: '历史评估加载失败', icon: 'none' })
+        wx.showToast({ title: friendlyRequestError(error, '历史评估加载失败，请重试'), icon: 'none' })
       } else if (pageVisible && getSavedAuthResult()) {
         clearRefreshTimer()
         refreshTimer = setTimeout(() => {
@@ -130,7 +135,7 @@ Page({
     }
 
     if (status === 'failed') {
-      wx.showToast({ title: '本次评估运行失败，可重新发起评估', icon: 'none' })
+      this.openRetry(id)
       return
     }
 
@@ -139,6 +144,18 @@ Page({
     wx.navigateTo({
       url: `/pages/assessment-result/assessment-result?id=${encodeURIComponent(id)}`,
     })
+  },
+
+  openRetry(id: string) {
+    if (!this.data.canCreateAssessment) {
+      wx.showToast({ title: '当前身份不能重新发起评估', icon: 'none' }); return
+    }
+    wx.navigateTo({ url: `/pages/assessment-form/assessment-form?retryFrom=${encodeURIComponent(id)}` })
+  },
+
+  onRetryAssessment(event: WechatMiniprogram.BaseEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (id) this.openRetry(id)
   },
 
   onCreateAssessment() {
