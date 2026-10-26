@@ -9,11 +9,14 @@ const sku=FIXED_ASSESSMENT_SKUS[1]!
 test('virtual payments default closed, production requires separate approval',()=>{
   assert.equal(virtualPaymentConfig(loadEnv({})),null)
   assert.equal(virtualPaymentConfig(loadEnv({WECHAT_VIRTUAL_PAY_ENABLED:'true'})),null)
-  const env={WECHAT_VIRTUAL_PAY_ENABLED:'true',WECHAT_VIRTUAL_PAY_APP_KEY:'hidden',WECHAT_VIRTUAL_PAY_OFFER_ID:'offer',WECHAT_VIRTUAL_PAY_PRODUCT_ONE:'one',WECHAT_VIRTUAL_PAY_PRODUCT_FIVE:'five',WECHAT_VIRTUAL_PAY_PRODUCT_TEN:'ten',WECHAT_VIRTUAL_PAY_ENV:'production'}
+  const env={WECHAT_VIRTUAL_PAY_ENABLED:'true',WECHAT_VIRTUAL_PAY_APP_KEY:'hidden',WECHAT_VIRTUAL_PAY_OFFER_ID:'offer',WECHAT_VIRTUAL_PAY_PRODUCT_TEST:'test',WECHAT_VIRTUAL_PAY_PRODUCT_ONE:'one',WECHAT_VIRTUAL_PAY_PRODUCT_FIVE:'five',WECHAT_VIRTUAL_PAY_PRODUCT_TEN:'ten',WECHAT_VIRTUAL_PAY_ENV:'production'}
   assert.equal(virtualPaymentConfig(loadEnv(env)),null)
-  assert.equal(virtualPaymentConfig(loadEnv({...env,WECHAT_VIRTUAL_PAY_PRODUCTION_APPROVED:'true'}))?.env,0)
-  assert.equal(virtualPaymentConfig(loadEnv({...env,WECHAT_VIRTUAL_PAY_PRODUCTION_APPROVED:'true',WECHAT_VIRTUAL_PAY_PRODUCT_FIVE:'one'})),null)
-  assert.equal(virtualPaymentConfig(loadEnv({...env,WECHAT_VIRTUAL_PAY_PRODUCTION_APPROVED:'true',WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED:'true'})),null)
+  assert.equal(virtualPaymentConfig(loadEnv({...env,WECHAT_VIRTUAL_PAY_PRODUCTION_APPROVED:'true'})),null)
+  const ready = {...env,WECHAT_VIRTUAL_PAY_PRODUCTION_APPROVED:'true',WECHAT_APP_ID:'wx-test',
+    WECHAT_VIRTUAL_PUSH_TOKEN:'test-token',WECHAT_VIRTUAL_PUSH_AES_KEY:'A'.repeat(43)}
+  assert.equal(virtualPaymentConfig(loadEnv(ready))?.env,0)
+  assert.equal(virtualPaymentConfig(loadEnv({...ready,WECHAT_VIRTUAL_PAY_PRODUCT_FIVE:'one'})),null)
+  assert.equal(virtualPaymentConfig(loadEnv({...ready,WECHAT_VIRTUAL_PAY_PRODUCT_TEST:'one'})),null)
 })
 test('virtual signing preserves exact JSON bytes and protects keys',()=>{
   const p=buildVirtualPayment({config,sku,orderNo:'JC12345678901234567',sessionKey:'private-session'})

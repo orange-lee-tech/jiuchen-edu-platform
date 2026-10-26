@@ -46,7 +46,7 @@ test('assessment connection rejects local and metadata addresses before network 
   }
 })
 
-test('virtual goods use distinct server-side products and test SKU stays closed by default', () => {
+test('virtual goods use four distinct server-side products when explicitly enabled', () => {
   const env = {
     WECHAT_VIRTUAL_PAY_ENABLED:true,WECHAT_VIRTUAL_PAY_APP_KEY:'test-only-key',
     WECHAT_VIRTUAL_PAY_OFFER_ID:'offer',WECHAT_VIRTUAL_PAY_PRODUCT_ONE:'wx-one',
@@ -54,7 +54,7 @@ test('virtual goods use distinct server-side products and test SKU stays closed 
     WECHAT_VIRTUAL_PAY_PRODUCT_TEST:'wx-test',WECHAT_VIRTUAL_PAY_ENV:'sandbox',
   } as AppEnv
   const config = virtualPaymentConfig(env)!
-  assert.equal(config.products.JC000,undefined)
+  assert.equal(config.products.JC000,'wx-test')
   assert.notEqual(config.products.JC002,config.products.JC003)
   const signed = buildVirtualPayment({ config,sku:FIXED_ASSESSMENT_SKUS[2]!,
     orderNo:'JC'+'A'.repeat(12),sessionKey:'session-test' })

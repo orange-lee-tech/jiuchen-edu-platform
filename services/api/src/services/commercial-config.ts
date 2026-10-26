@@ -30,7 +30,6 @@ export type FreeGrant = { version: string; amount: number }
 
 export type CommercialConfig = {
   creditEnforcementEnabled: boolean
-  testSkuEnabled?: boolean
   fixedCatalogConfirmed?: boolean
   freeGrant: FreeGrant | null
   studentBonusGrant: FreeGrant | null
@@ -92,7 +91,6 @@ export function createCommercialConfig(env: AppEnv): CommercialConfig {
 
   return {
     creditEnforcementEnabled: enabled,
-    testSkuEnabled: env.WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED === true,
     fixedCatalogConfirmed: env.WECHAT_VIRTUAL_PAY_FIXED_CATALOG_CONFIRMED === true,
     freeGrant,
     // Grant one to everyone; upgrading an account to student adds four.
@@ -100,13 +98,8 @@ export function createCommercialConfig(env: AppEnv): CommercialConfig {
     studentBonusGrant: freeGrant?.amount === GUEST_FREE_COUNT
       ? { version: `${freeGrant.version}:student-bonus`, amount: STUDENT_TOTAL_FREE_COUNT - GUEST_FREE_COUNT }
       : null,
-    paymentSkus: enabled ? FIXED_ASSESSMENT_SKUS.filter(sku => sku.key !== 'JC000' || env.WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED === true) : [],
+    paymentSkus: enabled ? FIXED_ASSESSMENT_SKUS : [],
   }
-}
-
-export function canPurchaseTestSku(userId: string, env: AppEnv): boolean {
-  return env.WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED === true &&
-    (env.WECHAT_VIRTUAL_PAY_TEST_USER_IDS ?? '').split(',').some(id => id.trim().toLowerCase() === userId.toLowerCase())
 }
 
 export function findCreditSku(

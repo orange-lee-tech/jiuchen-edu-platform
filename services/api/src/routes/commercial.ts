@@ -5,6 +5,8 @@ import type { AppEnv } from '../config/env.js'
 import { users } from '../db/schema.js'
 import { eq } from 'drizzle-orm'
 import { buildVirtualPayment, virtualPaymentConfig } from '../services/wechat-virtual-payment.js'
+import { decryptVirtualPush, encryptedVirtualPushBody, parseVirtualGoodsPush,
+  verifyVirtualPushSignature } from '../services/wechat-virtual-push.js'
 import { readVirtualOrder, reconcileVirtualOrder } from '../services/virtual-payment-reconciliation.js'
 import { exchangeWechatVirtualPaymentCode } from '../services/wechat.js'
 import type { DatabaseContext } from '../db/client.js'
@@ -24,7 +26,6 @@ import {
   STUDENT_TOTAL_FREE_COUNT,
   freeGrantsForRole,
   findCreditSku,
-  canPurchaseTestSku,
   type CommercialConfig,
 } from '../services/commercial-config.js'
 import {
@@ -71,12 +72,71 @@ export function registerCommercialRoutes(
 ) {
   const virtualConfig = virtualPaymentConfig(env)
 
-  app.get('/commercial/meta', async (request) => {
+  // WeChat virtual-goods messages use Mini Program message signing, not the
+  // ordinary WeChat Pay V3 callback. A verified push still goes through the
+  // official order query before ledger settlement and delivery confirmation.
+  app.register(async (pushScope) => {
+    for (const type of ['application/xml', 'text/xml']) {
+      pushScope.addContentTypeParser(type, { parseAs: 'string' }, (_request, body, done) => done(null, body))
+    }
+    const route = '/payments/wechat/virtual-push'
+    const success = '<xml><ErrCode>0</ErrCode><ErrMsg><![CDATA[success]]></ErrMsg></xml>'
+    const retry = '<xml><ErrCode>1</ErrCode><ErrMsg><![CDATA[retry]]></ErrMsg></xml>'
+    type PushQuery = { timestamp?: string; nonce?: string; msg_signature?: string; echostr?: string }
+    pushScope.get<{ Querystring: PushQuery }>(route, { logLevel: 'silent' }, async (request, reply) => {
+      const { timestamp, nonce, msg_signature: signature, echostr } = request.query
+      if (!env.WECHAT_VIRTUAL_PUSH_TOKEN || !env.WECHAT_VIRTUAL_PUSH_AES_KEY || !env.WECHAT_APP_ID)
+        return reply.code(503).send('virtual_push_not_configured')
+      if (!timestamp || !nonce || !signature || !echostr ||
+          !verifyVirtualPushSignature({ token: env.WECHAT_VIRTUAL_PUSH_TOKEN,
+            timestamp, nonce, encrypted: echostr, signature }))
+        return reply.code(403).send('virtual_push_signature_invalid')
+      try {
+        const challenge = decryptVirtualPush({ encrypted: echostr,
+          aesKey: env.WECHAT_VIRTUAL_PUSH_AES_KEY, appId: env.WECHAT_APP_ID })
+        return reply.type('text/plain').send(challenge)
+      } catch {
+        return reply.code(403).send('virtual_push_challenge_invalid')
+      }
+    })
+    pushScope.post<{ Querystring: PushQuery; Body: string }>(route,
+      { bodyLimit: 16_384, logLevel: 'silent' }, async (request, reply) => {
+        reply.type('application/xml')
+        if (!env.WECHAT_VIRTUAL_PUSH_TOKEN || !env.WECHAT_VIRTUAL_PUSH_AES_KEY ||
+            !env.WECHAT_APP_ID || !virtualConfig || !database.configured)
+          return reply.code(503).send(retry)
+        try {
+          if (typeof request.body !== 'string' || !request.query.timestamp ||
+              !request.query.nonce || !request.query.msg_signature) throw new Error('push_payload_missing')
+          const encrypted = encryptedVirtualPushBody(request.body)
+          if (!verifyVirtualPushSignature({ token: env.WECHAT_VIRTUAL_PUSH_TOKEN,
+            timestamp: request.query.timestamp, nonce: request.query.nonce,
+            encrypted, signature: request.query.msg_signature }))
+            return reply.code(403).send(retry)
+          const message = decryptVirtualPush({ encrypted,
+            aesKey: env.WECHAT_VIRTUAL_PUSH_AES_KEY, appId: env.WECHAT_APP_ID })
+          const pushed = parseVirtualGoodsPush(message)
+          const [rows] = await database.pool.query<import('mysql2/promise').RowDataPacket[]>(
+            'SELECT id FROM payment_orders WHERE out_trade_no = ? LIMIT 1', [pushed.outTradeNo])
+          const order = rows[0] ? await readVirtualOrder(database.pool, String(rows[0].id)) : null
+          if (!order || order.openId !== pushed.openId ||
+              order.wechatProductId !== pushed.productId) throw new Error('push_order_mismatch')
+          const result = await reconcileVirtualOrder({ database, env, config: virtualConfig,
+            order, checkPaidState: true })
+          if (result.state !== 'paid' || result.deliveryPending || result.requiresFinanceReview)
+            throw new Error('push_delivery_pending')
+          return reply.send(success)
+        } catch (error) {
+          app.log.error({ code: error instanceof Error ? error.name : 'unknown' },
+            'virtual goods push requires retry or operator review')
+          return reply.code(503).send(retry)
+        }
+      })
+  })
+
+  app.get('/commercial/meta', async () => {
     const config = await getConfig()
-    const viewer = config.testSkuEnabled && database.configured
-      ? await resolveSessionUser(request, database) : null
-    const visibleSkus = config.paymentSkus.filter(sku => sku.key !== 'JC000' ||
-      (viewer !== null && canPurchaseTestSku(viewer.userId, env)))
+    const visibleSkus = config.paymentSkus
     const virtualCheckoutReady = Boolean(config.creditEnforcementEnabled && virtualConfig &&
       config.platformPriceConfirmed && config.paymentSkus.length &&
       config.paymentSkus.every(sku => Boolean(virtualConfig.products[sku.key])))
@@ -216,8 +276,6 @@ export function registerCommercialRoutes(
     // same fixed-price goods, and the new order always records the canonical SKU.
     const skuKey=parsed.data.skuKey==='assessment-1' ? 'JC001' :
       parsed.data.skuKey==='assessment-10' ? 'JC003' : parsed.data.skuKey
-    if(skuKey==='JC000' && !canPurchaseTestSku(user.userId,env))
-      return reply.code(403).send({ok:false,error:'internal_test_sku_forbidden'})
     const sku=findCreditSku(config,skuKey)
     if(!sku) return reply.code(400).send({ok:false,error:'unapproved_assessment_payment_sku'})
     if(!virtualConfig.products[sku.key]) return reply.code(503).send({ok:false,error:'wechat_virtual_product_not_configured'})

@@ -20,22 +20,23 @@ export type VirtualPaymentParams = {
 export function virtualPaymentConfig(env: AppEnv): VirtualPayConfig | null {
   if (env.WECHAT_VIRTUAL_PAY_ENABLED !== true ||
     !env.WECHAT_VIRTUAL_PAY_APP_KEY || !env.WECHAT_VIRTUAL_PAY_OFFER_ID ||
-    !env.WECHAT_VIRTUAL_PAY_PRODUCT_ONE || !env.WECHAT_VIRTUAL_PAY_PRODUCT_FIVE ||
+    !env.WECHAT_VIRTUAL_PAY_PRODUCT_TEST || !env.WECHAT_VIRTUAL_PAY_PRODUCT_ONE || !env.WECHAT_VIRTUAL_PAY_PRODUCT_FIVE ||
     !env.WECHAT_VIRTUAL_PAY_PRODUCT_TEN) return null
-  const productIds = [env.WECHAT_VIRTUAL_PAY_PRODUCT_ONE, env.WECHAT_VIRTUAL_PAY_PRODUCT_FIVE,
-    env.WECHAT_VIRTUAL_PAY_PRODUCT_TEN,
-    ...(env.WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED === true ? [env.WECHAT_VIRTUAL_PAY_PRODUCT_TEST] : [])]
+  const productIds = [env.WECHAT_VIRTUAL_PAY_PRODUCT_TEST, env.WECHAT_VIRTUAL_PAY_PRODUCT_ONE,
+    env.WECHAT_VIRTUAL_PAY_PRODUCT_FIVE, env.WECHAT_VIRTUAL_PAY_PRODUCT_TEN]
   if(productIds.some(id => !id) || new Set(productIds).size !== productIds.length) return null
   if(env.WECHAT_VIRTUAL_PAY_ENV === 'production' && env.WECHAT_VIRTUAL_PAY_PRODUCTION_APPROVED !== true) return null
+  // Formal checkout must have a verifiable goods-delivery push receiver.
+  if(env.WECHAT_VIRTUAL_PAY_ENV === 'production' && (!env.WECHAT_APP_ID ||
+    !env.WECHAT_VIRTUAL_PUSH_TOKEN || !/^[A-Za-z0-9+/]{43}$/.test(env.WECHAT_VIRTUAL_PUSH_AES_KEY ?? ''))) return null
   return {
     offerId:env.WECHAT_VIRTUAL_PAY_OFFER_ID,
     appKey:env.WECHAT_VIRTUAL_PAY_APP_KEY,
     env:env.WECHAT_VIRTUAL_PAY_ENV === 'production' ? 0 : 1,
-    products:{JC001:env.WECHAT_VIRTUAL_PAY_PRODUCT_ONE,
+    products:{JC000:env.WECHAT_VIRTUAL_PAY_PRODUCT_TEST,
+      JC001:env.WECHAT_VIRTUAL_PAY_PRODUCT_ONE,
       JC002:env.WECHAT_VIRTUAL_PAY_PRODUCT_FIVE,
-      JC003:env.WECHAT_VIRTUAL_PAY_PRODUCT_TEN,
-      ...(env.WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED === true && env.WECHAT_VIRTUAL_PAY_PRODUCT_TEST
-        ? { JC000: env.WECHAT_VIRTUAL_PAY_PRODUCT_TEST } : {})},
+      JC003:env.WECHAT_VIRTUAL_PAY_PRODUCT_TEN},
   }
 }
 export function paySig(uri:string,body:string,key:string) {
