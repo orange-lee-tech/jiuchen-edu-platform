@@ -10,6 +10,11 @@ function loadModules(wx={}){
  load.page=()=>({...pageDefinition,data:JSON.parse(JSON.stringify(pageDefinition.data)),setData(value){Object.assign(this.data,value)}})
  return load
 }
+function requestAt(requests,pathname){
+ const matches=requests.filter(item=>new URL(item.url).pathname===pathname)
+ assert.equal(matches.length,1,`expected one request for ${pathname}`)
+ return matches[0]
+}
 test('news dates use Beijing time and distinguish verified publications from legacy updates',()=>{
  const {newsPublicationLabel}=loadModules()('utils/news-date')
  assert.match(newsPublicationLabel({source:'manual',publishedAt:'2026-10-11T16:00:01Z'},true),/2026-10-12 00:00:01/)
@@ -104,10 +109,14 @@ test('analytics page retains successful assessments but removes error-backed pay
  const load=loadModules(wx),auth=load('utils/auth')
  auth.saveAuthResult({ok:true,user:{id:'00000000-0000-4000-8000-000000000001',role:'admin',displayName:'合成'},agreement:{type:'user_terms',version:'test',accepted:true},session:{token:'synthetic',expiresAt:'2099-01-01'},businessIdentity:null})
  load('pages/admin/admin');const page=load.page(),flow=page.loadAnalytics()
- requests[0].success({statusCode:200,data:{analytics:{period:'week',buckets:[{key:'2026-10-12',label:'10/12',assessmentCount:3,createdCount:4,failedCount:0,runningCount:0,rechargeCount:null,rechargeAmountFen:null,consumptionCount:null}],summary:{assessmentCount:3,assessmentUserCount:2,rechargeAmountFen:null},sources:{assessments:{status:'ok'},payments:{status:'error',error:'ER_NO_SUCH_TABLE'},ledger:{status:'error',error:'ER_NO_SUCH_TABLE'},reservations:{status:'ok'}},payers:[],range:{},ledger:{},gaps:{},reservations:{},supplier:{}}}})
- requests[1].success({statusCode:503,data:{ok:false,error:'database_error'}})
+ requestAt(requests,'/me/admin/assessment-analytics').success({statusCode:200,data:{analytics:{period:'week',buckets:[{key:'2026-10-12',label:'10/12',assessmentCount:3,createdCount:4,failedCount:0,runningCount:0,rechargeCount:null,rechargeAmountFen:null,consumptionCount:null}],summary:{assessmentCount:3,assessmentUserCount:2,rechargeAmountFen:null},sources:{assessments:{status:'ok'},payments:{status:'error',error:'ER_NO_SUCH_TABLE'},ledger:{status:'error',error:'ER_NO_SUCH_TABLE'},reservations:{status:'ok'}},payers:[],range:{},ledger:{},gaps:{},reservations:{},supplier:{}}}})
+ requestAt(requests,'/me/admin/users').success({statusCode:503,data:{ok:false,error:'database_error'}})
+ requestAt(requests,'/me/admin/assessment-ai-costs').fail({errMsg:'request:fail synthetic cost outage'})
+ requestAt(requests,'/me/admin/assessment-ai-balance').fail({errMsg:'request:fail synthetic balance outage'})
  await flow;assert.equal(page.data.analytics.summary.assessmentCount,3);assert.match(page.data.analyticsWarning,/支付读取失败/)
  assert.equal(page.data.userCount,null);assert.ok(page.data.userCountError)
+ assert.equal(page.data.aiCosts,null);assert.equal(page.data.aiBalance,null)
+ assert.match(page.data.aiCostWarning,/成本表迁移/)
  assert.equal(page.data.analyticsPlots.some(p=>p.key==='rechargeCount'),false)
  assert.equal(page.data.analyticsPlots.find(p=>p.key==='createdCount').points[0].display,'4')
  assert.equal(page.data.analyticsPlots.find(p=>p.key==='failedCount').max,0)
@@ -117,23 +126,43 @@ test('account total uses real users endpoint and does not follow assessment peri
  const load=loadModules(wx),auth=load('utils/auth')
  auth.saveAuthResult({ok:true,user:{id:'00000000-0000-4000-8000-000000000001',role:'admin'},agreement:{type:'user_terms',version:'test',accepted:true},session:{token:'synthetic',expiresAt:'2099-01-01'},businessIdentity:null})
  load('pages/admin/admin');const page=load.page(),flow=page.loadAnalytics()
- assert.match(requests[1].url,/me\/admin\/users/)
- requests[0].success({statusCode:200,data:{ok:true,analytics:{period:'week',buckets:[],summary:{assessmentCount:0,assessmentUserCount:0,rechargeAmountFen:null},sources:{assessments:{status:'ok'},payments:{status:'error',error:'missing'},ledger:{status:'error',error:'missing'},reservations:{status:'error',error:'missing'}},payers:[],range:{},ledger:{},gaps:{},reservations:{},supplier:{}}}})
- requests[1].success({statusCode:200,data:{ok:true,users:[{id:'u1'},{id:'u2'}]}})
+ requestAt(requests,'/me/admin/assessment-analytics').success({statusCode:200,data:{ok:true,analytics:{period:'week',buckets:[],summary:{assessmentCount:0,assessmentUserCount:0,rechargeAmountFen:null},sources:{assessments:{status:'ok'},payments:{status:'error',error:'missing'},ledger:{status:'error',error:'missing'},reservations:{status:'error',error:'missing'}},payers:[],range:{},ledger:{},gaps:{},reservations:{},supplier:{}}}})
+ requestAt(requests,'/me/admin/users').success({statusCode:200,data:{ok:true,users:[{id:'u1'},{id:'u2'}]}})
+ requestAt(requests,'/me/admin/assessment-ai-costs').success({statusCode:200,data:{ok:true,costs:{scope:'platform'}}})
+ requestAt(requests,'/me/admin/assessment-ai-balance').success({statusCode:200,data:{ok:true,balance:{status:'not_connected'}}})
  await flow;assert.equal(page.data.analytics.summary.assessmentCount,0);assert.equal(page.data.userCount,2);assert.equal(page.data.userCountError,'')
+ assert.equal(page.data.aiCosts.scope,'platform');assert.equal(page.data.aiBalance.status,'not_connected')
 })
 test('Release A analytics without distinct-user field keeps real assessment data and marks the gap',async()=>{
  const storage=new Map(),requests=[],wx={getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),request:o=>requests.push(o)}
  const load=loadModules(wx),auth=load('utils/auth')
  auth.saveAuthResult({ok:true,user:{id:'00000000-0000-4000-8000-000000000001',role:'admin'},agreement:{type:'user_terms',version:'test',accepted:true},session:{token:'synthetic',expiresAt:'2099-01-01'},businessIdentity:null})
  load('pages/admin/admin');const page=load.page(),flow=page.loadAnalytics()
- requests[0].success({statusCode:200,data:{ok:true,analytics:{period:'week',buckets:[{key:'2026-10-12',label:'10/12',assessmentCount:3,createdCount:4,failedCount:1,runningCount:0}],summary:{assessmentCount:3,createdCount:4,failedCount:1,runningCount:0,rechargeAmountFen:null},sources:{assessments:{status:'ok'},payments:{status:'error',error:'ER_NO_SUCH_TABLE'},ledger:{status:'error',error:'ER_NO_SUCH_TABLE'},reservations:{status:'error',error:'ER_NO_SUCH_TABLE'}},payers:[],range:{from:'2026-10-06',before:'2026-10-13',timezone:'Asia/Shanghai',basis:'合成口径'},ledger:{},gaps:{},reservations:{},supplier:{}}}})
- requests[1].success({statusCode:200,data:{ok:true,users:[{id:'synthetic'}]}})
+ requestAt(requests,'/me/admin/assessment-analytics').success({statusCode:200,data:{ok:true,analytics:{period:'week',buckets:[{key:'2026-10-12',label:'10/12',assessmentCount:3,createdCount:4,failedCount:1,runningCount:0}],summary:{assessmentCount:3,createdCount:4,failedCount:1,runningCount:0,rechargeAmountFen:null},sources:{assessments:{status:'ok'},payments:{status:'error',error:'ER_NO_SUCH_TABLE'},ledger:{status:'error',error:'ER_NO_SUCH_TABLE'},reservations:{status:'error',error:'ER_NO_SUCH_TABLE'}},payers:[],range:{from:'2026-10-06',before:'2026-10-13',timezone:'Asia/Shanghai',basis:'合成口径'},ledger:{},gaps:{},reservations:{},supplier:{}}}})
+ requestAt(requests,'/me/admin/users').success({statusCode:200,data:{ok:true,users:[{id:'synthetic'}]}})
+ requestAt(requests,'/me/admin/assessment-ai-costs').fail({errMsg:'request:fail synthetic cost outage'})
+ requestAt(requests,'/me/admin/assessment-ai-balance').success({statusCode:200,data:{ok:true,balance:{status:'not_connected'}}})
  await flow
  assert.equal(page.data.analytics.summary.assessmentCount,3)
+ assert.equal(page.data.aiCosts,null);assert.equal(page.data.aiBalance.status,'not_connected')
  assert.equal(page.data.assessmentUserCountLabel,'当前 API 未提供')
  assert.equal(page.data.analyticsPlots.find(p=>p.key==='createdCount').points[0].display,'4')
  assert.equal(page.data.analyticsPlots.some(p=>p.key==='rechargeAmountFen'),false)
+})
+test('analytics endpoint failure still uses the existing unavailable-state fallback',async()=>{
+ const storage=new Map(),requests=[],wx={getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),request:o=>requests.push(o)}
+ const load=loadModules(wx),auth=load('utils/auth')
+ auth.saveAuthResult({ok:true,user:{id:'00000000-0000-4000-8000-000000000001',role:'admin'},agreement:{type:'user_terms',version:'test',accepted:true},session:{token:'synthetic',expiresAt:'2099-01-01'},businessIdentity:null})
+ load('pages/admin/admin');const page=load.page(),flow=page.loadAnalytics()
+ requestAt(requests,'/me/admin/assessment-analytics').success({statusCode:503,data:{ok:false,error:'database_error'}})
+ requestAt(requests,'/me/admin/users').success({statusCode:200,data:{ok:true,users:[]}})
+ requestAt(requests,'/me/admin/assessment-ai-costs').fail({errMsg:'request:fail synthetic cost outage'})
+ requestAt(requests,'/me/admin/assessment-ai-balance').fail({errMsg:'request:fail synthetic balance outage'})
+ await flow
+ assert.equal(page.data.analytics,null)
+ assert.equal(page.data.analyticsPlots.length,0)
+ assert.ok(page.data.loadError)
+ assert.equal(page.data.loading,false)
 })
 test('admin pages only request their own Release A sources',()=>{
  for(const [section,expected] of [
