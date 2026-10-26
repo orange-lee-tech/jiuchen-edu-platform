@@ -1,7 +1,7 @@
 import type { ReportLayout, ReportLine } from './assessment-image'
 
 /** Paginated raster PDF reuses the same Chinese Canvas rendering and watermark.
- * Images use the bounded indexed PNG encoder; no fonts, server conversion or new dependency.
+ * Images use the bounded RGB PNG encoder; no fonts, server conversion or new dependency.
  */
 export function paginateAssessmentLayout(layout:ReportLayout):ReportLayout[]{
   const pages:ReportLayout[]=[]
@@ -48,22 +48,20 @@ export function buildAssessmentPdf(pages:Uint8Array[]):ArrayBuffer{
   object(2,ascii(`<< /Type /Pages /Count ${pages.length} /Kids [${pages.map((_,index)=>`${3+index*3} 0 R`).join(' ')}] >>`))
   pages.forEach((png,index)=>{
     const view=new DataView(png.buffer,png.byteOffset,png.byteLength)
-    if(png.length<33||png[0]!==137||png[25]!==3||png[24]!==8)throw new Error('PDF只接受报告编码器生成的8位索引PNG')
+    if(png.length<33||png[0]!==137||png[25]!==2||png[24]!==8)throw new Error('PDF只接受报告编码器生成的8位RGB PNG')
     const width=view.getUint32(16),height=view.getUint32(20)
-    let palette:Uint8Array|undefined
     const idat:Uint8Array[]=[]
     for(let offset=8;offset<png.length;){
       const size=view.getUint32(offset)
       if(offset+size+12>png.length)throw new Error('PNG分段不完整')
       const type=String.fromCharCode(...png.subarray(offset+4,offset+8))
-      if(type==='PLTE')palette=png.subarray(offset+8,offset+8+size)
       if(type==='IDAT')idat.push(png.subarray(offset+8,offset+8+size))
       offset+=size+12
     }
-    if(!palette||!idat.length||width*height>15000000)throw new Error('PNG报告数据无效')
+    if(!idat.length||width*height>15000000)throw new Error('PNG报告数据无效')
     const image=concat(idat),pageId=3+index*3,imageId=pageId+1,contentId=pageId+2
     object(pageId,ascii(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Report ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`))
-    object(imageId,concat([ascii(`<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace [/Indexed /DeviceRGB ${palette.length/3-1} <${[...palette].map(byte=>byte.toString(16).padStart(2,'0')).join('')}>] /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 1 /BitsPerComponent 8 /Columns ${width} >> /Length ${image.length} >>\nstream\n`),image,ascii('\nendstream')]))
+    object(imageId,concat([ascii(`<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors 3 /BitsPerComponent 8 /Columns ${width} >> /Length ${image.length} >>\nstream\n`),image,ascii('\nendstream')]))
     const content=ascii('q 595.28 0 0 841.89 0 0 cm /Report Do Q')
     object(contentId,concat([ascii(`<< /Length ${content.length} >>\nstream\n`),content,ascii('\nendstream')]))
   })

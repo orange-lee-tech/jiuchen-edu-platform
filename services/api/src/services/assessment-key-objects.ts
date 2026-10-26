@@ -29,6 +29,7 @@ type KeyRow = mysql.RowDataPacket & {
   status: 'candidate' | 'active' | 'disabled' | 'archived'; version: number
   failed_attempts: number; pin_locked: number | null; last_test_result: string | null
   last_test_at: Date | null; created_at: Date
+  source_object_id: string | null
 }
 type HeadRow = mysql.RowDataPacket & {
   active_object_id: string | null; version: number; pin_salt: string | null
@@ -56,7 +57,7 @@ function publicKey(row: KeyRow) {
     creatorUserId: row.creator_user_id, note: row.note, status: row.status,
     version: Number(row.version), hasObjectPin: Boolean(row.pin_hash),
     lastTestResult: row.last_test_result, lastTestAt: row.last_test_at,
-    createdAt: row.created_at,
+    createdAt: row.created_at, sourceObjectId: row.source_object_id ?? null,
   }
 }
 async function selectHead(connection: mysql.PoolConnection) {
@@ -219,6 +220,67 @@ export async function createAssessmentKey(input: {
     await connection.commit()
     return { id, active: first, version: first ? 1 : Number(head.version) }
   } catch (error) { await connection.rollback(); throw error }
+  finally { connection.release() }
+}
+
+/** Copy only the encrypted credential and immutable connection identity. The new
+ * object has its own PIN and has never passed a report-format probe. */
+export async function copyAssessmentKeyForModel(input: {
+  pool: mysql.Pool; actorId: string; sourceId: string; expectedVersion: number
+  currentPin: string; sourcePin: string; newPin: string
+  label: string; model: string; note: string
+  validateUrl?: (url: string) => Promise<string>
+}) {
+  if (![input.currentPin, input.sourcePin, input.newPin].every(pin => sixDigitPin.safeParse(pin).success)) {
+    throw new ControlError('pin_must_be_six_digits', 400)
+  }
+  const label = z.string().trim().min(1).max(120).parse(input.label)
+  const model = z.string().trim().min(1).max(120).parse(input.model)
+  const note = z.string().trim().max(1000).parse(input.note)
+  const connection = await input.pool.getConnection()
+  try {
+    await connection.beginTransaction()
+    const head = await selectHead(connection)
+    if (!Number(head.initialized)) throw new ControlError('assessment_key_not_initialized', 409)
+    if (Number(head.version) !== input.expectedVersion) throw new ControlError('control_version_conflict', 409)
+    await requireHeadPin(connection, head, input.currentPin)
+    const source = await selectKey(connection, input.sourceId)
+    if (!source || source.status === 'archived') throw new ControlError('assessment_key_not_found', 404)
+    if (source.creator_user_id !== input.actorId) throw new ControlError('assessment_key_creator_required', 403)
+    await requireObjectPin(connection, source, input.sourcePin)
+    if (!source.provider || !source.api_base_url || !source.model || source.status === 'disabled') {
+      throw new ControlError('assessment_key_connection_incomplete', 409)
+    }
+    // No destination provider or URL is accepted from the client. Recheck the
+    // stored HTTPS address against the same public-target policy as creation.
+    const baseUrl = await (input.validateUrl ?? validateAssessmentApiUrl)(source.api_base_url)
+    const id = randomUUID()
+    const pin = hashIndependentPin(input.newPin)
+    await connection.query(
+      `INSERT INTO assessment_key_objects
+       (id,label,provider,api_base_url,model,temperature,encrypted_secret,creator_user_id,
+        note,pin_salt,pin_hash,status,source_object_id,last_test_result,last_test_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,'candidate',?,NULL,NULL)`,
+      [id, label, source.provider, baseUrl, model, source.temperature,
+        source.encrypted_secret, input.actorId, note, pin.salt, pin.hash, source.id],
+    )
+    await audit(connection, input.actorId, 'copy_model', id, Number(head.version))
+    await connection.commit()
+    return { id, active: false, version: Number(head.version), sourceObjectId: source.id }
+  } catch (error) {
+    await connection.rollback()
+    if (error instanceof ControlError) {
+      const action = error.code.includes('pin_') ? 'copy_denied_pin' :
+        error.code.includes('version') ? 'copy_denied_version' :
+        error.code.includes('creator') ? 'copy_denied_creator' : 'copy_denied_validation'
+      try {
+        await connection.beginTransaction()
+        await audit(connection, input.actorId, action, null, input.expectedVersion)
+        await connection.commit()
+      } catch { await connection.rollback() }
+    }
+    throw error
+  }
   finally { connection.release() }
 }
 

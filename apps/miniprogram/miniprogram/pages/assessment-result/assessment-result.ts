@@ -305,7 +305,12 @@ Page({
         if (result.tapIndex === 1) void this.exportDocument('docx')
         if (result.tapIndex === 2) void this.exportDocument('pdf')
         if (result.tapIndex === 3) void this.exportImageReport('summary')
-        if (result.tapIndex === 4) void this.exportImageReport('long')
+        if (result.tapIndex === 4) wx.showModal({
+          title: '私人完整报告',
+          content: '长图包含学员姓名、完整编号及报告全文。请确认仅保存或发送给获得授权的人。',
+          confirmText: '确认生成',
+          success: choice => { if(choice.confirm) void this.exportImageReport('long') },
+        })
       },
     })
   },

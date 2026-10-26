@@ -55,3 +55,81 @@ button::after{border:0;}
 .identity-bind-input-placeholder {
   color: #78899b;
 }
+/* identity-card-layout-v2 */
+.identity-role-row {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 14rpx 0;
+  padding: 22rpx;
+  background: #ffffff;
+  border: 1rpx solid #d7e5f2;
+  border-left: 6rpx solid #2865b7;
+  border-radius: 12rpx;
+}
+
+.identity-role-info {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.identity-role-name {
+  display: block;
+  color: #15345a;
+  font-size: 30rpx;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.identity-role-code {
+  display: block;
+  width: 100%;
+  margin-top: 8rpx;
+  color: #265c9b;
+  font-size: 25rpx;
+  font-weight: 650;
+  line-height: 1.5;
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.identity-role-current {
+  display: inline-block;
+  margin-top: 10rpx;
+  padding: 5rpx 13rpx;
+  border-radius: 8rpx;
+  color: #08705e;
+  background: #e1f7ee;
+  font-size: 21rpx;
+}
+
+.identity-role-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  width: 100%;
+  margin-top: 19rpx;
+}
+
+.identity-role-button {
+  box-sizing: border-box;
+  flex: 1 1 210rpx;
+  min-width: 0;
+  margin: 0;
+  padding: 15rpx 12rpx;
+  border-radius: 9rpx;
+  font-size: 24rpx;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.identity-role-switch {
+  background: #285eb6;
+  color: #ffffff;
+}
+
+.identity-role-unbind {
+  background: #edf2f8;
+  color: #415870;
+}

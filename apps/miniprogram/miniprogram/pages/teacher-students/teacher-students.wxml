@@ -5,6 +5,17 @@
     <text class="page-desc">只显示后台已授权的师生关系。学员更新需要老师审核后才进入正式档案。</text>
   </view>
 
+  <view class="surface pending-review" wx:if="{{aiCosts}}">
+    <text class="review-title">已授权学员 · AI 请求摘要</text>
+    <text class="review-meta">首次生成 {{aiCosts.usage.initialCalls}} 次 · 自动修复 {{aiCosts.usage.repairCalls}} 次</text>
+    <text class="review-meta">供应商返回用量 {{aiCosts.usage.usageReturned}} 次 · 待对账 {{aiCosts.usage.awaitingReconciliation}} 次</text>
+    <text class="review-meta" wx:if="{{aiCosts.tokenForecast}}">按已有上下文长度，下次请求约 {{aiCosts.tokenForecast.lowerTokens}}–{{aiCosts.tokenForecast.upperTokensWithOneRepair}} token；上限含一次自动修复，仅供容量规划。</text>
+    <text class="review-meta" wx:if="{{aiCosts.costForecast}}">按已审核价格与近期汇率，所授权学员典型请求估算 ¥{{aiCosts.costForecast.minCny}}–¥{{aiCosts.costForecast.maxCnyWithOneRepair}}；供应商账单实收未接入。</text>
+    <text class="review-meta" wx:else>人民币成本预测待价格及汇率核实；不把 token 估算冒充实际费用。</text>
+    <text class="review-meta">仅统计已分配学员；供应商余额、单价与平台财务数据不向老师开放。</text>
+  </view>
+  <view class="empty surface" wx:elif="{{aiCostsNotice}}">{{aiCostsNotice}}</view>
+
   <view class="section-head">
     <text class="section-title">待审核更新</text>
     <text class="section-note">{{pending.length}} 项</text>

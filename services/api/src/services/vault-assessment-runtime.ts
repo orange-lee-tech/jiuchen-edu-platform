@@ -24,8 +24,9 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
       get provider() { return activeProviderName },
       get model() { return activeModel },
       isConfigured() { return vaultPresent ? vaultUsable : baseline.provider.isConfigured() },
+      async prepare() { selectedProvider = await activeProvider() },
       async analyze(input) {
-        const provider = await activeProvider()
+        const provider = selectedProvider ?? await activeProvider()
         selectedProvider = provider
         return provider.analyze(input)
       },

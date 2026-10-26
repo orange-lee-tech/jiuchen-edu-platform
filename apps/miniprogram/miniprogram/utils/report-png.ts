@@ -1,5 +1,5 @@
-/** Streaming indexed PNG: one small canvas strip at a time, no full-image RGBA buffer.
- * Palette preserves a muted blue-gray tone, including text antialiasing and watermark.
+/** Streaming true-color PNG: one small canvas strip at a time, no full-image RGBA buffer.
+ * Transparent canvas pixels are composited over white before encoding.
  * Stored DEFLATE blocks deliberately avoid a new npm/native image dependency.
  */
 function u32(value: number) {
@@ -30,30 +30,27 @@ export class ReportPngEncoder {
     }
   }
   header() {
-    const palette = new Uint8Array(768)
-    for (let v = 0; v < 256; v++) {
-      palette[v * 3] = v === 255 ? 255 : Math.round(v * .96)
-      palette[v * 3 + 1] = v === 255 ? 255 : Math.round(v * .98)
-      palette[v * 3 + 2] = v
-    }
     return join([
       new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
-      chunk('IHDR', join([u32(this.width), u32(this.height), new Uint8Array([8, 3, 0, 0, 0])])),
-      chunk('PLTE', palette), chunk('IDAT', new Uint8Array([0x78, 0x01])),
+      chunk('IHDR', join([u32(this.width), u32(this.height), new Uint8Array([8, 2, 0, 0, 0])])),
+      chunk('IDAT', new Uint8Array([0x78, 0x01])),
     ])
   }
   strip(rgba: Uint8ClampedArray, height: number) {
     if (height < 1 || this.rows + height > this.height || rgba.length !== this.width * height * 4) throw new Error('画布分段数据不完整')
-    const raw = new Uint8Array((this.width + 1) * height)
+    const stride = this.width * 3 + 1
+    const raw = new Uint8Array(stride * height)
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < this.width; x++) {
         const i = (y * this.width + x) * 4
         const alpha = rgba[i + 3] / 255
-        const luminance = rgba[i] * .2126 + rgba[i + 1] * .7152 + rgba[i + 2] * .0722
         // Some real devices return transparent pixels around a freshly resized
         // legacy canvas. Composite against the report's white background so
         // those pixels can never become opaque black in the streamed PNG.
-        raw[y * (this.width + 1) + x + 1] = Math.round(luminance * alpha + 255 * (1 - alpha))
+        const output = y * stride + x * 3 + 1
+        for (let channel = 0; channel < 3; channel++) {
+          raw[output + channel] = Math.round(rgba[i + channel] * alpha + 255 * (1 - alpha))
+        }
       }
     }
     for (const value of raw) { this.a = (this.a + value) % 65521; this.b = (this.b + this.a) % 65521 }

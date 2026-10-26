@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { ZodError } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import type {
@@ -16,6 +16,7 @@ import {
   createAssessmentAIProvider,
   JsonModelProviderInvalidJsonError,
   type JsonModelProvider,
+  type ModelTokenUsage,
 } from './ai-provider.js'
 import {
   CaseKnowledgeSource,
@@ -41,15 +42,20 @@ export interface AssessmentModelProvider {
   readonly provider: string
   readonly model: string
   isConfigured(): boolean
+  prepare?(): Promise<void>
   analyze(input: {
     assessment: AssessmentInput
     knowledge: AssessmentKnowledgeContext
+    onUsage?: (usage: ModelTokenUsage | null) => void
+    onPrepared?: (promptChars: number, outputBudget: number) => void
   }): Promise<unknown>
   repair?(input: {
     assessment: AssessmentInput
     knowledge: AssessmentKnowledgeContext
     invalidOutput: unknown
     validationError: string
+    onUsage?: (usage: ModelTokenUsage | null) => void
+    onPrepared?: (promptChars: number, outputBudget: number) => void
   }): Promise<unknown>
 }
 
@@ -207,6 +213,8 @@ class JsonAssessmentModelProvider implements AssessmentModelProvider {
     input: {
       assessment: AssessmentInput
       knowledge: AssessmentKnowledgeContext
+      onUsage?: (usage: ModelTokenUsage | null) => void
+      onPrepared?: (promptChars: number, outputBudget: number) => void
     },
     repair?: { invalidOutput: unknown; validationError: string },
   ) {
@@ -215,6 +223,8 @@ class JsonAssessmentModelProvider implements AssessmentModelProvider {
       '{"profileSummary":"string","strengths":[{"title":"string","detail":"string","evidenceRefs":["ref"]}],"risks":[{"title":"string","detail":"string","evidenceRefs":["ref"]}],"targetAssessments":[{"schoolName":"string","programName":null,"tier":"reach|match|conservative|insufficient_data","rationale":"string","gapItems":["string"],"actions":["string"],"evidenceRefs":["ref"]}],"recommendedActions":[{"priority":"high|medium|low","title":"string","rationale":"string","timeframe":null}],"similarCases":[{"caseId":"string","sourceType":"jiuchen|external","similarityReason":"string","resultSummary":"string","evidenceRef":"case:..."}],"uncertainties":["string"],"disclaimer":"string"}'
 
     return this.modelProvider.generateJson({
+      onUsage: input.onUsage,
+      onPrepared: input.onPrepared,
       system:
         '你是九辰教育保研评估引擎。只输出一个完整 JSON 对象，不要 Markdown，不要解释。' +
         '顶层必须是 object；第一个非空白字符必须是 {，最后一个非空白字符必须是 }。禁止只输出数字、字符串、数组、布尔值或 null。' +
@@ -262,6 +272,8 @@ class JsonAssessmentModelProvider implements AssessmentModelProvider {
     knowledge: AssessmentKnowledgeContext
     invalidOutput: unknown
     validationError: string
+    onUsage?: (usage: ModelTokenUsage | null) => void
+    onPrepared?: (promptChars: number, outputBudget: number) => void
   }): Promise<unknown> {
     return this.generate(input, {
       invalidOutput: input.invalidOutput,
@@ -500,7 +512,8 @@ export async function executeAssessment(
   accountEvidence: AssessmentEvidenceItem[] = [],
   onStage?: (stage: 'knowledge_retrieval' | 'model_request' | 'report_validation') => void,
   onModelCall?: (event: { phase: 'initial' | 'repair'; requestCount: number;
-    outcome: 'started' | 'completed' | 'failed' }) => void,
+    callId: string; outcome: 'started' | 'completed' | 'failed';
+    usage?: ModelTokenUsage | null; promptChars?: number | null; outputBudget?: number | null }) => void | Promise<void>,
 ): Promise<{
   output: AssessmentOutput
   evidence: AssessmentEvidenceItem[]
@@ -532,24 +545,36 @@ export async function executeAssessment(
   let rawOutput: unknown
   let repairUsed = false
   let requestCount = 0
-  const callModel = async (phase: 'initial' | 'repair', call: () => Promise<unknown>) => {
+  const callModel = async (phase: 'initial' | 'repair', call: (callbacks: {
+    onUsage: (usage: ModelTokenUsage | null) => void;
+    onPrepared: (promptChars: number, outputBudget: number) => void
+  }) => Promise<unknown>) => {
     requestCount += 1
+    const callId = randomUUID()
+    let usage: ModelTokenUsage | null = null
+    let promptChars: number | null = null
+    let outputBudget: number | null = null
     onStage?.('model_request')
-    onModelCall?.({ phase, requestCount, outcome: 'started' })
+    await onModelCall?.({ phase, requestCount, callId, outcome: 'started' })
     try {
-      const value = await call()
-      onModelCall?.({ phase, requestCount, outcome: 'completed' })
+      const value = await call({ onUsage: value => { usage = value },
+        onPrepared: (chars,budget) => { promptChars = chars; outputBudget = budget } })
+      await onModelCall?.({ phase, requestCount, callId, outcome: 'completed',
+        usage, promptChars, outputBudget })
       return value
     } catch (error) {
-      onModelCall?.({ phase, requestCount, outcome: 'failed' })
+      await onModelCall?.({ phase, requestCount, callId, outcome: 'failed',
+        usage, promptChars, outputBudget })
       throw error
     }
   }
 
   try {
-    rawOutput = await callModel('initial', () => runtime.provider.analyze({
+    await runtime.provider.prepare?.()
+    rawOutput = await callModel('initial', callbacks => runtime.provider.analyze({
       assessment: input,
       knowledge,
+      ...callbacks,
     }))
   } catch (error) {
     if (
@@ -560,11 +585,12 @@ export async function executeAssessment(
     }
 
     repairUsed = true
-    rawOutput = await callModel('repair', () => runtime.provider.repair!({
+    rawOutput = await callModel('repair', callbacks => runtime.provider.repair!({
       assessment: input,
       knowledge,
       invalidOutput: error.rawText,
       validationError: error.message,
+      ...callbacks,
     }))
   }
 
@@ -578,12 +604,13 @@ export async function executeAssessment(
     if (!runtime.provider.repair || repairUsed) throw error
 
     repairUsed = true
-    rawOutput = await callModel('repair', () => runtime.provider.repair!({
+    rawOutput = await callModel('repair', callbacks => runtime.provider.repair!({
       assessment: input,
       knowledge,
       invalidOutput: rawOutput,
       validationError:
         error instanceof Error ? error.message : 'assessment_output_invalid',
+      ...callbacks,
     }))
 
     try {

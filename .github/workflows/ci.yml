@@ -110,3 +110,10 @@ jobs:
           npm run db:upgrade:credit-plans
           npm run db:upgrade:dual-identity
           node dist/db/verify-closed-loop-mysql.js
+      - name: Verify AI cost and model copy migrations twice on disposable MySQL 8
+        working-directory: services/api
+        env:
+          DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_commercial_controls_ci
+        run: |
+          npm run db:upgrade:assessment
+          node dist/db/verify-ai-cost-model-copy-mysql.js

@@ -80,9 +80,8 @@ export function createCommercialConfig(env: AppEnv): CommercialConfig {
     if (!freeGrant || freeGrant.amount !== GUEST_FREE_COUNT) {
       throw new Error('approved_guest_free_grant_required')
     }
-    if (configuredSkus.length > 0 && (
-      configuredSkus.length !== APPROVED_ASSESSMENT_SKUS.length ||
-      APPROVED_ASSESSMENT_SKUS.some((sku) => !configuredSkus.some((item) =>
+    if (configuredSkus.length > 0 && ![APPROVED_ASSESSMENT_SKUS, FIXED_ASSESSMENT_SKUS].some((catalog) =>
+      configuredSkus.length === catalog.length && catalog.every((sku) => configuredSkus.some((item) =>
         item.key === sku.key &&
         item.description === sku.description &&
         item.amountFen === sku.amountFen &&
@@ -101,8 +100,13 @@ export function createCommercialConfig(env: AppEnv): CommercialConfig {
     studentBonusGrant: freeGrant?.amount === GUEST_FREE_COUNT
       ? { version: `${freeGrant.version}:student-bonus`, amount: STUDENT_TOTAL_FREE_COUNT - GUEST_FREE_COUNT }
       : null,
-    paymentSkus: enabled ? APPROVED_ASSESSMENT_SKUS : [],
+    paymentSkus: enabled ? FIXED_ASSESSMENT_SKUS.filter(sku => sku.key !== 'JC000' || env.WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED === true) : [],
   }
+}
+
+export function canPurchaseTestSku(userId: string, env: AppEnv): boolean {
+  return env.WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED === true &&
+    (env.WECHAT_VIRTUAL_PAY_TEST_USER_IDS ?? '').split(',').some(id => id.trim().toLowerCase() === userId.toLowerCase())
 }
 
 export function findCreditSku(

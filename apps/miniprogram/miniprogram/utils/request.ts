@@ -659,6 +659,7 @@ export type AdminInternalId = {
   displayName?:string|null;userStatus?:string|null;accountRole?:string|null;teacherStatus?:string|null
   assignmentCount?:number|null;assignmentState?:'unclaimed'|'assigned'|'unassigned'|'not_recorded'
   assignmentLabel?:string;profileState?:'unclaimed'|'incomplete'|'recorded'
+  profileLabel?:string;missingFields?:Array<'formal_name'|'university'>
   auditCategory?:'test_named_bound'|'test_named_unclaimed'|'no_test_name';nameVerification?:'not_recorded'
 
 }
@@ -670,9 +671,11 @@ export type AdminTeacher = {
   status: 'active' | 'inactive'
   createdAt?: string
   stateLabel?:string;canView?:boolean;businessId?:string|null
+  profileLabel?:string;assignmentLabel?:string;accountDisplayName?:string|null
+  missingFields?:Array<'formal_name'|'university'>
 }
 
-export async function getAdminReadOnlyRoster():Promise<{students:Array<StudentSummary&{stateLabel?:string;canView?:boolean;businessId?:string|null}>;teachers:AdminTeacher[];isolatedUnclaimedSeedCount:number}>{
+export async function getAdminReadOnlyRoster():Promise<{students:Array<StudentSummary&{stateLabel?:string;canView?:boolean;businessId?:string|null;profileLabel?:string;assignmentLabel?:string;accountDisplayName?:string|null;missingFields?:Array<'formal_name'|'university'>}>;teachers:AdminTeacher[];isolatedUnclaimedSeedCount:number}>{
  return request('/me/admin/read-only-directory')
 }
 
@@ -862,11 +865,11 @@ export async function getMyCreditAccount(): Promise<CreditAccount> {
   const result = await request<{ ok: true; account: CreditAccount }>('/me/credits')
   return result.account
 }
-export type VirtualPaymentArgs = {mode:'goods';signData:string;paySig:string;signature:string}
+export type VirtualPaymentArgs = {mode:'short_series_goods';signData:string;paySig:string;signature:string}
 export async function createVirtualAssessmentOrder(skuKey:string,wechatCode:string):Promise<{order:{id:string;status:'pending';amountFen:number;creditAmount:number};payment:VirtualPaymentArgs}> {
   return request('/me/virtual-payment-orders','POST',{skuKey,wechatCode})
 }
-export async function reconcileVirtualAssessmentOrder(id:string):Promise<{ok:boolean;state:'paid'|'pending'|'refunded'|'closed';credited:boolean;deliveryPending?:boolean}> {
+export async function reconcileVirtualAssessmentOrder(id:string):Promise<{ok:boolean;state:'paid'|'pending'|'refunded'|'closed';credited:boolean;deliveryPending?:boolean;requiresFinanceReview?:boolean}> {
   return request('/me/virtual-payment-orders/'+encodeURIComponent(id)+'/reconcile','POST',{})
 }
 export async function createAssessmentPaymentOrder(skuKey: string): Promise<{ order: AssessmentPaymentOrder; payment: AssessmentPaymentParams }> {
@@ -907,6 +910,53 @@ export type AdminAnalytics = {
 export async function getAdminAnalytics(period: AdminAnalyticsPeriod): Promise<AdminAnalytics> {
   const result = await request<{ ok: true; analytics: AdminAnalytics }>('/me/admin/assessment-analytics?period=' + period)
   return result.analytics
+}
+export type AdminAiCosts = {
+  scope:'platform'; usage:{calls:number;initialCalls:number;repairCalls:number;
+    usageReturned:number;awaitingReconciliation:number;promptTokens:number;completionTokens:number}
+  models:Array<{provider:string;model:string;calls:number;usageReturned:number;awaitingReconciliation:number}>
+  forecast:null|{lowerTokens:number;upperTokensWithOneRepair:number;
+    status:'reviewed_price_estimate'|'price_or_fx_not_verified';
+    costRange:null|{minCny:number;maxCnyWithOneRepair:number;priceVersion:string;
+      priceSource:string;priceReviewedAt:string;fxSource:string|null;fxObservedAt:string|null}}
+  actualSupplierCharge:'not_connected'
+  reviewedPrices:Array<{id:string;provider:string;model:string;currency:string;sourceUrl:string;reviewedAt:string}>
+  priceSource:{status:'reviewed'|'review_required'|'not_checked';fetchedAt:string|null}
+  exchangeRate:null|{version:string;rate:string;sourceUrl:string;observedAt:string;reviewedAt:string}
+  latestPriceVersions:Array<{provider:string;model:string;version:string|null}>
+}
+export type AdminAiBalance = {status:'not_connected'|'unavailable'|'official_observation';
+  observedAt?:string; balances?:Array<{currency:string;total:string|null}>}
+export async function getAdminAiCosts():Promise<AdminAiCosts>{
+  const result=await request<{ok:true;costs:AdminAiCosts}>('/me/admin/assessment-ai-costs')
+  return result.costs
+}
+export async function getAdminAiBalance():Promise<AdminAiBalance>{
+  const result=await request<{ok:true;balance:AdminAiBalance}>('/me/admin/assessment-ai-balance')
+  return result.balance
+}
+export async function checkDeepseekPriceSource(){
+  return request<{ok:true;status:'unchanged'|'review_required';fetchedAt:string}>(
+    '/me/admin/assessment-ai-prices/check-source','POST',{})
+}
+export async function reviewDeepseekPrice(payload:{model:string;expectedLatestVersion:string|null;
+  inputCacheHitPerMillion:number;inputCacheMissPerMillion:number;outputPerMillion:number;
+  peakInputCacheMissPerMillion:number|null;peakOutputPerMillion:number|null;
+  peakWindowUtc:string|null;effectiveAt:string;reviewNote:string}){
+  return request('/me/admin/assessment-ai-prices/review','POST',payload)
+}
+export async function reviewAiExchangeRate(payload:{rate:number;sourceUrl:string;
+  observedAt:string;reviewNote:string}){
+  return request('/me/admin/assessment-ai-fx/review','POST',payload)
+}
+export type TeacherAiCosts = {scope:'assigned_students'; usage:AdminAiCosts['usage'];
+  tokenForecast:null|{lowerTokens:number;upperTokensWithOneRepair:number};
+  costForecast:null|{status:'reviewed_price_estimate';minCny:number;
+    maxCnyWithOneRepair:number;priceReviewedAt:string;fxObservedAt:string|null};
+  providerBalance:'forbidden';providerPrices:'forbidden';actualSupplierCharge:'not_connected'}
+export async function getTeacherAiCosts():Promise<TeacherAiCosts>{
+  const result=await request<{ok:true;costs:TeacherAiCosts}>('/me/teacher/assessment-ai-costs')
+  return result.costs
 }
 
 export async function getAdminUsers(): Promise<AdminUser[]> {
@@ -952,7 +1002,7 @@ export type AssessmentKeyObject = {
   model: string | null; temperature: number | null; creatorUserId: string
   note: string | null; status: 'candidate' | 'active' | 'disabled' | 'archived'
   version: number; hasObjectPin: boolean; lastTestResult: string | null
-  lastTestAt: string | null; createdAt: string
+  lastTestAt: string | null; createdAt: string; sourceObjectId?: string | null
 }
 export type AssessmentKeyHead = { initialized: boolean; version: number; activeObjectId: string | null }
 export async function getAssessmentKeyObjects(): Promise<{
@@ -966,6 +1016,13 @@ export async function createAssessmentKeyObject(payload: {
 }) {
   return request<{ ok: true; id: string; active: boolean; version: number }>(
     '/me/admin/assessment-keys', 'POST', payload)
+}
+export async function copyAssessmentKeyModel(id: string, payload: {
+  expectedVersion: number; currentPin: string; sourcePin: string; newPin: string
+  label: string; model: string; note: string
+}) {
+  return request<{ok:true; id:string; active:false; version:number; sourceObjectId:string}>(
+    '/me/admin/assessment-keys/' + encodeURIComponent(id) + '/copy-model', 'POST', payload)
 }
 export async function activateAssessmentKeyObject(id: string, payload: {
   expectedVersion: number; currentPin: string; targetPin: string

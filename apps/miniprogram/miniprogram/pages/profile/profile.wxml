@@ -17,10 +17,16 @@
     <view wx:if="{{loggedIn && !readOnly && identities.length}}" class="card">
       <text class="section-heading">我的身份</text>
       <text class="card-note">当前使用：{{roleLabel}}。切换后服务器按新身份验证权限。</text>
-      <view wx:for="{{identities}}" wx:key="id" class="menu-row">
-        <view class="menu-main"><text class="menu-title">{{item.type === 'admin' ? '管理员' : item.type === 'teacher' ? '老师' : '学员'}} · {{item.businessId}}</text></view>
-        <button wx:if="{{role !== item.type}}" class="mini" disabled="{{identityBusy}}" data-role="{{item.type}}" bindtap="onSwitchIdentity">切换身份</button>
-        <button class="mini" disabled="{{identityBusy}}" data-id="{{item.id}}" bindtap="onUnbindIdentity">解除</button>
+      <view wx:for="{{identities}}" wx:key="id" class="identity-role-row">
+        <view class="identity-role-info">
+          <text class="identity-role-name">{{item.type === 'admin' ? '管理员' : item.type === 'teacher' ? '老师' : '学员'}}</text>
+          <text class="identity-role-code" selectable>{{item.businessId}}</text>
+          <text wx:if="{{role === item.type}}" class="identity-role-current">当前使用</text>
+        </view>
+        <view class="identity-role-actions">
+          <button wx:if="{{role !== item.type}}" class="identity-role-button identity-role-switch" disabled="{{identityBusy}}" data-role="{{item.type}}" bindtap="onSwitchIdentity">切换身份</button>
+          <button class="identity-role-button identity-role-unbind" disabled="{{identityBusy}}" data-id="{{item.id}}" bindtap="onUnbindIdentity">解除绑定</button>
+        </view>
       </view>
       <view wx:if="{{identities.length === 1 && identities[0].type === 'admin'}}">
         <input class="identity-bind-input" placeholder-class="identity-bind-input-placeholder" value="{{identityInput}}" placeholder="请填写未认领的学员或老师内部编号" bindinput="onAdditionalIdInput" />

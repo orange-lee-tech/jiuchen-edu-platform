@@ -6,6 +6,8 @@ import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { openOfficialArticle } from '../../utils/official-article'
 import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 import {getReadOnlyContext,clearReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
+import { clearCachedAcademicProfile } from '../../utils/profile-cache'
+import { clearGrowthProfileBootstrapCache } from '../../utils/growth-profile-cache'
 
 // Identity editing already lives in the blue hero. Never repeat the same
 // action in a long menu or create parallel assessment entry routes.
@@ -77,8 +79,10 @@ Page({
     if (this.data.identityBusy || !this.data.identities.some(item => item.type === role)) return
     this.setData({ identityBusy: true })
     try {
+      await clearCachedAcademicProfile()
       await switchMyIdentityRole(role)
       const refreshed = await refreshAuthResult()
+      await Promise.all([clearCachedAcademicProfile(), clearGrowthProfileBootstrapCache()])
       if (refreshed?.user.role !== role) {
         this.setData({ identityError: '身份已切换，但页面未完成刷新。请重新打开小程序后确认当前身份。' })
         return
@@ -99,8 +103,10 @@ Page({
   async unbindIdentity(id: string) {
     this.setData({ identityBusy: true })
     try {
+      await clearCachedAcademicProfile()
       await unbindMyIdentityId(id)
       await refreshAuthResult()
+      await Promise.all([clearCachedAcademicProfile(), clearGrowthProfileBootstrapCache()])
       await this.loadIdentities()
       wx.showToast({ title: '身份已解除', icon: 'success' })
     } catch (error) { wx.showToast({ title: friendlyRequestError(error, '解除身份失败'), icon: 'none' }) }

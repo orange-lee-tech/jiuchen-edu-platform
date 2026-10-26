@@ -5,10 +5,12 @@ import {
   friendlyRequestError,
   getPendingPlanRevisions,
   getTeacherStudents,
+  getTeacherAiCosts,
   rejectPlanRevision,
   type ClassroomPlanType,
   type PendingPlanRevision,
   type TeacherStudent,
+  type TeacherAiCosts,
 } from '../../utils/request'
 
 function planTypesForStage(stage: string | null): ClassroomPlanType[] {
@@ -32,6 +34,8 @@ Page({
     loading: true,
     students: [] as TeacherStudent[],
     pending: [] as PendingPlanRevision[],
+    aiCosts:null as TeacherAiCosts|null,
+    aiCostsNotice:'',
   },
 
   onShow() {
@@ -41,11 +45,13 @@ Page({
   async loadData() {
     try {
       this.setData({ loading: true })
-      const [students, pending] = await Promise.all([
+      const [students, pending, costResult] = await Promise.all([
         getTeacherStudents(),
         getPendingPlanRevisions(),
+        getTeacherAiCosts().then(value=>({value})).catch(()=>({value:null})),
       ])
-      this.setData({ students, pending })
+      this.setData({ students, pending, aiCosts:costResult.value,
+        aiCostsNotice:costResult.value?'':'已分配学员的供应商请求摘要暂不可用；请核对成本表与 API 版本。' })
     } catch (error) {
       wx.showToast({ title: '老师工作台加载失败', icon: 'none' })
     } finally {

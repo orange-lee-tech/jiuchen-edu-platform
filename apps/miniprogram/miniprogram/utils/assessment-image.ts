@@ -7,7 +7,7 @@ export const WATERMARK_ALPHA = .30
 export const WATERMARK_ANGLE = -25 * Math.PI / 180
 
 export type ReportLine = {text: string; y: number; size: number; heading: boolean}
-export type ReportLayout = {width: number; height: number; lines: ReportLine[]; identity: string; name: string; date: string}
+export type ReportLayout = {width: number; height: number; lines: ReportLine[]; identity: string; name: string; date: string; kind: 'summary'|'long'}
 
 export function wrapReportText(text: string, measure: (text: string) => number, width = 650): string[] {
   return text.split(/\r?\n/).flatMap(paragraph => {
@@ -66,7 +66,12 @@ export function shareReport(context: AssessmentReportExportContext, kind: 'summa
     lines.push('本次摘要没有可展示的案例引用')
   }
   lines.push('本图为分享摘要，完整报告请在九辰教育小程序查看。')
-  return lines.join('\n')
+  let summary=lines.join('\n')
+  for(const privateValue of [context.userId,context.displayName.trim()]){
+    if(privateValue&&privateValue.length>=2&&privateValue!=='微信用户'&&privateValue!=='某学员')
+      summary=summary.split(privateValue).join('学员')
+  }
+  return summary
 }
 
 export function layoutAssessmentImage(context: AssessmentReportExportContext, userId: string,
@@ -74,36 +79,92 @@ export function layoutAssessmentImage(context: AssessmentReportExportContext, us
   if (!userId) throw new Error('缺少可展示的用户编号，请先绑定学员身份')
   if(context.assessment.status!=='succeeded'||!context.assessment.output) throw new Error('当前报告不可导出')
   const name=context.displayName.trim() && !['微信用户','用户','某学员'].includes(context.displayName.trim()) ? context.displayName.trim() : '姓名未登记'
-  const identity=`${name} ｜ 用户ID：${userId}\n导出日期：${date}`
+  const identity=kind==='summary'
+    ? `报告标识：${context.assessment.id.slice(0, 8)} · ${date}`
+    : `${name} ｜ 用户ID：${userId}\n导出日期：${date}`
   const text=shareReport({...context,userId,exportDate:date},kind)
-  const paragraphs=[identity,`报告日期：${formatAssessmentDate(context.assessment.completedAt || context.assessment.updatedAt)}`,'',text,'',identity]
+  const paragraphs=kind==='summary'
+    ? [text.split('\n').slice(0,2).join('\n'),identity,...text.split('\n').slice(2)]
+    : [identity,`报告日期：${formatAssessmentDate(context.assessment.completedAt || context.assessment.updatedAt)}`,'',text,'',identity]
   const lines: ReportLine[]=[]
-  let y=42
+  let y=kind==='summary'?54:42
   paragraphs.forEach(paragraph=>paragraph.split('\n').forEach(p=>{
     const heading=/^九辰|^免责声明$|^核心结论$|^优势$|^风险$|^目标建议$|^关键行动$|^参考依据$/.test(p)
-    const size=heading?30:25
-    wrapReportText(p,t=>measure(t,size)).forEach(text=>{lines.push({text,y,size,heading});y+=heading?48:38})
+    if(kind==='summary'&&heading&&p!=='九辰教育 AI评估报告')y+=18
+    const size=heading?(kind==='summary'&&p==='九辰教育 AI评估报告'?38:30):25
+    wrapReportText(p,t=>measure(t,size),kind==='summary'?610:650).forEach(text=>{lines.push({text,y,size,heading});y+=kind==='summary'?(heading?52:42):(heading?48:38)})
   }))
-  const height=Math.ceil(y+42)
+  const height=Math.ceil(y+(kind==='summary'?64:42))
   if(height*REPORT_WIDTH>15000000) throw new Error('报告超出单张长图资源预算，请使用文本报告联系老师')
-  return {width:REPORT_WIDTH,height,lines,identity,name,date}
+  return {width:REPORT_WIDTH,height,lines,identity,name,date,kind}
 }
 
-/** Background first; watermark then body. No opaque cards cover the watermark. */
-export function drawReportStrip(ctx: WechatMiniprogram.CanvasContext, layout: ReportLayout, userId:string, offset:number, height:number) {
-  ctx.setFillStyle('#ffffff');ctx.fillRect(0,0,layout.width,height)
-  ctx.save();ctx.setGlobalAlpha(WATERMARK_ALPHA);ctx.setFillStyle('#b4becb');ctx.setFontSize(23)
-  const mark=`${layout.name} · 用户ID：${userId} · ${layout.date}`
+function roundedCard(ctx: WechatMiniprogram.CanvasContext,x:number,y:number,w:number,h:number,r:number){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r)
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h)
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r)
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.fill()
+}
+
+function paintWatermark(ctx: WechatMiniprogram.CanvasContext, mark:string, offset:number, height:number, alpha:number, color:string, firstY:number){
+  ctx.save();ctx.setGlobalAlpha(alpha);ctx.setFillStyle(color);ctx.setFontSize(23)
   const spacing=Math.max(520,ctx.measureText(mark).width+80)
-  // Absolute coordinates preserve the grid across adjacent strips.
-  for(let y=Math.floor((offset-600)/260)*260;y<offset+height+600;y+=260){
-    const stagger=(Math.abs(y/260)%2)*spacing/2
-    for(let x=-spacing;x<layout.width+spacing;x+=spacing){
+  // Anchor the grid to document coordinates, including across canvas strips.
+  for(let y=Math.floor((offset-firstY-600)/260)*260+firstY;y<offset+height+600;y+=260){
+    if(y<firstY)continue
+    const stagger=(Math.abs(Math.round((y-firstY)/260))%2)*spacing/2
+    for(let x=-spacing;x<REPORT_WIDTH+spacing;x+=spacing){
       ctx.save();ctx.translate(x+stagger,y-offset);ctx.rotate(WATERMARK_ANGLE);ctx.fillText(mark,0,0);ctx.restore()
     }
   }
-  ctx.restore();ctx.setGlobalAlpha(1);ctx.setTextBaseline('top')
+  ctx.restore();ctx.setGlobalAlpha(1)
+}
+
+function longSectionTitle(text:string){
+  return /^(?:用户提供的信息|学业背景与评估概要|[一二三四五六七八九十]+、|免责声明$)/.test(text)
+}
+
+/** Each strip uses absolute layout coordinates so colors and cards align at tile boundaries. */
+export function drawReportStrip(ctx: WechatMiniprogram.CanvasContext, layout: ReportLayout, userId:string, offset:number, height:number) {
+  ctx.setFillStyle('#f2f5f9');ctx.fillRect(0,0,layout.width,height)
+  if(layout.kind==='summary'){
+    ctx.setFillStyle('#142b4b');ctx.fillRect(0,-offset,layout.width,205)
+    ctx.setFillStyle('#c9a85b');ctx.fillRect(48,188-offset,654,5)
+    const headings=layout.lines.filter(line=>line.heading&&line.y>200)
+    headings.forEach((line,index)=>{
+      const next=headings[index+1]?.y??layout.height-40
+      if(next<offset||line.y>offset+height)return
+      ctx.setFillStyle('#ffffff');roundedCard(ctx,30,line.y-16-offset,690,next-line.y-2,18)
+      ctx.setFillStyle('#c9a85b');ctx.fillRect(49,line.y-2-offset,5,29)
+    })
+    // Public mark carries only the brand. Cards stay readable above the light ink.
+    paintWatermark(ctx,'九辰教育 · AI 保研评估',offset,height,.10,'#35547b',245)
+    ctx.setTextBaseline('top')
+    layout.lines.filter(line=>line.y+52>offset&&line.y<offset+height).forEach(line=>{
+      ctx.setFontSize(line.size)
+      ctx.setFillStyle(line.y<205?'#ffffff':line.heading?'#17375e':'#33445a')
+      ctx.fillText(line.text||' ',line.y<205?48:66,line.y-offset)
+    })
+    return
+  }
+  ctx.setFillStyle('#142b4b');ctx.fillRect(0,-offset,layout.width,232)
+  ctx.setFillStyle('#c9a85b');ctx.fillRect(48,226-offset,654,5)
+  const sections=layout.lines.filter(line=>longSectionTitle(line.text))
+  const first=layout.lines.find(line=>line.y>=232)
+  const cards=first?[first,...sections.filter(line=>line.y>first.y)]:sections
+  cards.forEach((line,index)=>{
+    const top=index===0?228:line.y-16
+    const bottom=(cards[index+1]?.y??layout.height-24)-14
+    if(bottom<offset||top>offset+height)return
+    ctx.setFillStyle('#ffffff');roundedCard(ctx,30,top-offset,690,Math.max(20,bottom-top),18)
+    if(index>0){ctx.setFillStyle('#c9a85b');ctx.fillRect(49,line.y-2-offset,5,29)}
+  })
+  const mark=`${layout.name} · 用户ID：${userId} · ${layout.date}`
+  paintWatermark(ctx,mark,offset,height,WATERMARK_ALPHA,'#b4becb',0)
+  ctx.setTextBaseline('top')
   layout.lines.filter(line=>line.y+48>offset && line.y<offset+height).forEach(line=>{
-    ctx.setFontSize(line.size);ctx.setFillStyle(line.heading?'#18202a':'#414b58');ctx.fillText(line.text||' ',50,line.y-offset)
+    ctx.setFontSize(line.size)
+    ctx.setFillStyle(line.y<232?'#ffffff':longSectionTitle(line.text)?'#17375e':'#33445a')
+    ctx.fillText(line.text||' ',line.y<232?48:66,line.y-offset)
   })
 }

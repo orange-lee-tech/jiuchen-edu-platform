@@ -25,6 +25,33 @@ export type JsonModelRequest = {
   user: JsonModelUserContent
   maxTokens?: number
   jsonSchema?: JsonModelJsonSchema
+  onUsage?: (usage: ModelTokenUsage | null) => void
+  onPrepared?: (promptChars: number, outputBudget: number) => void
+}
+
+export type ModelTokenUsage = {
+  promptTokens: number | null; completionTokens: number | null
+  cacheHitTokens: number | null; cacheMissTokens: number | null
+  reasoningTokens: number | null
+}
+
+function tokenCount(value: unknown): number | null {
+  return Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : null
+}
+
+export function parseModelTokenUsage(value: unknown): ModelTokenUsage | null {
+  if (!value || typeof value !== 'object') return null
+  const usage = value as Record<string, unknown>
+  const details = usage.completion_tokens_details && typeof usage.completion_tokens_details === 'object'
+    ? usage.completion_tokens_details as Record<string, unknown> : {}
+  const parsed = {
+    promptTokens: tokenCount(usage.prompt_tokens),
+    completionTokens: tokenCount(usage.completion_tokens),
+    cacheHitTokens: tokenCount(usage.prompt_cache_hit_tokens),
+    cacheMissTokens: tokenCount(usage.prompt_cache_miss_tokens),
+    reasoningTokens: tokenCount(details.reasoning_tokens),
+  }
+  return Object.values(parsed).some(count => count !== null) ? parsed : null
 }
 
 export interface JsonModelProvider {
@@ -193,6 +220,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
           content: request.user,
         },
       ]
+      request.onPrepared?.(JSON.stringify(messages).length, request.maxTokens ?? 0)
 
       const responseFormat =
         this.responseFormat === 'json_schema'
@@ -241,6 +269,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
       }
 
       let payload: {
+        usage?: unknown
         choices?: Array<{
           finish_reason?: string
           message?: {
@@ -250,6 +279,7 @@ export class ChatCompletionsJsonModelProvider implements JsonModelProvider {
       }
       try { payload = (await response.json()) as typeof payload }
       catch { throw new JsonModelProviderInvalidJsonError('') }
+      request.onUsage?.(parseModelTokenUsage(payload.usage))
 
       if (payload.choices?.[0]?.finish_reason === 'length') {
         throw new JsonModelProviderTruncatedError()

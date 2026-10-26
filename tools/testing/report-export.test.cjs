@@ -79,7 +79,16 @@ test('summary and long share images stay bounded, traceable and repeat identity 
  assert.ok(text.includes('完整证据'.repeat(100)));assert.ok(text.includes('仅供参考，不保证录取'));assert.ok(text.includes('JCC-000113'))
  assert.ok(long.lines.filter(l=>l.text.includes('用户ID')).length>=2);assert.ok(text.includes('李同学'));assert.equal(long.name,'李同学')
  const summary=layoutAssessmentImage(context,'JCS-TEST','summary',measure,'2026-10-12')
- assert.ok(summary.lines.map(l=>l.text).join('').includes('摘要分享图'))
+ const summaryText=summary.lines.map(l=>l.text).join('')
+ assert.ok(summaryText.includes('摘要分享图'))
+ assert.ok(summaryText.includes(context.assessment.id.slice(0,8)))
+ assert.ok(!summaryText.includes('JCS-TEST'))
+ assert.ok(!summaryText.includes('李同学'))
+ const leak={...named,assessment:{...named.assessment,output:{...named.assessment.output,
+   profileSummary:'李同学的完整编号是 JCS-TEST。'}}}
+ const safe=layoutAssessmentImage(leak,'JCS-TEST','summary',measure,'2026-10-12')
+ assert.ok(!safe.lines.map(l=>l.text).join('').includes('李同学'))
+ assert.ok(!safe.lines.map(l=>l.text).join('').includes('JCS-TEST'))
  assert.ok(!summary.lines.map(l=>l.text).join('').includes('完整证据'))
  assert.ok(summary.height<=long.height)
  assert.throws(()=>layoutAssessmentImage(context,'','long',measure))
@@ -90,13 +99,26 @@ test('watermark uses 0.30 alpha, negative 25 degrees; every strip paints waterma
  const {drawReportStrip,layoutAssessmentImage}=loader()('utils/assessment-image'),layout=layoutAssessmentImage(context,'JCS-TEST','long',(t,s)=>t.length*s)
  for(const offset of [0,800,1600]){
   const operations=[]
-  const ctx={setFillStyle(){},fillRect(){operations.push('background')},save(){},restore(){},setGlobalAlpha:n=>operations.push(['alpha',n]),setFontSize(){},measureText:()=>({width:440}),translate(){},rotate:n=>operations.push(['rotate',n]),fillText:t=>operations.push(['text',t]),setTextBaseline(){}}
+  const ctx={setFillStyle(){},fillRect(){operations.push('background')},beginPath(){},moveTo(){},lineTo(){},quadraticCurveTo(){},fill(){},save(){},restore(){},setGlobalAlpha:n=>operations.push(['alpha',n]),setFontSize(){},measureText:()=>({width:440}),translate(){},rotate:n=>operations.push(['rotate',n]),fillText:t=>operations.push(['text',t]),setTextBaseline(){}}
   drawReportStrip(ctx,layout,'JCS-TEST',offset,800)
   assert.equal(operations[0],'background');assert.ok(operations.some(o=>o[0]==='alpha'&&o[1]===.30));assert.ok(operations.some(o=>o[0]==='rotate'&&Math.abs(o[1]+25*Math.PI/180)<1e-9))
   const mark=operations.findIndex(o=>o[0]==='text'&&o[1].includes('姓名未登记 ·'))
   const reset=operations.findIndex(o=>o[0]==='alpha'&&o[1]===1)
   assert.ok(mark>0&&reset>mark)
  }
+})
+test('public summary paints blue and gold cards without name or full business ID',()=>{
+ const {drawReportStrip,layoutAssessmentImage}=loader()('utils/assessment-image')
+ const named={...context,displayName:'李同学'}
+ const layout=layoutAssessmentImage(named,'JCS-PRIVATE-123','summary',(t,s)=>t.length*s)
+ const colors=[],texts=[]
+ const ctx={setFillStyle:c=>colors.push(c),fillRect(){},beginPath(){},moveTo(){},lineTo(){},quadraticCurveTo(){},fill(){},save(){},restore(){},setGlobalAlpha(){},measureText:t=>({width:t.length*23}),translate(){},rotate(){},
+  setTextBaseline(){},setFontSize(){},fillText:t=>texts.push(t)}
+ drawReportStrip(ctx,layout,'JCS-PRIVATE-123',0,800)
+ assert.ok(colors.includes('#142b4b'));assert.ok(colors.includes('#c9a85b'))
+ assert.ok(colors.includes('#ffffff'));assert.ok(texts.join('').includes('报告标识'))
+ assert.ok(!texts.join('').includes('JCS-PRIVATE-123'))
+ assert.ok(!texts.join('').includes('李同学'))
 })
 test('result exposes copy and five useful export formats from one download entry',()=>{
  const result=fs.readFileSync(path.resolve(root,'pages/assessment-result/assessment-result.wxml'),'utf8')
@@ -121,7 +143,7 @@ test('every full format contains persisted user input and reliable identity with
  assert.ok(docx.includes('header.xml'));assert.ok(docx.includes('用户提供的背景必须保留'));assert.ok(docx.includes('w:headerReference'))
 })
 
-test('PDF pagination preserves every body line and creates a valid indexed-image PDF without Chinese font substitution',()=>{
+test('PDF pagination preserves every body line and creates a valid RGB-image PDF without Chinese font substitution',()=>{
  const load=loader(),{ReportPngEncoder}=load('utils/report-png'),{buildAssessmentPdf,paginateAssessmentLayout}=load('utils/report-pdf')
  const {layoutAssessmentImage}=load('utils/assessment-image')
  const layout=layoutAssessmentImage(context,'JCS-TEST','long',(text,size)=>[...text].length*size,'2026-10-14')
@@ -133,6 +155,7 @@ test('PDF pagination preserves every body line and creates a valid indexed-image
  const png=()=>{const encoder=new ReportPngEncoder(2,2);return Buffer.concat([encoder.header(),encoder.strip(new Uint8ClampedArray(16).fill(255),2),encoder.finish()].map(part=>Buffer.from(part)))}
  const pdf=Buffer.from(buildAssessmentPdf([png(),png()]))
  assert.ok(pdf.toString('ascii').startsWith('%PDF-1.4'));assert.ok(pdf.toString('ascii').includes('/Count 2'))
+ assert.ok(pdf.toString('ascii').includes('/ColorSpace /DeviceRGB'))
  const offset=Number(pdf.toString('ascii').match(/startxref\n(\d+)/)[1]);assert.equal(pdf.toString('ascii',offset,offset+4),'xref')
  assert.throws(()=>buildAssessmentPdf([]),/页数/)
 })
@@ -141,28 +164,107 @@ function pngData(bytes){
  for(let i=8;i<buffer.length;){const n=buffer.readUInt32BE(i),type=buffer.toString('ascii',i+4,i+8);if(type==='IDAT')idat.push(buffer.subarray(i+8,i+8+n));i+=12+n}
  return {buffer,raw:zlib.inflateSync(Buffer.concat(idat))}
 }
+function rasterCanvas(height,{skipWatermark=false}={}){
+ const width=750,pixels=new Uint8ClampedArray(width*height*4)
+ let state={color:[0,0,0],alpha:1,tx:0,ty:0,angle:0},path=[],stack=[]
+ function pixel(x,y){
+  x=Math.round(x);y=Math.round(y);if(x<0||x>=width||y<0||y>=height)return
+  const i=(y*width+x)*4,a=state.alpha
+  for(let c=0;c<3;c++)pixels[i+c]=Math.round(state.color[c]*a+pixels[i+c]*(1-a))
+  pixels[i+3]=255
+ }
+ function rect(x,y,w,h){
+  for(let row=Math.max(0,Math.floor(y));row<Math.min(height,Math.ceil(y+h));row++)
+   for(let col=Math.max(0,Math.floor(x));col<Math.min(width,Math.ceil(x+w));col++)pixel(col,row)
+ }
+ const ctx={
+  setFillStyle(hex){state.color=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16))},
+  setGlobalAlpha(alpha){state.alpha=alpha},setFontSize(){},setTextBaseline(){},
+  measureText:t=>({width:[...t].length*23}),fillRect:rect,
+  beginPath(){path=[]},moveTo(x,y){path.push([x,y])},lineTo(x,y){path.push([x,y])},quadraticCurveTo(_x,_y,x,y){path.push([x,y])},
+  fill(){const xs=path.map(p=>p[0]),ys=path.map(p=>p[1]);rect(Math.min(...xs),Math.min(...ys),Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys))},
+  save(){stack.push({...state,color:[...state.color]})},restore(){state=stack.pop()},
+  translate(x,y){state.tx+=x*Math.cos(state.angle)-y*Math.sin(state.angle);state.ty+=x*Math.sin(state.angle)+y*Math.cos(state.angle)},
+  rotate(angle){state.angle+=angle},
+  fillText(text,x,y){
+   if(skipWatermark&&state.alpha<1)return
+   for(let i=0;i<[...text].length;i++)for(let yy=0;yy<5;yy++)for(let xx=0;xx<3;xx++){
+    const gx=x+i*12+xx,gy=y+yy
+    pixel(state.tx+gx*Math.cos(state.angle)-gy*Math.sin(state.angle),state.ty+gx*Math.sin(state.angle)+gy*Math.cos(state.angle))
+   }
+  }
+ }
+ return {ctx,pixels}
+}
+function renderReportPng(layout,userId,skipWatermark=false){
+ const {drawReportStrip}=loader()('utils/assessment-image'),{ReportPngEncoder}=loader()('utils/report-png')
+ const encoder=new ReportPngEncoder(layout.width,layout.height),parts=[encoder.header()]
+ for(let offset=0;offset<layout.height;offset+=800){
+  const height=Math.min(800,layout.height-offset),canvas=rasterCanvas(height,{skipWatermark})
+  drawReportStrip(canvas.ctx,layout,userId,offset,height)
+  parts.push(encoder.strip(canvas.pixels,height))
+ }
+ parts.push(encoder.finish())
+ return pngData(Buffer.concat(parts.map(part=>Buffer.from(part))))
+}
+function rgbAt(raw,width,x,y){const i=y*(width*3+1)+1+x*3;return [...raw.subarray(i,i+3)]}
+test('public poster brand watermark survives RGB PNG encoding without private identity',()=>{
+ const {layoutAssessmentImage}=loader()('utils/assessment-image')
+ const named={...fixture(),displayName:'李同学'}
+ const layout=layoutAssessmentImage(named,'JCS-PRIVATE-123','summary',(text,size)=>[...text].length*size,'2026-10-12')
+ const withMark=renderReportPng(layout,'JCS-PRIVATE-123'),withoutMark=renderReportPng(layout,'JCS-PRIVATE-123',true)
+ assert.equal(withMark.buffer[25],2)
+ assert.ok(withMark.raw.some((value,i)=>i>245*2251&&value!==withoutMark.raw[i]),'brand watermark changes actual poster pixels')
+ assert.deepEqual(rgbAt(withMark.raw,750,400,220),[242,245,249])
+ const ink=withMark.raw.findIndex((value,i)=>i>245*2251&&value!==withoutMark.raw[i])
+ assert.ok(ink>0&&withMark.raw[ink]>80,'watermark stays translucent over the pale card')
+})
+test('long image keeps personal watermark and colored sections across RGB strip boundaries',()=>{
+ const {layoutAssessmentImage,drawReportStrip}=loader()('utils/assessment-image')
+ const layout=layoutAssessmentImage(fixture(),'JCS-TEST','long',(text,size)=>[...text].length*size,'2026-10-14')
+ const withMark=renderReportPng(layout,'JCS-TEST'),withoutMark=renderReportPng(layout,'JCS-TEST',true)
+ assert.equal(withMark.buffer[25],2)
+ assert.ok(withMark.raw.some((value,i)=>i>260*2251&&value!==withoutMark.raw[i]),'personal watermark changes actual long-image pixels')
+ assert.deepEqual(rgbAt(withMark.raw,750,15,15),[20,43,75])
+ assert.deepEqual(rgbAt(withMark.raw,750,50,226),[201,168,91])
+ assert.ok(layout.lines.some(line=>line.text.includes('完整证据')))
+ const full=rasterCanvas(1600)
+ drawReportStrip(full.ctx,layout,'JCS-TEST',0,1600)
+ for(const offset of [0,800]){
+  const tile=rasterCanvas(800)
+  drawReportStrip(tile.ctx,layout,'JCS-TEST',offset,800)
+  assert.deepEqual(Buffer.from(tile.pixels),Buffer.from(full.pixels.subarray(offset*750*4,(offset+800)*750*4)))
+ }
+})
 test('streaming PNG decodes multiple strips across deflate blocks with exact complete height',()=>{
  const {ReportPngEncoder}=loader()('utils/report-png'),encoder=new ReportPngEncoder(750,1601),parts=[encoder.header()]
  for(const h of [800,800,1]){const pixels=new Uint8ClampedArray(750*h*4).fill(255);parts.push(encoder.strip(pixels,h))}
  parts.push(encoder.finish());const {buffer,raw}=pngData(Buffer.concat(parts.map(p=>Buffer.from(p))))
- assert.equal(buffer.readUInt32BE(16),750);assert.equal(buffer.readUInt32BE(20),1601);assert.equal(raw.length,751*1601)
- for(let y=0;y<1601;y++){assert.equal(raw[y*751],0);assert.equal(raw[y*751+750],255)}
- assert.ok(buffer.length<1250000)
+ assert.equal(buffer.readUInt32BE(16),750);assert.equal(buffer.readUInt32BE(20),1601);assert.equal(buffer[25],2);assert.equal(raw.length,(750*3+1)*1601)
+ for(let y=0;y<1601;y++){assert.equal(raw[y*2251],0);assert.equal(raw[y*2251+2250],255)}
+ assert.ok(buffer.length<4000000)
  assert.throws(()=>new ReportPngEncoder(750,30000),/资源预算/)
  assert.throws(()=>new ReportPngEncoder(750,10).finish(),/完整/)
 })
 test('streaming PNG composites transparent device pixels over white instead of black',()=>{
  const {ReportPngEncoder}=loader()('utils/report-png'),encoder=new ReportPngEncoder(2,1)
- const pixels=new Uint8ClampedArray([0,0,0,0,0,0,0,255])
+ const pixels=new Uint8ClampedArray([0,0,0,0,220,70,20,255])
  const {raw}=pngData(Buffer.concat([encoder.header(),encoder.strip(pixels,1),encoder.finish()].map(p=>Buffer.from(p))))
- assert.deepEqual([...raw],[0,255,0])
+ assert.deepEqual([...raw],[0,255,255,255,220,70,20])
+})
+test('RGB PNG preserves color and strip boundaries without losing rows',()=>{
+ const {ReportPngEncoder}=loader()('utils/report-png'),encoder=new ReportPngEncoder(1,2)
+ const bytes=Buffer.concat([encoder.header(),encoder.strip(new Uint8ClampedArray([255,0,0,255]),1),
+   encoder.strip(new Uint8ClampedArray([0,0,255,128]),1),encoder.finish()].map(p=>Buffer.from(p)))
+ const {raw}=pngData(bytes)
+ assert.deepEqual([...raw],[0,255,0,0,0,127,127,255])
 })
 module.exports={loader,fixture}
 
 function pageHarness(){
  const storage=new Map(),requests=[],files=new Map(),saved=[],modals=[]
  const wx={env:{USER_DATA_PATH:'/synthetic'},getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),request:o=>requests.push(o),showLoading(){},hideLoading(){},showToast(){},showModal:o=>modals.push(o),
-  createCanvasContext:()=>({setFontSize(){},measureText:t=>({width:[...t].length*25}),setFillStyle(){},fillRect(){},save(){},restore(){},setGlobalAlpha(){},setTextBaseline(){},translate(){},rotate(){},fillText(){},draw:(_keep,cb)=>cb()}),
+  createCanvasContext:()=>({setFontSize(){},measureText:t=>({width:[...t].length*25}),setFillStyle(){},fillRect(){},beginPath(){},moveTo(){},lineTo(){},quadraticCurveTo(){},fill(){},save(){},restore(){},setGlobalAlpha(){},setTextBaseline(){},translate(){},rotate(){},fillText(){},draw:(_keep,cb)=>cb()}),
   canvasGetImageData:o=>o.success({data:new Uint8ClampedArray(o.width*o.height*4).fill(255)}),
   saveImageToPhotosAlbum:o=>{saved.push(Buffer.from(files.get(o.filePath)));o.success()},
   getFileSystemManager:()=>({writeFile:o=>{files.set(o.filePath,Buffer.from(o.data));o.success()},appendFile:o=>{files.set(o.filePath,Buffer.concat([files.get(o.filePath),Buffer.from(o.data)]));o.success()},unlink:o=>files.delete(o.filePath)})
@@ -178,7 +280,7 @@ test('actual export page writes one complete PNG, saves once, rejects double tap
  await h.page.exportImageReport('long');assert.equal(h.requests.length,1)
  h.respond();await flow
  assert.equal(h.saved.length,1);assert.equal(h.files.size,0);assert.equal(h.page.data.exporting,false)
- const {buffer,raw}=pngData(h.saved[0]);assert.equal(raw.length,(buffer.readUInt32BE(16)+1)*buffer.readUInt32BE(20))
+ const {buffer,raw}=pngData(h.saved[0]);assert.equal(raw.length,(buffer.readUInt32BE(16)*3+1)*buffer.readUInt32BE(20))
 })
 test('actual export page reports save errors and never claims success',async()=>{
  const h=pageHarness();h.wx.saveImageToPhotosAlbum=o=>o.fail({errMsg:'denied'})

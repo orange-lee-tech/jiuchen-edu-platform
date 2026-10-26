@@ -5,12 +5,15 @@ export function officialRosterProjection(rows:Array<Record<string,unknown>>){
  const hidden=rows.filter(row=>!row.userId&&(row.batch==='dev-seed-v1'||row.type==='student'&&row.id==='00000000-0000-4000-8000-000000000001'))
  const people=rows.filter(row=>!hidden.includes(row)).map(row=>{
   const state=identityDirectoryState({type:String(row.type),status:String(row.identityStatus||'available'),userId:row.userId?String(row.userId):null,
-   name:row.name?String(row.name):null,university:row.university?String(row.university):null,assignmentCount:Number(row.assignmentCount||0)})
+   name:row.name?String(row.name):null,university:row.university?String(row.university):null,assignmentCount:Number(row.assignmentCount||0),
+   displayName:row.displayName?String(row.displayName):null})
   const claimed=state.profileState!=='unclaimed'
-  return {id:String(row.id),name:!claimed?(row.type==='student'?'未认领学员':'未认领老师'):state.profileState==='incomplete'?'资料待完善':state.nameLabel,
+  return {id:String(row.id),name:!claimed?(row.type==='student'?'未认领学员':'未认领老师'):state.nameLabel,
    university:claimed?state.schoolLabel:'学校待补充',major:claimed?String(row.major||'专业待补充'):'专业待补充',currentStage:row.currentStage||null,
    title:row.title||null,status:row.status||'active',businessId:row.businessId||null,
-   stateLabel:!claimed?'未认领':state.profileState==='incomplete'?'资料待完善':state.assignmentState==='unassigned'?(row.type==='student'?'已认领未分配老师':'已认领未分配学员'):'已认领 · 已分配',
+   stateLabel:!claimed?'未认领':`${state.profileLabel} · ${state.assignmentLabel}`,
+   profileLabel:state.profileLabel,assignmentLabel:state.assignmentLabel,missingFields:state.missingFields,
+   accountDisplayName:claimed?state.displayName:null,
    canView:claimed&&row.userStatus==='active'&&row.identityStatus==='claimed'&&
     (row.type==='student'?row.accountRole==='student':['teacher','staff'].includes(String(row.accountRole)))&&row.status!=='inactive',
    provenance:row.batch==='dev-seed-v1'?'bound_seed_requires_review':'business_record'}
@@ -19,7 +22,7 @@ export function officialRosterProjection(rows:Array<Record<string,unknown>>){
 }
 
 export async function readAdminReadOnlyRoster(pool:mysql.Pool){
- const [students]=await pool.query<mysql.RowDataPacket[]>(`SELECT s.id,'student' AS type,s.user_id AS userId,s.name,
+ const [students]=await pool.query<mysql.RowDataPacket[]>(`SELECT s.id,'student' AS type,s.user_id AS userId,s.name,u.display_name AS displayName,
   COALESCE(NULLIF(p.university,''),s.university) AS university,COALESCE(NULLIF(p.major,''),s.major) AS major,s.current_stage AS currentStage,
   i.batch,i.business_id AS businessId,i.status AS identityStatus,u.status AS userStatus,u.role AS accountRole,
   (SELECT COUNT(DISTINCT a.teacher_id) FROM student_teacher_assignments a JOIN teachers t ON t.id=a.teacher_id AND t.status='active' WHERE a.student_id=s.id) AS assignmentCount
@@ -37,9 +40,14 @@ export function identityDirectoryState(row:{type:string;status:string;userId:str
  const testNamed=Boolean([row.name,row.displayName].some(v=>v&&/测试|体验|演示|^test\b|^demo\b|^学员[-－]?JCS|^老师[-－]?JCT/i.test(v)))
  const claimed=['claimed','disabled'].includes(row.status)&&Boolean(row.userId)
  const nameIncomplete=!row.name?.trim()||Boolean(row.name&&/测试|体验|演示|^test\b|^demo\b|^学员[-－]?JCS|^老师[-－]?JCT/i.test(row.name))
- const profileIncomplete=claimed&&(nameIncomplete||row.type==='student'&&!row.university?.trim())
+ const missingFields: Array<'formal_name'|'university'>=[]
+ if(claimed&&nameIncomplete)missingFields.push('formal_name')
+ if(claimed&&row.type==='student'&&!row.university?.trim())missingFields.push('university')
+ const profileIncomplete=missingFields.length>0
  return {...row,
   profileState:claimed?(profileIncomplete?'incomplete':'recorded'):'unclaimed',
+  missingFields,
+  profileLabel:!claimed?'未认领':missingFields.length?`待完善：${missingFields.map(field=>field==='formal_name'?'正式姓名':'本科院校').join('、')}`:row.type==='student'?'姓名与学校已记录':'姓名已记录',
   nameLabel:!claimed?'未认领':nameIncomplete?'待完善实名':row.name,
   schoolLabel:row.type==='student'?(row.university?.trim()||'学校待完善'):null,
   assignmentState:!claimed?'unclaimed':row.type==='admin'?'not_recorded':row.assignmentCount===null?'not_recorded':row.assignmentCount>0?'assigned':'unassigned',

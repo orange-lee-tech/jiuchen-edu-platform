@@ -37,9 +37,9 @@ export async function reconcileVirtualOrder(input: {
   }
   if (!order.openId) throw new Error('wechat_openid_missing')
   if (order.status === 'paid' && input.checkPaidState) {
-    const state = await queryVirtualPayment(env, config, order.openId, order.outTradeNo, order.amountFen)
+    const state = await queryVirtualPayment(env, config, order.openId, order.outTradeNo, order.amountFen, order.wechatProductId ?? undefined)
     if (state.state === 'refunded' || state.state === 'closed') {
-      return { state: state.state, credited: false, requiresFinanceReview: true }
+      return { state: state.state, credited: true, requiresFinanceReview: true }
     }
     if (state.state !== 'paid') throw new Error('virtual_paid_state_conflict')
   }
@@ -47,9 +47,14 @@ export async function reconcileVirtualOrder(input: {
   // A settled order needs only the independent delivery acknowledgement.
   // After a restart the timestamp tells the worker whether to retry it.
   if (order.status !== 'paid') {
-    const verified = await queryVirtualPayment(env, config, order.openId, order.outTradeNo, order.amountFen)
+    const verified = await queryVirtualPayment(env, config, order.openId, order.outTradeNo, order.amountFen, order.wechatProductId ?? undefined)
     if (verified.state === 'pending') return { state: 'pending', credited: false }
     if (verified.state === 'closed' || verified.state === 'refunded') {
+      const [updated] = await database.pool.query<mysql.ResultSetHeader>(
+        "UPDATE payment_orders SET status = ? WHERE id = ? AND status = 'pending'",
+        [verified.state, order.id],
+      )
+      if (updated.affectedRows !== 1) throw new Error('virtual_order_state_changed')
       return { state: verified.state, credited: false }
     }
     if (!verified.transactionId || !verified.notificationId || !verified.payloadHash) {

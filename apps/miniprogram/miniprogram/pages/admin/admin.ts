@@ -14,6 +14,8 @@ import {
   friendlyRequestError,
   getAdminAssignments,
   getAdminAnalytics,
+  getAdminAiCosts, getAdminAiBalance,
+  checkDeepseekPriceSource, reviewDeepseekPrice, reviewAiExchangeRate,
   getAdminInternalIds,
   getAdminNews,
   getAdminNewsData,
@@ -31,6 +33,7 @@ import {
   testAdminAssessmentKey,
   getAssessmentKeyObjects,
   createAssessmentKeyObject,
+  copyAssessmentKeyModel,
   activateAssessmentKeyObject,
   disableActiveAssessmentKey,
   archiveAssessmentKeyObject,
@@ -44,6 +47,7 @@ import {
   updateAdminNewsTags,
   type AdminAssignment,
   type AdminAnalytics,
+  type AdminAiCosts, type AdminAiBalance,
   type AdminAnalyticsPeriod,
   type AdminInternalId,
   type AdminNewsPost,
@@ -140,6 +144,11 @@ Page({
     analytics: null as (AdminAnalytics & { payers: Array<AdminAnalytics['payers'][number] & { amountYuan: string }> }) | null,
     analyticsPlots: [] as Plot[],
     analyticsWarning:'',
+    aiCosts:null as AdminAiCosts|null, aiBalance:null as AdminAiBalance|null,
+    aiCostWarning:'',
+    aiPriceModel:'deepseek-v4-pro',aiPriceHit:'',aiPriceMiss:'',aiPriceOutput:'',
+    aiPricePeakMiss:'',aiPricePeakOutput:'',aiPricePeakWindow:'',
+    aiPriceDate:'',aiPriceNote:'',aiFxRate:'',aiFxSource:'',aiFxDate:'',aiFxNote:'',
     assessmentUserCountLabel:'数据源不可用',
     userCount:null as number|null,
     userCountError:'',
@@ -155,8 +164,10 @@ Page({
     keyRigor: 7,
     activeKey: null as AssessmentKeyObject | null,
     keySourceLabel: '读取中', keyCurrentStatus: '读取中',
-    keyAction: '' as '' | 'activate' | 'disable' | 'archive' | 'test' | 'reveal' | 'setup',
+    keyAction: '' as '' | 'activate' | 'disable' | 'archive' | 'test' | 'reveal' | 'setup' | 'copy',
     keyActionId: '', keyActionLabel: '', keyActionPin: '', keyActionTargetPin: '',
+    keyCopySourcePin: '', keyCopyModel: '', keyCopyLabel: '', keyCopyNote: '',
+    keyCopyModels: [] as Array<{id:string; label:string}>, keyCopyModelIndex: 0,
     activePlan: null as CreditPlan | null,
     planPriceLabels: { JC000: '读取中', JC001: '读取中', JC002: '读取中', JC003: '读取中' },
     fixedPriceCatalogOk: false,
@@ -506,28 +517,39 @@ Page({
     if (this.data.actionLoading) return
     const action = String(event.currentTarget.dataset.action || '')
     const id = String(event.currentTarget.dataset.id || '')
-    if (!['activate', 'disable', 'archive', 'test', 'reveal', 'setup'].includes(action)) return
+    if (!['activate', 'disable', 'archive', 'test', 'reveal', 'setup', 'copy'].includes(action)) return
     const target = this.data.keyObjects.find(item => item.id === id)
+    const models = action==='copy' ? AI_SERVICE_PRESETS.find(item=>item.id===target?.provider)?.models??[] : []
     this.setData({ keyAction: action as typeof this.data.keyAction, keyActionId: id,
       keyActionLabel: target?.label || this.data.activeKey?.label || '当前服务',
-      keyActionPin: '', keyActionTargetPin: '' }, () => {
+      keyActionPin: '', keyActionTargetPin: '', keyCopySourcePin:'',
+      keyCopyModel:models.find(item=>item.id!==target?.model)?.id??'',
+      keyCopyLabel:target ? `${target.label} · 新模型` : '', keyCopyNote:'',
+      keyCopyModels:models,keyCopyModelIndex:Math.max(0,models.findIndex(item=>item.id!==target?.model)) }, () => {
       wx.pageScrollTo({ selector: '#key-action-panel', duration: 200 })
     })
   },
   onCancelKeyAction() {
-    this.setData({ keyAction: '', keyActionId: '', keyActionPin: '', keyActionTargetPin: '' })
+    this.setData({ keyAction: '', keyActionId: '', keyActionPin: '', keyActionTargetPin: '',
+      keyCopySourcePin:'',keyCopyModel:'',keyCopyLabel:'',keyCopyNote:'' })
   },
   onKeyActionPinInput(event: WechatMiniprogram.Input) {
     const name = String(event.currentTarget.dataset.name)
-    if (name === 'keyActionPin' || name === 'keyActionTargetPin')
+    if (['keyActionPin','keyActionTargetPin','keyCopySourcePin','keyCopyModel','keyCopyLabel','keyCopyNote'].includes(name))
       this.setData({ [name]: event.detail.value })
+  },
+  onCopyModelChange(event: WechatMiniprogram.PickerChange) {
+    const index = Number(event.detail.value)
+    const model = this.data.keyCopyModels[index]
+    if(model)this.setData({keyCopyModelIndex:index,keyCopyModel:model.id})
   },
   async onConfirmKeyAction() {
     const { keyAction: action, keyActionId: id, keyActionPin: pin,
       keyActionTargetPin: targetPin } = this.data
     if (this.data.actionLoading || !action) return
     if (!/^\d{6}$/.test(pin) ||
-      ((action === 'activate' || action === 'setup') && !/^\d{6}$/.test(targetPin))) {
+      ((action === 'activate' || action === 'setup' || action === 'copy') && !/^\d{6}$/.test(targetPin)) ||
+      (action === 'copy' && !/^\d{6}$/.test(this.data.keyCopySourcePin))) {
       wx.showToast({ title: '请输入本次操作所需的六位口令', icon: 'none' }); return
     }
     if (action === 'disable') {
@@ -554,6 +576,15 @@ Page({
       } else if (action === 'setup') {
         await setupLegacyAssessmentKeyPin(id, pin, targetPin)
         wx.showToast({ title: '对象口令已设置', icon: 'success' })
+      } else if (action === 'copy') {
+        if (!this.data.keyCopyModel.trim() || !this.data.keyCopyLabel.trim()) {
+          wx.showToast({title:'请填写新模型与候选名称',icon:'none'});return
+        }
+        await copyAssessmentKeyModel(id, { expectedVersion:this.data.keyHead.version,
+          currentPin:pin, sourcePin:this.data.keyCopySourcePin, newPin:targetPin,
+          label:this.data.keyCopyLabel.trim(), model:this.data.keyCopyModel.trim(),
+          note:this.data.keyCopyNote.trim() })
+        wx.showToast({title:'新模型候选已保存',icon:'success'})
       } else if (action === 'reveal') {
         const result = await revealAssessmentKeyObject(id, pin)
         wx.showModal({ title: '仅创建者查看密钥', content: result.apiKey, showCancel: false })
@@ -582,7 +613,7 @@ Page({
       wx.showModal({ title: '操作未完成',
         content: `${friendlyRequestError(error, '操作失败，请稍后重试')}。请核对口令及权限后重试。`,
         showCancel: false })
-    } finally { this.setData({ actionLoading: false, keyActionPin: '', keyActionTargetPin: '' }) }
+    } finally { this.setData({ actionLoading: false, keyActionPin: '', keyActionTargetPin: '', keyCopySourcePin:'' }) }
   },
   onControlPriceConfirm(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     this.setData({ platformPriceConfirmed: event.detail.value })
@@ -700,13 +731,75 @@ Page({
     finally { this.setData({ actionLoading: false, keyTestPin: '' }) }
   },
   analyticsGeneration:0,
+  onAiCostInput(event:WechatMiniprogram.Input){
+    const name=String(event.currentTarget.dataset.name)
+    if(['aiPriceModel','aiPriceHit','aiPriceMiss','aiPriceOutput','aiPricePeakMiss',
+      'aiPricePeakOutput','aiPricePeakWindow','aiPriceDate','aiPriceNote',
+      'aiFxRate','aiFxSource','aiFxDate','aiFxNote'].includes(name))
+      this.setData({[name]:event.detail.value})
+  },
+  async onCheckDeepseekPriceSource(){
+    if(this.data.actionLoading)return
+    this.setData({actionLoading:true})
+    try{
+      const result=await checkDeepseekPriceSource()
+      wx.showModal({title:'官方价格来源检查',content:result.status==='unchanged'?
+        '官方文档内容与已审核快照一致。仍请核对具体价格。':
+        '官方文档内容有变化或尚无已审核快照。请人工核对价格后再审核新版本。',showCancel:false})
+      await this.loadAnalytics()
+    }catch(error){wx.showToast({title:friendlyRequestError(error,'价格来源检查失败'),icon:'none'})}
+    finally{this.setData({actionLoading:false})}
+  },
+  async onReviewAiPrice(){
+    if(this.data.actionLoading)return
+    const d=this.data,number=(value:string)=>/^\d+(?:\.\d{1,6})?$/.test(value)?Number(value):NaN
+    const hit=number(d.aiPriceHit),miss=number(d.aiPriceMiss),output=number(d.aiPriceOutput)
+    const peakMiss=d.aiPricePeakMiss.trim()?number(d.aiPricePeakMiss):null
+    const peakOutput=d.aiPricePeakOutput.trim()?number(d.aiPricePeakOutput):null
+    if(!d.aiCosts||d.aiCosts.priceSource.status==='not_checked'||!d.aiPriceModel.trim()||
+      ![hit,miss,output,peakMiss,peakOutput].every(v=>v===null||Number.isFinite(v)&&v>=0)||
+      !/^\d{4}-\d{2}-\d{2}$/.test(d.aiPriceDate)||d.aiPriceNote.trim().length<8){
+      wx.showToast({title:'请先检查官方来源并完整填写价格、日期及说明',icon:'none'});return
+    }
+    const confirmed=await new Promise<boolean>(resolve=>wx.showModal({
+      title:'人工审核价格版本',content:'请确认已在 DeepSeek 官方价格页逐项核对美元/百万 token、峰谷规则及生效日期。保存后仅用于估算，不代表实际账单。',
+      success:result=>resolve(result.confirm),fail:()=>resolve(false)}))
+    if(!confirmed)return
+    this.setData({actionLoading:true})
+    try{
+      const expected=d.aiCosts.latestPriceVersions.find(v=>v.provider==='deepseek'&&v.model===d.aiPriceModel.trim())?.version??null
+      await reviewDeepseekPrice({model:d.aiPriceModel.trim(),expectedLatestVersion:expected,
+        inputCacheHitPerMillion:hit,inputCacheMissPerMillion:miss,outputPerMillion:output,
+        peakInputCacheMissPerMillion:peakMiss,peakOutputPerMillion:peakOutput,
+        peakWindowUtc:d.aiPricePeakWindow.trim()||null,
+        effectiveAt:new Date(d.aiPriceDate+'T00:00:00Z').toISOString(),reviewNote:d.aiPriceNote.trim()})
+      wx.showToast({title:'价格快照已审核',icon:'success'});await this.loadAnalytics()
+    }catch(error){wx.showToast({title:friendlyRequestError(error,'价格审核失败'),icon:'none'})}
+    finally{this.setData({actionLoading:false})}
+  },
+  async onReviewAiFx(){
+    if(this.data.actionLoading)return
+    const d=this.data,rate=Number(d.aiFxRate)
+    if(!Number.isFinite(rate)||rate<=0||rate>20||!/^https:\/\//.test(d.aiFxSource)||
+      !/^\d{4}-\d{2}-\d{2}$/.test(d.aiFxDate)||d.aiFxNote.trim().length<8){
+      wx.showToast({title:'请完整填写汇率、来源、日期及说明',icon:'none'});return
+    }
+    this.setData({actionLoading:true})
+    try{
+      await reviewAiExchangeRate({rate,sourceUrl:d.aiFxSource.trim(),
+        observedAt:new Date(d.aiFxDate+'T00:00:00Z').toISOString(),reviewNote:d.aiFxNote.trim()})
+      wx.showToast({title:'汇率快照已审核',icon:'success'});await this.loadAnalytics()
+    }catch(error){wx.showToast({title:friendlyRequestError(error,'汇率审核失败'),icon:'none'})}
+    finally{this.setData({actionLoading:false})}
+  },
   async loadAnalytics() {
     const generation=++this.analyticsGeneration
     const owner=getSavedAuthResult()?.user.id
     const period=this.data.analyticsPeriod
     try {
       this.setData({ loading: true, loadError: '' })
-      const [statistics, accounts] = await Promise.allSettled([getAdminAnalytics(period), getAdminUsers()])
+      const [statistics, accounts, costs, balance] = await Promise.allSettled([
+        getAdminAnalytics(period), getAdminUsers(), getAdminAiCosts(), getAdminAiBalance()])
       if(statistics.status==='rejected')throw statistics.reason
       const analytics = statistics.value
       if(!analytics.sources || !analytics.range || !analytics.summary)throw new Error('统计接口版本尚未更新，请先部署 API')
@@ -716,6 +809,9 @@ Page({
         assessmentUserCountLabel:typeof analytics.summary.assessmentUserCount==='number'?String(analytics.summary.assessmentUserCount):'当前 API 未提供',
         userCountError:accounts.status==='rejected'?friendlyRequestError(accounts.reason,'账号来源读取失败'):accounts.status==='fulfilled' && !Array.isArray(accounts.value)?'账号接口版本不匹配':'',
         analytics: { ...analytics, payers: analytics.payers.map(row => ({ ...row, amountYuan: (row.amountFen/100).toFixed(2) })) },
+        aiCosts:costs.status==='fulfilled'?costs.value:null,
+        aiBalance:balance.status==='fulfilled'?balance.value:null,
+        aiCostWarning:costs.status==='rejected'?'模型请求明细尚未接入；请先完成成本表迁移与新版 API 发布。':'',
         rechargeAmountLabel:analytics.summary.rechargeAmountFen===null?'读取失败':(analytics.summary.rechargeAmountFen/100).toFixed(2),
         analyticsWarning:Object.entries(analytics.sources).filter(([,state])=>state.status==='error').map(([source,state])=>({assessments:'评估',payments:'支付',ledger:'账本',reservations:'冻结记录'}[source]||source)+'读取失败：'+state.error).join('；'),
         analyticsPlots: [

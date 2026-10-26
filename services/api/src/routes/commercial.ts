@@ -19,12 +19,12 @@ import {
   readCreditAccount,
 } from '../services/credit-ledger.js'
 import {
-  APPROVED_ASSESSMENT_SKUS,
   FIXED_ASSESSMENT_SKUS,
   GUEST_FREE_COUNT,
   STUDENT_TOTAL_FREE_COUNT,
   freeGrantsForRole,
   findCreditSku,
+  canPurchaseTestSku,
   type CommercialConfig,
 } from '../services/commercial-config.js'
 import {
@@ -71,8 +71,12 @@ export function registerCommercialRoutes(
 ) {
   const virtualConfig = virtualPaymentConfig(env)
 
-  app.get('/commercial/meta', async () => {
+  app.get('/commercial/meta', async (request) => {
     const config = await getConfig()
+    const viewer = config.testSkuEnabled && database.configured
+      ? await resolveSessionUser(request, database) : null
+    const visibleSkus = config.paymentSkus.filter(sku => sku.key !== 'JC000' ||
+      (viewer !== null && canPurchaseTestSku(viewer.userId, env)))
     const virtualCheckoutReady = Boolean(config.creditEnforcementEnabled && virtualConfig &&
       config.platformPriceConfirmed && config.paymentSkus.length &&
       config.paymentSkus.every(sku => Boolean(virtualConfig.products[sku.key])))
@@ -104,10 +108,8 @@ export function registerCommercialRoutes(
       // Legacy JSAPI MUST NEVER be enabled as the credit checkout transport.
       checkoutEnabled: virtualCheckoutReady,
       checkoutReason: virtualCheckoutReady ? null : 'wechat_virtual_payment_not_configured_or_not_approved',
-      catalog: config.paymentSkus.some(sku => sku.planId)
-        ? FIXED_ASSESSMENT_SKUS.filter(sku => sku.key !== 'JC000' || config.testSkuEnabled)
-        : APPROVED_ASSESSMENT_SKUS,
-      skus: config.paymentSkus,
+      catalog: visibleSkus,
+      skus: visibleSkus,
     },
   })
   })
@@ -210,7 +212,13 @@ export function registerCommercialRoutes(
     if(!canUseAssessment(user.role)) return reply.code(403).send({ok:false,error:'assessment_not_available_for_role'})
     const parsed=virtualCreateSchema.safeParse(request.body)
     if(!parsed.success) return reply.code(400).send({ok:false,error:'invalid_virtual_payment_payload'})
-    const sku=findCreditSku(config,parsed.data.skuKey)
+    // Older clients may still submit the two former names. They resolve to the
+    // same fixed-price goods, and the new order always records the canonical SKU.
+    const skuKey=parsed.data.skuKey==='assessment-1' ? 'JC001' :
+      parsed.data.skuKey==='assessment-10' ? 'JC003' : parsed.data.skuKey
+    if(skuKey==='JC000' && !canPurchaseTestSku(user.userId,env))
+      return reply.code(403).send({ok:false,error:'internal_test_sku_forbidden'})
+    const sku=findCreditSku(config,skuKey)
     if(!sku) return reply.code(400).send({ok:false,error:'unapproved_assessment_payment_sku'})
     if(!virtualConfig.products[sku.key]) return reply.code(503).send({ok:false,error:'wechat_virtual_product_not_configured'})
     const [identity]=await database.db.select({openid:users.wechatOpenId}).from(users).where(eq(users.id,user.userId)).limit(1)
@@ -224,7 +232,7 @@ export function registerCommercialRoutes(
     }
     if(fresh.openId!==identity.openid) return reply.code(403).send({ok:false,error:'wechat_identity_mismatch'})
     const id=randomUUID()
-    const outTradeNo='JCV'+Date.now()+randomBytes(9).toString('hex')
+    const outTradeNo='JCV'+Date.now().toString(36).toUpperCase()+randomBytes(10).toString('hex').toUpperCase()
     let orderSku=sku
     let payment: ReturnType<typeof buildVirtualPayment> | null = null
     try {
@@ -239,7 +247,7 @@ export function registerCommercialRoutes(
           initialized=Boolean(head?.initialized)
           if(initialized) {
             if(!head.active_plan_id) throw new Error('credit_plan_disabled')
-            const fixed=FIXED_ASSESSMENT_SKUS.find(item=>item.key===parsed.data.skuKey)
+            const fixed=FIXED_ASSESSMENT_SKUS.find(item=>item.key===skuKey)
             if(!fixed) throw new Error('credit_plan_sku_invalid')
             const [plans]=await connection.query<import('mysql2/promise').RowDataPacket[]>(
               "SELECT * FROM credit_plan_objects WHERE id=? AND status='active' FOR UPDATE",[head.active_plan_id])
@@ -254,24 +262,15 @@ export function registerCommercialRoutes(
         }
         payment=buildVirtualPayment({config:virtualConfig,sku:orderSku,
           orderNo:outTradeNo,sessionKey:fresh.sessionKey})
-        if(initialized) {
-          await connection.query(
-            `INSERT INTO payment_orders
-              (id,user_id,out_trade_no,provider,status,sku_key,plan_id,plan_version,
-               amount_fen,credit_amount,pay_environment,wechat_product_id,expires_at)
-             VALUES (?, ?, ?, 'wechat_pay', 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id,user.userId,outTradeNo,orderSku.key,orderSku.planId,orderSku.planVersion,
-              orderSku.amountFen,orderSku.creditAmount,virtualConfig.env===0?'production':'sandbox',
-              virtualConfig.products[orderSku.key],new Date(Date.now()+30*60*1000)],
-          )
-        } else {
-          await connection.query(
-            `INSERT INTO payment_orders
-              (id,user_id,out_trade_no,provider,status,amount_fen,credit_amount,expires_at)
-             VALUES (?, ?, ?, 'wechat_pay', 'pending', ?, ?, ?)`,
-            [id,user.userId,outTradeNo,orderSku.amountFen,orderSku.creditAmount,new Date(Date.now()+30*60*1000)],
-          )
-        }
+        await connection.query(
+          `INSERT INTO payment_orders
+            (id,user_id,out_trade_no,provider,status,sku_key,plan_id,plan_version,
+             amount_fen,credit_amount,pay_environment,wechat_product_id,expires_at)
+           VALUES (?, ?, ?, 'wechat_pay', 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [id,user.userId,outTradeNo,orderSku.key,orderSku.planId??null,orderSku.planVersion??null,
+            orderSku.amountFen,orderSku.creditAmount,virtualConfig.env===0?'production':'sandbox',
+            virtualConfig.products[orderSku.key],new Date(Date.now()+30*60*1000)],
+        )
         await connection.commit()
       } catch(error) { await connection.rollback(); throw error }
       finally { connection.release() }
