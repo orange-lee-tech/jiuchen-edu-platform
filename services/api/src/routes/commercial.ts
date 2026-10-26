@@ -6,7 +6,7 @@ import { users } from '../db/schema.js'
 import { eq } from 'drizzle-orm'
 import { buildVirtualPayment, virtualPaymentConfig } from '../services/wechat-virtual-payment.js'
 import { decryptVirtualPush, encryptedVirtualPushBody, parseVirtualGoodsPush,
-  verifyVirtualPushSignature } from '../services/wechat-virtual-push.js'
+  verifyVirtualPushSignature, verifyVirtualServerSignature } from '../services/wechat-virtual-push.js'
 import { readVirtualOrder, reconcileVirtualOrder } from '../services/virtual-payment-reconciliation.js'
 import { exchangeWechatVirtualPaymentCode } from '../services/wechat.js'
 import type { DatabaseContext } from '../db/client.js'
@@ -82,14 +82,23 @@ export function registerCommercialRoutes(
     const route = '/payments/wechat/virtual-push'
     const success = '<xml><ErrCode>0</ErrCode><ErrMsg><![CDATA[success]]></ErrMsg></xml>'
     const retry = '<xml><ErrCode>1</ErrCode><ErrMsg><![CDATA[retry]]></ErrMsg></xml>'
-    type PushQuery = { timestamp?: string; nonce?: string; msg_signature?: string; echostr?: string }
+    type PushQuery = { timestamp?: string; nonce?: string; signature?: string;
+      msg_signature?: string; echostr?: string }
     pushScope.get<{ Querystring: PushQuery }>(route, { logLevel: 'silent' }, async (request, reply) => {
-      const { timestamp, nonce, msg_signature: signature, echostr } = request.query
-      if (!env.WECHAT_VIRTUAL_PUSH_TOKEN || !env.WECHAT_VIRTUAL_PUSH_AES_KEY || !env.WECHAT_APP_ID)
+      const { timestamp, nonce, signature, msg_signature: encryptedSignature, echostr } = request.query
+      if (!env.WECHAT_VIRTUAL_PUSH_TOKEN)
         return reply.code(503).send('virtual_push_not_configured')
-      if (!timestamp || !nonce || !signature || !echostr ||
+      if (!timestamp || !nonce || !echostr)
+        return reply.code(403).send('virtual_push_signature_invalid')
+      if (signature) {
+        if (!verifyVirtualServerSignature({ token: env.WECHAT_VIRTUAL_PUSH_TOKEN,
+          timestamp, nonce, signature }))
+          return reply.code(403).send('virtual_push_signature_invalid')
+        return reply.type('text/plain').send(echostr)
+      }
+      if (!encryptedSignature || !env.WECHAT_VIRTUAL_PUSH_AES_KEY || !env.WECHAT_APP_ID ||
           !verifyVirtualPushSignature({ token: env.WECHAT_VIRTUAL_PUSH_TOKEN,
-            timestamp, nonce, encrypted: echostr, signature }))
+            timestamp, nonce, encrypted: echostr, signature: encryptedSignature }))
         return reply.code(403).send('virtual_push_signature_invalid')
       try {
         const challenge = decryptVirtualPush({ encrypted: echostr,

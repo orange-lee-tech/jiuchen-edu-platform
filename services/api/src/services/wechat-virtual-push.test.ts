@@ -4,7 +4,7 @@ import test from 'node:test'
 import { buildApp } from '../app.js'
 import { loadEnv } from '../config/env.js'
 import { decryptVirtualPush, encryptedVirtualPushBody, parseVirtualGoodsPush,
-  verifyVirtualPushSignature } from './wechat-virtual-push.js'
+  verifyVirtualPushSignature, verifyVirtualServerSignature } from './wechat-virtual-push.js'
 
 const token = 'fixture-token'
 const appId = 'wx-fixture-app'
@@ -44,6 +44,27 @@ test('verified encrypted virtual goods push parses one matching product and orde
   assert.throws(() => decryptVirtualPush({ encrypted, aesKey, appId: 'wrong-app' }), /app_mismatch/)
   assert.throws(() => parseVirtualGoodsPush(goods.replace('<Quantity>1</Quantity>',
     '<Quantity>2</Quantity>')), /goods_invalid/)
+})
+
+test('standard WeChat server challenge verifies signature and echoes plain text unchanged', async () => {
+  const app = buildApp(loadEnv({ WECHAT_VIRTUAL_PUSH_TOKEN: token }))
+  const echostr = 'plain-challenge_123'
+  const signature = createHash('sha1').update([token, timestamp, nonce].sort().join('')).digest('hex')
+  const query = new URLSearchParams({ signature, timestamp, nonce, echostr })
+  try {
+    assert.equal(verifyVirtualServerSignature({ token, timestamp, nonce, signature }), true)
+    const verified = await app.inject({ method: 'GET',
+      url: `/payments/wechat/virtual-push?${query}` })
+    assert.equal(verified.statusCode, 200)
+    assert.match(String(verified.headers['content-type']), /^text\/plain/)
+    assert.equal(verified.body, echostr)
+    const wrong = await app.inject({ method: 'GET',
+      url: `/payments/wechat/virtual-push?${query.toString().replace(signature, '0'.repeat(40))}` })
+    assert.equal(wrong.statusCode, 403)
+    const missing = await app.inject({ method: 'GET',
+      url: `/payments/wechat/virtual-push?timestamp=${timestamp}&nonce=${nonce}&echostr=${echostr}` })
+    assert.equal(missing.statusCode, 403)
+  } finally { await app.close() }
 })
 
 test('push challenge works with payment switch off; unsolicited delivery cannot settle', async () => {

@@ -17,6 +17,17 @@ export function verifyVirtualPushSignature(input: {
   return timingSafeEqual(expected, Buffer.from(input.signature, 'hex'))
 }
 
+export function verifyVirtualServerSignature(input: {
+  token: string; timestamp: string; nonce: string; signature: string
+}): boolean {
+  if (!/^\d{1,16}$/.test(input.timestamp) || !/^[\w-]{1,128}$/.test(input.nonce) ||
+      !/^[a-fA-F0-9]{40}$/.test(input.signature)) return false
+  const expected = createHash('sha1').update(
+    [input.token, input.timestamp, input.nonce].sort().join(''),
+  ).digest()
+  return timingSafeEqual(expected, Buffer.from(input.signature, 'hex'))
+}
+
 export function decryptVirtualPush(input: {
   encrypted: string; aesKey: string; appId: string
 }): string {
