@@ -24,6 +24,9 @@ function harness() {
   let cloudInitialized = false
   const wx = {
     getStorageSync: (key) => storage.get(key), setStorageSync: (key, value) => storage.set(key, value), removeStorageSync: (key) => storage.delete(key),
+    getStorage:o=>storage.has(o.key)?o.success({data:storage.get(o.key)}):o.fail?.(),
+    setStorage:o=>{storage.set(o.key,o.data);o.complete?.()},
+    removeStorage:o=>{storage.delete(o.key);o.complete?.()},
     request: (options) => requests.push(options),
     cloud: { init() { cloudInitialized = true }, callContainer(options) { assert.ok(cloudInitialized, 'CloudBase must initialize before its first request'); requests.push(options) } },
     setTabBarItem: (options) => tabs.push(options), setNavigationBarTitle() {}, showToast() {},
@@ -300,6 +303,32 @@ test('identity changes preserve account-owned result reads without enabling a ne
     assert.equal(h.nav.routeAllowed('pages/assessment-history/assessment-history', role), true)
     assert.equal(h.nav.routeAllowed('pages/assessment-form/assessment-form', role), false)
   }
+})
+
+test('admin switching to student refreshes role presentation and invalidates the old profile cache',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('admin'))
+ const profile=h.page('pages/profile/profile')
+ profile.onShow()
+ const identities=[{id:'admin-id',businessId:'JCA-TEST',type:'admin',status:'claimed'},
+  {id:'student-id',businessId:'JCS-TEST',type:'student',status:'claimed'}]
+ h.respond(0,{ok:true,user:authFixture('admin').user,businessIdentity:null})
+ h.respond(1,{ok:true,activeRole:'admin',identities});await settle()
+ const cacheKey='jiuchen-academic-profile:'+id
+ h.storage.set(cacheKey,{privateAcademicRecord:true})
+ const flow=profile.onSwitchIdentity({currentTarget:{dataset:{role:'student'}}})
+ await settle();const switched=h.requests.findIndex(r=>/\/me\/identities\/switch$/.test(r.url))
+ assert.ok(switched>=0)
+ h.respond(switched,{ok:true});await settle()
+ const auth=h.requests.findIndex((r,i)=>i>switched&&/\/auth\/me$/.test(r.url))
+ assert.ok(auth>=0)
+ h.respond(auth,{ok:true,user:authFixture('student').user,businessIdentity:{businessId:'JCS-TEST',type:'student',status:'claimed'}})
+ await settle();const loaded=h.requests.findIndex((r,i)=>i>auth&&/\/me\/identities$/.test(r.url))
+ assert.ok(loaded>=0)
+ h.respond(loaded,{ok:true,activeRole:'student',identities});await flow
+ assert.equal(h.auth.getSavedAuthResult().user.role,'student')
+ assert.equal(profile.data.role,'student')
+ assert.ok(profile.data.menus.some(item=>item.key==='assessment'))
+ assert.equal(h.storage.has(cacheKey),false)
 })
 
 test('editor auth gate hides revoked-role data, retains form and rejects an account switch', async () => {

@@ -76,6 +76,15 @@ test('a teacher account name edit does not change a student roster name',async()
     assert.equal(getStudentName(),'测试学员零三')
   }finally{await app.close()}
 })
+test('switching to admin updates the account label without overwriting the linked student name',async()=>{
+  const {app,headers,getDisplayName,getStudentName}=fixture('admin')
+  try{
+    const result=await app.inject({method:'PUT',url:'/me/display-name',headers,payload:{displayName:'管理员显示名'}})
+    assert.equal(result.statusCode,200)
+    assert.equal(getDisplayName(),'管理员显示名')
+    assert.equal(getStudentName(),'测试学员零三')
+  }finally{await app.close()}
+})
 test('profile enrollment support preserves authentication and role checks',async()=>{
   const {app,headers}=fixture('teacher')
   try {

@@ -18,6 +18,7 @@ import {
   type AssessmentRuntime,
 } from './assessment-runtime.js'
 import { classifyAssessmentFailure } from './assessment-failure.js'
+import { recordAssessmentModelCall, type ModelCallEvent, type ModelCallIdentity } from './assessment-ai-cost.js'
 import {
   persistAssessmentFailureAndReleaseCredit,
   persistAssessmentSuccessAndConsumeCredit,
@@ -48,6 +49,8 @@ export type AssessmentBackgroundJob = {
 
 export interface AssessmentBackgroundStore {
   nextRunning(): Promise<AssessmentBackgroundJob | null>
+  recordModelCall?(assessmentId: string, event: ModelCallEvent,
+    identity: ModelCallIdentity): Promise<void>
   persistSuccess(
     job: AssessmentBackgroundJob,
     result: Awaited<ReturnType<typeof executeAssessment>>,
@@ -218,7 +221,7 @@ export async function processAssessmentBackgroundJob(input: {
       includeRecentAssessments: normalizedInput.contextOptions?.includeRecentAssessments !== false,
     }) : []
     result = await executeAssessment(runtime, normalizedInput, accountEvidence,
-      stage => { failureStage = stage }, event => {
+      stage => { failureStage = stage }, async event => {
         modelRequestCount = event.requestCount
         if (event.phase === 'repair') {
           repairRequestCount = 1
@@ -227,6 +230,15 @@ export async function processAssessmentBackgroundJob(input: {
         logger.info({ assessmentId: job.id, requestId, modelCallPhase: event.phase,
           modelRequestCount, repairRequestCount, modelCallOutcome: event.outcome,
           ...diagnostics() }, 'Assessment model call stage')
+        try {
+          await store.recordModelCall?.(job.id, event, diagnostics())
+        } catch (error) {
+          // Telemetry never changes a paid model call into a business failure.
+          const code = error && typeof error === 'object' && 'code' in error &&
+            /^[A-Z0-9_]+$/.test(String(error.code)) ? String(error.code) : 'write_failed'
+          logger.warn({ assessmentId: job.id, callId: event.callId, code },
+            'Assessment model usage observation unavailable; reconcile provider billing separately')
+        }
       })
   } catch (error) {
     const completedAt = new Date()
@@ -314,6 +326,8 @@ export function createConfiguredStore(
   const batchSize = 32
   let scanOffset = 0
   return {
+    recordModelCall: (assessmentId,event,identity) =>
+      recordAssessmentModelCall(database.pool,assessmentId,event,identity),
     async nextRunning() {
       const rows = await database.db
         .select({ id: assessments.id })

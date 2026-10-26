@@ -6,11 +6,10 @@ export function internalIdView(item: AdminInternalId, currentUserId = '') {
   const own = Boolean(currentUserId && item.userId === currentUserId)
   const actions = own ? [] : item.status === 'claimed' ? ['暂停访问', '撤销授权'] : item.status === 'disabled' ? ['恢复编号', ...(item.userId ? ['撤销授权'] : ['删除编号'])] : ['绑定账号', '删除编号']
   const unclaimed = item.profileState === 'unclaimed' || !item.userId
-  const incomplete = item.profileState === 'incomplete'
   const entityLabel = item.type === 'student'
-    ? unclaimed ? '未认领学员' : incomplete ? '资料待完善' : item.nameLabel || '资料待完善'
+    ? unclaimed ? '未认领学员' : item.nameLabel || '正式姓名待完善'
     : item.type === 'teacher'
-      ? unclaimed ? '未认领老师' : incomplete ? '资料待完善' : item.nameLabel || '资料待完善'
+      ? unclaimed ? '未认领老师' : item.nameLabel || '正式姓名待完善'
       : item.nameLabel || '管理员资料待完善'
   const schoolMajorLabel = item.type === 'student'
     ? unclaimed ? '学校待补充' : `${item.schoolLabel || '学校待补充'} · ${item.major || '专业待补充'}`

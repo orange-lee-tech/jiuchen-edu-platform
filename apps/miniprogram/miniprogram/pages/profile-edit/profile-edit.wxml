@@ -7,9 +7,9 @@
 
   <view class="form-card">
     <label class="field">
-      <text class="field-label">我的真实姓名</text>
+      <text class="field-label">{{role === 'student' ? '正式学员姓名' : '账号显示名'}}</text>
       <input class="field-input" value="{{nameInput}}" maxlength="80" placeholder="请填写本人真实姓名" bindinput="onNameInput" />
-      <text class="identity-desc">由你主动填写；客服咨询和个人档案使用此姓名。原有的测试学员名称不会自动当作真实姓名。</text>
+      <text class="identity-desc">{{role === 'student' ? '学员身份保存后，同步账号显示名和正式学员档案姓名；管理员目录以正式档案为准。' : '此处只更新账号显示名。请切换至学员身份，再保存正式学员姓名；原有测试名称不会自动视为实名。'}}</text>
     </label>
   </view>
   <button class="save-button" loading="{{savingName}}" disabled="{{savingName || loading || readOnly}}" bindtap="onSaveName">保存姓名</button>

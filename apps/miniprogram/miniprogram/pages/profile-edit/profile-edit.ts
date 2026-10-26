@@ -213,7 +213,7 @@ Page({
       if(getSavedAuthResult()?.user.id!==owner)return
       this.setData({nameInput:saved,nameTouched:false})
       await refreshAuthResult()
-      wx.showToast({title:'姓名已保存',icon:'success'})
+      wx.showToast({title:this.data.role==='student'?'学员姓名已同步':'显示名已保存',icon:'success'})
     }catch(error){
       wx.showToast({title:friendlyRequestError(error,'姓名保存失败，请重试'),icon:'none'})
     }finally{this.setData({savingName:false})}

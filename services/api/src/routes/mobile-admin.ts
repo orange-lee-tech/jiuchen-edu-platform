@@ -28,6 +28,10 @@ import {
 import { resolveSessionUser } from '../services/session.js'
 import { readAdminIdentityDirectory,readAdminReadOnlyRoster } from '../services/admin-identity-directory.js'
 import { readAssessmentCommerceAnalytics, type AnalyticsPeriod } from '../services/commercial-analytics.js'
+import { readAdminAssessmentAiCosts, readAdminDeepseekBalance,
+  readTeacherAssessmentAiCosts } from '../services/assessment-ai-cost-summary.js'
+import { checkDeepseekPriceSource, reviewDeepseekPrice, reviewExchangeRate } from '../services/assessment-ai-cost.js'
+import { ControlError } from '../services/admin-control-boxes.js'
 import { reconcileNewsWindow, withNewsLock } from '../services/news-v2-store.js'
 
 const createIdSchema = z.object({
@@ -54,6 +58,18 @@ const newsTagsSchema = z
       .transform((tags) => [...new Set(tags.map((tag) => tag.trim()))]),
   })
   .strict()
+const priceReviewSchema=z.object({
+  model:z.string().trim().min(1).max(120),expectedLatestVersion:z.string().uuid().nullable(),
+  inputCacheHitPerMillion:z.number().min(0).max(10000),
+  inputCacheMissPerMillion:z.number().min(0).max(10000),
+  outputPerMillion:z.number().min(0).max(10000),
+  peakInputCacheMissPerMillion:z.number().min(0).max(10000).nullable(),
+  peakOutputPerMillion:z.number().min(0).max(10000).nullable(),
+  peakWindowUtc:z.string().trim().max(120).nullable(),
+  effectiveAt:z.iso.datetime(),reviewNote:z.string().trim().min(8).max(500),
+}).strict()
+const fxReviewSchema=z.object({rate:z.number().positive().max(20),sourceUrl:z.string().url().max(500),
+  observedAt:z.iso.datetime(),reviewNote:z.string().trim().min(8).max(500)}).strict()
 
 async function requireAdmin(
   request: FastifyRequest,
@@ -104,6 +120,64 @@ export function registerMobileAdminRoutes(
         'code' in error && String(error.code) === 'ER_NO_SUCH_TABLE') {
         return reply.code(503).send({ ok: false, error: 'commercial_analytics_schema_not_ready' })
       }
+      throw error
+    }
+  })
+
+  app.get('/me/admin/assessment-ai-costs', async (request, reply) => {
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
+    try { return {ok:true, costs:await readAdminAssessmentAiCosts(configuredDatabase.pool)} }
+    catch (error) {
+      if (['ER_NO_SUCH_TABLE','ER_BAD_FIELD_ERROR'].includes(String((error as {code?:string}).code)))
+        return reply.code(503).send({ok:false,error:'assessment_ai_cost_schema_not_ready'})
+      throw error
+    }
+  })
+  app.get('/me/admin/assessment-ai-balance', async (request, reply) => {
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
+    return {ok:true,balance:await readAdminDeepseekBalance(configuredDatabase.pool,env)}
+  })
+  app.post('/me/admin/assessment-ai-prices/check-source',async(request,reply)=>{
+    if(!(await requireAdmin(request,reply,configuredDatabase)))return
+    try{return {ok:true,...await checkDeepseekPriceSource(configuredDatabase.pool)}}
+    catch{return reply.code(503).send({ok:false,error:'price_source_unavailable'})}
+  })
+  app.post<{Body:unknown}>('/me/admin/assessment-ai-prices/review',async(request,reply)=>{
+    const user=await requireAdmin(request,reply,configuredDatabase)
+    if(!user)return
+    const parsed=priceReviewSchema.safeParse(request.body)
+    if(!parsed.success)return reply.code(400).send({ok:false,error:'invalid_price_review'})
+    try{return {ok:true,...await reviewDeepseekPrice({pool:configuredDatabase.pool,
+      actorId:user.userId,...parsed.data,effectiveAt:new Date(parsed.data.effectiveAt)})}}
+    catch(error){
+      if(error instanceof ControlError)return reply.code(error.status).send({ok:false,error:error.code})
+      throw error
+    }
+  })
+  app.post<{Body:unknown}>('/me/admin/assessment-ai-fx/review',async(request,reply)=>{
+    const user=await requireAdmin(request,reply,configuredDatabase)
+    if(!user)return
+    const parsed=fxReviewSchema.safeParse(request.body)
+    if(!parsed.success)return reply.code(400).send({ok:false,error:'invalid_fx_review'})
+    try{return {ok:true,...await reviewExchangeRate({pool:configuredDatabase.pool,
+      actorId:user.userId,...parsed.data,observedAt:new Date(parsed.data.observedAt)})}}
+    catch(error){
+      if(error instanceof ControlError)return reply.code(error.status).send({ok:false,error:error.code})
+      throw error
+    }
+  })
+  app.get<{Querystring:{assessmentId?:string}}>('/me/teacher/assessment-ai-costs', async (request, reply) => {
+    const user = await resolveSessionUser(request, configuredDatabase)
+    if (!user) return reply.code(401).send({ok:false,error:'unauthorized'})
+    if (user.role !== 'teacher') return reply.code(403).send({ok:false,error:'teacher_forbidden'})
+    const assessmentId = request.query.assessmentId ?? null
+    if (assessmentId && !z.string().uuid().safeParse(assessmentId).success)
+      return reply.code(400).send({ok:false,error:'invalid_assessment_id'})
+    try { return {ok:true,costs:await readTeacherAssessmentAiCosts(configuredDatabase.pool,
+      user.userId,assessmentId)} }
+    catch (error) {
+      if (['ER_NO_SUCH_TABLE','ER_BAD_FIELD_ERROR'].includes(String((error as {code?:string}).code)))
+        return reply.code(503).send({ok:false,error:'assessment_ai_cost_schema_not_ready'})
       throw error
     }
   })

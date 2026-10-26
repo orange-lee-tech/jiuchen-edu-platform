@@ -314,7 +314,8 @@ Page({
         return
       }
       // Chargeable plans and prices are server-owned, not submitted by the client.
-      const skuChoices = meta.payment.skus.map(sku => ({
+      const isIos = wx.getSystemInfoSync().platform === 'ios'
+      const skuChoices = meta.payment.skus.filter(sku => sku.key !== 'JC000' || !isIos).map(sku => ({
         key: sku.key, count: sku.creditAmount, price: (sku.amountFen / 100).toFixed(2),
       }))
       this.setData({ billingEnabled: true, checkoutEnabled: meta.payment.checkoutEnabled, skuChoices })
@@ -343,6 +344,10 @@ Page({
   },
   async beginCreditPurchase(skuKey: string) {
     if (this.data.purchasing || !this.data.checkoutEnabled) return
+    if (this.data.pendingPaymentOrderId) {
+      wx.showModal({title:'请先核实上一笔订单',content:'如已付款，请先核实订单状态，避免重复购买。',showCancel:false})
+      return
+    }
     this.setData({purchasing:true})
     try {
       const code=await new Promise<string>((resolve,reject)=>{
@@ -352,7 +357,7 @@ Page({
       this.setData({pendingPaymentOrderId:order.id})
       wx.setStorageSync(virtualOrderKey(),order.id)
       const api=wx as unknown as {requestVirtualPayment?: (arg:{
-        mode:'goods';signData:string;paySig:string;signature:string;
+        mode:'short_series_goods';signData:string;paySig:string;signature:string;
         success:()=>void;fail:(err:{errMsg?:string})=>void;
       })=>void}
       if(!api.requestVirtualPayment) throw new Error('当前微信版本不支持虚拟支付，请升级微信')
@@ -379,16 +384,22 @@ Page({
     const id=this.data.pendingPaymentOrderId
     if(!id)return
     const result=await reconcileVirtualAssessmentOrder(id)
-    if(result.state==='paid' && result.credited) {
+    if(result.state==='paid' && result.credited && !result.deliveryPending) {
       this.setData({pendingPaymentOrderId:''})
       wx.removeStorageSync(virtualOrderKey())
       wx.showToast({title:'评估次数已到账',icon:'success'})
+    } else if(result.state==='paid' && result.credited && result.deliveryPending) {
+      wx.showModal({title:'次数已到账',content:'微信发货确认仍在处理中，请稍后再次核实本订单，无需重复付款。',showCancel:false})
+    } else if(result.requiresFinanceReview) {
+      wx.showModal({title:'订单需要人工核对',content:'微信显示付款后退款或关闭，已发放的次数需人工对账。请勿重复付款，并联系九辰客服。',showCancel:false})
+    } else if(result.state==='refunded' || result.state==='closed') {
+      this.setData({pendingPaymentOrderId:''})
+      wx.removeStorageSync(virtualOrderKey())
+      wx.showModal({title:'订单已结束',content:'微信确认订单已退款或关闭，未增加评估次数。可重新选择商品。',showCancel:false})
     } else {
       wx.showModal({
         title:'支付状态核实',
-        content:result.state==='refunded' || result.state==='closed'
-          ? '订单已退款或关闭，未增加评估次数。'
-          : '微信暂未确认付款，请稍后点击“核实上一笔充值订单”。',
+        content:'微信暂未确认付款，请稍后点击“核实上一笔充值订单”。',
         showCancel:false,
       })
     }

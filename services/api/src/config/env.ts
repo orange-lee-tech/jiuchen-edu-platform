@@ -63,6 +63,7 @@ const envSchema = z.object({
   WECHAT_VIRTUAL_PAY_PRODUCT_TEN: optionalNonEmptyString,
   WECHAT_VIRTUAL_PAY_PRODUCT_TEST: optionalNonEmptyString,
   WECHAT_VIRTUAL_PAY_TEST_SKU_ENABLED: optionalBoolean,
+  WECHAT_VIRTUAL_PAY_TEST_USER_IDS: optionalNonEmptyString,
   WECHAT_VIRTUAL_PAY_FIXED_CATALOG_CONFIRMED: optionalBoolean,
   WECHAT_VIRTUAL_PAY_ENV: z.enum(['sandbox','production']).optional(),
   CLOUDBASE_ENV_ID: optionalNonEmptyString,

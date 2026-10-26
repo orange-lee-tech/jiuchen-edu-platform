@@ -6,7 +6,7 @@ import { canAccessAdminWorkspace } from '../domain/auth-policy.js'
 import { resolveSessionUser } from '../services/session.js'
 import { ControlError, sixDigitPin } from '../services/admin-control-boxes.js'
 import {
-  archiveAssessmentKey, assessmentKeyInput, createAssessmentKey, disableAssessmentKey,
+  archiveAssessmentKey, assessmentKeyInput, copyAssessmentKeyForModel, createAssessmentKey, disableAssessmentKey,
   listAssessmentKeys, revealAssessmentKey, setLegacyAssessmentKeyPin, switchAssessmentKey,
   testAssessmentKey,
 } from '../services/assessment-key-objects.js'
@@ -18,6 +18,11 @@ const pinSetupSchema = z.object({ currentPin: sixDigitPin, newPin: sixDigitPin }
 const switchSchema = z.object({ expectedVersion: versionSchema,
   currentPin: sixDigitPin, targetPin: sixDigitPin }).strict()
 const controlSchema = z.object({ expectedVersion: versionSchema, currentPin: sixDigitPin }).strict()
+const modelCopySchema = z.object({
+  expectedVersion: versionSchema, currentPin: sixDigitPin, sourcePin: sixDigitPin,
+  newPin: sixDigitPin, label: z.string().trim().min(1).max(120),
+  model: z.string().trim().min(1).max(120), note: z.string().trim().max(1000),
+}).strict()
 
 export function registerAssessmentKeyObjectRoutes(
   app: FastifyInstance, database: DatabaseContext, env: AppEnv, onKeyChanged: () => Promise<void>,
@@ -35,7 +40,7 @@ export function registerAssessmentKeyObjectRoutes(
   }
   function failure(reply: FastifyReply, error: unknown) {
     if (error instanceof ControlError) return reply.code(error.status).send({ ok: false, error: error.code })
-    if ((error as { code?: string }).code === 'ER_NO_SUCH_TABLE') {
+    if (['ER_NO_SUCH_TABLE', 'ER_BAD_FIELD_ERROR'].includes((error as { code?: string }).code ?? '')) {
       return reply.code(503).send({ ok: false, error: 'assessment_keys_schema_not_ready' })
     }
     throw error
@@ -90,6 +95,18 @@ export function registerAssessmentKeyObjectRoutes(
     }
     try { const result = await switchAssessmentKey({ pool: database.pool, actorId: user.userId,
       id: request.params.id, ...parsed.data }); await onKeyChanged(); return { ok: true, ...result } }
+    catch (error) { return failure(reply, error) }
+  })
+  app.post<{ Params: { id: string }; Body: unknown }>('/me/admin/assessment-keys/:id/copy-model', async (request, reply) => {
+    const user = await admin(request, reply)
+    if (!user || !database.configured) return
+    const parsed = modelCopySchema.safeParse(request.body)
+    if (!idSchema.safeParse(request.params.id).success || !parsed.success) {
+      return reply.code(400).send({ ok: false, error: 'invalid_assessment_key_request' })
+    }
+    try { return reply.code(201).send({ ok: true,
+      ...await copyAssessmentKeyForModel({ pool: database.pool, actorId: user.userId,
+        sourceId: request.params.id, ...parsed.data }) }) }
     catch (error) { return failure(reply, error) }
   })
   app.post<{ Body: unknown }>('/me/admin/assessment-keys/disable', async (request, reply) => {
