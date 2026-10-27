@@ -50,15 +50,18 @@ test('pre-checkout refusal closes only an expired owner order after official mis
   try {
     assert.deepEqual(await endRejectedVirtualOrder(input(f.database)),{state:'closed',credited:false})
     assert.equal(f.state.writes,1)
+    const alternate=fixture()
+    assert.deepEqual(await endRejectedVirtualOrder({...input(alternate.database),prePaymentErrorCode:-15014}),
+      {state:'closed',credited:false},'client code is diagnostic; verified server evidence decides')
     assert.equal(f.state.commits,1)
-    assert.equal(f.state.officialQueries,1)
+    assert.equal(f.state.officialQueries,2)
     assert.deepEqual(await endRejectedVirtualOrder(input(f.database)),{state:'closed',credited:false},
       'a repeated close does not issue a second update')
     assert.equal(f.state.writes,1)
   } finally {fetchMock.mock.restore()}
 })
 
-test('other users, unexpired checkout, settlement evidence and untrusted error code never close',async()=>{
+test('other users, unexpired checkout, settlement evidence and missing owner confirmation never close',async()=>{
   const f=fixture({owner:'other'})
   await assert.rejects(endRejectedVirtualOrder(input(f.database,'other')),
     (error:unknown)=>error instanceof UnpaidOrderError && error.code==='virtual_order_not_found')
@@ -71,7 +74,7 @@ test('other users, unexpired checkout, settlement evidence and untrusted error c
     assert.equal(guarded.state.writes,0)
   }
   const invalid=fixture()
-  await assert.rejects(endRejectedVirtualOrder({...input(invalid.database),prePaymentErrorCode:-2}),
+  await assert.rejects(endRejectedVirtualOrder({...input(invalid.database),confirmUnpaid:false}),
     (error:unknown)=>error instanceof UnpaidOrderError && error.code==='virtual_order_rejection_not_confirmed')
   assert.equal(invalid.state.writes,0)
 })

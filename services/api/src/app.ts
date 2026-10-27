@@ -35,7 +35,7 @@ import { createAssessmentImportService } from './services/assessment-import.js'
 import { createCommercialConfig } from './services/commercial-config.js'
 import { loadCommercialConfig } from './services/live-commercial-config.js'
 import { createWechatPayGatewayFromEnv } from './services/wechat-pay.js'
-import { virtualPaymentConfig } from './services/wechat-virtual-payment.js'
+import { virtualPaymentOperationalConfig } from './services/wechat-virtual-payment.js'
 import { createVirtualPaymentRecovery } from './services/virtual-payment-reconciliation.js'
 
 const API_RELEASE = '0.3.0-experience'
@@ -68,8 +68,8 @@ export function buildApp(env: AppEnv) {
     logger: app.log,
   })
   const wechatPay = createWechatPayGatewayFromEnv(env)
-  const virtualConfig = virtualPaymentConfig(env)
-  const virtualRecovery = database.configured && commercialConfig.creditEnforcementEnabled && virtualConfig
+  const virtualConfig = virtualPaymentOperationalConfig(env)
+  const virtualRecovery = database.configured && virtualConfig
     ? createVirtualPaymentRecovery({ database, env, config: virtualConfig, logger: app.log })
     : null
   const cloudbaseCamConfigured = Boolean(

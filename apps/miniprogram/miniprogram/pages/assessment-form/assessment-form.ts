@@ -7,6 +7,8 @@ import {
   getCommercialMeta,
   grantMyFreeCredits,
   getMyCreditAccount,
+  getMyVirtualPurchaseOrders,
+  requestVirtualPurchaseAfterSales,
   createVirtualAssessmentOrder,
   endUnpaidVirtualAssessmentOrder,
   reconcileVirtualAssessmentOrder,
@@ -21,6 +23,7 @@ import {
   type AssessmentImportCandidate,
   type AssessmentResearchExperience,
   type AssessmentTarget,
+  type VirtualPurchaseOrder,
 } from '../../utils/request'
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
 
@@ -266,6 +269,8 @@ Page({
     billingEnabled: false,
     checkoutEnabled: false,
     creditAvailable: null as number | null,
+    purchaseOrders: [] as Array<VirtualPurchaseOrder & {amountYuan:string;statusLabel:string}>,
+    purchaseOrderError:'',
     creditError: '',
     creditLoading: false,
     purchasing: false,
@@ -311,8 +316,7 @@ Page({
       const id=wx.getStorageSync(virtualOrderKey())
       if(typeof id==='string' && id && !this.data.pendingPaymentOrderId)
         this.setData({pendingPaymentOrderId:id})
-      const failure=wx.getStorageSync(virtualOrderFailureKey())
-      this.setData({canEndPendingOrder:Boolean(id && failure?.orderId===id && failure?.code===-15013)})
+      this.setData({canEndPendingOrder:Boolean(id)})
     }
     // Read the canonical account profile after returning from 我的 → 编辑个人资料.
     // Never promote resume extraction or a historical draft to the source of truth.
@@ -350,11 +354,38 @@ Page({
       await grantMyFreeCredits()
       const creditAccount = await getMyCreditAccount()
       this.setData({ creditAvailable: creditAccount.availableBalance })
+      void this.loadPurchaseOrders()
     } catch (error) {
       this.setData({ creditAvailable: null, creditError: friendlyRequestError(error, '额度读取失败，请重试') })
     } finally {
       this.setData({ creditLoading: false })
     }
+  },
+  async loadPurchaseOrders() {
+    try {
+      const orders=await getMyVirtualPurchaseOrders()
+      const labels:Record<string,string>={pending:'待核实',paid:'已付款',
+        closed:'已结束',refunded:'已退款'}
+      this.setData({purchaseOrderError:'',purchaseOrders:orders.map(order=>({
+        ...order,amountYuan:(order.amountFen/100).toFixed(2),
+        statusLabel:labels[order.status]??'待核实',
+      }))})
+    } catch(error) {
+      this.setData({purchaseOrderError:friendlyRequestError(error,'购买订单读取失败，请重试')})
+    }
+  },
+  onRequestAfterSales(event:WechatMiniprogram.BaseEvent) {
+    const id=String(event.currentTarget.dataset.id||'')
+    const order=this.data.purchaseOrders.find(item=>item.id===id)
+    if(!order || order.status!=='paid')return
+    wx.showModal({title:'申请售后核对',
+      content:'这会提交人工核对请求，不会立即退款或扣回次数。安卓订单由九辰客服核对；iOS 请同时到 App Store 购买记录申请退款。',
+      confirmText:'提交核对',success:result=>{if(result.confirm)void this.requestAfterSales(id)}})
+  },
+  async requestAfterSales(id:string) {
+    try {await requestVirtualPurchaseAfterSales(id);await this.loadPurchaseOrders()
+      wx.showToast({title:'售后请求已记录',icon:'success'})}
+    catch(error){wx.showToast({title:friendlyRequestError(error,'售后请求失败'),icon:'none'})}
   },
   onBuyCredit(event: WechatMiniprogram.BaseEvent) {
     if (!this.data.checkoutEnabled || this.data.purchasing || this.data.verifyingPayment || this.data.endingPayment) return
@@ -403,9 +434,9 @@ Page({
         wx.showModal({title:'创建订单失败',content:`${friendlyRequestError(error, '暂时无法创建订单，请稍后重试')}。本次未调起微信支付。`,showCancel:false})
       } else if (stage === 'invoke') {
         const errorCode=error && typeof error==='object' ? (error as {errCode?:unknown}).errCode : undefined
-        if(String(errorCode)==='-15013') {
-          const id=this.data.pendingPaymentOrderId
-          wx.setStorageSync(virtualOrderFailureKey(),{orderId:id,code:-15013})
+        const id=this.data.pendingPaymentOrderId
+        if(id) {
+          wx.setStorageSync(virtualOrderFailureKey(),{orderId:id,code:errorCode})
           this.setData({canEndPendingOrder:true})
         }
         const detail = error instanceof Error && error.message === '当前微信版本不支持虚拟支付，请升级微信'
@@ -466,7 +497,7 @@ Page({
     if(!this.data.canEndPendingOrder || !this.data.pendingPaymentOrderId ||
       this.data.purchasing || this.data.verifyingPayment || this.data.endingPayment) return
     wx.showModal({title:'结束未完成购买',
-      content:'仅在微信收银台未打开且你确认没有付款时使用。服务端会等待原付款窗口结束，并核对微信订单、到账及发货记录；无法确认时不会解除购买保护。',
+      content:'仅在确认没有付款时使用。服务端会等待原付款窗口结束，并核对微信订单、到账及发货记录；无法确认时不会解除购买保护。',
       confirmText:'确认未付款',cancelText:'返回核实',
       success:result=>{if(result.confirm) void this.endUnpaidPayment()},
     })

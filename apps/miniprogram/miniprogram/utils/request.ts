@@ -869,12 +869,53 @@ export type VirtualPaymentArgs = {mode:'short_series_goods';signData:string;payS
 export async function createVirtualAssessmentOrder(skuKey:string,wechatCode:string):Promise<{order:{id:string;status:'pending';amountFen:number;creditAmount:number};payment:VirtualPaymentArgs}> {
   return request('/me/virtual-payment-orders','POST',{skuKey,wechatCode})
 }
-export async function reconcileVirtualAssessmentOrder(id:string):Promise<{ok:boolean;state:'paid'|'pending'|'refunded'|'closed';credited:boolean;deliveryPending?:boolean;requiresFinanceReview?:boolean}> {
+export async function reconcileVirtualAssessmentOrder(id:string):Promise<{ok:boolean;state:'paid'|'pending'|'refunded'|'closed'|'review';credited:boolean;deliveryPending?:boolean;requiresFinanceReview?:boolean}> {
   return request('/me/virtual-payment-orders/'+encodeURIComponent(id)+'/reconcile','POST',{})
 }
 export async function endUnpaidVirtualAssessmentOrder(id:string):Promise<{ok:boolean;state:'closed';credited:false}> {
   return request('/me/virtual-payment-orders/'+encodeURIComponent(id)+'/end-unpaid','POST',
-    {prePaymentErrorCode:-15013,confirmUnpaid:true})
+    {confirmUnpaid:true})
+}
+export type VirtualPurchaseOrder={id:string;skuKey:string;status:'pending'|'paid'|'closed'|'refunded';
+  amountFen:number;purchasedCredits:number;credited:number;createdAt:string;paidAt:string|null;
+  deliveredAt:string|null;lastCheckedAt?:string|null;reviewState:string|null}
+export type VirtualPurchaseCase={id:string;orderId:string|null;kind:string;state:string;
+  reasonCode:string;refundAmountFen:number|null;lastCheckedAt:string|null;createdAt:string;
+  skuKey:string|null;orderStatus:string|null;amountFen:number|null;
+  purchasedCredits:number|null;credited:number}
+export type VirtualPurchaseReconciliation={window:'rolling_24_hours';generatedAt:string;
+  local:{orders:number;paidNotCredited:number;creditedNotDelivered:number;
+    refundCreditReview:number;openCases:Array<{kind:string;count:number}>};
+  officialOrderSource:string;wechatBill:'not_connected'}
+export async function getMyVirtualPurchaseOrders():Promise<VirtualPurchaseOrder[]> {
+  const result=await request<{ok:true;orders:VirtualPurchaseOrder[]}>('/me/virtual-payment-orders')
+  return result.orders
+}
+export async function requestVirtualPurchaseAfterSales(id:string) {
+  return request<{ok:true;state:'review_requested'}>(
+    '/me/virtual-payment-orders/'+encodeURIComponent(id)+'/after-sales','POST',{})
+}
+export async function getAdminVirtualPurchaseOrders(status?:string):Promise<VirtualPurchaseOrder[]> {
+  const url='/me/admin/virtual-payment-orders'+(status?'?status='+encodeURIComponent(status):'')
+  const result=await request<{ok:true;orders:VirtualPurchaseOrder[]}>(url)
+  return result.orders
+}
+export async function getAdminVirtualPurchaseCases():Promise<VirtualPurchaseCase[]> {
+  const result=await request<{ok:true;cases:VirtualPurchaseCase[]}>('/me/admin/virtual-payment-cases')
+  return result.cases
+}
+export async function getAdminVirtualReconciliation():Promise<VirtualPurchaseReconciliation> {
+  const result=await request<{ok:true}&VirtualPurchaseReconciliation>(
+    '/me/admin/virtual-payment-reconciliation')
+  return result
+}
+export async function recheckAdminVirtualPurchaseOrder(id:string) {
+  return request<{ok:true;state:string;credited:boolean}>(
+    '/me/admin/virtual-payment-orders/'+encodeURIComponent(id)+'/recheck','POST',{})
+}
+export async function reviewAdminVirtualPurchaseCase(id:string,note:string,action:'processing'|'resolved') {
+  return request<{ok:true}>(
+    '/me/admin/virtual-payment-cases/'+encodeURIComponent(id)+'/review','POST',{note,action})
 }
 export async function createAssessmentPaymentOrder(skuKey: string): Promise<{ order: AssessmentPaymentOrder; payment: AssessmentPaymentParams }> {
   const result = await request<{ ok: true; order: AssessmentPaymentOrder; payment: AssessmentPaymentParams }>(

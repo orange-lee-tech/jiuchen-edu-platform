@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   boolean,
   int,
+  index,
   json,
   mysqlEnum,
   mysqlTable,
@@ -290,6 +291,38 @@ export const paymentNotifications = mysqlTable('payment_notifications', {
   processedAt: timestamp('processed_at'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
+
+// Virtual-payment exceptions and refund outcomes are separate from the immutable
+// purchase and credit ledgers. A case never grants or removes credits by itself.
+export const virtualPaymentCases = mysqlTable('virtual_payment_cases', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  orderId: varchar('order_id', { length: 36 }).references(() => paymentOrders.id),
+  eventKey: varchar('event_key', { length: 128 }).notNull().unique(),
+  kind: mysqlEnum('kind', ['late_payment', 'refund', 'complaint', 'delivery', 'reconciliation']).notNull(),
+  state: mysqlEnum('state', ['open', 'processing', 'succeeded', 'failed', 'resolved']).notNull().default('open'),
+  reasonCode: varchar('reason_code', { length: 80 }).notNull(),
+  refundAmountFen: int('refund_amount_fen'),
+  providerReference: varchar('provider_reference', { length: 96 }),
+  attemptCount: int('attempt_count').notNull().default(0),
+  lastCheckedAt: timestamp('last_checked_at'),
+  resolvedAt: timestamp('resolved_at'),
+  resolvedBy: varchar('resolved_by', { length: 36 }).references(() => users.id),
+  reviewNote: varchar('review_note', { length: 500 }),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+}, (table) => [
+  index('virtual_payment_cases_order_state_idx').on(table.orderId,table.state),
+  index('virtual_payment_cases_kind_state_idx').on(table.kind,table.state),
+])
+
+export const virtualPaymentCaseActions = mysqlTable('virtual_payment_case_actions', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  caseId: varchar('case_id', { length: 36 }).notNull().references(() => virtualPaymentCases.id),
+  actorUserId: varchar('actor_user_id', { length: 36 }).references(() => users.id),
+  action: varchar('action', { length: 48 }).notNull(),
+  note: varchar('note', { length: 500 }),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index('virtual_payment_case_actions_case_idx').on(table.caseId,table.createdAt)])
 
 export const growthRecords = mysqlTable('growth_records', {
   id: varchar('id', { length: 36 }).primaryKey(),

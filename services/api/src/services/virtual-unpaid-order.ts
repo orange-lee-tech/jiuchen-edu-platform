@@ -44,9 +44,11 @@ async function assertNoSettlementEvidence(connection:Pick<mysql.PoolConnection,'
 
 export async function endRejectedVirtualOrder(input:{
   database:ConfiguredDatabase; env:AppEnv; config:VirtualPayConfig;
-  orderId:string; userId:string; prePaymentErrorCode:number; confirmUnpaid:boolean;
+  orderId:string; userId:string; prePaymentErrorCode?:number; confirmUnpaid:boolean;
 }):Promise<{state:'closed';credited:false}> {
-  if(input.prePaymentErrorCode!==-15013 || input.confirmUnpaid!==true)
+  // A client error is only diagnostic. The owner confirmation, expired checkout,
+  // absent settlement evidence and the official missing-order result are the gate.
+  if(input.confirmUnpaid!==true)
     throw new UnpaidOrderError('virtual_order_rejection_not_confirmed')
   const [rows]=await input.database.pool.query<OrderRow[]>(orderSql,[input.orderId,input.userId])
   const order=rows[0]

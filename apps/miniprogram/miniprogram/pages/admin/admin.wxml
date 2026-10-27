@@ -314,6 +314,35 @@
         <text class="analytics-rank-fee">¥{{item.amountYuan}}</text>
       </view>
     </view>
+    <view class="card">
+      <view class="list-toolbar"><text class="card-title">购买订单与售后核对</text><button class="mini" bindtap="loadVirtualPaymentOps">刷新</button></view>
+      <text class="card-note">微信订单、到账次数与发货状态分别展示；退款不会自动冲正已使用次数。</text>
+      <text wx:if="{{paymentReconciliation}}" class="card-note">近 24 小时本地订单 {{paymentReconciliation.local.orders}} 笔 · 付款未到账 {{paymentReconciliation.local.paidNotCredited}} · 到账未确认发货 {{paymentReconciliation.local.creditedNotDelivered}} · 退款需核算次数 {{paymentReconciliation.local.refundCreditReview}}。</text>
+      <text class="card-note">微信官方逐单查单与推送已接入；微信账单文件对账尚未接入，不将本地统计冒充微信账单。</text>
+      <text wx:if="{{paymentOpsError}}" class="card-note">{{paymentOpsError}}</text>
+      <view class="analytics-switch">
+        <button class="mini" data-status="all" bindtap="onPaymentStatusFilter">全部</button>
+        <button class="mini" data-status="pending" bindtap="onPaymentStatusFilter">待核实</button>
+        <button class="mini" data-status="paid" bindtap="onPaymentStatusFilter">已付款</button>
+        <button class="mini" data-status="refunded" bindtap="onPaymentStatusFilter">已退款</button>
+        <button class="mini" data-status="closed" bindtap="onPaymentStatusFilter">已结束</button>
+      </view>
+      <text wx:if="{{!paymentOrders.length && !paymentOpsError}}" class="card-note">当前筛选暂无订单</text>
+      <view wx:for="{{paymentOrders}}" wx:key="id" class="account-row">
+        <text class="row-title">{{item.skuKey}} · ¥{{item.amountYuan}} · {{item.status}}</text>
+        <text class="row-desc">购买 {{item.purchasedCredits}} 次 · 到账 {{item.credited}} 次 · {{item.deliveredAt ? '发货已确认' : '发货待核对'}}</text>
+        <text class="row-desc">{{item.reviewState ? '异常核对：' + item.reviewState : '暂无异常记录'}} · 上次查单 {{item.lastCheckedAt || '未记录'}}</text>
+        <button class="mini" data-id="{{item.id}}" disabled="{{actionLoading}}" bindtap="onRecheckVirtualOrder">官方重查</button>
+      </view>
+      <text class="card-title">异常订单</text>
+      <text wx:if="{{!paymentCases.length && !paymentOpsError}}" class="card-note">当前暂无异常记录</text>
+      <view wx:for="{{paymentCases}}" wx:key="id" class="account-row">
+        <text class="row-title">{{item.skuKey || '未匹配订单'}} · {{item.kind}} · {{item.state}}</text>
+        <text class="row-desc">原因 {{item.reasonCode}} · 订单 {{item.orderStatus || '待匹配'}} · 到账 {{item.credited}} 次</text>
+        <text class="row-desc">上次核查 {{item.lastCheckedAt || '未记录'}}</text>
+        <button wx:if="{{item.state !== 'resolved'}}" class="mini" data-id="{{item.id}}" disabled="{{actionLoading}}" bindtap="onReviewVirtualCase">记录人工复核</button>
+      </view>
+    </view>
   </block>
 
   <block wx:else>

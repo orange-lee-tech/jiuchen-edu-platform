@@ -59,3 +59,47 @@ test('delivery failure remains pending and a later retry confirms without settli
     assert.equal(writes, 1)
   } finally { fetchMock.mock.restore() }
 })
+
+test('verified goods push marks delivery without invoking active compensation endpoint',async()=>{
+  const paths:string[]=[]
+  let writes=0
+  const fetchMock=mock.method(globalThis,'fetch',async(url:string|URL)=>{
+    const path=String(url);paths.push(path)
+    if(path.includes('stable_token'))return {ok:true,json:async()=>({access_token:'local-token',expires_in:3600})} as Response
+    assert.match(path,/\/xpay\/query_order/)
+    return {ok:true,json:async()=>({errcode:0,order:{order_id:order.outTradeNo,
+      order_fee:190,paid_fee:190,product_id:'product-one',status:2,
+      wx_order_id:'platform-paid',env_type:2,order_type:0}})} as Response
+  })
+  try {
+    const database=fakeDatabase(async(sql)=>{
+      assert.match(sql,/virtual_delivery_confirmed_at/);writes++
+      return [{affectedRows:1}]
+    })
+    assert.deepEqual(await reconcileVirtualOrder({database,env,config,
+      order:{...order,status:'paid'},checkPaidState:true,deliveryPush:true}),
+      {state:'paid',credited:true,deliveryPending:false})
+    assert.equal(writes,1)
+    assert.ok(!paths.some(path=>path.includes('notify_provide_goods')))
+  } finally {fetchMock.mock.restore()}
+})
+
+test('late official payment evidence on a closed order enters review without granting credits',async()=>{
+  let providerQueries=0
+  const writes:string[]=[]
+  const fetchMock=mock.method(globalThis,'fetch',async(url:string|URL)=>{
+    if(String(url).includes('stable_token'))return {ok:true,json:async()=>({access_token:'local-token',expires_in:3600})} as Response
+    providerQueries++
+    return {ok:true,json:async()=>({errcode:0,order:{order_id:order.outTradeNo,
+      order_fee:190,paid_fee:190,status:2,wx_order_id:'late-platform-order'}})} as Response
+  })
+  try {
+    const database=fakeDatabase(async(sql)=>{writes.push(sql);return [{affectedRows:1}]})
+    assert.deepEqual(await reconcileVirtualOrder({database,env,config,
+      order:{...order,status:'closed'},checkPaidState:true}),
+      {state:'review',credited:false,requiresFinanceReview:true})
+    assert.equal(providerQueries,2)
+    assert.equal(writes.length,1)
+    assert.match(writes[0]!,/INSERT INTO virtual_payment_cases/)
+  } finally {fetchMock.mock.restore()}
+})

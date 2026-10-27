@@ -3,7 +3,7 @@ import { createCipheriv, createHash } from 'node:crypto'
 import test from 'node:test'
 import { buildApp } from '../app.js'
 import { loadEnv } from '../config/env.js'
-import { decryptVirtualPush, encryptedVirtualPushBody, parseVirtualGoodsPush,
+import { decryptVirtualPush, encryptedVirtualPushBody, parseVirtualGoodsPush, parseVirtualAncillaryPush,
   verifyVirtualPushSignature, verifyVirtualServerSignature } from './wechat-virtual-push.js'
 
 const token = 'fixture-token'
@@ -13,10 +13,12 @@ const aesKey = key.toString('base64').slice(0, 43)
 const timestamp = '1793000000'
 const nonce = 'fixture-nonce'
 const goods = '<xml><Event><![CDATA[xpay_goods_deliver_notify]]></Event>' +
+  '<Env>0</Env>' +
   '<OpenId><![CDATA[fixture_openid]]></OpenId>' +
   '<OutTradeNo><![CDATA[JCV1234567890123456789012345678]]></OutTradeNo>' +
   '<GoodsInfo><ProductId><![CDATA[product_000]]></ProductId>' +
-  '<Quantity>1</Quantity></GoodsInfo></xml>'
+  '<Quantity>1</Quantity><ActualPrice>10</ActualPrice></GoodsInfo>' +
+  '<WeChatPayInfo><MchOrderNo>wechat-order</MchOrderNo></WeChatPayInfo></xml>'
 
 function fixture(plain: string) {
   const message = Buffer.from(plain)
@@ -39,11 +41,27 @@ test('verified encrypted virtual goods push parses one matching product and orde
   assert.equal(encryptedVirtualPushBody(`<xml><Encrypt><![CDATA[${encrypted}]]></Encrypt></xml>`), encrypted)
   assert.deepEqual(parseVirtualGoodsPush(decryptVirtualPush({ encrypted, aesKey, appId })), {
     outTradeNo: 'JCV1234567890123456789012345678', openId: 'fixture_openid',
-    productId: 'product_000',
+    productId: 'product_000',env:0,actualPriceFen:10,platformOrderId:'wechat-order',
   })
   assert.throws(() => decryptVirtualPush({ encrypted, aesKey, appId: 'wrong-app' }), /app_mismatch/)
   assert.throws(() => parseVirtualGoodsPush(goods.replace('<Quantity>1</Quantity>',
     '<Quantity>2</Quantity>')), /goods_invalid/)
+})
+
+test('verified refund and complaint XML distinguish outcome from notification acceptance',()=>{
+  const refund='<xml><Event>xpay_refund_notify</Event><MchOrderId>JCV1234567890123456789012345678</MchOrderId>'+
+    '<MchRefundId>refund_12345678</MchRefundId><OpenId>fixture_openid</OpenId>'+
+    '<RefundFee>10</RefundFee><RetCode>0</RetCode><Env>0</Env></xml>'
+  assert.deepEqual(parseVirtualAncillaryPush(refund),{event:'refund',
+    outTradeNo:'JCV1234567890123456789012345678',refundId:'refund_12345678',
+    openId:'fixture_openid',refundFeeFen:10,retCode:0,env:0,wxOrderId:null})
+  const failed=parseVirtualAncillaryPush(refund.replace('<RetCode>0</RetCode>','<RetCode>1</RetCode>'))
+  assert.equal(failed.event,'refund')
+  if(failed.event==='refund') assert.equal(failed.retCode,1)
+  const complaint='<xml><Event>xpay_complaint_notify</Event><RequestId>request-123</RequestId>'+
+    '<MchOrderId>JCV1234567890123456789012345678</MchOrderId><OpenId>fixture_openid</OpenId></xml>'
+  assert.deepEqual(parseVirtualAncillaryPush(complaint),{event:'complaint',
+    requestId:'request-123',outTradeNo:'JCV1234567890123456789012345678',openId:'fixture_openid'})
 })
 
 test('standard WeChat server challenge verifies signature and echoes plain text unchanged', async () => {

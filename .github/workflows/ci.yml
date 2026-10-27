@@ -117,3 +117,12 @@ jobs:
         run: |
           npm run db:upgrade:assessment
           node dist/db/verify-ai-cost-model-copy-mysql.js
+      - name: Verify virtual payment exception migration twice on disposable MySQL 8
+        working-directory: services/api
+        env:
+          DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_commercial_controls_ci
+        run: |
+          npm run db:upgrade:virtual-payment-reliability
+          node dist/db/verify-virtual-payment-reliability-mysql.js prepare
+          npm run db:upgrade:virtual-payment-reliability
+          node dist/db/verify-virtual-payment-reliability-mysql.js verify

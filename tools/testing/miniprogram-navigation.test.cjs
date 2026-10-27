@@ -140,7 +140,7 @@ test('a confirmed pre-checkout rejection can end only the owned unresolved order
   const before=p.endUnpaidPayment()
   await settle()
   assert.match(h.requests[1].url,/\/virtual-payment-orders\/.*\/end-unpaid$/)
-  assert.equal(h.requests[1].data.prePaymentErrorCode,-15013)
+  assert.equal(h.requests[1].data.prePaymentErrorCode,undefined,'client error code is diagnostic only')
   assert.equal(h.requests[1].data.confirmUnpaid,true)
   h.respond(1,{ok:false,error:'virtual_order_checkout_window_open'},409)
   await before

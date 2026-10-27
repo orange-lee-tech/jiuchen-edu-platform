@@ -4,6 +4,7 @@ import type { DatabaseContext } from '../db/client.js'
 import { paymentGrantIdempotencyKey } from '../domain/credit-policy.js'
 import type { CreditSku } from './commercial-config.js'
 import { CommercialStateError } from './credit-ledger.js'
+import { recordVirtualPaymentCase } from './virtual-payment-cases.js'
 import type {
   VerifiedWechatPayNotification,
   WechatPayClientParams,
@@ -388,6 +389,10 @@ export async function settleVerifiedPaymentNotification(input: {
     }
 
     if (order.status !== 'pending') {
+      if(order.status==='closed' && input.notification.outTradeNo.startsWith('JCV'))
+        await recordVirtualPaymentCase(connection,{eventKey:'late:'+String(order.id),
+          orderId:String(order.id),kind:'late_payment',state:'open',
+          reasonCode:'closed_order_payment_evidence'})
       const result = await rejectNotification(
         connection,
         input.notification.notificationId,

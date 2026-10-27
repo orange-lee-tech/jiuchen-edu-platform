@@ -5,6 +5,24 @@ const xmlTag = (xml: string, name: string): string => {
   if (matches.length !== 1) throw new Error('virtual_push_field_invalid')
   return matches[0]![1] ?? matches[0]![2] ?? ''
 }
+const optionalXmlTag=(xml:string,name:string):string|null=>{
+  if(!new RegExp(`<${name}>`).test(xml)) return null
+  return xmlTag(xml,name)
+}
+const xmlBlock=(xml:string,name:string):string=>{
+  const matches=[...xml.matchAll(new RegExp(`<${name}>([\\s\\S]*?)<\\/${name}>`,'g'))]
+  if(matches.length!==1) throw new Error('virtual_push_nested_field_invalid')
+  return matches[0]![1]!
+}
+const optionalXmlBlock=(xml:string,name:string):string|null=>
+  new RegExp(`<${name}>`).test(xml)?xmlBlock(xml,name):null
+function rootXml(xml:string) {
+  if(xml.length>16_384 || /<!DOCTYPE|<!ENTITY/i.test(xml) ||
+      !/^\s*(?:<\?xml[^>]*>\s*)?<xml>[\s\S]*<\/xml>\s*$/.test(xml))
+    throw new Error('virtual_push_xml_invalid')
+  return xmlBlock(xml,'xml')
+}
+export const virtualPushEvent=(xml:string)=>xmlTag(rootXml(xml),'Event')
 
 export function verifyVirtualPushSignature(input: {
   token: string; timestamp: string; nonce: string; encrypted: string; signature: string
@@ -52,16 +70,62 @@ export function decryptVirtualPush(input: {
 }
 
 export function parseVirtualGoodsPush(xml: string) {
-  if (xml.length > 16_384 || xmlTag(xml, 'Event') !== 'xpay_goods_deliver_notify')
+  const root=rootXml(xml)
+  if (xmlTag(root, 'Event') !== 'xpay_goods_deliver_notify')
     throw new Error('virtual_push_event_unsupported')
-  const outTradeNo = xmlTag(xml, 'OutTradeNo')
-  const openId = xmlTag(xml, 'OpenId')
-  const productId = xmlTag(xml, 'ProductId')
-  const quantity = xmlTag(xml, 'Quantity')
+  const outTradeNo = xmlTag(root, 'OutTradeNo')
+  const openId = xmlTag(root, 'OpenId')
+  const env=Number(xmlTag(root,'Env'))
+  const goods=xmlBlock(root,'GoodsInfo')
+  const pay=optionalXmlBlock(root,'WeChatPayInfo')
+  const productId = xmlTag(goods, 'ProductId')
+  const quantity = xmlTag(goods, 'Quantity')
+  const price=optionalXmlTag(goods,'ActualPrice')
+  const wxOrderId=pay===null?null:optionalXmlTag(pay,'MchOrderNo')
+  const transactionId=pay===null?null:optionalXmlTag(pay,'TransactionId')
   if (!/^JCV[A-Z0-9]{8,29}$/.test(outTradeNo) || !/^[A-Za-z0-9_-]{1,128}$/.test(openId) ||
-      !/^[A-Za-z0-9_-]{1,128}$/.test(productId) || quantity !== '1')
+      !/^[A-Za-z0-9_-]{1,128}$/.test(productId) || quantity !== '1' ||
+      ![0,1].includes(env) || (price!==null && !/^\d{1,9}$/.test(price)))
     throw new Error('virtual_push_goods_invalid')
-  return { outTradeNo, openId, productId }
+  return { outTradeNo, openId, productId, env, actualPriceFen:price===null?null:Number(price),
+    platformOrderId:wxOrderId||transactionId||null }
+}
+
+export type VirtualRefundPush={event:'refund';outTradeNo:string;openId:string;
+  refundId:string;refundFeeFen:number;retCode:number;env:number;wxOrderId:string|null}
+export type VirtualComplaintPush={event:'complaint';outTradeNo:string|null;
+  requestId:string;openId:string}
+export function parseVirtualAncillaryPush(xml:string):VirtualRefundPush|VirtualComplaintPush {
+  const root=rootXml(xml)
+  const event=xmlTag(root,'Event')
+  if(event==='xpay_refund_notify') {
+    const outTradeNo=xmlTag(root,'MchOrderId')
+    const refundId=xmlTag(root,'MchRefundId')
+    const openId=xmlTag(root,'OpenId')
+    const refundFee=xmlTag(root,'RefundFee')
+    const retCode=xmlTag(root,'RetCode')
+    const env=xmlTag(root,'Env')
+    const wxOrderId=optionalXmlTag(root,'WxOrderId')
+    if(!/^JCV[A-Z0-9]{8,29}$/.test(outTradeNo) ||
+      !/^[A-Za-z0-9_-]{1,128}$/.test(openId) ||
+      !/^[A-Za-z0-9_-]{8,96}$/.test(refundId) ||
+      !/^\d{1,9}$/.test(refundFee) || !/^-?\d{1,9}$/.test(retCode) ||
+      (wxOrderId!==null && !/^[A-Za-z0-9_-]{1,64}$/.test(wxOrderId)) ||
+      !['0','1'].includes(env)) throw new Error('virtual_refund_push_invalid')
+    return {event:'refund',outTradeNo,openId,refundId,
+      refundFeeFen:Number(refundFee),retCode:Number(retCode),env:Number(env),wxOrderId}
+  }
+  if(event==='xpay_complaint_notify') {
+    const requestId=xmlTag(root,'RequestId')
+    const openId=xmlTag(root,'OpenId')
+    const outTradeNo=optionalXmlTag(root,'MchOrderId')
+    if(!/^[A-Za-z0-9_-]{1,96}$/.test(requestId) ||
+      !/^[A-Za-z0-9_-]{1,128}$/.test(openId) ||
+      (outTradeNo!==null && !/^JCV[A-Z0-9]{8,29}$/.test(outTradeNo)))
+      throw new Error('virtual_complaint_push_invalid')
+    return {event:'complaint',outTradeNo,openId,requestId}
+  }
+  throw new Error('virtual_push_event_unsupported')
 }
 
 export function encryptedVirtualPushBody(xml: string): string {
