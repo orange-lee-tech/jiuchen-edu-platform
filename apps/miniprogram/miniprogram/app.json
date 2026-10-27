@@ -24,19 +24,19 @@
   ],
   "window": {
     "navigationBarTitleText": "九辰保研",
-    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarBackgroundColor": "#f4f2ed",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f6f7fb"
+    "backgroundColor": "#f4f2ed"
   },
   "tabBar": {
-    "color": "#8a8f98",
-    "selectedColor": "#2f6fed",
-    "backgroundColor": "#ffffff",
+    "color": "#697584",
+    "selectedColor": "#173e67",
+    "backgroundColor": "#fffdf9",
     "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页",
+        "text": "今天",
         "iconPath": "assets/icons/home-normal.png",
         "selectedIconPath": "assets/icons/home-active.png"
       },

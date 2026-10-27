@@ -1,7 +1,7 @@
 page {
   min-height: 100%;
-  background: #f6f7fb;
-  color: #1f2733;
+  background: #f4f2ed;
+  color: #223246;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
   font-size: 26rpx;
   -webkit-font-smoothing: antialiased;
@@ -9,18 +9,18 @@ page {
 
 .page-shell {
   box-sizing: border-box;
-  padding: 28rpx 28rpx 56rpx;
+  padding: 28rpx 28rpx calc(56rpx + env(safe-area-inset-bottom));
 }
 
 .surface {
-  background: #ffffff;
-  border: 1rpx solid #e8ebf1;
+  background: #fffdf9;
+  border: 1rpx solid #e8e2d6;
   border-radius: 22rpx;
-  box-shadow: 0 8rpx 24rpx rgba(31, 45, 61, 0.045);
+  box-shadow: 0 8rpx 24rpx rgba(28, 52, 77, 0.05);
 }
 
 .section-title {
-  color: #1f2733;
+  color: #173e67;
   font-size: 32rpx;
   font-weight: 700;
   line-height: 1.35;
@@ -45,7 +45,7 @@ page {
 
 .jc-page-title {
   display: block;
-  color: #18202b;
+  color: #173e67;
   font-size: 44rpx;
   font-weight: 800;
   line-height: 1.25;
@@ -73,15 +73,15 @@ page {
 
 .jc-card {
   box-sizing: border-box;
-  background: #ffffff;
-  border: 1rpx solid #e8ebf1;
+  background: #fffdf9;
+  border: 1rpx solid #e8e2d6;
   border-radius: 22rpx;
-  box-shadow: 0 8rpx 24rpx rgba(31, 45, 61, 0.045);
+  box-shadow: 0 8rpx 24rpx rgba(28, 52, 77, 0.05);
 }
 
 .jc-card--interactive:active {
-  background: #f8faff;
-  border-color: #d8e2f5;
+  background: #f3f7fc;
+  border-color: #cfddec;
 }
 
 .jc-button {
@@ -104,27 +104,27 @@ page {
 }
 
 .jc-button--primary {
-  background: #2f6fed;
+  background: #173e67;
   color: #ffffff;
 }
 
 .jc-button--primary:active {
-  background: #285fcf;
+  background: #245681;
 }
 
 .jc-button--secondary {
-  background: #eef4ff;
-  color: #2f6fed;
+  background: #eaf2fa;
+  color: #173e67;
 }
 
 .jc-button--secondary:active {
-  background: #e3edff;
+  background: #dceaf6;
 }
 
 .jc-button--outline {
-  border: 1rpx solid #cfdaf0;
-  background: #ffffff;
-  color: #2f6fed;
+  border: 1rpx solid #c9d9e8;
+  background: #fffdf9;
+  color: #173e67;
 }
 
 .jc-button--ghost {
@@ -160,8 +160,8 @@ page {
 }
 
 .jc-field--focus {
-  border-color: #8fb0f3;
-  box-shadow: 0 0 0 4rpx rgba(47, 111, 237, 0.08);
+  border-color: #7e9db9;
+  box-shadow: 0 0 0 4rpx rgba(23, 62, 103, 0.08);
 }
 
 .jc-field--disabled {
@@ -191,8 +191,8 @@ page {
   min-height: 40rpx;
   padding: 0 14rpx;
   border-radius: 999rpx;
-  background: #eef4ff;
-  color: #2f6fed;
+  background: #faf1db;
+  color: #896526;
   font-size: 20rpx;
   font-weight: 700;
   line-height: 1.2;
@@ -221,15 +221,15 @@ page {
 .jc-state {
   box-sizing: border-box;
   padding: 44rpx 30rpx;
-  border: 1rpx solid #e8ebf1;
+  border: 1rpx solid #e8e2d6;
   border-radius: 22rpx;
-  background: #ffffff;
+  background: #fffdf9;
   text-align: center;
 }
 
 .jc-state-title {
   display: block;
-  color: #2a313c;
+  color: #173e67;
   font-size: 27rpx;
   font-weight: 700;
 }
@@ -257,8 +257,8 @@ page {
   width: 40rpx;
   height: 40rpx;
   margin: 0 auto 18rpx;
-  border: 4rpx solid #dce6fa;
-  border-top-color: #2f6fed;
+  border: 4rpx solid #dce6f1;
+  border-top-color: #173e67;
   border-radius: 50%;
   animation: jc-spin 0.8s linear infinite;
 }
@@ -287,7 +287,7 @@ page {
 
 .jc-divider {
   height: 1rpx;
-  background: #eceef2;
+  background: #e8e2d6;
 }
 
 .jc-clickable:active {

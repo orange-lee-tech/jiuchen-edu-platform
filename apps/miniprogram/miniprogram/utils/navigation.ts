@@ -7,7 +7,7 @@ export type ShellKind = 'student' | 'teacher' | 'admin'
 const SLOT_INDEX: Record<ShellSlot, number> = { home: 0, plan: 1, opportunity: 2, mine: 3 }
 export const ROLE_LABELS: Record<UserRole, string> = { user: '普通用户', student: '学员', teacher: '老师', staff: '内部员工', admin: '管理员' }
 export const TAB_LABELS: Record<ShellKind, readonly string[]> = {
-  student: ['首页', '规划', '机会', '我的'], teacher: ['工作台', '学员', '辅导', '我的'], admin: ['工作台', '查阅', '运营', '我的'],
+  student: ['今天', '规划', '机会', '我的'], teacher: ['工作台', '学员', '辅导', '我的'], admin: ['工作台', '查阅', '运营', '我的'],
 }
 export function shellKind(role?: UserRole): ShellKind {
   return role === 'admin' ? 'admin' : role === 'teacher' || role === 'staff' ? 'teacher' : 'student'
