@@ -70,6 +70,129 @@ test('four native paths; all 21 registered legacy pages remain', () => {
   assert.ok(h.navigations.every((item) => item.api === 'switchTab' && !item.url.includes('?') && !item.url.includes('/position/')))
 })
 
+function virtualPaymentPage() {
+  const h = harness()
+  h.auth.saveAuthResult(authFixture())
+  const p = h.page('pages/assessment-form/assessment-form')
+  p.data.checkoutEnabled = true
+  p.loadCredits = async () => {}
+  h.wx.login = ({ success }) => success({ code: 'synthetic-wechat-code' })
+  return { h, p }
+}
+
+const syntheticVirtualOrder = {
+  ok: true,
+  order: { id: secondId, status: 'pending', amountFen: 10, creditAmount: 2 },
+  payment: { mode: 'short_series_goods', signData: 'fixture', paySig: 'fixture', signature: 'fixture' },
+}
+
+test('virtual payment distinguishes order creation failure before invoking WeChat', async () => {
+  const { h, p } = virtualPaymentPage()
+  let invoked = 0
+  h.wx.requestVirtualPayment = () => { invoked++ }
+  const purchase = p.beginCreditPurchase('JC000')
+  await settle()
+  h.respond(0, { error: 'wechat_virtual_payment_not_ready' }, 503)
+  await purchase
+  assert.equal(invoked, 0)
+  assert.equal(p.data.pendingPaymentOrderId, '')
+  assert.equal(h.modals.at(-1).title, '创建订单失败')
+})
+
+test('cancelled or failed virtual payment retains the pending order and exposes only safe platform details', async () => {
+  for (const failure of [
+    { errCode: -2, errMsg: 'requestVirtualPayment:fail cancel' },
+    { errCode: -15010, errMsg: 'requestVirtualPayment:fail 商品未发布' },
+    { errCode: -15013, errMsg: 'requestVirtualPayment:fail goodsPrice错误' },
+    { errCode: -15006, errMsg: 'requestVirtualPayment:fail paySig=private-value' },
+  ]) {
+    const { h, p } = virtualPaymentPage()
+    h.wx.requestVirtualPayment = ({ fail }) => fail(failure)
+    const purchase = p.beginCreditPurchase('JC000')
+    await settle()
+    h.respond(0, syntheticVirtualOrder)
+    await purchase
+    assert.equal(p.data.pendingPaymentOrderId, secondId)
+    assert.match(h.modals.at(-1).content, new RegExp(String(failure.errCode)))
+    if(failure.errCode===-15013) {
+      assert.equal(p.data.canEndPendingOrder,true)
+      assert.match(h.modals.at(-1).content,/微信道具价格与当前购买金额不一致/)
+    }
+    assert.doesNotMatch(h.modals.at(-1).content, /private-value|paySig/)
+    assert.equal(h.requests.length, 1, 'a failed client callback never settles credits')
+    p.setData({ pendingPaymentOrderId: '' })
+    p.onShow()
+    assert.equal(p.data.pendingPaymentOrderId, secondId, 'an app revisit restores the unresolved order')
+    await p.beginCreditPurchase('JC000')
+    assert.equal(h.requests.length, 1, 'unverified order blocks a second charge')
+    assert.equal(h.modals.at(-1).title, '请先核实上一笔订单')
+  }
+})
+
+test('a confirmed pre-checkout rejection can end only the owned unresolved order and unlock all goods', async () => {
+  const {h,p}=virtualPaymentPage()
+  h.wx.requestVirtualPayment=({fail})=>fail({errCode:-15013,errMsg:'requestVirtualPayment:fail goodsPrice错误'})
+  const first=p.beginCreditPurchase('JC000')
+  await settle()
+  h.respond(0,syntheticVirtualOrder)
+  await first
+  assert.equal(p.data.canEndPendingOrder,true)
+  const before=p.endUnpaidPayment()
+  await settle()
+  assert.match(h.requests[1].url,/\/virtual-payment-orders\/.*\/end-unpaid$/)
+  assert.equal(h.requests[1].data.prePaymentErrorCode,undefined,'client error code is diagnostic only')
+  assert.equal(h.requests[1].data.confirmUnpaid,true)
+  h.respond(1,{ok:false,error:'virtual_order_checkout_window_open'},409)
+  await before
+  assert.equal(p.data.pendingPaymentOrderId,secondId,'the open checkout window keeps the order locked')
+  const retry=p.endUnpaidPayment()
+  await settle()
+  h.respond(2,{ok:true,state:'closed',credited:false})
+  await retry
+  assert.equal(p.data.pendingPaymentOrderId,'')
+  assert.equal(p.data.canEndPendingOrder,false)
+  assert.equal(h.storage.has('jiuchen:virtual-order:'+id),false)
+  assert.equal(h.storage.has('jiuchen:virtual-order-failure:'+id),false)
+  const next=p.beginCreditPurchase('JC003')
+  await settle()
+  assert.equal(h.requests.length,4,'a different SKU can create a new order only after trusted closure')
+  h.respond(3,{error:'wechat_virtual_payment_not_ready'},503)
+  await next
+})
+
+test('WeChat callback success with failed official query remains unresolved until a trusted terminal response', async () => {
+  const { h, p } = virtualPaymentPage()
+  h.wx.requestVirtualPayment = ({ success }) => success()
+  const purchase = p.beginCreditPurchase('JC000')
+  await settle()
+  h.respond(0, syntheticVirtualOrder)
+  await settle()
+  assert.match(h.requests[1].url, /\/virtual-payment-orders\/.*\/reconcile$/)
+  h.respond(1, { error: 'virtual_payment_query_unavailable' }, 503)
+  await purchase
+  assert.equal(h.modals.at(-1).title, '官方查单未完成')
+  assert.equal(p.data.pendingPaymentOrderId, secondId)
+  await p.beginCreditPurchase('JC000')
+  assert.equal(h.requests.length, 2, 'unknown state cannot open a new order')
+
+  p.onVerifyCreditPayment()
+  p.onVerifyCreditPayment()
+  assert.equal(h.requests.length, 3, 'only one manual query runs at a time')
+  h.respond(2, { ok: true, state: 'closed', credited: false })
+  await settle()
+  assert.equal(p.data.pendingPaymentOrderId, '')
+  assert.equal(p.data.verifyingPayment, false)
+  assert.equal(h.storage.has('jiuchen:virtual-order:' + id), false, 'only the resolved local order marker is removed')
+  assert.equal(h.modals.at(-1).title, '购买订单已结束')
+  assert.doesNotMatch(h.modals.at(-1).content, /微信确认订单已关闭/, 'manual local closure is not called an official WeChat closure')
+  const retry = p.beginCreditPurchase('JC000')
+  await settle()
+  assert.equal(h.requests.length, 4, 'trusted closed state unlocks creation of a fresh order')
+  h.respond(3, { error: 'wechat_virtual_payment_not_ready' }, 503)
+  await retry
+  assert.equal(p.data.pendingPaymentOrderId, '')
+})
+
 test('shared week filter covers ranges, odd/even weeks, date boundaries and sorted sections', () => {
   const { weeklyScheduleView, weekMatches, currentWeekFromStart } = harness().load('utils/schedule-view')
   assert.equal(currentWeekFromStart('2026-09-07', new Date('2026-09-13T15:59:59Z')), 1)

@@ -15,6 +15,9 @@ import {
   getAdminAssignments,
   getAdminAnalytics,
   getAdminAiCosts, getAdminAiBalance,
+  getAdminVirtualPurchaseOrders,getAdminVirtualPurchaseCases,
+  getAdminVirtualReconciliation,
+  recheckAdminVirtualPurchaseOrder,reviewAdminVirtualPurchaseCase,
   checkDeepseekPriceSource, reviewDeepseekPrice, reviewAiExchangeRate,
   getAdminInternalIds,
   getAdminNews,
@@ -48,6 +51,8 @@ import {
   type AdminAssignment,
   type AdminAnalytics,
   type AdminAiCosts, type AdminAiBalance,
+  type VirtualPurchaseOrder,type VirtualPurchaseCase,
+  type VirtualPurchaseReconciliation,
   type AdminAnalyticsPeriod,
   type AdminInternalId,
   type AdminNewsPost,
@@ -144,6 +149,10 @@ Page({
     analytics: null as (AdminAnalytics & { payers: Array<AdminAnalytics['payers'][number] & { amountYuan: string }> }) | null,
     analyticsPlots: [] as Plot[],
     analyticsWarning:'',
+    paymentOrders:[] as Array<VirtualPurchaseOrder & {amountYuan:string}>,
+    paymentCases:[] as VirtualPurchaseCase[],paymentOpsError:'',
+    paymentReconciliation:null as VirtualPurchaseReconciliation|null,
+    paymentStatusFilter:'all',
     aiCosts:null as AdminAiCosts|null, aiBalance:null as AdminAiBalance|null,
     aiCostWarning:'',
     aiPriceModel:'deepseek-v4-pro',aiPriceHit:'',aiPriceMiss:'',aiPriceOutput:'',
@@ -266,6 +275,7 @@ Page({
       return
     }
     if (this.data.section === 'admin-analytics') {
+      void this.loadVirtualPaymentOps()
       await this.loadAnalytics()
       return
     }
@@ -831,6 +841,65 @@ Page({
       if(generation===this.analyticsGeneration)this.setData({ loading: false })
     }
   },
+  async loadVirtualPaymentOps() {
+    try {
+      const filter=this.data.paymentStatusFilter
+      const [orders,cases,reconciliation]=await Promise.all([
+        getAdminVirtualPurchaseOrders(filter==='all'?undefined:filter),
+        getAdminVirtualPurchaseCases(),
+        getAdminVirtualReconciliation(),
+      ])
+      this.setData({paymentOpsError:'',paymentOrders:orders.map(order=>({
+        ...order,amountYuan:(order.amountFen/100).toFixed(2),
+      })),paymentCases:cases,paymentReconciliation:reconciliation})
+    } catch(error) {
+      this.setData({paymentOpsError:friendlyRequestError(error,'订单核对暂不可用')})
+    }
+  },
+  onPaymentStatusFilter(event:WechatMiniprogram.BaseEvent) {
+    const filter=String(event.currentTarget.dataset.status)
+    if(!['all','pending','paid','closed','refunded'].includes(filter))return
+    this.setData({paymentStatusFilter:filter})
+    void this.loadVirtualPaymentOps()
+  },
+  async onRecheckVirtualOrder(event:WechatMiniprogram.BaseEvent) {
+    if(this.data.actionLoading)return
+    const id=String(event.currentTarget.dataset.id||'')
+    if(!this.data.paymentOrders.some(order=>order.id===id))return
+    this.setData({actionLoading:true})
+    try {
+      const result=await recheckAdminVirtualPurchaseOrder(id)
+      await this.loadVirtualPaymentOps()
+      wx.showModal({title:'官方查单结果',content:result.state==='paid'
+        ? '已核验付款；到账与发货状态请核对订单列表。'
+        : result.state==='review'?'发现需人工核对的状态，未自动冲正或发放次数。'
+        : '当前状态：'+result.state+'。未核实付款时不会发放次数。',showCancel:false})
+    } catch(error) {
+      wx.showToast({title:friendlyRequestError(error,'官方查单未完成'),icon:'none'})
+    } finally {this.setData({actionLoading:false})}
+  },
+  onReviewVirtualCase(event:WechatMiniprogram.BaseEvent) {
+    if(this.data.actionLoading)return
+    const id=String(event.currentTarget.dataset.id||'')
+    if(!this.data.paymentCases.some(item=>item.id===id))return
+    wx.showActionSheet({itemList:['标记处理中','完成复核'],success:selection=>{
+      const action=selection.tapIndex===0?'processing':'resolved'
+      wx.showModal({title:action==='processing'?'标记人工处理中':'完成人工复核',
+        content:'请先核对微信后台、订单与学点流水。此操作只记录状态，不会退款或增减次数。',
+        editable:true,placeholderText:'填写至少 8 字的复核结论',success:result=>{
+          if(result.confirm && result.content?.trim())
+            void this.reviewVirtualCase(id,result.content.trim(),action)
+        }})
+    }})
+  },
+  async reviewVirtualCase(id:string,note:string,action:'processing'|'resolved') {
+    if(this.data.actionLoading)return
+    this.setData({actionLoading:true})
+    try {await reviewAdminVirtualPurchaseCase(id,note,action);await this.loadVirtualPaymentOps()
+      wx.showToast({title:'复核已记录',icon:'success'})}
+    catch(error){wx.showToast({title:friendlyRequestError(error,'复核记录失败'),icon:'none'})}
+    finally{this.setData({actionLoading:false})}
+  },
   onAnalyticsPeriod(event: WechatMiniprogram.BaseEvent) {
     const period = String(event.currentTarget.dataset.period)
     if (!['week','month','year'].includes(period) || period === this.data.analyticsPeriod) return
@@ -890,7 +959,7 @@ Page({
     const section = String(event.currentTarget.dataset.section) as Section
     if (!['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics', 'admin-readonly', 'admin-controls'].includes(section)) return
     this.setData({ section })
-    if (section === 'admin-analytics') void this.loadAnalytics()
+    if (section === 'admin-analytics') {void this.loadAnalytics();void this.loadVirtualPaymentOps()}
     else if (section === 'admin-controls') void this.loadControls()
     else if (section === 'admin-readonly') void this.loadReadOnlyRoster()
     else if(section==='admin-news'&&this.data.newsV2Enabled)void this.loadRetirementTasks()

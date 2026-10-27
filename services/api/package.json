@@ -30,6 +30,7 @@
     "assessment:smoke:live": "tsx src/scripts/smoke-assessment-runtime.ts",
     "db:upgrade:credit-payment": "tsx src/db/upgrade-credit-payment-foundation.ts",
     "db:upgrade:virtual-delivery": "tsx src/db/upgrade-virtual-delivery.ts",
+    "db:upgrade:virtual-payment-reliability": "tsx src/db/upgrade-virtual-payment-reliability.ts",
     "db:upgrade:admin-controls": "tsx src/db/upgrade-admin-controls.ts",
     "db:upgrade:assessment-keys": "tsx src/db/upgrade-assessment-keys.ts",
     "db:upgrade:assessment-key-model-copy": "tsx src/db/upgrade-assessment-key-model-copy.ts",

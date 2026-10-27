@@ -11,8 +11,6 @@ export async function loadCommercialConfig(
   pool: mysql.Pool | null, baseline: CommercialConfig, env: AppEnv,
 ): Promise<CommercialConfig & { platformPriceConfirmed: boolean; adminSettingsApplied: boolean }> {
   if (!pool) return { ...baseline, platformPriceConfirmed: baseline.fixedCatalogConfirmed === true, adminSettingsApplied: false }
-  const visiblePlanSkus = (skus: CommercialConfig['paymentSkus']) =>
-    skus.filter((sku) => sku.key !== 'JC000' || baseline.testSkuEnabled === true)
   let activePlan: Awaited<ReturnType<typeof readActiveCreditPlan>> | null = null
   try { activePlan = await readActiveCreditPlan(pool, env) }
   catch (error) {
@@ -23,7 +21,7 @@ export async function loadCommercialConfig(
   catch (error) {
     if ((error as { code?: string }).code === 'ER_NO_SUCH_TABLE') {
       return activePlan?.initialized ? { ...baseline,
-        paymentSkus: visiblePlanSkus(activePlan.skus),
+        paymentSkus: activePlan.skus,
         platformPriceConfirmed: baseline.fixedCatalogConfirmed === true,
         adminSettingsApplied: false } :
         { ...baseline, platformPriceConfirmed: baseline.fixedCatalogConfirmed === true, adminSettingsApplied: false }
@@ -32,7 +30,7 @@ export async function loadCommercialConfig(
   }
   if (!row && !activePlan?.initialized) return { ...baseline, platformPriceConfirmed: baseline.fixedCatalogConfirmed === true, adminSettingsApplied: false }
   if (!row) return { ...baseline,
-    paymentSkus: visiblePlanSkus(activePlan!.skus),
+    paymentSkus: activePlan!.skus,
     platformPriceConfirmed: baseline.fixedCatalogConfirmed === true,
     adminSettingsApplied: false }
   const raw = typeof row.payload_json === 'string' ? JSON.parse(row.payload_json) : row.payload_json
@@ -42,13 +40,12 @@ export async function loadCommercialConfig(
   const bonus = settings.studentTotalFree - guest
   return {
     creditEnforcementEnabled: baseline.creditEnforcementEnabled,
-    testSkuEnabled: baseline.testSkuEnabled,
     fixedCatalogConfirmed: baseline.fixedCatalogConfirmed,
     freeGrant: guest ? { version, amount: guest } : null,
     studentBonusGrant: bonus ? { version: `${version}:student-bonus`, amount: bonus } : null,
-    paymentSkus: activePlan?.initialized ? visiblePlanSkus(activePlan.skus) :
+    paymentSkus: activePlan?.initialized ? activePlan.skus :
       baseline.creditEnforcementEnabled
-      ? visiblePlanSkus(FIXED_ASSESSMENT_SKUS) : [],
+      ? FIXED_ASSESSMENT_SKUS : [],
     platformPriceConfirmed: baseline.fixedCatalogConfirmed === true,
     adminSettingsApplied: true,
   }
