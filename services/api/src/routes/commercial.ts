@@ -8,6 +8,7 @@ import { buildVirtualPayment, virtualPaymentConfig } from '../services/wechat-vi
 import { decryptVirtualPush, encryptedVirtualPushBody, parseVirtualGoodsPush,
   verifyVirtualPushSignature, verifyVirtualServerSignature } from '../services/wechat-virtual-push.js'
 import { readVirtualOrder, reconcileVirtualOrder } from '../services/virtual-payment-reconciliation.js'
+import { endRejectedVirtualOrder, UnpaidOrderError } from '../services/virtual-unpaid-order.js'
 import { exchangeWechatVirtualPaymentCode } from '../services/wechat.js'
 import type { DatabaseContext } from '../db/client.js'
 import { canUseAssessment } from '../domain/auth-policy.js'
@@ -367,6 +368,37 @@ export function registerCommercialRoutes(
       return reply.code(503).send({ok:false,error:'virtual_payment_query_unavailable'})
     }
   })
+
+  const endUnpaidSchema=z.object({
+    prePaymentErrorCode:z.literal(-15013),confirmUnpaid:z.literal(true),
+  }).strict()
+  app.post<{Params:{id:string};Body:unknown}>(
+    '/me/virtual-payment-orders/:id/end-unpaid',async(request,reply)=>{
+      if(!virtualConfig || !database.configured)
+        return reply.code(503).send({ok:false,error:'wechat_virtual_payment_not_ready'})
+      const user=await resolveSessionUser(request,database)
+      if(!user) return reply.code(401).send({ok:false,error:'unauthorized'})
+      if(!canUseAssessment(user.role))
+        return reply.code(403).send({ok:false,error:'assessment_not_available_for_role'})
+      const parsed=endUnpaidSchema.safeParse(request.body)
+      if(!parsed.success || !z.string().uuid().safeParse(request.params.id).success)
+        return reply.code(400).send({ok:false,error:'invalid_virtual_unpaid_end_payload'})
+      try {
+        const result=await endRejectedVirtualOrder({database,env,config:virtualConfig,
+          orderId:request.params.id,userId:user.userId,...parsed.data})
+        app.log.warn({orderId:request.params.id,
+          reason:'pre_checkout_rejection',officialCode:268490002},
+          'Unpaid virtual order ended after official and ledger verification')
+        return {ok:true,...result}
+      } catch(error) {
+        if(error instanceof UnpaidOrderError)
+          return reply.code(error.code==='virtual_order_not_found'?404:409)
+            .send({ok:false,error:error.code})
+        app.log.warn({orderId:request.params.id,code:error instanceof Error?error.name:'unknown'},
+          'Unpaid virtual order official verification unavailable')
+        return reply.code(503).send({ok:false,error:'virtual_payment_query_unavailable'})
+      }
+    })
 
   app.get<{ Params: { id: string } }>(
     '/me/payment-orders/:id',

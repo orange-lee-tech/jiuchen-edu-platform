@@ -872,6 +872,10 @@ export async function createVirtualAssessmentOrder(skuKey:string,wechatCode:stri
 export async function reconcileVirtualAssessmentOrder(id:string):Promise<{ok:boolean;state:'paid'|'pending'|'refunded'|'closed';credited:boolean;deliveryPending?:boolean;requiresFinanceReview?:boolean}> {
   return request('/me/virtual-payment-orders/'+encodeURIComponent(id)+'/reconcile','POST',{})
 }
+export async function endUnpaidVirtualAssessmentOrder(id:string):Promise<{ok:boolean;state:'closed';credited:false}> {
+  return request('/me/virtual-payment-orders/'+encodeURIComponent(id)+'/end-unpaid','POST',
+    {prePaymentErrorCode:-15013,confirmUnpaid:true})
+}
 export async function createAssessmentPaymentOrder(skuKey: string): Promise<{ order: AssessmentPaymentOrder; payment: AssessmentPaymentParams }> {
   const result = await request<{ ok: true; order: AssessmentPaymentOrder; payment: AssessmentPaymentParams }>(
     '/me/payment-orders', 'POST', { skuKey },

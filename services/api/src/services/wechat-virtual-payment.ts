@@ -104,6 +104,17 @@ export async function queryVirtualPayment(env:AppEnv,config:VirtualPayConfig,ope
   }))
   return verifyVirtualQuery(payload,orderNo,fen,productId)
 }
+// Only for an explicitly requested, expired, pre-checkout rejection recovery.
+// All other gateway responses remain unknown and must keep the order pending.
+export async function isVirtualOrderMissingOnWechat(env:AppEnv,config:VirtualPayConfig,openId:string,orderNo:string) {
+  const payload=await postSignedXpay(config,env,'/xpay/query_order',JSON.stringify({
+    openid:openId,env:config.env,order_id:orderNo,
+  }))
+  const result=z.object({errcode:z.number().int(),order:z.unknown().optional()}).parse(payload)
+  if(result.errcode===268490002 && result.order===undefined) return true
+  if(result.errcode===0) return false
+  throw new Error('virtual_query_unverified')
+}
 export async function confirmVirtualDelivery(env:AppEnv,config:VirtualPayConfig,orderNo:string) {
   const result=z.object({errcode:z.number(),errmsg:z.string().optional()}).parse(
     await postSignedXpay(config,env,'/xpay/notify_provide_goods',JSON.stringify({order_id:orderNo,env:config.env})))

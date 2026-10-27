@@ -103,6 +103,7 @@ test('cancelled or failed virtual payment retains the pending order and exposes 
   for (const failure of [
     { errCode: -2, errMsg: 'requestVirtualPayment:fail cancel' },
     { errCode: -15010, errMsg: 'requestVirtualPayment:fail 商品未发布' },
+    { errCode: -15013, errMsg: 'requestVirtualPayment:fail goodsPrice错误' },
     { errCode: -15006, errMsg: 'requestVirtualPayment:fail paySig=private-value' },
   ]) {
     const { h, p } = virtualPaymentPage()
@@ -113,6 +114,10 @@ test('cancelled or failed virtual payment retains the pending order and exposes 
     await purchase
     assert.equal(p.data.pendingPaymentOrderId, secondId)
     assert.match(h.modals.at(-1).content, new RegExp(String(failure.errCode)))
+    if(failure.errCode===-15013) {
+      assert.equal(p.data.canEndPendingOrder,true)
+      assert.match(h.modals.at(-1).content,/微信道具价格与当前购买金额不一致/)
+    }
     assert.doesNotMatch(h.modals.at(-1).content, /private-value|paySig/)
     assert.equal(h.requests.length, 1, 'a failed client callback never settles credits')
     p.setData({ pendingPaymentOrderId: '' })
@@ -122,6 +127,37 @@ test('cancelled or failed virtual payment retains the pending order and exposes 
     assert.equal(h.requests.length, 1, 'unverified order blocks a second charge')
     assert.equal(h.modals.at(-1).title, '请先核实上一笔订单')
   }
+})
+
+test('a confirmed pre-checkout rejection can end only the owned unresolved order and unlock all goods', async () => {
+  const {h,p}=virtualPaymentPage()
+  h.wx.requestVirtualPayment=({fail})=>fail({errCode:-15013,errMsg:'requestVirtualPayment:fail goodsPrice错误'})
+  const first=p.beginCreditPurchase('JC000')
+  await settle()
+  h.respond(0,syntheticVirtualOrder)
+  await first
+  assert.equal(p.data.canEndPendingOrder,true)
+  const before=p.endUnpaidPayment()
+  await settle()
+  assert.match(h.requests[1].url,/\/virtual-payment-orders\/.*\/end-unpaid$/)
+  assert.equal(h.requests[1].data.prePaymentErrorCode,-15013)
+  assert.equal(h.requests[1].data.confirmUnpaid,true)
+  h.respond(1,{ok:false,error:'virtual_order_checkout_window_open'},409)
+  await before
+  assert.equal(p.data.pendingPaymentOrderId,secondId,'the open checkout window keeps the order locked')
+  const retry=p.endUnpaidPayment()
+  await settle()
+  h.respond(2,{ok:true,state:'closed',credited:false})
+  await retry
+  assert.equal(p.data.pendingPaymentOrderId,'')
+  assert.equal(p.data.canEndPendingOrder,false)
+  assert.equal(h.storage.has('jiuchen:virtual-order:'+id),false)
+  assert.equal(h.storage.has('jiuchen:virtual-order-failure:'+id),false)
+  const next=p.beginCreditPurchase('JC003')
+  await settle()
+  assert.equal(h.requests.length,4,'a different SKU can create a new order only after trusted closure')
+  h.respond(3,{error:'wechat_virtual_payment_not_ready'},503)
+  await next
 })
 
 test('WeChat callback success with failed official query remains unresolved until a trusted terminal response', async () => {

@@ -8,6 +8,7 @@ import {
   grantMyFreeCredits,
   getMyCreditAccount,
   createVirtualAssessmentOrder,
+  endUnpaidVirtualAssessmentOrder,
   reconcileVirtualAssessmentOrder,
   getAssessmentPaymentOrder,
   getMyAcademicProfile,
@@ -24,6 +25,12 @@ import {
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
 
 const virtualOrderKey = () => 'jiuchen:virtual-order:' + (getSavedAuthResult()?.user.id || 'none')
+const virtualOrderFailureKey = () => 'jiuchen:virtual-order-failure:' + (getSavedAuthResult()?.user.id || 'none')
+function clearVirtualOrderMarkers(id:string) {
+  if(wx.getStorageSync(virtualOrderKey())===id) wx.removeStorageSync(virtualOrderKey())
+  const failure=wx.getStorageSync(virtualOrderFailureKey())
+  if(failure?.orderId===id) wx.removeStorageSync(virtualOrderFailureKey())
+}
 
 function virtualPaymentFailureDetail(error: unknown) {
   const result = error && typeof error === 'object' ? error as { errCode?: unknown; errMsg?: unknown } : {}
@@ -36,7 +43,8 @@ function virtualPaymentFailureDetail(error: unknown) {
     !/[\r\n?&=<>]/.test(message) &&
     !/https?:|sign|secret|token|session|openid|authorization|api.?key|[a-z\d+/_-]{16,}/i.test(message)
       ? message : '微信未提供可安全展示的简短原因'
-  return `微信错误码：${safeCode}\n微信提示：${safeMessage}`
+  const advice = safeCode === '-15013' ? '\n微信道具价格与当前购买金额不一致，请等待商品配置核对。' : ''
+  return `微信错误码：${safeCode}\n微信提示：${safeMessage}${advice}`
 }
 const RESEARCH_TIERS = [
   'Nature',
@@ -262,7 +270,9 @@ Page({
     creditLoading: false,
     purchasing: false,
     verifyingPayment: false,
+    endingPayment: false,
     pendingPaymentOrderId: '',
+    canEndPendingOrder: false,
     skuChoices: [] as Array<{ key: string; price: string; count: number }>,
     materialImportConfigured: false,
     draftId: '',
@@ -301,6 +311,8 @@ Page({
       const id=wx.getStorageSync(virtualOrderKey())
       if(typeof id==='string' && id && !this.data.pendingPaymentOrderId)
         this.setData({pendingPaymentOrderId:id})
+      const failure=wx.getStorageSync(virtualOrderFailureKey())
+      this.setData({canEndPendingOrder:Boolean(id && failure?.orderId===id && failure?.code===-15013)})
     }
     // Read the canonical account profile after returning from 我的 → 编辑个人资料.
     // Never promote resume extraction or a historical draft to the source of truth.
@@ -345,7 +357,7 @@ Page({
     }
   },
   onBuyCredit(event: WechatMiniprogram.BaseEvent) {
-    if (!this.data.checkoutEnabled || this.data.purchasing || this.data.verifyingPayment) return
+    if (!this.data.checkoutEnabled || this.data.purchasing || this.data.verifyingPayment || this.data.endingPayment) return
     const key = String(event.currentTarget.dataset.key ?? '')
     const sku = this.data.skuChoices.find(item => item.key === key)
     if (!sku) return
@@ -358,7 +370,7 @@ Page({
     })
   },
   async beginCreditPurchase(skuKey: string) {
-    if (this.data.purchasing || this.data.verifyingPayment || !this.data.checkoutEnabled) return
+    if (this.data.purchasing || this.data.verifyingPayment || this.data.endingPayment || !this.data.checkoutEnabled) return
     const pendingId = this.data.pendingPaymentOrderId || wx.getStorageSync(virtualOrderKey())
     if (pendingId) {
       this.setData({pendingPaymentOrderId:pendingId})
@@ -372,7 +384,7 @@ Page({
         wx.login({success:result=>result.code?resolve(result.code):reject(new Error('wechat_login_missing')),fail:reject})
       })
       const {order,payment}=await createVirtualAssessmentOrder(skuKey,code)
-      this.setData({pendingPaymentOrderId:order.id})
+      this.setData({pendingPaymentOrderId:order.id,canEndPendingOrder:false})
       wx.setStorageSync(virtualOrderKey(),order.id)
       stage = 'invoke'
       const api=wx as unknown as {requestVirtualPayment?: (arg:{
@@ -390,11 +402,17 @@ Page({
       if (stage === 'create') {
         wx.showModal({title:'创建订单失败',content:`${friendlyRequestError(error, '暂时无法创建订单，请稍后重试')}。本次未调起微信支付。`,showCancel:false})
       } else if (stage === 'invoke') {
+        const errorCode=error && typeof error==='object' ? (error as {errCode?:unknown}).errCode : undefined
+        if(String(errorCode)==='-15013') {
+          const id=this.data.pendingPaymentOrderId
+          wx.setStorageSync(virtualOrderFailureKey(),{orderId:id,code:-15013})
+          this.setData({canEndPendingOrder:true})
+        }
         const detail = error instanceof Error && error.message === '当前微信版本不支持虚拟支付，请升级微信'
           ? error.message : virtualPaymentFailureDetail(error)
         wx.showModal({
           title: '微信支付未完成',
-          content: `${detail}\n如已付款，请核实上一笔订单；未核实前不会再次下单。`,
+          content: `${detail}\n如确认收银台未打开、没有付款，可在订单付款窗口结束后申请结束此订单；状态未知时请先核实。`,
           showCancel: false,
         })
       } else {
@@ -415,7 +433,8 @@ Page({
     const result=await reconcileVirtualAssessmentOrder(id)
     if(result.state==='paid' && result.credited && !result.deliveryPending) {
       if(this.data.pendingPaymentOrderId===id) this.setData({pendingPaymentOrderId:''})
-      if(wx.getStorageSync(virtualOrderKey())===id) wx.removeStorageSync(virtualOrderKey())
+      clearVirtualOrderMarkers(id)
+      this.setData({canEndPendingOrder:false})
       wx.showToast({title:'评估次数已到账',icon:'success'})
     } else if(result.state==='paid' && result.credited && result.deliveryPending) {
       wx.showModal({title:'次数已到账',content:'微信发货确认仍在处理中，请稍后再次核实本订单，无需重复付款。',showCancel:false})
@@ -423,7 +442,8 @@ Page({
       wx.showModal({title:'订单需要人工核对',content:'微信显示付款后退款或关闭，已发放的次数需人工对账。请勿重复付款，并联系九辰客服。',showCancel:false})
     } else if(result.state==='refunded' || result.state==='closed') {
       if(this.data.pendingPaymentOrderId===id) this.setData({pendingPaymentOrderId:''})
-      if(wx.getStorageSync(virtualOrderKey())===id) wx.removeStorageSync(virtualOrderKey())
+      clearVirtualOrderMarkers(id)
+      this.setData({canEndPendingOrder:false})
       wx.showModal({title:'购买订单已结束',content:result.state==='refunded'
         ? '订单已退款，未增加评估次数。可重新选择商品。'
         : '订单已关闭，未增加评估次数。可重新选择商品。',showCancel:false})
@@ -436,11 +456,37 @@ Page({
     }
   },
   onVerifyCreditPayment() {
-    if(this.data.purchasing || this.data.verifyingPayment)return
+    if(this.data.purchasing || this.data.verifyingPayment || this.data.endingPayment)return
     this.setData({verifyingPayment:true})
     void this.verifyCreditPayment()
       .catch(()=>wx.showModal({title:'官方查单未完成',content:'微信官方暂未返回可确认的订单状态。请稍后重试；若超过付款时限仍无法确认，请联系九辰客服核查，勿重复付款。',showCancel:false}))
       .finally(()=>{this.setData({verifyingPayment:false});void this.loadCredits()})
+  },
+  onEndUnpaidPayment() {
+    if(!this.data.canEndPendingOrder || !this.data.pendingPaymentOrderId ||
+      this.data.purchasing || this.data.verifyingPayment || this.data.endingPayment) return
+    wx.showModal({title:'结束未完成购买',
+      content:'仅在微信收银台未打开且你确认没有付款时使用。服务端会等待原付款窗口结束，并核对微信订单、到账及发货记录；无法确认时不会解除购买保护。',
+      confirmText:'确认未付款',cancelText:'返回核实',
+      success:result=>{if(result.confirm) void this.endUnpaidPayment()},
+    })
+  },
+  async endUnpaidPayment() {
+    const id=this.data.pendingPaymentOrderId
+    if(!id || !this.data.canEndPendingOrder || this.data.endingPayment || this.data.purchasing || this.data.verifyingPayment) return
+    this.setData({endingPayment:true})
+    try {
+      const result=await endUnpaidVirtualAssessmentOrder(id)
+      if(result.state!=='closed' || result.credited) throw new Error('virtual_order_payment_review_required')
+      if(this.data.pendingPaymentOrderId===id) this.setData({pendingPaymentOrderId:'',canEndPendingOrder:false})
+      clearVirtualOrderMarkers(id)
+      wx.showModal({title:'未付款订单已结束',content:'订单记录已保留，未增加评估次数。现在可以重新选择商品。',showCancel:false})
+    } catch(error) {
+      const code=error && typeof error==='object' ? String((error as {message?:unknown}).message||'') : ''
+      wx.showModal({title:'订单尚不能结束',content:code.includes('virtual_order_checkout_window_open')
+        ? '原订单的 30 分钟付款窗口尚未结束，请稍后再试。期间不要重复付款。'
+        : '微信订单或到账状态尚不能安全确认，请先核实订单；如持续无法确认，请联系九辰客服。',showCancel:false})
+    } finally {this.setData({endingPayment:false});void this.loadCredits()}
   },
   async initializeForm(query: Record<string, string | undefined>) {
     const auth = getSavedAuthResult()
