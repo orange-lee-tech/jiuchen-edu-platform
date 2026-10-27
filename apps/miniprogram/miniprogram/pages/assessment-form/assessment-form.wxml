@@ -20,7 +20,7 @@
       </view>
       <text wx:else class="credit-status">目前仅显示真实额度，微信购买暂未开放；可咨询客服。</text>
       <button wx:if="{{pendingPaymentOrderId}}" class="credit-verify" loading="{{verifyingPayment}}" disabled="{{verifyingPayment || purchasing}}" bindtap="onVerifyCreditPayment">核实上一笔购买订单</button>
-      <button wx:if="{{pendingPaymentOrderId && canEndPendingOrder}}" class="credit-verify" loading="{{endingPayment}}" disabled="{{endingPayment || verifyingPayment || purchasing}}" bindtap="onEndUnpaidPayment">结束未完成购买</button>
+      <button wx:if="{{pendingPaymentOrderId && canEndPendingOrder}}" class="credit-verify" loading="{{endingPayment}}" bindtap="onEndUnpaidPayment">结束未完成购买</button>
       <text wx:if="{{pendingPaymentOrderId}}" class="credit-status">上一笔订单待微信核实。超过付款时限也不会自动解除；请先查单，持续无法确认时联系客服核对，避免重复付款。</text>
     </view>
 

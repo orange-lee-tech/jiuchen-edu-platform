@@ -494,11 +494,21 @@ Page({
       .finally(()=>{this.setData({verifyingPayment:false});void this.loadCredits()})
   },
   onEndUnpaidPayment() {
-    if(!this.data.canEndPendingOrder || !this.data.pendingPaymentOrderId ||
-      this.data.purchasing || this.data.verifyingPayment || this.data.endingPayment) return
+    if (!this.data.pendingPaymentOrderId || !this.data.canEndPendingOrder) {
+      wx.showToast({ title:'当前没有可处理的未完成订单', icon:'none' })
+      return
+    }
+    if (this.data.purchasing || this.data.verifyingPayment || this.data.endingPayment) {
+      wx.showModal({
+        title:'订单操作进行中',
+        content:'当前订单正在处理中，操作结束后再点击。不要重复付款。',
+        showCancel:false,
+      })
+      return
+    }
     wx.showModal({title:'结束未完成购买',
       content:'仅在确认没有付款时使用。服务端会等待原付款窗口结束，并核对微信订单、到账及发货记录；无法确认时不会解除购买保护。',
-      confirmText:'确认未付款',cancelText:'返回核实',
+      confirmText:'确认结束',cancelText:'返回核实',
       success:result=>{if(result.confirm) void this.endUnpaidPayment()},
     })
   },
