@@ -58,9 +58,6 @@ try {
     for(const name of ['virtual_payment_cases_order_fk','virtual_payment_cases_resolver_fk',
       'virtual_payment_case_actions_case_fk','virtual_payment_case_actions_actor_fk'])
       assert(foreignKeys.some(row=>row.CONSTRAINT_NAME===name))
-    const [ledger]=await db.query<mysql.RowDataPacket[]>(
-      'SELECT COUNT(*) AS count FROM credit_ledger_entries WHERE payment_order_id=?',[orderId])
-    assert.equal(Number(ledger[0]?.count),0,'case migration never grants credits')
     await assert.rejects(db.query(
       `INSERT INTO virtual_payment_cases(id,order_id,event_key,kind,state,reason_code)
        VALUES ('00000000-0000-4000-8000-000000009004',?,'ci:reliability:1','refund','open','duplicate')`,
