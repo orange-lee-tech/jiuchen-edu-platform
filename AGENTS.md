@@ -2,20 +2,23 @@
 
 This file applies to Codex and other coding agents working in this repository.
 
-## Current branch authority (2026-10-19)
+## Current branch authority (2026-10-27)
 
-`main` now contains the reconciled 0.0.19 frontend and deployed dbd7d9a8 API source. `docs/handoff/CURRENT.md` is the sole live status page. `p1/foundation` is a legacy integration branch and may be pruned after checking it is identical to/ancestor of `main`; do not treat older PR or branch descriptions as the active release state. WeChat publication, payment enablement and production changes remain separate approved actions.
+`main` is the sole authoritative integrated source. PR #9 is merged at `8778fde63cfaa74170bfb50090fbac7c623278d9` from PR head `b6318c748e26c868374a7fdd92c345da8317ed44`; both the PR-head CI and the main-push CI passed. These checks establish repository validation only, not current production deployment, database migration, WeChat formal publication, or payment-switch state.
 
-## Active entry and priority (2026-10-12)
+`docs/handoff/CURRENT.md` is the sole live status page. Use `docs/handoff/README.md` for navigation. Historical handoff documents remain evidence; do not promote old SHA values or dated “pending” statements into current facts. `p1/foundation` and other candidate branches are historical and must not be treated as a competing source of truth.
 
-**One current authority:** `docs/handoff/CURRENT.md`. Read in order:
+## Active entry and priority (2026-10-27)
+
+Read in order:
 `CONSTITUTION.md` → `AGENTS.md` → `docs/handoff/CURRENT.md` → relevant module contract/source. Before ECS work also read `ops/ecs/AGENTS.md`.
 
-The former 2026-10-09 Phase 1a/Gate 0 execution header and previous CURRENT chronology are archived/historical, not standing orders. For traceability only: `docs/handoff/archive/CURRENT-pre-cleanup-2026-10-12.md`.
+Current priority:
+1. Complete GitHub branch and local worktree cleanup without deleting Git history or unreviewed local data.
+2. Synchronize the Windows UI workspace to the latest `origin/main`.
+3. Begin the approved blue-gold warm UI/UX revision, prioritizing the Today workbench, today/tomorrow timetable, planning summary and semester switcher.
 
-The current order is P0 production protection & truth checking; P1 independently deliverable, schema-free News/Analytics/Identity and existing contact/export verification; P2 News V2 after non-production SQL/backup/explicit production schema approval; P3 other independently authorized tasks. Keep `PARKED` blockers visible and move on rather than repeatedly reopening a single deadlock. Never skip a production safety blocker by classifying it as merely PARKED.
-
-Do not infer a deployment or permission from a code SHA, stale handoff, CI green, or the existence of a migration script. Production DDL, release promotion, timer enabling, WeChat publishing, AI/Payment changes and broadening read-only role powers require their own explicit approval.
+Production DDL, ECS release promotion, service cutover, timer enabling, WeChat publishing, AI/payment configuration changes and broadening read-only role powers remain separate approved actions. Do not infer production state from a source SHA, historical handoff, CI green, or the existence of a migration script.
 
 ## Authority and scope
 

@@ -2,14 +2,15 @@
 
 微信原生小程序、Fastify API 与 Vue 管理后台的单仓库。线上业务数据以 MySQL 为准；官网与小程序 API 在同一台 ECS 上独立运行。
 
-## 当前发布基线（2026-10-19）
+## 当前工程状态（2026-10-27）
 
-- **正式版本尚未发布。** 用户指定的下一次微信体验版为 `0.0.19`，固定小程序源码 `9da7f9178b737b8ebbc7b17ece1ef3260824f893`。用户提供的 0.0.19 体验包已与 `main` 的 168 个业务/工程文件逐项核对一致；实际微信上传和指定体验版回执待补。
-- 生产 API 的最后现场回执：`dbd7d9a818523cc3b007afe47a03519510415652`，健康与 News V2 公开读取通过；官网发布指针未变。
-- `main` 已整合上述固定前端与现役 API 源码。整合树经本地 API typecheck、222 项测试与 build，小程序 typecheck、106 项回归，管理端 typecheck、2 项测试与 build。历史固定配对自托管 Gate 已通过；先前 GitHub 托管 CI 因 Actions 额度在步骤前失败。通用 CI 与两条迁移门禁在本次提交中改用本机 Runner，改路由后的运行结果需另行核实。
-- 微信新客服卡片、真实商户充值与次数统计、AI 真实负载、正式审核和发布仍待验。四篇十月稿已公开可读；后续公众号持续自动同步尚有来源缺口。
-
-**最新事实与操作边界只看 [CURRENT.md](docs/handoff/CURRENT.md)。** [版本登记](docs/release/version-ledger.md)记录体验版号与固定源码；[工作流登记](docs/automation/registry.yml)记录 Runner 路由。 该页顶部是现态，下面保留历史回执，旧章节标题中的“待切流”等不代表当前状态。
+- `main` 已合并 PR #9（虚拟支付可靠性、订单核对与未付款订单恢复提示）。PR 合并提交：`8778fde63cfaa74170bfb50090fbac7c623278d9`；PR 源提交：`b6318c748e26c868374a7fdd92c345da8317ed44`。
+- PR 头部 CI run [#40489949057](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/40489949057) 通过；合并提交的 main-push CI run [#40491735769](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/40491735769) 通过。检查包含小程序、管理员、API 及一次性 MySQL 8 迁移验证。
+- 用户报告两笔安卓微信虚拟支付测试交易：JC000 ¥0.10 / 2 次、JC001 ¥1.90 / 1 次。此处记录为用户提供的验收事实，不代表本次仓库维护重新核对了微信商户账单或生产账本。
+- 合并与 CI 不代表 ECS 部署、生产数据库迁移、微信正式发布、支付开关变更或密钥变更。当前生产 API SHA 需要新的 ECS 只读回执确认；不要把历史文档中的旧 SHA 当作当前生产版本。
+- 当前唯一状态入口为 [docs/handoff/CURRENT.md](docs/handoff/CURRENT.md)，交接文档导航为 [docs/handoff/README.md](docs/handoff/README.md)，工作流登记为 [docs/automation/registry.yml](docs/automation/registry.yml)。
+- 五条固定 SHA 的历史 P1 工作流已从现役工作流目录移除；GitHub 已有运行记录保留。当前保留通用 CI、News V2 MySQL Gate、Profile MySQL Gate。
+- UI/UX 方向已批准为蓝金温润版。开始改版前，先完成远端分支与 Windows 本地工作区规整，并确认本地工程同步到最新 `main`。
 
 ## 代码入口
 

@@ -1,8 +1,8 @@
-# GitHub Actions 登记（2026-10-19）
-# 分类：quality、integration、release。当前仓库运行入口共八条。
+# GitHub Actions 登记（2026-10-27）
+# 分类：quality、integration。当前仓库运行入口共三条。
 # 自托管 Runner 注册于本仓库，Windows 11 / Ubuntu 24.04 WSL2。
 # 实际标签拼写为 orangeleetec-local-linux；Mac mini 尚未迁移。
-# 每条 workflow 的 job 以文件为准，本表记录归属和触发边界。
+# 每条 workflow 的 job 以文件为准，本表记录现役归属和触发边界。
 
 runner:
   selector: [self-hosted, Linux, X64, orangeleetec-local-linux]
@@ -36,38 +36,3 @@ workflows:
     jobs: [profile-gate]
     runner: self-hosted
     side_effects: [disposable_mysql_service]
-  - id: historical-fixed-eda
-    file: .github/workflows/p1-fixed-candidate-local.yml
-    cluster: release
-    status: deprecated
-    triggers: [own-file-push-on-p1-foundation, manual]
-    fixed_source: eda525c1a2276af90668849b669e9bce19a4fd7d
-    runner: self-hosted
-    exit_condition: archive_after_release_evidence_retention_review
-  - id: historical-frontend-51ea
-    file: .github/workflows/p1-frontend-release-local.yml
-    cluster: release
-    status: deprecated
-    triggers: [own-file-push-on-p1-foundation, manual]
-    fixed_source: 51ea8775de74581289617cf1428ba4165775c1e0
-    runner: self-hosted
-  - id: historical-isolated-858
-    file: .github/workflows/p1-isolated-mixed-local.yml
-    cluster: release
-    status: deprecated
-    triggers: [own-file-push-on-p1-foundation, manual]
-    fixed_source: 858aa6a5bebbdb88346c6282f691b4976886b935
-    runner: self-hosted
-  - id: historical-mixed-charset
-    file: .github/workflows/p1-mixed-charset-local.yml
-    cluster: integration
-    status: deprecated
-    triggers: [own-file-push-on-p1-foundation, manual]
-    runner: self-hosted
-  - id: historical-archive-858
-    file: .github/workflows/p1-release-archive-local.yml
-    cluster: release
-    status: deprecated
-    triggers: [own-file-push-on-p1-foundation, manual]
-    fixed_source: 858aa6a5bebbdb88346c6282f691b4976886b935
-    runner: self-hosted
