@@ -1,9 +1,9 @@
 # 九辰保研四个一级页视觉精修｜总控施工蓝图（执行版）
 
-版本：2026-10-29  
-仓库：orange-lee-tech/jiuchen-edu-platform  
-施工分支：codex/ui-redesign-20261028  
-基线：102a0b70c704f7989e7b83bedccba3f2ca0fba65  
+版本：2026-10-29
+仓库：orange-lee-tech/jiuchen-edu-platform
+施工分支：codex/ui-redesign-20261028
+基线：102a0b70c704f7989e7b83bedccba3f2ca0fba65
 性质：仅小程序前端视觉精修；不授权生产发布。
 
 ## 1. 先给结论
