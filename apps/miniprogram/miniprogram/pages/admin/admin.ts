@@ -304,7 +304,7 @@ Page({
           getAdminStudents(), getAdminTeachers(), getAdminAssignments(), getAdminInternalIds(),
         ])
         const codeByEntity = new Map(internalIds.filter(item=>item.entityId)
-          .map(item=>[item.type+':'+item.entityId, item.businessId]))
+          .map(item=>[item.type+':'+item.entityId, item.businessId] as const))
         const displayPerson = (name:string, role:'student'|'teacher', id:string) =>
           /^(测试|待命名|待完善|未完善)/.test(name.trim())
             ? (codeByEntity.get(role+':'+id) || '待完善档案')
