@@ -89,3 +89,19 @@ button::after{border:0;}
 .service-symbol,.service-website .service-symbol{width:42rpx;height:42rpx;}
 .service-icon,.service-website .service-icon{width:30rpx;height:30rpx;}
 .service-title{margin-top:0;font-size:23rpx;}
+
+/* Compact self-service countdown; on-device, identity-scoped, no API writes. */
+.action-countdown{min-height:220rpx;}
+.countdown-icon{font-size:36rpx;line-height:1;color:#235a78;}
+.action-countdown-days{display:block;margin-top:5rpx;color:#896526;font-size:21rpx;font-weight:750;}
+.countdown-panel{margin-top:18rpx;}
+.countdown-local-note{display:block;margin-top:8rpx;font-size:19rpx;color:#6b7c87;}
+.countdown-item{display:flex;align-items:center;gap:12rpx;padding:16rpx 0;border-bottom:1rpx solid #ebe7df;}
+.countdown-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5rpx;}
+.countdown-name{font-size:25rpx;font-weight:750;color:#193f5c;word-break:break-word;}
+.countdown-date{font-size:19rpx;color:#6b7c87;}
+.countdown-remaining{flex:none;font-size:22rpx;font-weight:750;color:#896526;}
+.countdown-remove{flex:none;padding:12rpx 2rpx;color:#a44740;font-size:20rpx;}
+.countdown-editor{display:flex;flex-direction:column;gap:14rpx;margin-top:15rpx;}
+.countdown-input,.countdown-date-picker{box-sizing:border-box;width:100%;min-height:74rpx;padding:17rpx 18rpx;border:1rpx solid #e2dccc;border-radius:6rpx;background:#fff;color:#193f5c;font-size:23rpx;}
+.countdown-save{width:100%;margin:0;background:#173e67;color:#fff;font-size:24rpx;font-weight:750;}

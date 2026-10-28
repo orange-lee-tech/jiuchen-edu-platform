@@ -16,6 +16,23 @@ function courseStartMinutes(value: string | null) {
   return match ? Number(match[1]) * 60 + Number(match[2]) : null
 }
 
+
+type CountdownEntry = { id: string; title: string; date: string }
+type CountdownView = CountdownEntry & { remainingDays: number }
+const COUNTDOWN_PREFIX = 'jiuchen-countdowns-v1:'
+function dateText(value: Date) {
+  const n = (v: number) => String(v).padStart(2, '0')
+  return `${value.getFullYear()}-${n(value.getMonth() + 1)}-${n(value.getDate())}`
+}
+function daysUntil(date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null
+  const [year, month, day] = date.split('-').map(Number)
+  const target = new Date(year, month - 1, day)
+  if (target.getFullYear() !== year || target.getMonth() !== month - 1 || target.getDate() !== day) return null
+  const now = new Date()
+  return Math.round((target.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000)
+}
+
 Page({
   data: { ...INITIAL_SHELL, loggedIn: false, assessmentReady: false,
     todayLabel: '', scheduleDay: 0 as 0 | 1, scheduleDateLabel: '',
@@ -23,8 +40,79 @@ Page({
     scheduleCourses: [] as Array<{time:string;name:string;location:string;next:boolean}>,
     planLoading: false, planError: '', planState: 'unbound', planStageLabel: '',
     planPreview: [] as Array<{title:string;status:string}>,
+    countdowns: [] as CountdownView[], countdownOpen: false,
+    countdownTitle: '', countdownDate: dateText(new Date()),
+    countdownToday: dateText(new Date()), countdownSaving: false,
   },
   homeEpoch: 0,
+  countdownOwner: '',
+  countdownKey() { return COUNTDOWN_PREFIX + this.countdownOwner },
+  loadCountdowns(owner: string | null) {
+    const nextOwner = owner || ''
+    if (!nextOwner) {
+      this.countdownOwner = ''
+      this.setData({countdowns:[],countdownOpen:false,countdownTitle:''})
+      return
+    }
+    if (nextOwner !== this.countdownOwner) this.setData({countdownOpen:false,countdownTitle:''})
+    this.countdownOwner = nextOwner
+    let entries: CountdownEntry[] = []
+    try {
+      const stored: unknown = wx.getStorageSync(this.countdownKey())
+      if (Array.isArray(stored)) entries = stored.filter((e):e is CountdownEntry =>
+        Boolean(e && typeof e === 'object' && typeof e.id === 'string' &&
+          typeof e.title === 'string' && typeof e.date === 'string'))
+    } catch { /* A storage error must not block the home workbench. */ }
+    const active: CountdownView[] = entries.slice(0,8).map(e=>({
+      ...e, remainingDays:daysUntil(e.date) ?? -1,
+    })).filter(e=>e.remainingDays>=0).sort((a,b)=>a.remainingDays-b.remainingDays)
+    this.setData({countdowns:active,countdownToday:dateText(new Date())})
+  },
+  onCountdownToggle() {
+    if (!this.countdownOwner) { wx.showToast({title:'登录学员身份后可设置',icon:'none'}); return }
+    this.setData({countdownOpen:!this.data.countdownOpen,countdownTitle:'',countdownDate:dateText(new Date())})
+  },
+  onCountdownTitleInput(event:WechatMiniprogram.Input) {
+    this.setData({countdownTitle:String(event.detail.value||'')})
+  },
+  onCountdownDateChange(event:WechatMiniprogram.CustomEvent<{value:string}>) {
+    this.setData({countdownDate:String(event.detail.value||'')})
+  },
+  onCountdownSave() {
+    if (!this.countdownOwner || this.data.countdownSaving) return
+    const title=this.data.countdownTitle.trim()
+    const date=this.data.countdownDate
+    if (!title || title.length>24 || daysUntil(date)===null || (daysUntil(date)??-1)<0) {
+      wx.showToast({title:'填写事件名称和有效日期',icon:'none'});return
+    }
+    if (this.data.countdowns.length>=8) {
+      wx.showToast({title:'最多设置8个倒数日',icon:'none'});return
+    }
+    this.setData({countdownSaving:true})
+    try {
+      const entries=[...this.data.countdowns.map(({id,title,date})=>({id,title,date})),
+        {id:String(Date.now())+'-'+Math.random().toString(36).slice(2,8),title,date}]
+      wx.setStorageSync(this.countdownKey(),entries)
+      this.loadCountdowns(this.countdownOwner)
+      this.setData({countdownTitle:'',countdownOpen:false})
+      wx.showToast({title:'倒数日已保存到本机',icon:'success'})
+    } catch { wx.showToast({title:'本机保存失败，请重试',icon:'none'}) }
+    finally { this.setData({countdownSaving:false}) }
+  },
+  onCountdownDelete(event:WechatMiniprogram.BaseEvent) {
+    const id=String(event.currentTarget.dataset.id||'')
+    if (!this.countdownOwner || !this.data.countdowns.some(e=>e.id===id)) return
+    wx.showModal({title:'删除倒数日',content:'确定删除这个倒数日吗？',
+      success:result=>{
+        if (!result.confirm || !this.countdownOwner) return
+        try {
+          const entries=this.data.countdowns.filter(e=>e.id!==id).map(({id,title,date})=>({id,title,date}))
+          wx.setStorageSync(this.countdownKey(),entries)
+          this.loadCountdowns(this.countdownOwner)
+        } catch { wx.showToast({title:'删除失败，请重试',icon:'none'}) }
+      },
+    })
+  },
   currentHomeStudentId: null as string | null,
   homeSchedule: null as ParsedSchedule | null,
   stopShell: undefined as (() => void) | undefined,
@@ -38,6 +126,7 @@ Page({
       const studentId = state.phase === 'ready' && state.auth?.user.role === 'student'
         ? state.auth.user.id : null
       this.currentHomeStudentId = studentId
+      this.loadCountdowns(studentId)
       this.setData({ ...shellView(state), loggedIn: Boolean(state.auth), assessmentReady: false })
       if (!studentId) { this.homeSchedule = null; this.setData({ planLoading: false, planError: '', planState: 'unbound', planPreview: [], scheduleLoading: false, scheduleError: '', scheduleStage: '', scheduleCourses: [], scheduleState: 'missing' }); return }
       this.setData({ scheduleLoading: true, scheduleError: '', scheduleStage: '', scheduleCourses: [], planLoading: true, planError: '', planPreview: [] })
@@ -109,7 +198,7 @@ Page({
     }
     this.renderScheduleDay()
   },
-  onHide() { ++this.homeEpoch; this.currentHomeStudentId = null; this.homeSchedule = null; this.stopShell?.(); this.setData({ shellPhase: 'loading', assessmentReady: false, scheduleCourses: [], planPreview: [] }) },
+  onHide() { ++this.homeEpoch; this.currentHomeStudentId = null; this.countdownOwner = ''; this.homeSchedule = null; this.stopShell?.(); this.setData({ shellPhase: 'loading', assessmentReady: false, scheduleCourses: [], planPreview: [], countdowns: [], countdownOpen: false }) },
   onUnload() { ++this.homeEpoch; this.stopShell?.() },
   onPrimary() {
     // The daily workflow starts with the plan, not another AI request.

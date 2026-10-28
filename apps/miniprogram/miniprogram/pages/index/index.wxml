@@ -5,16 +5,16 @@
       <text class="eyebrow">{{todayLabel}}</text>
       <text class="home-title">今天</text>
       <button wx:if="{{!loggedIn}}" class="home-primary" bindtap="onPrimary">进入我的规划 ›</button>
-      <text class="home-caption">{{readOnly ? '只读查看 · 不能编辑资料或运行 AI 评估' : assessmentReady ? '学业资料已就绪 · 可使用 AI 评估' : (loggedIn ? '补全学业资料后可使用 AI 评估' : '个人数据仅在登录后展示')}}</text>
+      <text wx:if="{{readOnly || !assessmentReady}}" class="home-caption">{{readOnly ? '只读查看' : loggedIn ? '学业资料待完善' : '登录后查看个人数据'}}</text>
       <text wx:if="{{!assessmentReady && !readOnly}}" class="home-minor-link" bindtap="onCompleteProfile">{{loggedIn ? '补全学业资料 ›' : '登录并建立档案 ›'}}</text>
     </view>
     <view class="home-schedule home-card">
       <view class="home-card-head"><text class="section-heading">课表</text><text class="home-card-link" bindtap="onPlanning">本周完整课表 ›</text></view>
       <view class="day-tabs"><view class="day-tab {{scheduleDay === 0 ? 'active' : ''}}" data-day="0" bindtap="onScheduleDay">今天</view><view class="day-tab {{scheduleDay === 1 ? 'active' : ''}}" data-day="1" bindtap="onScheduleDay">明天</view></view>
-      <text class="home-schedule-meta">{{scheduleDateLabel}}{{scheduleStage ? ' · ' + scheduleStage : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
+      <text class="home-schedule-meta">{{scheduleDateLabel}}{{scheduleStage ? ' · 档案阶段：' + scheduleStage : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
       <text wx:if="{{scheduleLoading}}" class="home-state">正在读取课表…</text>
       <view wx:elif="{{scheduleError}}" class="home-state"><text>{{scheduleError}}</text><text class="home-state-link" bindtap="onPlanning">进入规划页重试 ›</text></view>
-      <text wx:elif="{{!loggedIn}}" class="home-state">登录并绑定学员身份后，可查看个人课表。</text>
+      <text wx:elif="{{!loggedIn}}" class="home-state">登录后查看个人课表</text>
       <view wx:elif="{{scheduleState !== 'ready'}}" class="home-state"><text>{{scheduleState === 'holiday' ? '当前阶段没有学期课表' : scheduleState === 'missing' ? '尚未导入本学期课表' : scheduleState === 'before' ? '课表学期尚未开始' : scheduleState === 'date' ? '需设置本学期第一周周一' : '当天没有匹配课程'}}</text><text class="home-state-link" bindtap="onPlanning">{{scheduleState === 'empty' || scheduleState === 'holiday' ? '查看阶段规划 ›' : '前往课表管理 ›'}}</text></view>
       <block wx:else><view wx:for="{{scheduleCourses}}" wx:key="index" class="home-schedule-course {{item.next ? 'next-course' : ''}}">
         <view class="home-course-when"><text class="home-course-time">{{item.time}}</text><text wx:if="{{item.next}}" class="next-label">下一节</text></view>
@@ -26,7 +26,7 @@
       <text wx:if="{{planLoading}}" class="home-state">正在读取阶段规划…</text>
       <text wx:elif="{{planError}}" class="home-state">{{planError}}</text>
       <text wx:elif="{{planState === 'unbound'}}" class="home-state">绑定学员身份后，即可查看和编辑自己的阶段规划。</text>
-      <block wx:else><text class="home-plan-stage">阶段计划摘要 · 档案当前阶段：{{planStageLabel}}</text><view wx:for="{{planPreview}}" wx:key="title" class="home-plan-row"><text class="home-plan-name">{{item.title}}</text><text class="home-plan-status">{{item.status}}</text></view><text wx:if="{{!planPreview.length}}" class="home-state">本阶段暂无计划，进入规划页查看可用内容。</text></block>
+      <block wx:else><text class="home-plan-stage">档案阶段：{{planStageLabel}}</text><view wx:for="{{planPreview}}" wx:key="title" class="home-plan-row"><text class="home-plan-name">{{item.title}}</text><text class="home-plan-status">{{item.status}}</text></view><text wx:if="{{!planPreview.length}}" class="home-state">本阶段暂无计划，进入规划页查看可用内容。</text></block>
     </view>
     <view class="home-section-bar"><text class="section-heading">常用入口</text></view>
     <view class="action-list">
@@ -44,10 +44,32 @@
         <text class="action-title">AI 评估</text>
         <text class="action-more">›</text>
       </view>
+      <view class="action-row action-countdown" bindtap="onCountdownToggle" hover-class="action-pressed" aria-role="button" aria-label="查看或设置倒数日">
+        <view class="action-symbol"><text class="countdown-icon">⌛</text></view>
+        <text class="action-title">倒数日</text>
+        <text wx:if="{{countdowns.length}}" class="action-countdown-days">{{countdowns[0].remainingDays}} 天</text>
+        <text class="action-more">›</text>
+      </view>
       <view class="action-row action-consult" bindtap="onCustomerService" hover-class="action-pressed" aria-role="button" aria-label="联系九辰客服">
         <view class="action-symbol"><image class="action-icon" src="/assets/icons/service-active.png" mode="aspectFit" /></view>
         <text class="action-title">联系客服</text>
         <text class="action-more">›</text>
+      </view>
+    </view>
+    <view wx:if="{{countdownOpen}}" class="home-card countdown-panel">
+      <view class="home-card-head"><text class="section-heading">我的倒数日</text><text class="home-card-link" bindtap="onCountdownToggle">收起 ›</text></view>
+      <text class="countdown-local-note">仅保存在本机当前学员账号</text>
+      <view wx:for="{{countdowns}}" wx:key="id" class="countdown-item">
+        <view class="countdown-main"><text class="countdown-name">{{item.title}}</text><text class="countdown-date">{{item.date}}</text></view>
+        <text class="countdown-remaining">{{item.remainingDays === 0 ? '就是今天' : '还剩 ' + item.remainingDays + ' 天'}}</text>
+        <text class="countdown-remove" data-id="{{item.id}}" bindtap="onCountdownDelete">删除</text>
+      </view>
+      <view wx:if="{{countdowns.length < 8}}" class="countdown-editor">
+        <input class="countdown-input" maxlength="24" placeholder="事件名称，如：四六级考试" value="{{countdownTitle}}" bindinput="onCountdownTitleInput" />
+        <picker mode="date" start="{{countdownToday}}" end="2099-12-31" value="{{countdownDate}}" bindchange="onCountdownDateChange">
+          <view class="countdown-date-picker">目标日期：{{countdownDate}} ›</view>
+        </picker>
+        <button class="countdown-save" loading="{{countdownSaving}}" disabled="{{countdownSaving}}" bindtap="onCountdownSave">保存倒数日</button>
       </view>
     </view>
     <view class="service-section">
