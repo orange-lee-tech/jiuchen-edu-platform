@@ -24,7 +24,7 @@
   </view>
 
   <view wx:else class="student-layout">
-    <view wx:if="{{loadError && !studentName}}" class="plan-error"><text>{{loadError}}</text><button bindtap="onRetryPlan">重新加载规划</button></view>
+    <view wx:if="{{loadError && !studentName}}" class="plan-error"><text>{{loadError}}</text><button bindtap="onRetryPlan">重新加载规划</button><button wx:if="{{!readOnly}}" bindtap="onReviewCurrentStage">核对当前阶段</button><view class="stage-options"><view wx:for="{{stages}}" wx:key="code" class="stage-option" data-code="{{item.code}}" bindtap="onStageChange">{{item.label}}</view></view></view>
     <view wx:elif="{{loading && !studentName}}" class="plan-loading">正在读取你的阶段规划…</view>
     <block wx:else>
     <view class="student-tools surface">
@@ -36,6 +36,7 @@
 
     <view class="stage-picker surface">
       <view class="stage-picker-top"><view><text class="stage-picker-caption">档案当前阶段：{{actualStageLabel}}</text><text class="stage-picker-current">正在查看：{{currentStageLabel}}</text></view><text class="stage-picker-toggle" bindtap="onToggleStagePicker">{{stagePickerOpen ? '收起' : '选择学期'}} ›</text></view>
+      <view wx:if="{{!readOnly}}" class="stage-correction"><text bindtap="onReviewCurrentStage">按入学年份核对 ›</text><text wx:if="{{currentStageCode !== actualStageCode}}" bindtap="onSetViewedStage">设为当前阶段 ›</text></view>
       <view wx:if="{{stagePickerOpen}}" class="stage-group-list">
         <view wx:for="{{stageGroups}}" wx:for-item="group" wx:key="year" class="stage-group">
           <text class="stage-group-title">{{group.label}}</text>

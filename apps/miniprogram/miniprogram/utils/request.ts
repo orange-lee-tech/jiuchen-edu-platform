@@ -370,6 +370,14 @@ export function getMyClassroom(stageCode?: string): Promise<ClassroomView> {
   return request<ClassroomView>(`/me/classroom${query}`)
 }
 
+export function getCurrentStageSuggestion(): Promise<{ ok: true; currentStage: string | null; suggestedStage: string | null }> {
+  return request('/me/classroom/stage-suggestion')
+}
+
+export function setCurrentClassroomStage(stageCode: string, expectedCurrentStage: string | null): Promise<{ ok: true; currentStage: string }> {
+  return request('/me/classroom/current-stage', 'PUT', { stageCode, expectedCurrentStage })
+}
+
 export type PlanEditorItem = {
   name: string
   target?: string | null

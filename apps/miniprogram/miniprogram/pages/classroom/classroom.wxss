@@ -136,6 +136,7 @@ button::after { border:0; }
 .stage-option{padding:11rpx 18rpx;border-radius: 9rpx;background:#edf3f4;color:#365a70;font-size:22rpx;}
 .stage-option.active{background:#1d5779;color:#fff;border-bottom:3rpx solid #d8ad64;}
 .current-week-link{margin-top:12rpx;padding:12rpx 0;border-top:1rpx solid #ede7db;color:#236383;font-size:23rpx;font-weight:750;}
+.stage-correction{display:flex;flex-wrap:wrap;gap:16rpx;margin-top:12rpx;color:#236383;font-size:21rpx;line-height:1.5;}
 .classroom-layout{display:block;}
 .classroom-main{width:100%;}
 .stage-summary{background:#e9f0f1;border-left-color:#d6ad69;border-radius: 8rpx;}

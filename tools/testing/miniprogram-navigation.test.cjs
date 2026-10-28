@@ -799,6 +799,19 @@ test('compact planning selector keeps all academic years, holiday stages and wee
  assert.equal(page.data.currentStageCode,'junior-winter')
  assert.equal(page.data.stagePickerOpen,false)
 })
+
+test('setting the viewed stage requires confirmation and reloads only after server success',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
+ page.setData({currentStageCode:'junior-fall',currentStageLabel:'大三上',actualStageCode:'freshman-fall'})
+ let reloads=0;page.initializeClassroom=async()=>{reloads++}
+ page.onSetViewedStage();assert.equal(h.requests.length,0)
+ h.modals[0].success({confirm:false});assert.equal(h.requests.length,0)
+ page.onSetViewedStage();h.modals[1].success({confirm:true})
+ assert.equal(h.requests[0].method,'PUT');assert.match(h.requests[0].url,/\/me\/classroom\/current-stage$/)
+ assert.equal(h.requests[0].data.expectedCurrentStage,'freshman-fall')
+ h.respond(0,{ok:true,currentStage:'junior-fall'});await settle();await settle()
+ assert.equal(reloads,1)
+})
 test('account settings stay reachable without exposing destructive actions on the main Mine surface',()=>{
  const h=harness(),page=h.page('pages/profile/profile')
  const wxml=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')

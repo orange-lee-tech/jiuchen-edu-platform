@@ -6,6 +6,8 @@ import {
   getClassroomStages,
   getLatestScheduleImport,
   getMyClassroom,
+  getCurrentStageSuggestion,
+  setCurrentClassroomStage,
   type ClassroomCoachingRecord,
   type ClassroomMentor,
   type ClassroomPlan,
@@ -129,6 +131,7 @@ Page({
     stages: stageLabels(FALLBACK_STAGES),
     stageGroups: stageGroups(FALLBACK_STAGES), stagePickerOpen: false, actualStageLabel: '待确认',
     actualStageCode: '',
+    stageChangeBusy: false,
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
 
@@ -250,6 +253,44 @@ Page({
     void this.reloadStage(stage.code)
   },
   onToggleStagePicker() { this.setData({ stagePickerOpen: !this.data.stagePickerOpen }) },
+  async onReviewCurrentStage() {
+    if (isReadOnly() || this.data.stageChangeBusy) return
+    this.setData({ stageChangeBusy: true })
+    try {
+      const result = await getCurrentStageSuggestion()
+      const stage = (this.data.stages as ClassroomStage[]).find(item => item.code === result.suggestedStage)
+      if (!stage) {
+        wx.showModal({ title: '当前阶段待确认', content: '无法根据入学年份确定阶段。请在学期选择器中选择实际阶段，再设为当前。', showCancel: false })
+      } else if (stage.code === result.currentStage) {
+        wx.showToast({ title: '当前阶段与建议一致', icon: 'none' })
+      } else {
+        wx.showModal({ title: '核对当前阶段', content: `按普通四年制及入学年份估算为${stage.label}。如有休学或其他学制，请手动选择实际阶段。`, confirmText: '设为当前',
+          success: outcome => { if (outcome.confirm) void this.saveCurrentStage(stage.code, result.currentStage) } })
+      }
+    } catch { wx.showToast({ title: '暂无法读取阶段建议，请稍后重试', icon: 'none' }) }
+    finally { this.setData({ stageChangeBusy: false }) }
+  },
+  onSetViewedStage() {
+    if (isReadOnly() || this.data.stageChangeBusy) return
+    const code = this.data.currentStageCode, expected = this.data.actualStageCode || null
+    wx.showModal({ title: '设为当前阶段', content: `确认将${this.data.currentStageLabel}设为当前阶段？历史计划和课表会保留。`,
+      success: outcome => { if (outcome.confirm) void this.saveCurrentStage(code, expected) } })
+  },
+  async saveCurrentStage(code: string, expected: string | null) {
+    if (this.data.stageChangeBusy || isReadOnly()) return
+    const generation = this.viewGeneration
+    this.setData({ stageChangeBusy: true })
+    try {
+      const result = await setCurrentClassroomStage(code, expected)
+      if (generation !== this.viewGeneration) return
+      const index = (this.data.stages as ClassroomStage[]).findIndex(item => item.code === result.currentStage)
+      if (index < 0) throw new Error('unknown_stage')
+      this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage' })
+      await this.initializeClassroom()
+      wx.showToast({ title: '当前阶段已更新', icon: 'success' })
+    } catch { if (generation === this.viewGeneration) wx.showToast({ title: '阶段未更新，请刷新后重试', icon: 'none' }) }
+    finally { this.setData({ stageChangeBusy: false }) }
+  },
   async reloadStage(stageCode: string) {
     const generation = this.viewGeneration
     this.setData({ loading: true, loadError: '' })
