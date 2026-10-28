@@ -70,7 +70,13 @@ Page({
   },
   onCountdownToggle() {
     if (!this.countdownOwner) { wx.showToast({title:'登录学员身份后可设置',icon:'none'}); return }
-    this.setData({countdownOpen:!this.data.countdownOpen,countdownTitle:'',countdownDate:dateText(new Date())})
+    const opening = !this.data.countdownOpen
+    this.setData({
+      countdownOpen: opening, countdownTitle: '', countdownDate: dateText(new Date()),
+    }, () => {
+      // Editor is below the shortcut grid: without scrolling the tap looks unresponsive.
+      if (opening) wx.pageScrollTo({selector:'.countdown-panel',duration:220})
+    })
   },
   onCountdownTitleInput(event:WechatMiniprogram.Input) {
     this.setData({countdownTitle:String(event.detail.value||'')})

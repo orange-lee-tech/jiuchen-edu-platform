@@ -1538,6 +1538,7 @@ test('home countdown is isolated by authenticated identity and saved only on dev
  const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  assert.match(index,/COUNTDOWN_PREFIX \+ this\.countdownOwner/)
  assert.match(index,/this\.loadCountdowns\(studentId\)/)
+ assert.match(index,/pageScrollTo\(\{selector:'\.countdown-panel',duration:220\}\)/)
  assert.match(index,/wx\.setStorageSync\(this\.countdownKey\(\),entries\)/)
  assert.match(template,/bindtap="onCountdownSave"/)
  assert.match(template,/bindtap="onCountdownDelete"/)
