@@ -1508,3 +1508,33 @@ test('the student can save their own name and refresh server identity',async()=>
  await flow
  assert.equal(h.auth.getSavedAuthResult().user.displayName,'李同学')
 })
+
+test('home countdown is isolated by authenticated identity and saved only on device',()=>{
+ const index=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
+ const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+ assert.match(index,/COUNTDOWN_PREFIX \+ this\.countdownOwner/)
+ assert.match(index,/this\.loadCountdowns\(studentId\)/)
+ assert.match(index,/wx\.setStorageSync\(this\.countdownKey\(\),entries\)/)
+ assert.match(template,/bindtap="onCountdownSave"/)
+ assert.match(template,/bindtap="onCountdownDelete"/)
+ assert.match(template,/仅保存在本机当前学员账号/)
+})
+test('school photo provenance remains in data while favorites have separate full-width actions',()=>{
+ const detail=fs.readFileSync(path.join(root,'packages/schools/detail/detail.wxml'),'utf8')
+ const profile=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
+ const school=fs.readFileSync(path.join(root,'packages/schools/detail/detail.ts'),'utf8')
+ assert.doesNotMatch(detail,/class="photo-credit"/)
+ assert.match(detail,/bindtap="onPreviewPhoto"/)
+ assert.match(school,/photoLicense:/)
+ assert.match(profile,/class="favorite-row"/)
+ assert.match(profile,/class="favorite-actions"/)
+ assert.match(profile,/bindtap="onFavoriteOpen"/)
+ assert.match(profile,/bindtap="onFavoriteReader"/)
+})
+test('admin identity binding jumps to the visible editor and offers multi-role entry',()=>{
+ const admin=fs.readFileSync(path.join(root,'pages/admin/admin.ts'),'utf8')
+ const template=fs.readFileSync(path.join(root,'pages/admin/admin.wxml'),'utf8')
+ assert.match(admin,/pageScrollTo\(\{scrollTop:0,duration:240\}\)/)
+ assert.match(admin,/onOpenMyIdentity\(\)/)
+ assert.match(template,/bindtap="onOpenMyIdentity"/)
+})
