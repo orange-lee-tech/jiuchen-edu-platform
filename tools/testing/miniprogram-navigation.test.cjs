@@ -1269,7 +1269,7 @@ test('home keeps profile completion accessible without displacing the plan CTA',
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  const page=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
  assert.match(source,/wx:if="\{\{!assessmentReady && !readOnly\}\}".*bindtap="onCompleteProfile"/)
- assert.match(source,/只读查看 · 不能编辑资料或运行 AI 评估/)
+ assert.match(source,/只读模式 · 无编辑和评估权限/)
  assert.match(fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8'),/地点：\{\{item.location \|\| '暂无'\}\}/)
  assert.match(page,/onCompleteProfile\(\)/)
 })
