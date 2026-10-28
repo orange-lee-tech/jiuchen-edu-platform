@@ -622,40 +622,39 @@ Avoid:
 
 Shape should communicate grouping, not decoration.
 
-### 10.2 Surface — not pure-white everywhere
+### 10.2 Surface — restrained warm-neutral and blue hierarchy
 
-Do not place every block on #FFFFFF.
+Do not place every block on pure white, and do not make the whole screen a gold-tinted card wall.
 
-Use a restrained two-level neutral / blue-gray surface system.
-
-Recommended starting tokens:
+The current UI redesign candidate adopts a warm-neutral canvas, soft ivory primary surfaces, purposeful blue actions and sparse muted-gold warmth:
 
 ```text
-Canvas             #F2F4F6
-Surface Primary    #FAFBFC
-Surface Secondary  #EDF2F7
-Surface Selected   #E7EEF8
+Canvas             #F4F2ED
+Surface Primary    #FFFDF9
+Surface Secondary  #F3F7FC
+Surface Selected   #EAF2FA
+Human Note          #FAF1DB
 
-Text Primary       #18202A
-Text Secondary     #5F6B78
-Text Muted         #89939E
+Text Primary       #223246
+Text Secondary     #5F6874
+Text Muted         #8B929D
 
-Line Strong        #D8DEE6
-Line Soft          #E5E9EE
+Line Strong        #E8E2D6
+Line Soft          #CFDDEC
 
-Brand Action       #2F6FED
-Brand Deep         #2459BE
-Brand Soft         #E7EEF8
+Brand Primary      #173E67
+Brand Secondary    #245681
+Brand Soft         #EAF2FA
+Muted Gold         #896526
 ```
 
 Ratio guideline (**starting balance, not an automatic pass/fail percentage**):
 
 - roughly 70–80% neutral canvas / text / lines overall;
-- roughly 15–25% secondary blue-gray or other approved **purposeful** tinted surfaces;
+- roughly 15–25% secondary tinted surfaces;
 - strong brand / semantic color concentrated on focal actions and real states (often <10%, with screen-specific justified exceptions).
 
-A “calm” interface is not an all-gray interface: visible brand-blue action and selected states, honest green/amber/red status cues and sparse human-guidance warmth should create intentional focal rhythm where needed. No gratuitous rainbow; no color-free card wall. Semantic content must remain legible without color. Refer to the updated `jiuchen-v1-design-system.md` §§6 and 9 for interaction-level tests.
-
+A “calm” interface is not an all-gray interface or an all-gold interface. Blue identifies action and current state; green/amber/red communicate real semantic states; muted gold is reserved for sparse human-guidance warmth or a meaningful highlight. No gratuitous rainbow; no color-free card wall. Semantic content must remain legible without color.
 ### 10.3 Secondary tonal hierarchy
 
 Use color value to show information hierarchy.

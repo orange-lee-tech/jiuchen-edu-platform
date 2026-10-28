@@ -16,8 +16,8 @@ page {
 .surface {
   background: #fffdf9;
   border: 1rpx solid #e8e2d6;
-  border-radius: 22rpx;
-  box-shadow: 0 8rpx 24rpx rgba(28, 52, 77, 0.05);
+  border-radius: 8rpx;
+  box-shadow: 0 4rpx 12rpx rgba(28, 52, 77, 0.04);
 }
 
 .section-title {
@@ -76,8 +76,8 @@ page {
   box-sizing: border-box;
   background: #fffdf9;
   border: 1rpx solid #e8e2d6;
-  border-radius: 22rpx;
-  box-shadow: 0 8rpx 24rpx rgba(28, 52, 77, 0.05);
+  border-radius: 8rpx;
+  box-shadow: 0 4rpx 12rpx rgba(28, 52, 77, 0.04);
 }
 
 .jc-card--interactive:active {
@@ -94,7 +94,7 @@ page {
   margin: 0;
   padding: 0 28rpx;
   border: 0;
-  border-radius: 18rpx;
+  border-radius: 8rpx;
   font-size: 27rpx;
   font-weight: 700;
   line-height: 1.2;
@@ -147,7 +147,7 @@ page {
 .jc-button--compact {
   min-height: 64rpx;
   padding: 0 22rpx;
-  border-radius: 999rpx;
+  border-radius: 6rpx;
   font-size: 23rpx;
 }
 
@@ -156,8 +156,8 @@ page {
   min-height: 88rpx;
   padding: 20rpx 22rpx;
   border: 1rpx solid #dfe4ec;
-  border-radius: 16rpx;
-  background: #ffffff;
+  border-radius: 6rpx;
+  background: #fffdf9;
 }
 
 .jc-field--focus {
