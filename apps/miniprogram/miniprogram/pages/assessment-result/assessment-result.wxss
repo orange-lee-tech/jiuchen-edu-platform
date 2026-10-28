@@ -68,7 +68,7 @@
   min-width: 0;
   margin: 0;
   border: 1rpx solid #cfd6df;
-  border-radius: 10rpx;
+  border-radius: 8rpx;
   background: #fff;
   color: #334155;
   font-size: 23rpx;
@@ -96,7 +96,7 @@
   margin-bottom: 18rpx;
   padding: 26rpx;
   border: 1rpx solid #dfe4ea;
-  border-radius: 10rpx;
+  border-radius: 8rpx;
   background: #fff;
 }
 
@@ -419,7 +419,7 @@
   max-height: 78vh;
   overflow-y: auto;
   padding: 28rpx 28rpx calc(36rpx + env(safe-area-inset-bottom));
-  border-radius: 16rpx 16rpx 0 0;
+  border-radius: 10rpx 10rpx 0 0;
   background: #fff;
 }
 

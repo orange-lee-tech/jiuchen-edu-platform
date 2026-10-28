@@ -44,7 +44,7 @@
   margin-bottom: 18rpx;
   padding: 24rpx;
   border: 1rpx solid #eceef3;
-  border-radius: 22rpx;
+  border-radius: 8rpx;
   background: #ffffff;
 }
 
@@ -96,7 +96,7 @@
   min-height: 70rpx;
   padding: 0 16rpx;
   border: 1rpx solid #e1e4e9;
-  border-radius: 14rpx;
+  border-radius: 6rpx;
   background: #fafbfc;
   color: #40454d;
   font-size: 21rpx;
@@ -122,7 +122,7 @@
 .remove {
   margin: 0;
   padding: 0 16rpx;
-  border-radius: 12rpx;
+  border-radius: 8rpx;
   background: #fff1ef;
   color: #b4534b;
   font-size: 20rpx;
@@ -165,7 +165,7 @@
 
 .primary,
 .secondary {
-  border-radius: 16rpx;
+  border-radius: 8rpx;
   font-size: 24rpx;
   font-weight: 700;
 }
@@ -260,7 +260,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 14rpx;
+  border-radius: 8rpx;
   background: #2f6fed;
   color: #ffffff;
   font-size: 22rpx;
@@ -294,8 +294,8 @@
 .credit-subtitle { display:block; font-size:22rpx; line-height:1.65; color:#53677d; }
 .credit-status { display:block; color:#987026; font-size:22rpx; margin:12rpx 0; }
 .credit-offers { display:flex; gap:12rpx; flex-wrap:wrap; margin:18rpx 0 6rpx; }
-.credit-offer { margin:0; flex:1 1 220rpx; padding:14rpx; font-size:24rpx; line-height:1.6; color:white; background:#2f6fed; border-radius:8rpx; }
-.credit-verify { margin:16rpx 0 0; background:#e7eef8; color:#2459be; border-radius:6rpx; font-size:24rpx; }
+.credit-offer { margin:0; flex:1 1 220rpx; padding:14rpx; font-size:24rpx; line-height:1.6; color:white; background:#2f6fed; border-radius: 8rpx; }
+.credit-verify { margin:16rpx 0 0; background:#e7eef8; color:#2459be; border-radius: 8rpx; font-size:24rpx; }
 
 .context-card{border-left:5rpx solid #0d9488;background:#f7fcfb;}
 .context-choice{display:flex;gap:20rpx;align-items:center;justify-content:space-between;padding:19rpx 0;border-top:1rpx solid #dceee9;}

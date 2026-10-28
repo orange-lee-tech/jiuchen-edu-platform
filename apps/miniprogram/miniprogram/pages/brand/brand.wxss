@@ -7,7 +7,7 @@
 
 .hero {
   padding: 38rpx 30rpx;
-  border-radius: 28rpx;
+  border-radius: 8rpx;
   background: linear-gradient(145deg, #173b78 0%, #285cae 100%);
   color: #fff;
 }
@@ -74,7 +74,7 @@
   margin-top: 18rpx;
   padding: 26rpx;
   border: 1rpx solid #eceef3;
-  border-radius: 22rpx;
+  border-radius: 8rpx;
   background: #fff;
 }
 
@@ -151,7 +151,7 @@
 .highlight {
   margin-top: 18rpx;
   padding: 18rpx;
-  border-radius: 16rpx;
+  border-radius: 8rpx;
   background: #f8faff;
 }
 
@@ -204,7 +204,7 @@
 .service-item {
   margin-top: 14rpx;
   padding: 18rpx;
-  border-radius: 14rpx;
+  border-radius: 8rpx;
   background: #fafbfc;
 }
 

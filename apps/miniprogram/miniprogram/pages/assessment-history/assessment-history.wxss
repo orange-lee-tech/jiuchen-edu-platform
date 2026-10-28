@@ -5,7 +5,7 @@
 .title { margin-top: 10rpx; color: #20242b; font-size: 38rpx; font-weight: 800; }
 .desc { margin-top: 12rpx; color: #747b86; font-size: 23rpx; line-height: 1.65; }
 .assessment-list { display: flex; flex-direction: column; gap: 18rpx; }
-.assessment-card, .state-card { padding: 26rpx; border: 1rpx solid #e9edf3; border-radius: 22rpx; background: #fff; }
+.assessment-card, .state-card { padding: 26rpx; border: 1rpx solid #e9edf3; border-radius: 8rpx; background: #fff; }
 .card-head, .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 16rpx; }
 .school { flex: 1; color: #272b32; font-size: 26rpx; font-weight: 800; }
 .status { padding: 6rpx 14rpx; border-radius: 999rpx; background: #eef1f5; color: #6f7680; font-size: 19rpx; }
@@ -17,5 +17,5 @@
 .link { color: #2f6fed; font-weight: 700; }
 .empty-title { color: #30343b; font-size: 28rpx; font-weight: 800; text-align: center; }
 .empty-desc { margin: 14rpx 0 24rpx; color: #858b94; font-size: 22rpx; line-height: 1.6; text-align: center; }
-.primary { border-radius: 16rpx; background: #2f6fed; color: #fff; font-size: 24rpx; font-weight: 700; }
+.primary { border-radius: 8rpx; background: #2f6fed; color: #fff; font-size: 24rpx; font-weight: 700; }
 .primary::after { border: 0; }
