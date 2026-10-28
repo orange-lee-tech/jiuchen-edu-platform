@@ -2,11 +2,14 @@
   <role-shell view-slot="home" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready' && shellKind === 'student'}}">
     <view class="home-intro {{loggedIn ? 'home-intro-compact' : ''}}">
-      <text class="eyebrow">{{todayLabel}}</text>
-      <text class="home-title">今天</text>
-      <button wx:if="{{!loggedIn}}" class="home-primary" bindtap="onPrimary">进入我的规划 ›</button>
-      <text wx:if="{{readOnly || !assessmentReady}}" class="home-caption">{{readOnly ? '只读模式 · 无编辑和评估权限' : loggedIn ? '学业资料待完善' : '登录后查看个人数据'}}</text>
-      <text wx:if="{{!assessmentReady && !readOnly}}" class="home-minor-link" bindtap="onCompleteProfile">{{loggedIn ? '补全学业资料 ›' : '登录并建立档案 ›'}}</text>
+      <image class="home-hero-art" src="/assets/jiuchen-visual-v1/banners/today-campus-hero.webp" mode="aspectFill" aria-hidden="true" />
+      <view class="home-intro-content">
+        <text class="eyebrow">{{todayLabel}}</text>
+        <text class="home-title">今天</text>
+        <button wx:if="{{!loggedIn}}" class="home-primary" bindtap="onPrimary">进入我的规划 ›</button>
+        <text wx:if="{{readOnly || !assessmentReady}}" class="home-caption">{{readOnly ? '只读模式 · 无编辑和评估权限' : loggedIn ? '学业资料待完善' : '登录后查看个人数据'}}</text>
+        <text wx:if="{{!assessmentReady && !readOnly}}" class="home-minor-link" bindtap="onCompleteProfile">{{loggedIn ? '补全学业资料 ›' : '登录并建立档案 ›'}}</text>
+      </view>
     </view>
     <view class="home-schedule home-card">
       <view class="home-card-head"><text class="section-heading">课表</text><text class="home-card-link" bindtap="onPlanning">本周完整课表 ›</text></view>
@@ -32,27 +35,27 @@
       <view class="home-section-bar"><text class="section-heading">常用入口</text></view>
       <view class="action-list">
 <view class="action-row action-assessment" bindtap="onAssessment" hover-class="action-pressed" aria-role="button" aria-label="AI评估与历史结果">
-        <view class="action-symbol"><image class="action-icon" src="/assets/icons/assessment-active.png" mode="aspectFit" /></view>
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/ai-assessment.webp" mode="aspectFit" /></view>
         <text class="action-title">AI 评估</text>
         <text class="action-more">›</text>
       </view>
 <view class="action-row action-schools" bindtap="onSchools" hover-class="action-pressed" aria-role="button" aria-label="筛选院校库">
-        <view class="action-symbol"><image class="action-icon" src="/assets/icons/opportunity-active.png" mode="aspectFit" /></view>
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/library.webp" mode="aspectFit" /></view>
         <text class="action-title">院校库</text><text class="action-more">›</text>
       </view>
 <view class="action-row action-news" bindtap="onNews" hover-class="action-pressed" aria-role="button" aria-label="阅读保研资讯">
-        <view class="action-symbol"><image class="action-icon" src="/assets/icons/opportunity-active.png" mode="aspectFit" /></view>
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/news.webp" mode="aspectFit" /></view>
         <text class="action-title">保研资讯</text>
         <text class="action-more">›</text>
       </view>
 <view class="action-row action-countdown" bindtap="onCountdownToggle" hover-class="action-pressed" aria-role="button" aria-label="查看或设置倒数日">
-        <view class="action-symbol"><text class="countdown-icon">⌛</text></view>
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/clock.webp" mode="aspectFit" /></view>
         <text class="action-title">倒数日</text>
         <text wx:if="{{countdowns.length}}" class="action-countdown-days">{{countdowns[0].remainingDays}} 天</text>
         <text class="action-more">›</text>
       </view>
 <view class="action-row action-consult" bindtap="onCustomerService" hover-class="action-pressed" aria-role="button" aria-label="联系九辰客服">
-        <view class="action-symbol"><image class="action-icon" src="/assets/icons/service-active.png" mode="aspectFit" /></view>
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/headset.webp" mode="aspectFit" /></view>
         <text class="action-title">联系客服</text>
         <text class="action-more">›</text>
       </view>

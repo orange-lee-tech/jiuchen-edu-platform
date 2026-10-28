@@ -1282,6 +1282,21 @@ test('home shortcuts prioritize core actions and retain the countdown tile',()=>
  assert.ok(positions.every((position,index)=>index===0 || positions[index-1]<position),'home shortcut order must stay intentional')
 })
 
+test('today artwork references only the six selected decodable WebP assets',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+ const assets=['banners/today-campus-hero.webp','icons/ai-assessment.webp','icons/library.webp','icons/news.webp','icons/clock.webp','icons/headset.webp']
+ for(const asset of assets){
+  const resource='/assets/jiuchen-visual-v1/'+asset
+  assert.ok(source.includes(`src="${resource}"`),`${asset} must be referenced from Today`)
+  const bytes=fs.readFileSync(path.join(root,resource.slice(1)))
+  assert.equal(bytes.toString('ascii',0,4),'RIFF')
+  assert.equal(bytes.toString('ascii',8,16),'WEBPVP8X')
+  const width=bytes.readUIntLE(24,3)+1, height=bytes.readUIntLE(27,3)+1
+  assert.deepEqual([width,height],asset.startsWith('banners/')?[1344,516]:[256,256])
+ }
+ assert.equal((source.match(/\/assets\/jiuchen-visual-v1\//g)||[]).length,assets.length)
+})
+
 test('PKU media/map are real sourced assets and consultation uses the shared chat entry',()=>{
  const data=fs.readFileSync(path.join(root,'packages/schools/data.ts'),'utf8')
  const wxml=fs.readFileSync(path.join(root,'packages/schools/detail/detail.wxml'),'utf8')

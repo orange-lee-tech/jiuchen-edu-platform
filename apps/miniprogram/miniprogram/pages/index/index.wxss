@@ -92,7 +92,6 @@ button::after{border:0;}
 
 /* Compact self-service countdown; on-device, identity-scoped, no API writes. */
 .action-countdown{min-height:220rpx;}
-.countdown-icon{font-size:36rpx;line-height:1;color:#235a78;}
 .action-countdown-days{display:block;margin-top:5rpx;color:#896526;font-size:21rpx;font-weight:750;}
 .countdown-panel{margin-top:18rpx;}
 .countdown-local-note{display:block;margin-top:8rpx;font-size:19rpx;color:#6b7c87;}
@@ -166,4 +165,62 @@ button::after{border:0;}
 .home-shortcuts .action-consult {
   min-height: 96rpx;
   border-top: 1rpx solid #d9e5dd;
+}
+
+/* B2: compact campus art and source-colored icons on the existing Today workbench. */
+.home-intro {
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  min-height: 170rpx;
+  padding: 22rpx 26rpx;
+  border-radius: 16rpx;
+  background: #174e78;
+  box-shadow: none;
+}
+
+.home-intro-compact {
+  min-height: 150rpx;
+  padding: 18rpx 24rpx;
+}
+
+.home-hero-art {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.home-intro-content {
+  position: relative;
+  z-index: 1;
+  max-width: 62%;
+}
+
+.home-intro .eyebrow { color: #f3dfa9; }
+.home-intro .home-title { margin-top: 3rpx; }
+.home-intro .home-caption { color: #eef7fa; }
+.home-intro .home-minor-link { color: #ffe3ae; }
+
+.home-shortcuts .action-symbol,
+.home-shortcuts .action-consult .action-symbol {
+  width: 74rpx;
+  height: 74rpx;
+  background: transparent;
+}
+
+.home-shortcuts .action-icon {
+  width: 72rpx;
+  height: 72rpx;
+}
+
+.home-shortcuts .action-consult .action-symbol {
+  width: 62rpx;
+  height: 62rpx;
+}
+
+.home-shortcuts .action-consult .action-icon {
+  width: 60rpx;
+  height: 60rpx;
 }
