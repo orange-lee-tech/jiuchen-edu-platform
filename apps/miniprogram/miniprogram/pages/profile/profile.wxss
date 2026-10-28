@@ -154,3 +154,10 @@ button::after{border:0;}
 .identity-number{margin-top:12rpx;padding:9rpx 12rpx;background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.18);}
 .identity-number-label{font-size:20rpx;color:#d7e3ec;}
 .identity-code{font-size:23rpx;font-weight:650;letter-spacing:0;}
+
+/* Favorites: long titles must never be squeezed into a one-character column. */
+.favorite-row{box-sizing:border-box;width:100%;padding:19rpx;background:#fffdf9;border:1rpx solid #e4ded2;border-left:5rpx solid #aac3c8;border-radius:8rpx;}
+.favorite-title{display:block;width:100%;color:#193f5c;font-size:27rpx;line-height:1.5;font-weight:750;overflow-wrap:anywhere;word-break:break-word;}
+.favorite-actions{display:flex;align-items:stretch;gap:13rpx;margin-top:17rpx;}
+.favorite-action{display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:1;min-width:0;min-height:70rpx;padding:9rpx 12rpx;background:#e8eff0;color:#1d5876;font-size:23rpx;font-weight:700;border-radius:6rpx;white-space:nowrap;}
+.favorite-reader{background:#173e67;color:#fff;}

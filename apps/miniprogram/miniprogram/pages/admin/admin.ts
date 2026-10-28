@@ -939,6 +939,7 @@ Page({
     wx.showActionSheet({ itemList: ['生成新编号', '绑定已有编号'], success: result => this.setData({ formMode: result.tapIndex === 0 ? 'create' : 'bind' }) })
   },
   onCloseForm() { if (!this.data.actionLoading) this.setData({ formMode: '' }) },
+  onOpenMyIdentity() { wx.switchTab({url:'/pages/profile/profile'}) },
   onCopyId(event: WechatMiniprogram.BaseEvent) {
     const item = this.data.internalIds.find(i => i.id === event.currentTarget.dataset.id)
     if (item) wx.setClipboardData({ data: item.businessId, fail: () => wx.showToast({ title: '复制失败，请重试', icon: 'none' }) })
@@ -952,7 +953,13 @@ Page({
     wx.showActionSheet({ itemList: view.actions, success: result => {
       const action = view.actions[result.tapIndex]
       if (action === '绑定账号') {
-        this.setData({ formMode: 'bind', bindIdIndex: this.data.availableIds.findIndex(i => i.id === item.id) }); return
+        const index = this.data.availableIds.findIndex(i => i.id === item.id)
+        if (index < 0) {
+          wx.showToast({title:'编号当前不可绑定，请刷新列表',icon:'none'})
+          return
+        }
+        this.setData({ formMode: 'bind', bindIdIndex: index }, () => wx.pageScrollTo({scrollTop:0,duration:240}))
+        return
       }
       if (action === '暂停访问') this.onPauseId(event)
       if (action === '恢复编号') this.onRestoreId(event)

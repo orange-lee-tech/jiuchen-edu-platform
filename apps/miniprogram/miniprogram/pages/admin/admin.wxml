@@ -9,7 +9,7 @@
   <view wx:elif="{{loadError}}" class="card"><text class="card-title">数据未能读取</text><text class="card-note">{{loadError}}</text><button class="primary" bindtap="loadData">重新读取</button></view>
 
   <block wx:elif="{{section === 'admin-users'}}">
-    <view class="list-toolbar"><text class="card-title">内部编号</text><button class="mini" disabled="{{actionLoading}}" bindtap="onNewEntry">新增 / 绑定</button></view>
+    <view class="list-toolbar"><text class="card-title">内部编号</text><button class="mini" disabled="{{actionLoading}}" bindtap="onNewEntry">新增 / 绑定</button><button class="mini" bindtap="onOpenMyIdentity">我的兼任身份</button></view>
     <view wx:if="{{formMode === 'create'}}" class="card form-card">
       <text class="card-title">生成内部ID</text>
       <picker range="{{idTypes}}" range-key="label" value="{{newIdTypeIndex}}" bindchange="onIdTypeChange">
