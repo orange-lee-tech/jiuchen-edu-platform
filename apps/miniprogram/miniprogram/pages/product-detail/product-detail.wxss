@@ -12,7 +12,7 @@
   margin-bottom: 18rpx;
   overflow: hidden;
   border: 1rpx solid #e8ebf0;
-  border-radius: 24rpx;
+  border-radius: 8rpx;
   background: #fff;
 }
 
@@ -98,7 +98,7 @@
 .consult {
   margin-top: 24rpx;
   border: 0;
-  border-radius: 16rpx;
+  border-radius: 8rpx;
   background: #2f6fed;
   color: #fff;
   font-size: 25rpx;
@@ -165,7 +165,7 @@
   min-height: 120rpx;
   box-sizing: border-box;
   padding: 18rpx;
-  border-radius: 16rpx;
+  border-radius: 8rpx;
   background: #f7f9fc;
 }
 
@@ -275,7 +275,7 @@
   gap: 18rpx;
   padding: 20rpx 22rpx;
   border: 1rpx solid #dfe6f6;
-  border-radius: 22rpx;
+  border-radius: 8rpx;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 10rpx 36rpx rgba(55, 76, 120, 0.12);
 }

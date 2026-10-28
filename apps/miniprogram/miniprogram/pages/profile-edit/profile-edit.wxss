@@ -8,7 +8,7 @@
 .intro-card,
 .form-card {
   border: 1rpx solid #eceef3;
-  border-radius: 24rpx;
+  border-radius: 8rpx;
   background: #ffffff;
   box-shadow: 0 8rpx 24rpx rgba(33, 40, 58, 0.04);
 }
@@ -67,7 +67,7 @@
 
 .save-button {
   margin-top: 26rpx;
-  border-radius: 18rpx;
+  border-radius: 8rpx;
   background: #6b53d8;
   color: #ffffff;
   font-size: 27rpx;
@@ -91,7 +91,7 @@
   margin-top: 20rpx;
   padding: 26rpx;
   border: 1rpx solid #eceef3;
-  border-radius: 24rpx;
+  border-radius: 8rpx;
   background: #ffffff;
   box-shadow: 0 8rpx 24rpx rgba(33, 40, 58, 0.04);
 }
@@ -145,7 +145,7 @@
   box-sizing: border-box;
   padding: 0 18rpx;
   border: 1rpx solid #dfe2e8;
-  border-radius: 14rpx;
+  border-radius: 6rpx;
   background: #fafbfc;
   font-size: 24rpx;
 }
@@ -155,7 +155,7 @@
   width: 176rpx;
   min-height: 72rpx;
   margin: 0;
-  border-radius: 14rpx;
+  border-radius: 8rpx;
   background: #6b53d8;
   color: #ffffff;
   font-size: 22rpx;
@@ -198,7 +198,7 @@
 .role-note {
   margin-top: 20rpx;
   padding: 24rpx;
-  border-radius: 20rpx;
+  border-radius: 8rpx;
   background: #f0edff;
   color: #6f668d;
   font-size: 21rpx;
