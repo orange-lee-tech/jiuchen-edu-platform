@@ -28,32 +28,34 @@
       <text wx:elif="{{planState === 'unbound'}}" class="home-state">绑定学员身份后，即可查看和编辑自己的阶段规划。</text>
       <block wx:else><text class="home-plan-stage">档案阶段：{{planStageLabel}}</text><view wx:for="{{planPreview}}" wx:key="title" class="home-plan-row"><text class="home-plan-name">{{item.title}}</text><text class="home-plan-status">{{item.status}}</text></view><text wx:if="{{!planPreview.length}}" class="home-state">本阶段暂无计划，进入规划页查看可用内容。</text></block>
     </view>
-    <view class="home-section-bar"><text class="section-heading">常用入口</text></view>
-    <view class="action-list">
-      <view class="action-row action-news" bindtap="onNews" hover-class="action-pressed" aria-role="button" aria-label="阅读保研资讯">
-        <view class="action-symbol"><image class="action-icon" src="/assets/icons/opportunity-active.png" mode="aspectFit" /></view>
-        <text class="action-title">保研资讯</text>
-        <text class="action-more">›</text>
-      </view>
-      <view class="action-row action-schools" bindtap="onSchools" hover-class="action-pressed" aria-role="button" aria-label="筛选院校库">
-        <view class="action-symbol"><image class="action-icon" src="/assets/icons/opportunity-active.png" mode="aspectFit" /></view>
-        <text class="action-title">院校库</text><text class="action-more">›</text>
-      </view>
-      <view class="action-row action-assessment" bindtap="onAssessment" hover-class="action-pressed" aria-role="button" aria-label="AI评估与历史结果">
+    <view class="home-shortcuts home-card">
+      <view class="home-section-bar"><text class="section-heading">常用入口</text></view>
+      <view class="action-list">
+<view class="action-row action-assessment" bindtap="onAssessment" hover-class="action-pressed" aria-role="button" aria-label="AI评估与历史结果">
         <view class="action-symbol"><image class="action-icon" src="/assets/icons/assessment-active.png" mode="aspectFit" /></view>
         <text class="action-title">AI 评估</text>
         <text class="action-more">›</text>
       </view>
-      <view class="action-row action-countdown" bindtap="onCountdownToggle" hover-class="action-pressed" aria-role="button" aria-label="查看或设置倒数日">
+<view class="action-row action-schools" bindtap="onSchools" hover-class="action-pressed" aria-role="button" aria-label="筛选院校库">
+        <view class="action-symbol"><image class="action-icon" src="/assets/icons/opportunity-active.png" mode="aspectFit" /></view>
+        <text class="action-title">院校库</text><text class="action-more">›</text>
+      </view>
+<view class="action-row action-news" bindtap="onNews" hover-class="action-pressed" aria-role="button" aria-label="阅读保研资讯">
+        <view class="action-symbol"><image class="action-icon" src="/assets/icons/opportunity-active.png" mode="aspectFit" /></view>
+        <text class="action-title">保研资讯</text>
+        <text class="action-more">›</text>
+      </view>
+<view class="action-row action-countdown" bindtap="onCountdownToggle" hover-class="action-pressed" aria-role="button" aria-label="查看或设置倒数日">
         <view class="action-symbol"><text class="countdown-icon">⌛</text></view>
         <text class="action-title">倒数日</text>
         <text wx:if="{{countdowns.length}}" class="action-countdown-days">{{countdowns[0].remainingDays}} 天</text>
         <text class="action-more">›</text>
       </view>
-      <view class="action-row action-consult" bindtap="onCustomerService" hover-class="action-pressed" aria-role="button" aria-label="联系九辰客服">
+<view class="action-row action-consult" bindtap="onCustomerService" hover-class="action-pressed" aria-role="button" aria-label="联系九辰客服">
         <view class="action-symbol"><image class="action-icon" src="/assets/icons/service-active.png" mode="aspectFit" /></view>
         <text class="action-title">联系客服</text>
         <text class="action-more">›</text>
+      </view>
       </view>
     </view>
     <view wx:if="{{countdownOpen}}" class="home-card countdown-panel">

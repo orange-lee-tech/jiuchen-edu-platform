@@ -1273,6 +1273,15 @@ test('home keeps profile completion accessible without displacing the plan CTA',
  assert.match(fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8'),/地点：\{\{item.location \|\| '暂无'\}\}/)
  assert.match(page,/onCompleteProfile\(\)/)
 })
+test('home shortcuts prioritize core actions and retain the countdown tile',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+ assert.match(source,/class="home-shortcuts home-card"/)
+ const names=['action-assessment','action-schools','action-news','action-countdown','action-consult']
+ const positions=names.map(name=>source.indexOf('class="action-row '+name+'"'))
+ assert.ok(positions.every(position=>position>=0),'all expected home shortcuts must remain')
+ assert.ok(positions.every((position,index)=>index===0 || positions[index-1]<position),'home shortcut order must stay intentional')
+})
+
 test('PKU media/map are real sourced assets and consultation uses the shared chat entry',()=>{
  const data=fs.readFileSync(path.join(root,'packages/schools/data.ts'),'utf8')
  const wxml=fs.readFileSync(path.join(root,'packages/schools/detail/detail.wxml'),'utf8')
