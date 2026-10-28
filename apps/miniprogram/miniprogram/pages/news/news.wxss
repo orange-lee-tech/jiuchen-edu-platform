@@ -15,7 +15,7 @@
 .news-head { flex-wrap: wrap; }
 .news-head > view { flex: 1; min-width: 240rpx; }
 .page-shell .page-desc { color: #5f6b78; font-size: 26rpx; line-height: 1.75; }
-.surface { border-radius: 6rpx; background: #fafbfc; box-shadow: none; border-color: #d8dee6; }
+.surface { border-radius: 8rpx; background: #fafbfc; box-shadow: none; border-color: #d8dee6; }
 .page-shell .category { font-size: 25rpx; padding: 16rpx 20rpx; border-radius: 6rpx; }
 .page-shell .category.active { background: #2f6fed; color: #fff; }
 .page-shell .featured-summary, .page-shell .article-summary { color: #5f6b78; font-size: 25rpx; line-height: 1.75; }
@@ -250,23 +250,23 @@
 .pending-news-title, .pending-news-desc { display: block; }
 .pending-news-title { color: #2b3c50; font-size: 24rpx; font-weight: 700; }
 .pending-news-desc { margin-top: 6rpx; color: #667788; font-size: 20rpx; line-height: 1.5; }
-.pending-news-action { flex-shrink: 0; margin: 0; padding: 0 14rpx; background: #375f92; border-radius: 7rpx; color: #fff; font-size: 21rpx; line-height: 58rpx; }
+.pending-news-action { flex-shrink: 0; margin: 0; padding: 0 14rpx; background: #375f92; border-radius: 8rpx; color: #fff; font-size: 21rpx; line-height: 58rpx; }
 .pending-news-action::after { border: 0; }
 
 /* School directory is a separately-loaded native subpackage, never a fake feed card. */
-.school-entry{display:flex;box-sizing:border-box;align-items:center;gap:17rpx;width:100%;margin:8rpx 0 22rpx;padding:18rpx 20rpx;background:#0d8079;color:#fff;border-radius:12rpx;border-left:7rpx solid #f2b03c;}
+.school-entry{display:flex;box-sizing:border-box;align-items:center;gap:17rpx;width:100%;margin:8rpx 0 22rpx;padding:18rpx 20rpx;background:#0d8079;color:#fff;border-radius: 8rpx;border-left:7rpx solid #f2b03c;}
 .school-entry-hover{opacity:.78;}
-.school-entry-icon{display:flex;align-items:center;justify-content:center;flex:none;width:65rpx;height:65rpx;background:rgba(255,255,255,.19);border-radius:9rpx;font-weight:800;font-size:29rpx;}
+.school-entry-icon{display:flex;align-items:center;justify-content:center;flex:none;width:65rpx;height:65rpx;background:rgba(255,255,255,.19);border-radius: 8rpx;font-weight:800;font-size:29rpx;}
 .school-entry-copy{flex:1 1 0;min-width:0;display:flex;flex-direction:column;}
 .school-entry-title{font-size:29rpx;font-weight:800;color:#fff;line-height:1.4;}
 .school-entry-desc{font-size:21rpx;line-height:1.5;color:#e5faf5;margin-top:5rpx;}
 .school-entry-arrow{font-size:38rpx;line-height:1;color:#ffe5a1;}
 
 /* Optional reference reading uses full-row aligned affordance, not a centered native button. */
-.reference-news-link{box-sizing:border-box;width:100%;min-height:76rpx;margin:15rpx 0;display:flex;align-items:center;justify-content:space-between;gap:12rpx;padding:15rpx 22rpx;background:#e7eef8;border:1rpx solid #d2dfe9;border-radius:6rpx;color:#215a9f;font-size:23rpx;font-weight:800;}
+.reference-news-link{box-sizing:border-box;width:100%;min-height:76rpx;margin:15rpx 0;display:flex;align-items:center;justify-content:space-between;gap:12rpx;padding:15rpx 22rpx;background:#e7eef8;border:1rpx solid #d2dfe9;border-radius: 6rpx;color:#215a9f;font-size:23rpx;font-weight:800;}
 .reference-news-pressed{background:#d8e6f8;}
 .reference-news-arrow{flex:none;color:#2459be;font-size:34rpx;line-height:1;}
-.news-extra{margin:18rpx 0;padding:20rpx;background:#fff;border:1rpx solid #d8dee6;border-radius:8rpx;}
+.news-extra{margin:18rpx 0;padding:20rpx;background:#fff;border:1rpx solid #d8dee6;border-radius: 8rpx;}
 .news-extra-row{display:flex;flex-direction:column;gap:6rpx;padding:18rpx 0;border-bottom:1rpx solid #e6eaf0;}
 .news-extra-row:last-child{border-bottom:0;}
 .news-extra-title{font-size:26rpx;font-weight:700;color:#273548;line-height:1.5;}
@@ -285,11 +285,11 @@
 
 /* Opportunity reading list: source and date stay visible beside a compact cover. */
 .page-shell{background:#f4f2ed;color:#193b55;padding:24rpx 22rpx calc(38rpx + env(safe-area-inset-bottom));}
-.news-head{background:#e8eff0;border-left-color:#d7ad67;border-radius:15rpx;margin-bottom:17rpx;}
+.news-head{background:#e8eff0;border-left-color:#d7ad67;border-radius: 8rpx;margin-bottom:17rpx;}
 .page-shell .page-desc{font-size:23rpx;line-height:1.6;color:#59717e;}
-.school-entry{background:#1b5678;border-left-color:#d7ad67;border-radius:15rpx;}
+.school-entry{background:#1b5678;border-left-color:#d7ad67;border-radius: 8rpx;}
 .page-shell .category.active{background:#1b5678;}
-.page-shell .surface{background:#fffdf9;border:1rpx solid #e6dfd3;border-radius:16rpx;box-shadow:0 4rpx 14rpx rgba(25,60,78,.055);}
+.page-shell .surface{background:#fffdf9;border:1rpx solid #e6dfd3;border-radius: 8rpx;box-shadow:0 4rpx 14rpx rgba(25,60,78,.055);}
 .featured,.article-card{display:flex;flex-direction:row-reverse;align-items:stretch;min-height:155rpx;}
 .featured-media,.article-media{position:relative;flex:0 0 132rpx;width:132rpx;height:auto;min-height:155rpx;padding-top:0;background:#e7edef;}
 .featured-cover,.article-cover,.featured-media .cover-fallback,.article-media .cover-fallback{position:absolute;inset:0;width:100%;height:100%;min-height:0;}
@@ -299,5 +299,5 @@
 .news-card-footer .article-tags{max-height:none;flex-wrap:wrap;}
 .featured-meta,.article-meta{white-space:normal;color:#627986;line-height:1.4;}
 .article-tag{background:#edf2f0;color:#4a6a75;}
-.news-extra,.news-error,.news-empty,.news-loading{background:#fffdf9;border-color:#e6dfd3;border-radius:15rpx;}
+.news-extra,.news-error,.news-empty,.news-loading{background:#fffdf9;border-color:#e6dfd3;border-radius: 8rpx;}
 .news-error button{background:#205b7d;}

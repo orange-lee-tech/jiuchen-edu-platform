@@ -9,7 +9,7 @@
 .state-card {
   padding: 28rpx;
   border: 1rpx solid #e2e6eb;
-  border-radius: 10rpx;
+  border-radius: 8rpx;
   background: #fff;
   color: #68727e;
   font-size: 22rpx;

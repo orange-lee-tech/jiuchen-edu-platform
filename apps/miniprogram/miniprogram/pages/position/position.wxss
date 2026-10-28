@@ -41,7 +41,7 @@
   margin-top: 28rpx;
   height: 84rpx;
   border: 0;
-  border-radius: 18rpx;
+  border-radius: 8rpx;
   background: #2f6fed;
   color: #ffffff;
   font-size: 28rpx;
