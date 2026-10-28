@@ -353,7 +353,7 @@ Page({
         creditPlansReady: true, planHead: plans.head, creditPlans: plans.plans,
         activePlan: plans.plans.find(item => item.id === plans.head.activePlanId) ?? null,
         checkoutStatusLabel: commercialMeta
-          ? (commercialMeta.payment.checkoutEnabled ? '真实微信支付已开放' : '真实微信支付仍关闭')
+          ? (commercialMeta.payment.checkoutEnabled ? '微信虚拟支付配置已就绪' : '微信虚拟支付配置未就绪')
           : '购买状态暂未取得，请到商品页核实',
         planPriceLabels: Object.fromEntries(plans.prices.map(item => [item.key,
           `¥${(item.amountFen / 100).toFixed(2)}`])) as typeof this.data.planPriceLabels,
