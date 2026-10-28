@@ -150,7 +150,7 @@
         <button class="primary" loading="{{saving}}" disabled="{{saving}}" bindtap="onSaveCourse">保存课程</button>
       </view>
 
-      <text class="editor-note">这里是学员自己的临时课表，保存后立即生效，不进入老师审核流程。</text>
+      <text class="editor-note">这里是学员自己的临时课表，保存后立即生效。</text>
     </view>
   </view>
 </view>

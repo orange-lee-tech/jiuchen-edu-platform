@@ -118,3 +118,32 @@ button::after { border:0; }
 .classroom-main .stage-title{font-size:27rpx;}
 .classroom-main .section-title{font-size:25rpx;}
 .classroom-main .plan-card{min-width:0;}
+
+/* Compact term switcher; keep the selected viewing stage separate from the canonical student stage. */
+.classroom-page{background:#f4f2ed;color:#18374f;}
+.classroom-top{align-items:flex-start;}
+.page-title{color:#183f62;}
+.page-subtitle{color:#627987;}
+.surface{background:#fffdf9;border-color:#e4ded2;border-radius:16rpx;box-shadow:0 4rpx 16rpx rgba(24,57,74,.05);}
+.student-tools{background:#fffdf9;border-left-color:#d7ad66;border-radius:16rpx;}
+.schedule-import-button,.entry-button,.plan-error button{background:#205b7d;border-radius:10rpx;}
+.stage-picker{padding:18rpx 20rpx;margin-bottom:18rpx;}
+.stage-picker-top{display:flex;justify-content:space-between;align-items:center;gap:16rpx;}
+.stage-picker-caption,.stage-picker-current{display:block;font-size:21rpx;line-height:1.55;color:#607584;}
+.stage-picker-current{font-size:27rpx;color:#193f5f;font-weight:800;}
+.stage-picker-toggle{flex:none;padding:11rpx 14rpx;background:#e7eff1;border-radius:9rpx;color:#1f607e;font-size:22rpx;font-weight:800;}
+.stage-group-list{margin-top:16rpx;padding-top:13rpx;border-top:1rpx solid #e9e3d9;}
+.stage-group{margin:8rpx 0 17rpx;}
+.stage-group-title{display:block;color:#986c36;font-size:22rpx;font-weight:800;margin-bottom:9rpx;}
+.stage-options{display:flex;flex-wrap:wrap;gap:10rpx;}
+.stage-option{padding:11rpx 18rpx;border-radius:9rpx;background:#edf3f4;color:#365a70;font-size:22rpx;}
+.stage-option.active{background:#1d5779;color:#fff;border-bottom:3rpx solid #d8ad64;}
+.current-week-link{margin-top:12rpx;padding:12rpx 0;border-top:1rpx solid #ede7db;color:#236383;font-size:23rpx;font-weight:750;}
+.classroom-layout{display:block;}
+.classroom-main{width:100%;}
+.stage-summary{background:#e9f0f1;border-left-color:#d6ad69;border-radius:16rpx;}
+.stage-title{color:#194765;}
+.plan-card{border-left-color:#d6ad69;border-radius:14rpx;}
+.plan-card:nth-child(2n){border-left-color:#87aeb5;}
+.plan-arrow,.course-slot{color:#24647f;}
+.revision-chip.pending{background:#fff3da;color:#795921;}

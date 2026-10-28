@@ -97,11 +97,14 @@ Page({
     this.stopShell = observeSlot('opportunity', (state) => {
       this.viewGeneration += 1
       const view=shellView(state)
-      this.setData({ ...view, showReferenceNews: state.phase === 'ready' && view.shellKind !== 'student', allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0 })
+      this.setData({ ...view, showReferenceNews: state.phase === 'ready' && view.shellKind !== 'student',
+        allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0,
+        favorites: [], favoritesError: '', retiring: [], newsV2Enabled: false })
       if (state.phase === 'ready') void this.loadNews()
     })
   },
-  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading' }) },
+  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading',
+    favorites: [], retiring: [], articles: [], allArticles: [] }) },
   onUnload() { this.stopShell?.() },
   onSchools() { openPage('/packages/schools/directory/directory') },
   onReferenceNews() {

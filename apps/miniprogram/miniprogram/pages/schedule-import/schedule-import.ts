@@ -565,7 +565,7 @@ Page({
 
     wx.showModal({
       title: '删除课程',
-      content: `确定删除“${course.name}”吗？这项临时课表修改不需要老师审核。`,
+      content: `确定删除“${course.name}”吗？删除后将立即更新你的课表。`,
       confirmColor: '#c2413d',
       success: async (result) => {
         if (!result.confirm) return

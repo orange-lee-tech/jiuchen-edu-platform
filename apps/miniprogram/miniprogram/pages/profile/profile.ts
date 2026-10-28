@@ -15,10 +15,10 @@ const PERSONAL_MENUS = [
   { key: 'growth', title: '成长档案与简历', desc: '整理长期成长记录，生成真实申请材料' },
   { key: 'assessment', title: 'AI 评估历史与草稿', desc: '接续未完成评估，查看既有报告' },
   { key: 'favorites', title: '我的收藏', desc: '重新打开已收藏的服务号原文' },
-  { key: 'service', title: '联系顾问', desc: '向九辰咨询具体院校与服务方案' },
+  { key: 'service', title: '联系客服', desc: '咨询院校信息与九辰服务' },
 ]
 const TEACHER_MENUS = [
-  { key: 'students', title: '学员规划与审核', desc: '进入已分配学员的辅导与版本审核' },
+  { key: 'students', title: '学员规划', desc: '查看已分配学员的辅导与规划' },
   { key: 'favorites', title: '我的收藏', desc: '重新打开已收藏的服务号原文' },
   { key: 'service', title: '联系运营', desc: '咨询账号、学员分配与业务支持' },
 ]
@@ -31,7 +31,7 @@ Page({
     ...INITIAL_SHELL, loggedIn: false, role: '' as UserRole | '', roleLabel: '未登录',
     businessId: '', userName: '', menus: PERSONAL_MENUS, loggingOut: false, deleting: false,
     favoritesVisible:false,favoritesLoading:false,favoritesError:'',favorites:[] as NewsFavorite[],
-    identities: [] as MyIdentity[], identityInput: '', identityBusy: false, identityError: '',
+    identities: [] as MyIdentity[], identityInput: '', identityBusy: false, identityError: '', accountSettingsOpen: false,
   },
   stopShell: undefined as (() => void) | undefined,
   onShow() {
@@ -112,9 +112,11 @@ Page({
     } catch (error) { wx.showToast({ title: friendlyRequestError(error, '解除身份失败'), icon: 'none' }) }
     finally { this.setData({ identityBusy: false }) }
   },
-  onHide() { this.stopShell?.(); this.setData({ shellPhase: 'loading' }) },
+  onHide() { this.stopShell?.(); this.setData({ shellPhase: 'loading', identities: [],
+    favorites: [], favoritesVisible: false, identityInput: '' }) },
   onUnload() { this.stopShell?.() },
   onCustomerServiceTap() { void openVerifiedWechatCustomerService('账号及运营支持') },
+  onToggleAccountSettings() { this.setData({ accountSettingsOpen: !this.data.accountSettingsOpen }) },
   onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },
   onIdentityTap() {
     if(isReadOnly()){wx.showToast({title:'当前为只读查看，不能编辑资料',icon:'none'});return}

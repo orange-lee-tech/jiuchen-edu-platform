@@ -193,8 +193,8 @@ test('WeChat callback success with failed official query remains unresolved unti
   assert.equal(p.data.pendingPaymentOrderId, '')
 })
 
-test('shared week filter covers ranges, odd/even weeks, date boundaries and sorted sections', () => {
-  const { weeklyScheduleView, weekMatches, currentWeekFromStart } = harness().load('utils/schedule-view')
+test('shared week and today/tomorrow filters cover China dates, odd/even weeks and sorted sections', () => {
+  const { weeklyScheduleView, dailyScheduleView, weekMatches, currentWeekFromStart } = harness().load('utils/schedule-view')
   assert.equal(currentWeekFromStart('2026-09-07', new Date('2026-09-13T15:59:59Z')), 1)
   assert.equal(currentWeekFromStart('2026-09-07', new Date('2026-09-13T16:00:00Z')), 2)
   assert.equal(currentWeekFromStart('2026-09-07', new Date('2026-09-01')), 0)
@@ -208,13 +208,100 @@ test('shared week filter covers ranges, odd/even weeks, date boundaries and sort
   assert.equal(weeklyScheduleView({ termStartDate: '2026-09-07', courses: [] }, today).state, 'empty')
   const view = weeklyScheduleView({ termStartDate: '2026-09-07', courses: [{ name: 'later', dayIndex: 2, startSection: 1, weeks: null }, { name: 'last', dayIndex: 1, startSection: 5, weeks: '1-8' }, { name: 'first', dayIndex: 1, startSection: 1, weeks: '双' }] }, today)
   assert.equal(view.state, 'ready'); assert.equal(view.visibleCourses.map(c => c.name).join(','), 'first,last,later')
+  const schedule = { termStartDate:'2026-09-07', courses:[
+    {name:'Monday late',dayIndex:1,startSection:5,weeks:'1-8'},
+    {name:'Monday early',dayIndex:1,startSection:1,weeks:'单'},
+    {name:'Tuesday',dayIndex:2,startSection:1,weeks:'双'},
+  ] }
+  const sunday = new Date('2026-09-06T15:59:00Z') // Sunday 23:59 in China
+  assert.equal(dailyScheduleView(schedule, 0, sunday).state, 'before')
+  assert.deepEqual(Array.from(dailyScheduleView(schedule, 1, sunday).courses, c => c.name), ['Monday early','Monday late'])
+  const monday = new Date('2026-09-13T16:00:00Z') // Next Monday 00:00 in China
+  assert.equal(dailyScheduleView(schedule, 0, monday).week, 2)
+  assert.deepEqual(Array.from(dailyScheduleView(schedule, 0, monday).courses, c => c.name), ['Monday late'])
+  assert.deepEqual(Array.from(dailyScheduleView(schedule, 1, monday).courses, c => c.name), ['Tuesday'])
+  assert.equal(dailyScheduleView(null, 0, monday).state, 'missing')
+  assert.equal(dailyScheduleView({ courses: [] }, 0, monday).state, 'date')
+  assert.equal(dailyScheduleView({ termStartDate:'2026-09-07',courses:[] }, 0, monday).state, 'empty')
+})
+
+test('today workbench shows the saved classroom plan state', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture('student'))
+  const page = h.page('pages/index/index'); page.onShow()
+  h.respond(0, { ok:true, user:authFixture('student').user, businessIdentity:null }); await settle()
+  const classroom = h.requests.findIndex(item => item.url.endsWith('/me/classroom'))
+  const profile = h.requests.findIndex(item => item.url.endsWith('/me/profile'))
+  assert.ok(classroom >= 0 && profile >= 0)
+  assert.equal(h.requests.some(item => item.url.includes('/schedule-imports/latest')), false,
+    'schedule query waits for the actual classroom stage')
+  h.respond(classroom, {ok:true, student:{currentStage:'junior-fall'}, stage:{code:'junior-fall'},
+    plans:[{type:'gpa',title:'课程成绩计划',id:'saved-plan',revisionStatus:'approved',items:[]}], mentors:[],records:[]})
+  await settle()
+  const schedule = h.requests.findIndex(item => item.url.includes('/schedule-imports/latest'))
+  assert.ok(schedule >= 0)
+  assert.match(h.requests[schedule].url, /stageCode=junior-fall/)
+  h.respond(schedule, {ok:true,import:null})
+  h.respond(profile, {ok:true,profile:{university:'测试大学',major:'测试专业',currentGrade:'大三'}})
+  await settle()
+  assert.equal(page.data.planStageLabel,'大三上')
+  assert.equal(page.data.planPreview[0].status,'已保存')
+  assert.equal(page.data.scheduleState,'missing')
+  page.onHide()
+  assert.equal(page.data.planPreview.length,0,'private preview is cleared when the tab hides')
+})
+
+test('today workbench never displays a schedule from another semester or a holiday', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture('student'))
+  const page = h.page('pages/index/index'); page.onShow()
+  h.respond(0, { ok:true, user:authFixture('student').user, businessIdentity:null }); await settle()
+  const classroom = h.requests.findIndex(item => item.url.endsWith('/me/classroom'))
+  const profile = h.requests.findIndex(item => item.url.endsWith('/me/profile'))
+  h.respond(classroom, {ok:true, student:{currentStage:'junior-winter'}, stage:{code:'junior-winter'},
+    plans:[], mentors:[],records:[]})
+  h.respond(profile, {ok:true,profile:{university:'测试大学',major:'测试专业',currentGrade:'大三'}})
+  await settle()
+  assert.equal(page.data.scheduleState, 'holiday')
+  assert.equal(h.requests.some(item => item.url.includes('/schedule-imports/latest')), false)
+  page.onScheduleDay({currentTarget:{dataset:{day:1}}})
+  assert.equal(page.data.scheduleState, 'holiday')
+  page.onHide()
+
+  const other = harness(); other.auth.saveAuthResult(authFixture('student'))
+  const termPage = other.page('pages/index/index'); termPage.onShow()
+  other.respond(0, { ok:true, user:authFixture('student').user, businessIdentity:null }); await settle()
+  const termClassroom = other.requests.findIndex(item => item.url.endsWith('/me/classroom'))
+  other.respond(termClassroom, {ok:true, student:{currentStage:'junior-fall'}, stage:{code:'junior-fall'},
+    plans:[], mentors:[], records:[]})
+  await settle()
+  const schedule = other.requests.findIndex(item => item.url.includes('/schedule-imports/latest'))
+  assert.ok(schedule >= 0)
+  other.respond(schedule, {ok:true, import:{schedule:{stageCode:'sophomore-spring',
+    termStartDate:'2026-09-07',courses:[{name:'不得展示的课程',dayIndex:1,startSection:1}]}}})
+  await settle()
+  assert.equal(termPage.data.scheduleCourses.length, 0)
+  assert.match(termPage.data.scheduleError, /阶段与档案不一致/)
+  termPage.onHide()
+})
+
+test('plan save requires a direct-save response and rejects an old pending-review API', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture('student'))
+  const api = h.load('utils/request')
+  const payload = { title: '英语规划', items: [{ name: '练习', status: 'pending' }] }
+  const stale = api.saveMyClassroomPlan('junior-fall', 'english', payload)
+  h.respond(0, { ok: true, revision: { id: 'old-revision', status: 'pending' } })
+  await assert.rejects(stale, /plan_direct_save_unavailable/)
+  const saved = api.saveMyClassroomPlan('junior-fall', 'english', payload)
+  h.respond(1, { ok: true, plan: { id: 'saved-plan', status: 'saved' } })
+  assert.equal((await saved).id, 'saved-plan')
 })
 
 test('current week switches the right-hand view without any navigation and failures are retryable', async () => {
   const h = harness(); h.auth.saveAuthResult(authFixture())
   const p = h.page('pages/classroom/classroom')
+  p.setData({ actualStageCode: 'junior-fall' })
   p.onCurrentWeekSchedule()
   assert.equal(p.data.selectedView, 'week'); assert.equal(h.navigations.length, 0)
+  assert.match(h.requests[0].url, /stageCode=junior-fall/)
   h.respond(0, { error: 'failure' }, 500); await settle()
   assert.ok(p.data.weekError); assert.equal(p.data.weekLoading, false)
   p.loadCurrentWeek(); h.respond(1, { ok: true, import: null }); await settle()
@@ -223,6 +310,53 @@ test('current week switches the right-hand view without any navigation and failu
   assert.equal(p.data.selectedView, 'stage'); assert.equal(p.data.currentStageCode, 'freshman-winter')
   assert.equal(h.navigations.length, 0)
   h.respond(2, { error: 'failure' }, 500); await settle()
+})
+
+test('plan editor imports courses only from the selected semester and blocks saves after a failed read', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture('student'))
+  const page = h.page('pages/plan-editor/plan-editor')
+  page.onLoad({stage:'junior-fall',type:'gpa'})
+  h.respond(0, {ok:true,user:authFixture('student').user,businessIdentity:null}); await settle()
+  const classroom = h.requests.findIndex(item => item.url.includes('/me/classroom?stage=junior-fall'))
+  assert.ok(classroom >= 0)
+  h.respond(classroom, {ok:true,student:{name:'测试学员'},stage:{code:'junior-fall'},
+    plans:[{type:'gpa',title:'课程成绩计划',id:null,revisionStatus:'none',items:[]}],mentors:[],records:[]})
+  await settle()
+  const schedule = h.requests.findIndex(item => item.url.includes('/schedule-imports/latest'))
+  assert.ok(schedule >= 0)
+  assert.match(h.requests[schedule].url,/stageCode=junior-fall/)
+  h.respond(schedule,{ok:true,import:null}); await settle()
+  const versions = h.requests.findIndex(item => item.url.includes('/versions'))
+  if (versions >= 0) { h.respond(versions,{ok:true,revisions:[]}); await settle() }
+  assert.equal(page.data.loadError,'')
+
+  const failed = harness(); failed.auth.saveAuthResult(authFixture('student'))
+  const editor = failed.page('pages/plan-editor/plan-editor')
+  editor.onLoad({stage:'junior-fall',type:'gpa'})
+  failed.respond(0,{ok:true,user:authFixture('student').user,businessIdentity:null}); await settle()
+  const failedRead = failed.requests.findIndex(item => item.url.includes('/me/classroom?stage=junior-fall'))
+  failed.respond(failedRead,{ok:false,error:'network_unavailable'},503); await settle()
+  assert.ok(editor.data.loadError)
+  const beforeSave = failed.requests.length
+  await editor.onSave()
+  assert.equal(failed.requests.length,beforeSave,'failed read must not submit a stale plan')
+})
+
+test('opportunity and mine clear account-owned lists when hidden', () => {
+  const h = harness()
+  const news = h.page('pages/news/news')
+  news.setData({ favorites:[{postId:'old-article'}], retiring:[{id:'old-article'}],
+    articles:[{id:'old-article'}], allArticles:[{id:'old-article'}] })
+  news.onHide()
+  assert.equal(news.data.favorites.length, 0)
+  assert.equal(news.data.articles.length, 0)
+  const profile = h.page('pages/profile/profile')
+  profile.setData({ identities:[{id:'old-identity'}], favorites:[{postId:'old-article'}],
+    favoritesVisible:true, identityInput:'old-code' })
+  profile.onHide()
+  assert.equal(profile.data.identities.length, 0)
+  assert.equal(profile.data.favorites.length, 0)
+  assert.equal(profile.data.identityInput, '')
 })
 
 test('internal ID search, four Chinese states and actions follow real status and binding', () => {
@@ -308,7 +442,7 @@ test('401 invalidates auth and resets tabs; an older session 401 cannot clear a 
   const freshRequest = h.load('utils/request').request('/me/profile').catch(() => {})
   h.respond(1, { error: 'unauthorized' }, 401); await freshRequest
   assert.equal(h.auth.getSavedAuthResult(), null)
-  assert.equal(h.tabs.slice(-4).map((item) => item.text).join('|'), '首页|规划|机会|我的')
+  assert.equal(h.tabs.slice(-4).map((item) => item.text).join('|'), '今天|规划|机会|我的')
 })
 
 test('claim while validation is in flight is not overwritten by the old response', async () => {
@@ -340,7 +474,7 @@ test('all six role presentations select the expected stable native labels', asyn
     if (role) h.auth.saveAuthResult(authFixture(role))
     const home = h.page(`pages/${slot}/${slot}`); home.onShow()
     if (role) { h.respond(0, { ok: true, user: authFixture(role).user, businessIdentity: null }); await settle() }
-    const expected = role === 'admin' ? '工作台|查阅|运营|我的' : role === 'teacher' || role === 'staff' ? '工作台|学员|辅导|我的' : '首页|规划|机会|我的'
+    const expected = role === 'admin' ? '工作台|查阅|运营|我的' : role === 'teacher' || role === 'staff' ? '工作台|学员|辅导|我的' : '今天|规划|机会|我的'
     assert.equal(h.tabs.slice(-4).map((item) => item.text).join('|'), expected)
     assert.equal(home.data.shellPhase, 'ready')
     home.onHide()
@@ -647,12 +781,31 @@ test('old backend missing date-only route NEVER resubmits the entire timetable',
  assert.equal(page.data.schedule.courses.length,1)
  assert.match(page.data.saveError,/服务端尚未部署/)
 })
-test('vertical planning navigation scrolls the stage rail instead of clipping a horizontal strip',()=>{
+test('compact planning selector keeps all academic years, holiday stages and week entry',()=>{
  const wxml=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8')
  const css=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxss'),'utf8')
- assert.match(wxml,/class="stage-sidebar" scroll-y/)
- assert.match(css,/\.stage-strip\{[^}]*flex-direction:column/)
- assert.match(css,/\.timeline\{[^}]*flex-direction:column/)
+ assert.match(wxml,/class="stage-picker surface"/)
+ assert.match(wxml,/wx:for="\{\{stageGroups\}\}"/)
+ assert.match(wxml,/档案当前阶段：\{\{actualStageLabel\}\}/)
+ assert.match(wxml,/查看本周完整课表/)
+ assert.match(css,/\.stage-options\{[^}]*flex-wrap:wrap/)
+ const page=harness().page('pages/classroom/classroom')
+ assert.equal(page.data.stageGroups.length,4)
+ assert.equal(page.data.stageGroups.flatMap(group=>group.stages).length,page.data.stages.length)
+ page.onToggleStagePicker();assert.equal(page.data.stagePickerOpen,true)
+ page.onStageChange({currentTarget:{dataset:{code:'junior-winter'}}})
+ assert.equal(page.data.currentStageCode,'junior-winter')
+ assert.equal(page.data.stagePickerOpen,false)
+})
+test('account settings stay reachable without exposing destructive actions on the main Mine surface',()=>{
+ const h=harness(),page=h.page('pages/profile/profile')
+ const wxml=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
+ assert.match(wxml,/wx:if="\{\{accountSettingsOpen\}\}" class="account-actions"/)
+ assert.equal(page.data.accountSettingsOpen,false)
+ page.onToggleAccountSettings();assert.equal(page.data.accountSettingsOpen,true)
+ page.onToggleAccountSettings();assert.equal(page.data.accountSettingsOpen,false)
+ assert.match(wxml,/bindtap="onLogout"/)
+ assert.match(wxml,/bindtap="onDeleteAccount"/)
 })
 test('Monday-only selector exposes exactly the Mondays of a selected month', () => {
   const h=harness()
@@ -829,18 +982,21 @@ test('admin identity roster uses protected canonical projection without unrelate
  assert.equal(h.navigations.length,0)
  assert.ok(h.requests.every(r=>!r.url.includes('/me/admin/news')))
 })
-test('student homepage prioritizes plan and renders a four-card action grid',()=>{
+test('student homepage preserves action routes and shows real daily states',()=>{
  const home=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  const ts=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
  assert.match(home,/进入我的规划/)
- for(const name of ['我的规划','保研资讯','AI 评估','联系顾问'])assert.ok(home.includes(name))
+ for(const name of ['我的规划','保研资讯','AI 评估','联系顾问','院校库'])assert.ok(home.includes(name))
  assert.match(ts,/onPrimary\(\) \{[\s\S]*?openSlot\('plan'\)/)
- assert.match(home,/本周课表/)
- assert.match(ts,/getLatestScheduleImport\(\)/)
- assert.match(ts,/weeklyScheduleView\(latest\?\.schedule \|\| null\)/)
+ assert.match(home,/本周完整课表/)
+ assert.match(home,/当天没有匹配课程/)
+ assert.match(ts,/plan\.id \? '已保存'/)
+ assert.match(ts,/getLatestScheduleImport\(stageCode\)/)
+ assert.match(ts,/dailyScheduleView\(this\.homeSchedule, this\.data\.scheduleDay\)/)
+ assert.match(ts,/getMyClassroom\(\)/)
  const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
- assert.match(css,/\.action-row\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)
- assert.match(css,/\.service-link\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)
+ assert.match(css,/\.action-row,\.service-link\{[^}]*width:49%/)
+ assert.match(css,/\.home-card\{[^}]*background:#fffdf9/)
 })
 test('unbound school consultation copies the correct school and identifies missing binding',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('admin'))
@@ -930,7 +1086,7 @@ test('home keeps profile completion accessible without displacing the plan CTA',
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  const page=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
  assert.match(source,/wx:if="\{\{!assessmentReady && !readOnly\}\}".*bindtap="onCompleteProfile"/)
- assert.match(source,/只读查看 · 可查看已有报告，不能编辑资料或运行 AI 评估/)
+ assert.match(source,/只读查看 · 不能编辑资料或运行 AI 评估/)
  assert.match(fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8'),/地点：\{\{item.location \|\| '暂无'\}\}/)
  assert.match(page,/onCompleteProfile\(\)/)
 })

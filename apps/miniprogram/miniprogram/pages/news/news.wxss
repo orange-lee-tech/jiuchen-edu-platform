@@ -282,3 +282,22 @@
 .news-card-footer{margin-top:auto;}
 .news-card-footer .article-tags{max-height:46rpx;overflow:hidden;flex-wrap:nowrap;}
 .featured-meta,.article-meta{display:block;overflow:hidden;margin-top:5rpx;color:#7b8793;font-size:19rpx;line-height:1.35;white-space:nowrap;text-overflow:ellipsis;}
+
+/* Opportunity reading list: source and date stay visible beside a compact cover. */
+.page-shell{background:#f4f2ed;color:#193b55;padding:24rpx 22rpx calc(38rpx + env(safe-area-inset-bottom));}
+.news-head{background:#e8eff0;border-left-color:#d7ad67;border-radius:15rpx;margin-bottom:17rpx;}
+.page-shell .page-desc{font-size:23rpx;line-height:1.6;color:#59717e;}
+.school-entry{background:#1b5678;border-left-color:#d7ad67;border-radius:15rpx;}
+.page-shell .category.active{background:#1b5678;}
+.page-shell .surface{background:#fffdf9;border:1rpx solid #e6dfd3;border-radius:16rpx;box-shadow:0 4rpx 14rpx rgba(25,60,78,.055);}
+.featured,.article-card{display:flex;flex-direction:row-reverse;align-items:stretch;min-height:155rpx;}
+.featured-media,.article-media{position:relative;flex:0 0 132rpx;width:132rpx;height:auto;min-height:155rpx;padding-top:0;background:#e7edef;}
+.featured-cover,.article-cover,.featured-media .cover-fallback,.article-media .cover-fallback{position:absolute;inset:0;width:100%;height:100%;min-height:0;}
+.featured-body,.article-main{box-sizing:border-box;flex:1;min-width:0;height:auto;min-height:155rpx;padding:17rpx 19rpx;}
+.featured-title,.article-title{min-height:0;margin-top:0;color:#173f5d;font-size:27rpx;line-height:1.45;}
+.featured-summary,.article-summary{min-height:0;max-height:none;margin:8rpx 0;color:#627986;font-size:21rpx;line-height:1.45;-webkit-line-clamp:2;}
+.news-card-footer .article-tags{max-height:none;flex-wrap:wrap;}
+.featured-meta,.article-meta{white-space:normal;color:#627986;line-height:1.4;}
+.article-tag{background:#edf2f0;color:#4a6a75;}
+.news-extra,.news-error,.news-empty,.news-loading{background:#fffdf9;border-color:#e6dfd3;border-radius:15rpx;}
+.news-error button{background:#205b7d;}

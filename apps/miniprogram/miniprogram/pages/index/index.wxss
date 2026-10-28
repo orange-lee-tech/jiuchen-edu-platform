@@ -53,3 +53,43 @@ button::after{border:0;}
 .action-title,.service-title{color:#fff;}
 .action-description,.service-description{color:#e3eef5;}
 .action-more{color:#f3cf74;}
+
+/* Daily workbench: warm surfaces carry content, blue and gold mark actions. */
+.home-page{background:#f4f2ed;color:#193750;}
+.home-intro{background:linear-gradient(135deg,#173c62,#245d76);border:0;border-radius:22rpx;padding:29rpx 28rpx;box-shadow:0 12rpx 28rpx rgba(18,52,77,.12);}
+.home-title{font-size:37rpx;}
+.home-primary{width:auto;min-height:70rpx;padding:12rpx 26rpx;border-radius:12rpx;font-size:25rpx;}
+.home-card{box-sizing:border-box;margin-top:20rpx;padding:25rpx;background:#fffdf9;border:1rpx solid #e7ded0;border-radius:20rpx;box-shadow:0 5rpx 18rpx rgba(27,59,77,.055);}
+.home-card-head{display:flex;align-items:center;justify-content:space-between;gap:12rpx;}
+.home-card-link,.home-state-link{color:#276384;font-size:22rpx;font-weight:750;}
+.day-tabs{display:flex;gap:10rpx;margin-top:18rpx;}
+.day-tab{padding:10rpx 27rpx;background:#edf3f5;color:#456278;border-radius:999rpx;font-size:24rpx;font-weight:700;}
+.day-tab.active{background:#1b5479;color:#fff;border-bottom:3rpx solid #e8bf71;}
+.home-schedule-meta{margin-top:15rpx;color:#667986;}
+.home-state{display:block;margin-top:18rpx;color:#536c79;font-size:23rpx;line-height:1.6;}
+.home-state-link{display:block;margin-top:8rpx;}
+.home-schedule-course{border-top-color:#e8e9e6;}
+.home-schedule-course.next-course{margin-left:-10rpx;padding-left:10rpx;border-left:5rpx solid #d7a957;background:#fbf8f0;}
+.home-course-when{flex-basis:152rpx;border-right-color:#e7e9e6;}
+.next-label{display:block;margin-top:5rpx;color:#94682c;font-size:18rpx;font-weight:800;}
+.home-plan-stage{display:block;margin-top:17rpx;color:#526b7b;font-size:23rpx;}
+.home-plan-row{display:flex;justify-content:space-between;gap:12rpx;padding:15rpx 0;border-bottom:1rpx solid #edf0ee;font-size:23rpx;}
+.home-plan-name{color:#1b3f58;font-weight:700;flex:1;min-width:0;}
+.home-plan-status{color:#8a6434;flex:none;}
+.action-row,.service-link,.action-row:nth-child(even),.service-link:nth-child(even){background:#fffdf9;border:1rpx solid #e3ddd0;border-top:4rpx solid #d9b368;border-radius:16rpx;box-shadow:0 4rpx 12rpx rgba(25,57,75,.06);}
+.action-row:active,.action-pressed,.service-link:active,.service-pressed{background:#edf4f5;}
+.action-symbol,.service-symbol{background:#e4edf0;}
+.action-title,.service-title{color:#1a4666;}
+.action-description,.service-description{color:#687d89;}
+.action-more{color:#af8548;}
+.service-section{border-top-color:#e7ded0;}
+.section-supplement{color:#71818a;}
+.action-consult{width:100%;min-height:118rpx;flex-direction:row;justify-content:flex-start;gap:16rpx;text-align:left;padding:18rpx 25rpx;}
+.action-consult .action-symbol{width:60rpx;height:60rpx;}
+.action-consult .action-title,.action-consult .action-description{margin-top:0;text-align:left;}
+.service-links{display:flex;flex-direction:column;gap:9rpx;}
+.service-link,.service-website{width:100%;min-height:86rpx;flex-direction:row;justify-content:flex-start;gap:13rpx;padding:13rpx 17rpx;}
+.service-symbol,.service-website .service-symbol{width:42rpx;height:42rpx;}
+.service-icon,.service-website .service-icon{width:30rpx;height:30rpx;}
+.service-title{margin-top:0;font-size:23rpx;}
+.service-description{margin-top:0;font-size:20rpx;}

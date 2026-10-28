@@ -170,6 +170,7 @@ export function friendlyRequestError(
 
   const messages: Record<string, string> = {
     backend_version_mismatch: '测试服务尚未更新到当前版本，请稍后重试',
+    plan_direct_save_unavailable: '当前服务尚未支持规划直接保存，请稍后重试',
     network_unavailable: '暂时无法连接服务，请检查网络后重试',
     unauthorized: '登录已失效，请重新登录',
     session_changed: '登录账号已变化，请从“我的”重新打开页面',
@@ -379,16 +380,19 @@ export async function saveMyClassroomPlan(
   stageCode: string,
   type: ClassroomPlanType,
   payload: { title: string; items: PlanEditorItem[] },
-): Promise<{ id: string; status: 'pending' }> {
+): Promise<{ id: string; status: 'saved' }> {
   const result = await request<{
     ok: true
-    revision: { id: string; status: 'pending' }
+    plan: { id: string; status: 'saved' }
   }>(
     `/me/classroom/plans/${encodeURIComponent(stageCode)}/${encodeURIComponent(type)}`,
     'PUT',
     payload as unknown as WechatMiniprogram.IAnyObject,
   )
-  return result.revision
+  if (!result.plan?.id || result.plan.status !== 'saved') {
+    throw new ApiRequestError(409, 'plan_direct_save_unavailable')
+  }
+  return result.plan
 }
 
 export type PlanRevision = {
@@ -447,56 +451,19 @@ export async function saveTeacherStudentPlan(
   stageCode: string,
   type: ClassroomPlanType,
   payload: { title: string; items: PlanEditorItem[] },
-): Promise<{ id: string; status: 'approved' }> {
+): Promise<{ id: string; status: 'saved' }> {
   const result = await request<{
     ok: true
-    revision: { id: string; status: 'approved' }
+    plan: { id: string; status: 'saved' }
   }>(
     `/me/teacher/students/${encodeURIComponent(studentId)}/plans/${encodeURIComponent(stageCode)}/${encodeURIComponent(type)}`,
     'PUT',
     payload as unknown as WechatMiniprogram.IAnyObject,
   )
-  return result.revision
-}
-
-export type PendingPlanRevision = {
-  id: string
-  studentId: string
-  studentName: string
-  stageCode: string
-  type: ClassroomPlanType
-  title: string
-  itemsJson: PlanEditorItem[]
-  createdAt: string
-}
-
-export async function getPendingPlanRevisions(): Promise<PendingPlanRevision[]> {
-  const result = await request<{ ok: true; revisions: PendingPlanRevision[] }>(
-    '/me/teacher/pending-plan-revisions',
-  )
-  return result.revisions
-}
-
-export async function approvePlanRevision(
-  revisionId: string,
-  note: string | null = null,
-): Promise<void> {
-  await request<{ ok: true }>(
-    `/me/teacher/plan-revisions/${encodeURIComponent(revisionId)}/approve`,
-    'POST',
-    { note },
-  )
-}
-
-export async function rejectPlanRevision(
-  revisionId: string,
-  note: string | null = null,
-): Promise<void> {
-  await request<{ ok: true }>(
-    `/me/teacher/plan-revisions/${encodeURIComponent(revisionId)}/reject`,
-    'POST',
-    { note },
-  )
+  if (!result.plan?.id || result.plan.status !== 'saved') {
+    throw new ApiRequestError(409, 'plan_direct_save_unavailable')
+  }
+  return result.plan
 }
 
 export type ParsedScheduleCourse = {

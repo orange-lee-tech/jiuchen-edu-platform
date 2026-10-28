@@ -2,23 +2,34 @@
   <role-shell view-slot="home" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready' && shellKind === 'student'}}">
     <view class="home-intro">
-      <text class="eyebrow">九辰保研 · 从每日行动走向长期目标</text>
-      <text class="home-title">你的保研规划，从今天开始</text>
-      <text class="home-description">查看本学期任务、课表与辅导进度，推进下一件该完成的事。需要调整方向时，再结合背景做 AI 评估。</text>
+      <text class="eyebrow">九辰保研 · {{todayLabel}}</text>
+      <text class="home-title">从今天，走向理想院校</text>
+      <text class="home-description">{{loggedIn ? '查看课表和阶段规划，按自己的节奏准备。' : '先了解保研机会；登录并绑定学员身份后查看个人课表与规划。'}}</text>
       <button class="home-primary" bindtap="onPrimary">进入我的规划 ›</button>
-      <text class="home-caption">{{readOnly ? '只读查看 · 可查看已有报告，不能编辑资料或运行 AI 评估' : assessmentReady ? '学业资料就绪 · 可随时查看或重新运行 AI 评估' : (loggedIn ? '补全学业资料后可使用 AI 评估' : '登录并绑定身份后，可保存自己的阶段规划')}}</text>
+      <text class="home-caption">{{readOnly ? '只读查看 · 不能编辑资料或运行 AI 评估' : assessmentReady ? '学业资料已就绪 · 可使用 AI 评估' : (loggedIn ? '补全学业资料后可使用 AI 评估' : '个人数据仅在登录后展示')}}</text>
       <text wx:if="{{!assessmentReady && !readOnly}}" class="home-minor-link" bindtap="onCompleteProfile">{{loggedIn ? '补全学业资料 ›' : '登录并建立档案 ›'}}</text>
     </view>
-    <view class="home-schedule" bindtap="onPlanning" aria-role="button" aria-label="查看我的本周课表">
-      <text class="section-heading">本周课表 ›</text>
-      <text class="home-schedule-meta">{{scheduleLoading ? '正在读取最新课表…' : scheduleError || (scheduleStage + ' · ' + scheduleLabel)}}</text>
-      <view wx:for="{{scheduleCourses}}" wx:key="index" class="home-schedule-course">
-        <view class="home-course-when"><text class="home-course-day">{{item.day}}</text><text class="home-course-time">{{item.time}}</text></view>
-        <view class="home-course-main"><text class="home-course-name">{{item.name}}</text><text class="home-course-location">地点：{{item.location}}</text></view>
-      </view>
-      <text wx:if="{{scheduleEmptyWeek}}" class="home-schedule-course">本周没有匹配课程</text>
+    <view class="home-schedule home-card">
+      <view class="home-card-head"><text class="section-heading">课表</text><text class="home-card-link" bindtap="onPlanning">本周完整课表 ›</text></view>
+      <view class="day-tabs"><view class="day-tab {{scheduleDay === 0 ? 'active' : ''}}" data-day="0" bindtap="onScheduleDay">今天</view><view class="day-tab {{scheduleDay === 1 ? 'active' : ''}}" data-day="1" bindtap="onScheduleDay">明天</view></view>
+      <text class="home-schedule-meta">{{scheduleDateLabel}}{{scheduleStage ? ' · ' + scheduleStage : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
+      <text wx:if="{{scheduleLoading}}" class="home-state">正在读取课表…</text>
+      <view wx:elif="{{scheduleError}}" class="home-state"><text>{{scheduleError}}</text><text class="home-state-link" bindtap="onPlanning">进入规划页重试 ›</text></view>
+      <text wx:elif="{{!loggedIn}}" class="home-state">登录并绑定学员身份后，可查看个人课表。</text>
+      <view wx:elif="{{scheduleState !== 'ready'}}" class="home-state"><text>{{scheduleState === 'holiday' ? '当前阶段没有学期课表' : scheduleState === 'missing' ? '尚未导入本学期课表' : scheduleState === 'before' ? '课表学期尚未开始' : scheduleState === 'date' ? '需设置本学期第一周周一' : '当天没有匹配课程'}}</text><text class="home-state-link" bindtap="onPlanning">{{scheduleState === 'empty' || scheduleState === 'holiday' ? '查看阶段规划 ›' : '前往课表管理 ›'}}</text></view>
+      <block wx:else><view wx:for="{{scheduleCourses}}" wx:key="index" class="home-schedule-course {{item.next ? 'next-course' : ''}}">
+        <view class="home-course-when"><text class="home-course-time">{{item.time}}</text><text wx:if="{{item.next}}" class="next-label">下一节</text></view>
+        <view class="home-course-main"><text class="home-course-name">{{item.name}}</text><text class="home-course-location">{{item.location}}</text></view>
+      </view></block>
     </view>
-    <view class="home-section-bar"><text class="section-heading">准备与行动</text><text class="section-supplement">日常入口 · 按使用频率排列</text></view>
+    <view class="home-plan home-card">
+      <view class="home-card-head"><text class="section-heading">今日规划</text><text class="home-card-link" bindtap="onPlanning">进入规划 ›</text></view>
+      <text wx:if="{{planLoading}}" class="home-state">正在读取阶段规划…</text>
+      <text wx:elif="{{planError}}" class="home-state">{{planError}}</text>
+      <text wx:elif="{{planState === 'unbound'}}" class="home-state">绑定学员身份后可查看阶段计划；普通账号暂不支持直接保存规划。</text>
+      <block wx:else><text class="home-plan-stage">阶段计划摘要 · 档案当前阶段：{{planStageLabel}}</text><view wx:for="{{planPreview}}" wx:key="title" class="home-plan-row"><text class="home-plan-name">{{item.title}}</text><text class="home-plan-status">{{item.status}}</text></view><text wx:if="{{!planPreview.length}}" class="home-state">本阶段暂无计划，进入规划页查看可用内容。</text></block>
+    </view>
+    <view class="home-section-bar"><text class="section-heading">常用入口</text><text class="section-supplement">真实服务 · 随时可达</text></view>
     <view class="action-list">
       <view class="action-row action-planning" bindtap="onPlanning" hover-class="action-pressed" aria-role="button" aria-label="我的阶段规划">
         <view class="action-symbol"><image class="action-icon" src="/assets/icons/calendar-active.png" mode="aspectFit" /></view>
@@ -29,6 +40,10 @@
         <view class="action-symbol"><image class="action-icon" src="/assets/icons/opportunity-active.png" mode="aspectFit" /></view>
         <text class="action-title">保研资讯</text><text class="action-description">动态 · 文件 · 机会</text>
         <text class="action-more">›</text>
+      </view>
+      <view class="action-row action-schools" bindtap="onSchools" hover-class="action-pressed" aria-role="button" aria-label="筛选院校库">
+        <view class="action-symbol"><image class="action-icon" src="/assets/icons/opportunity-active.png" mode="aspectFit" /></view>
+        <text class="action-title">院校库</text><text class="action-description">地区 · 层次 · 特色</text><text class="action-more">›</text>
       </view>
       <view class="action-row action-assessment" bindtap="onAssessment" hover-class="action-pressed" aria-role="button" aria-label="AI评估与历史结果">
         <view class="action-symbol"><image class="action-icon" src="/assets/icons/assessment-active.png" mode="aspectFit" /></view>

@@ -2,7 +2,7 @@
 <view class="page-shell">
   <view class="teacher-head">
     <text class="page-title">我的学员</text>
-    <text class="page-desc">只显示后台已授权的师生关系。学员更新需要老师审核后才进入正式档案。</text>
+    <text class="page-desc">只显示后台已授权的师生关系。你和学员保存规划后立即生效。</text>
   </view>
 
   <view class="surface pending-review" wx:if="{{aiCosts}}">
@@ -15,24 +15,6 @@
     <text class="review-meta">仅统计已分配学员；供应商余额、单价与平台财务数据不向老师开放。</text>
   </view>
   <view class="empty surface" wx:elif="{{aiCostsNotice}}">{{aiCostsNotice}}</view>
-
-  <view class="section-head">
-    <text class="section-title">待审核更新</text>
-    <text class="section-note">{{pending.length}} 项</text>
-  </view>
-
-  <view wx:if="{{pending.length}}" class="pending-list">
-    <view wx:for="{{pending}}" wx:key="id" class="pending-review surface">
-      <text class="review-student">{{item.studentName}}</text>
-      <text class="review-title">{{item.title}}</text>
-      <text class="review-meta">{{item.stageCode}} · {{item.type}} · {{item.itemsJson.length}} 项任务</text>
-      <view wx:if="{{!readOnly}}" class="review-actions">
-        <button class="reject-button" data-id="{{item.id}}" bindtap="onReject">否决</button>
-        <button class="approve-button" data-id="{{item.id}}" bindtap="onApprove">通过进档</button>
-      </view>
-    </view>
-  </view>
-  <view wx:else class="empty surface">当前没有待审核更新。</view>
 
   <view class="section-head">
     <text class="section-title">已分配学员</text>

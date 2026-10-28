@@ -21,7 +21,7 @@
 
   <view class="agreement-section">
     <text class="section-title">四、规划、课堂与资料更新</text>
-    <text class="section-body">学员计划、老师辅导记录、课表和成长资料以系统中真实保存的数据为准。学员提交的规划修改可能需要老师审核后成为正式版本。课表图片、Excel/CSV 等导入结果可能受文件结构和识别准确率影响，用户应在保存前核对并可手动修正。</text>
+    <text class="section-body">学员计划、老师辅导记录、课表和成长资料以系统中真实保存的数据为准。学员和老师的规划修改保存后直接生效。课表图片、Excel/CSV 等导入结果可能受文件结构和识别准确率影响，用户应在保存前核对并可手动修正。</text>
   </view>
 
   <view class="agreement-section">

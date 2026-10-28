@@ -133,3 +133,23 @@ button::after{border:0;}
   background: #edf2f8;
   color: #415870;
 }
+
+/* Warm personal hierarchy keeps identity actions and destructive confirmations intact. */
+.mine-page{background:#f4f2ed;color:#193750;}
+.identity-panel{background:linear-gradient(135deg,#193e64,#255c76);border-left:0;border-bottom:5rpx solid #d9b36d;border-radius:20rpx;padding:26rpx;}
+.identity-copy{background:#e8f1f1;color:#1a5271;}
+.identity-primary{background:#e8bd70;color:#183b54;}
+.section-heading{color:#183f5f;}
+.menu-row,.identity-role-row{background:#fffdf9;border:1rpx solid #e4ded2;border-left:5rpx solid #aac3c8;border-radius:14rpx;box-shadow:0 4rpx 13rpx rgba(24,58,77,.045);}
+.menu-growth,.menu-students{border-left-color:#d7ad67;background:#fffdf9;}
+.menu-assessment,.menu-position{border-left-color:#6f9caa;}
+.menu-service{border-left-color:#d7ad67;background:#fffaf0;}
+.menu-symbol{background:#e8f0f1;}
+.menu-title{color:#193f5c;}
+.menu-description{color:#617783;}
+.identity-role-code{font-size:22rpx;color:#526f83;}
+.website-row{background:#e8eff0;color:#1d5876;border-radius:13rpx;}
+.account-settings{margin-top:22rpx;}
+.account-settings-toggle{display:flex;justify-content:space-between;align-items:center;padding:18rpx 20rpx;background:#fffdf9;border:1rpx solid #e4ded2;border-radius:13rpx;color:#254f69;font-size:24rpx;font-weight:750;}
+.account-settings-toggle text{color:#5d7c8c;font-size:21rpx;}
+.account-actions{margin-top:0;padding:18rpx;border:1rpx solid #e4ded2;border-top:0;border-radius:0 0 13rpx 13rpx;background:#fffdf9;}

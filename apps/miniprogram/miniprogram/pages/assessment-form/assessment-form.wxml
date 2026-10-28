@@ -147,7 +147,7 @@
     <view class="card context-card">
       <view class="section-head"><text class="section-title">评估时参考的个人记录</text></view>
       <view class="context-choice">
-        <view class="context-copy"><text class="context-title">导入我的规划</text><text class="context-hint">默认开启。提炼本人已保存的阶段计划、任务进展和课表；没有内容则自动跳过，待审核内容会单独标记。</text></view>
+        <view class="context-copy"><text class="context-title">导入我的规划</text><text class="context-hint">默认开启。提炼本人已保存的阶段计划、任务进展和课表；没有内容则自动跳过。</text></view>
         <switch checked="{{includePlanning}}" color="#0d9488" bindchange="onIncludePlanning" />
       </view>
       <view class="context-choice">

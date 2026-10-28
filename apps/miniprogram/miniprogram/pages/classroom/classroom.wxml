@@ -4,7 +4,7 @@
   <view class="classroom-top">
     <view>
       <text class="page-title">我的规划</text>
-      <text class="page-subtitle">{{mode === 'student' ? '真实计划、版本审核与辅导进度' : '大学阶段规划与辅导工作台'}}</text>
+      <text class="page-subtitle">{{mode === 'student' ? '真实计划、课表与辅导进度' : '大学阶段规划与辅导工作台'}}</text>
     </view>
     <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge">{{selectedView === 'week' ? '本周课表' : currentStageLabel}}</view>
   </view>
@@ -17,13 +17,13 @@
 
   <view wx:elif="{{mode === 'unbound'}}" class="entry-state surface">
     <text class="entry-title">绑定学员身份，查看阶段规划</text>
-    <text class="entry-desc">填写九辰提供的学员编号即可接入服务，无需再次登录。尚未加入九辰的用户仍可从首页进入背景评估。</text>
+    <text class="entry-desc">填写九辰提供的学员编号即可接入服务，无需再次登录。尚未加入九辰的用户仍可从「今天」进入背景评估。</text>
     <button class="entry-button" bindtap="onBindIdentity">填写九辰学员编号</button>
   </view>
 
   <view wx:elif="{{mode === 'teacher'}}" class="entry-state surface">
     <text class="entry-title">老师工作台</text>
-    <text class="entry-desc">查看已分配学员、处理学员更新版本，并可直接编辑形成正式最新版。</text>
+    <text class="entry-desc">查看已分配学员的规划，并可直接编辑保存。</text>
     <button class="entry-button" bindtap="onTeacherWorkspace">进入我的学员</button>
   </view>
 
@@ -34,35 +34,32 @@
     <view class="student-tools surface">
       <view>
         <text class="tool-title">{{studentName || '我的计划'}}</text>
-        <text class="tool-desc">学员修改先进入待审核版本；老师通过后写入正式档案。</text>
+        <text class="tool-desc">你和老师修改规划后，保存即生效。</text>
       </view>
       <button wx:if="{{!readOnly}}" class="schedule-import-button" bindtap="onScheduleImport">导入课表</button>
     </view>
 
-    <view class="classroom-layout">
-      <scroll-view class="stage-sidebar" scroll-y enhanced show-scrollbar="{{false}}">
-        <view class="stage-strip">
-          <text class="stage-rail-title">阶段</text>
-          <view class="current-week-nav {{selectedView === 'week' ? 'active' : ''}}" bindtap="onCurrentWeekSchedule" hover-class="stage-pressed">
-            <text class="current-week-label">本周课表</text>
-          </view>
-          <view class="timeline">
-            <view wx:for="{{stages}}" wx:key="code" class="timeline-item {{selectedView === 'stage' && currentStage === index ? 'active' : ''}}" data-index="{{index}}" bindtap="onStageChange" hover-class="stage-pressed">
-              <text class="timeline-label">{{item.yearLabel}}{{item.periodLabel}}</text>
-            </view>
-          </view>
+    <view class="stage-picker surface">
+      <view class="stage-picker-top"><view><text class="stage-picker-caption">档案当前阶段：{{actualStageLabel}}</text><text class="stage-picker-current">正在查看：{{currentStageLabel}}</text></view><text class="stage-picker-toggle" bindtap="onToggleStagePicker">{{stagePickerOpen ? '收起' : '选择学期'}} ›</text></view>
+      <view wx:if="{{stagePickerOpen}}" class="stage-group-list">
+        <view wx:for="{{stageGroups}}" wx:for-item="group" wx:key="year" class="stage-group">
+          <text class="stage-group-title">{{group.label}}</text>
+          <view class="stage-options"><view wx:for="{{group.stages}}" wx:for-item="stage" wx:key="code" class="stage-option {{currentStageCode === stage.code && selectedView === 'stage' ? 'active' : ''}}" data-code="{{stage.code}}" bindtap="onStageChange">{{stage.label}}</view></view>
         </view>
-      </scroll-view>
+      </view>
+      <view class="current-week-link" bindtap="onCurrentWeekSchedule">查看本周完整课表 ›</view>
+    </view>
 
+    <view class="classroom-layout">
       <view class="classroom-main">
         <view wx:if="{{selectedView === 'week'}}" class="week-view">
           <view class="stage-summary surface"><text class="stage-title">本周课表</text><text class="stage-desc">{{weekLabel}}</text></view>
           <view wx:if="{{weekLoading}}" class="pending-card surface">正在读取本周课程…</view>
           <view wx:elif="{{weekError}}" class="plan-error"><text>{{weekError}}</text><button bindtap="loadCurrentWeek">重新读取课表</button></view>
           <view wx:elif="{{weekState !== 'ready'}}" class="pending-card surface">
-            <text class="pending-title">{{weekState === 'missing' ? '尚未导入课表' : weekState === 'date' ? '需要确认学期起始日期' : '本周没有课程'}}</text>
-            <text class="pending-desc">{{weekState === 'missing' ? '导入真实课表后，这里显示按周次筛选的课程。' : weekState === 'date' ? '在课表管理中设置本学期第一周周一，才能准确筛选本周课程。' : '按当前周次与单双周规则，没有安排课程。可查看完整课表确认。'}}</text>
-            <button wx:if="{{!readOnly}}" class="entry-button" bindtap="onScheduleImport">{{weekState === 'missing' ? '导入课表' : '管理课表与日期'}}</button>
+            <text class="pending-title">{{weekState === 'unknown' ? '档案阶段待确认' : weekState === 'holiday' ? '当前阶段没有学期课表' : weekState === 'missing' ? '尚未导入本学期课表' : weekState === 'date' ? '需要确认学期起始日期' : '本周没有课程'}}</text>
+            <text class="pending-desc">{{weekState === 'unknown' ? '请先读取档案阶段，再查看对应学期课表。' : weekState === 'holiday' ? '本周课表按档案当前学期展示；可切换学期查看阶段规划。' : weekState === 'missing' ? '导入本学期真实课表后，这里显示按周次筛选的课程。' : weekState === 'date' ? '在课表管理中设置本学期第一周周一，才能准确筛选本周课程。' : '按当前周次与单双周规则，没有安排课程。可查看完整课表确认。'}}</text>
+            <button wx:if="{{!readOnly && weekState !== 'holiday' && weekState !== 'unknown'}}" class="entry-button" bindtap="onScheduleImport">{{weekState === 'missing' ? '导入课表' : '管理课表与日期'}}</button>
           </view>
           <view wx:else class="week-list"><view wx:for="{{weekCourses}}" wx:key="index" class="week-course surface"><text class="course-slot">{{item.day}} · {{item.slot}}</text><text class="plan-title">{{item.name}}</text><text class="plan-note">地点：{{item.location || '暂无'}}{{item.teacher ? ' · ' + item.teacher : ''}}</text></view></view>
         </view>
@@ -80,7 +77,7 @@
 
         <view class="section-title-row">
           <text class="section-title">阶段规划</text>
-          <text class="section-note">{{loading ? '同步中…' : '点击即可编辑'}}</text>
+          <text class="section-note">{{loading ? '同步中…' : readOnly ? '只读查看' : '点击进入编辑'}}</text>
         </view>
 
         <view wx:if="{{plans.length > 0}}" class="plan-list">
@@ -97,15 +94,15 @@
                 <view class="plan-title-row">
                   <text class="plan-title">{{item.title}}</text>
                   <text class="revision-chip {{item.revisionStatus}}">
-                    {{item.revisionStatus === 'pending' ? '待老师审核' : item.revisionStatus === 'approved' ? '正式版' : '未建立'}}
+                    {{item.revisionStatus === 'pending' ? '旧版草稿未生效' : item.revisionStatus === 'approved' ? '已保存' : '未建立'}}
                   </text>
                 </view>
                 <text class="plan-note">{{item.note}}</text>
               </view>
-              <text class="plan-arrow">编辑 ›</text>
+              <text class="plan-arrow">{{readOnly ? '查看' : '编辑'}} ›</text>
             </view>
-            <view class="plan-card-foot">
-              <text class="progress-label">完成进度</text>
+            <view wx:if="{{item.progress}}" class="plan-card-foot">
+              <text class="progress-label">条目进度</text>
               <text class="plan-progress">{{item.progress}}</text>
             </view>
           </view>

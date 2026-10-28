@@ -9,7 +9,8 @@ page {
 
 .page-shell {
   box-sizing: border-box;
-  padding: 28rpx 28rpx calc(56rpx + env(safe-area-inset-bottom));
+  padding: 28rpx 28rpx 56rpx;
+  padding-bottom: calc(56rpx + env(safe-area-inset-bottom));
 }
 
 .surface {

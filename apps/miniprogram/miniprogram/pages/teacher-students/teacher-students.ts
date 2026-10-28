@@ -1,14 +1,9 @@
 import { authorizePage } from '../../utils/navigation'
 import {isReadOnly} from '../../utils/read-only-context'
 import {
-  approvePlanRevision,
-  friendlyRequestError,
-  getPendingPlanRevisions,
   getTeacherStudents,
   getTeacherAiCosts,
-  rejectPlanRevision,
   type ClassroomPlanType,
-  type PendingPlanRevision,
   type TeacherStudent,
   type TeacherAiCosts,
 } from '../../utils/request'
@@ -33,7 +28,6 @@ Page({
   data: {
     loading: true,
     students: [] as TeacherStudent[],
-    pending: [] as PendingPlanRevision[],
     aiCosts:null as TeacherAiCosts|null,
     aiCostsNotice:'',
   },
@@ -45,12 +39,11 @@ Page({
   async loadData() {
     try {
       this.setData({ loading: true })
-      const [students, pending, costResult] = await Promise.all([
+      const [students, costResult] = await Promise.all([
         getTeacherStudents(),
-        getPendingPlanRevisions(),
         getTeacherAiCosts().then(value=>({value})).catch(()=>({value:null})),
       ])
-      this.setData({ students, pending, aiCosts:costResult.value,
+      this.setData({ students, aiCosts:costResult.value,
         aiCostsNotice:costResult.value?'':'已分配学员的供应商请求摘要暂不可用；请核对成本表与 API 版本。' })
     } catch (error) {
       wx.showToast({ title: '老师工作台加载失败', icon: 'none' })
@@ -87,55 +80,6 @@ Page({
         wx.navigateTo({
           url: `/pages/plan-editor/plan-editor?studentId=${encodeURIComponent(student.studentId)}&studentName=${encodeURIComponent(student.name)}&stage=${encodeURIComponent(stage)}&type=${encodeURIComponent(type)}`,
         })
-      },
-    })
-  },
-
-  onApprove(event: WechatMiniprogram.BaseEvent) {
-    if(isReadOnly())return
-    const id = String(event.currentTarget.dataset.id || '')
-    if (!id) return
-    wx.showModal({
-      title: '通过学员更新？',
-      content: '通过后，该版本会写入正式档案并成为默认最新版。',
-      success: async (result) => {
-        if (!result.confirm) return
-        try {
-          await approvePlanRevision(id)
-          wx.showToast({ title: '已通过', icon: 'success' })
-          await this.loadData()
-        } catch (error) {
-          wx.showToast({
-            title: friendlyRequestError(error, '审核失败，请稍后重试'),
-            icon: 'none',
-            duration: 2600,
-          })
-        }
-      },
-    })
-  },
-
-  onReject(event: WechatMiniprogram.BaseEvent) {
-    if(isReadOnly())return
-    const id = String(event.currentTarget.dataset.id || '')
-    if (!id) return
-    wx.showModal({
-      title: '否决本次更新',
-      editable: true,
-      placeholderText: '可填写原因（选填）',
-      success: async (result) => {
-        if (!result.confirm) return
-        try {
-          await rejectPlanRevision(id, result.content || null)
-          wx.showToast({ title: '已否决并回退正式版', icon: 'none' })
-          await this.loadData()
-        } catch (error) {
-          wx.showToast({
-            title: friendlyRequestError(error, '审核失败，请稍后重试'),
-            icon: 'none',
-            duration: 2600,
-          })
-        }
       },
     })
   },

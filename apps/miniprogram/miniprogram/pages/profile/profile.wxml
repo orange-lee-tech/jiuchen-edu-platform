@@ -34,7 +34,7 @@
       </view>
       <text wx:if="{{identityError}}" class="card-note">{{identityError}}</text>
     </view>
-    <text class="section-heading">{{shellKind === 'student' ? '我的资料与记录' : '我的账号与支持'}}</text>
+    <text class="section-heading">{{shellKind === 'student' ? '成长与记录' : '工作与支持'}}</text>
     <view class="menu-list">
       <block wx:for="{{menus}}" wx:key="key">
         <view wx:if="{{item.key === 'service'}}" class="menu-row menu-service" bindtap="onCustomerServiceTap" hover-class="menu-pressed" aria-role="button">
@@ -56,10 +56,13 @@
       <view wx:for="{{favorites}}" wx:key="postId" class="menu-row" data-id="{{item.postId}}" bindtap="onFavoriteOpen"><text class="menu-title">{{item.title}}</text><text class="arrow">服务号原文 ›</text><button data-id="{{item.postId}}" catchtap="onFavoriteReader">站内阅读</button></view>
     </view>
     <view class="website-row" bindtap="onWebsite" hover-class="menu-pressed" aria-role="button"><image class="menu-icon" src="/assets/icons/website-active.png" mode="aspectFit" /><text>九辰官网 · 复制地址</text><text class="arrow">›</text></view>
-    <view wx:if="{{loggedIn && !readOnly}}" class="account-actions">
+    <view wx:if="{{loggedIn && !readOnly}}" class="account-settings">
+      <view class="account-settings-toggle" bindtap="onToggleAccountSettings" aria-role="button">账号与设置 <text>{{accountSettingsOpen ? '收起 ⌃' : '查看 ›'}}</text></view>
+      <view wx:if="{{accountSettingsOpen}}" class="account-actions">
       <button class="logout-button" loading="{{loggingOut}}" disabled="{{loggingOut || deleting}}" bindtap="onLogout">退出当前登录</button>
       <button class="delete-button" loading="{{deleting}}" disabled="{{loggingOut || deleting}}" bindtap="onDeleteAccount">注销账号</button>
       <text class="account-note">退出保留账号资料。注销会清理自填资料并解除登录绑定，操作前会再次确认。</text>
+      </view>
     </view>
   </block>
 </view>

@@ -94,6 +94,11 @@ function emptyStageView(stage: ClassroomStage, index: number) {
 function stageLabels(stages: ClassroomStage[]) {
   return stages.map(s => ({ ...s, yearLabel: s.label.slice(0, 2), periodLabel: s.label.slice(2) }))
 }
+function stageGroups(stages: ClassroomStage[]) {
+  const years = ['freshman', 'sophomore', 'junior', 'senior']
+  return years.map((year, index) => ({ year, label: `大${'一二三四'[index]}`,
+    stages: stages.filter(stage => stage.code.startsWith(year + '-')) }))
+}
 
 function toPlanCard(plan: ClassroomPlan, scheduleCourseCount = 0): PlanCard {
   const template = PLAN_CARDS[plan.type]
@@ -101,7 +106,7 @@ function toPlanCard(plan: ClassroomPlan, scheduleCourseCount = 0): PlanCard {
   return {
     ...template,
     title: plan.title,
-    progress: `${completed} / ${plan.items.length}`,
+    progress: plan.items.length ? `${completed} / ${plan.items.length}` : '',
     note:
       plan.type === 'gpa' && plan.items.length === 0 && scheduleCourseCount > 0
         ? `已导入 ${scheduleCourseCount} 门课程，点击进入后生成课程成绩计划`
@@ -122,6 +127,8 @@ Page({
     weekLoading: false, weekError: '', weekState: 'missing', weekLabel: '',
     weekCourses: [] as Array<{ name: string; day: string; slot: string; location: string | null; teacher: string | null }>,
     stages: stageLabels(FALLBACK_STAGES),
+    stageGroups: stageGroups(FALLBACK_STAGES), stagePickerOpen: false, actualStageLabel: '待确认',
+    actualStageCode: '',
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
 
@@ -134,7 +141,7 @@ Page({
     this.stopShell = observeSlot('plan', (state) => {
       this.setData(shellView(state))
       if (state.phase === 'ready') void this.initializeClassroom()
-      else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '' }) }
+      else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
     })
   },
   onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading' }) },
@@ -145,17 +152,17 @@ Page({
     const auth = getSavedAuthResult()
     const role=getReadOnlyContext()?.role||auth?.user.role
     if (!auth) {
-      this.setData({ mode: 'guest', plans: [], mentors: [], records: [] })
+      this.setData({ mode: 'guest', plans: [], mentors: [], records: [], actualStageCode: '' })
       return
     }
 
     if (role === 'teacher' || role === 'staff' || role === 'admin') {
-      this.setData({ mode: 'teacher', plans: [], mentors: [], records: [] })
+      this.setData({ mode: 'teacher', plans: [], mentors: [], records: [], actualStageCode: '' })
       return
     }
 
     if (role !== 'student') {
-      this.setData({ mode: 'unbound', plans: [], mentors: [], records: [] })
+      this.setData({ mode: 'unbound', plans: [], mentors: [], records: [], actualStageCode: '' })
       return
     }
     const owner=getReadOnlyContext()?.id||auth.user.id
@@ -180,9 +187,13 @@ Page({
         stages.findIndex((stage) => stage.code === initial.stage.code),
       )
       const stage = stages[index] || initial.stage
-      const scheduleCourseCount = latestSchedule?.schedule?.courses.length ?? 0
+      const scheduleCourseCount = latestSchedule?.schedule?.stageCode === initial.stage.code
+        ? latestSchedule.schedule.courses.length : 0
       this.setData({
         stages: stageLabels(stages),
+        stageGroups: stageGroups(stages),
+        actualStageLabel: stages.find(item => item.code === initial.student.currentStage)?.label || '未设置',
+        actualStageCode: initial.student.currentStage || '',
         ...emptyStageView(stage, index),
         studentName: initial.student.name,
         scheduleCourseCount,
@@ -207,12 +218,18 @@ Page({
 
   async hydratePlanData(stageCode: string) {
     const generation = this.viewGeneration
-    const result = await getMyClassroom(stageCode)
+    const [result, latestSchedule] = await Promise.all([
+      getMyClassroom(stageCode),
+      /^(freshman|sophomore|junior|senior)-(fall|spring)$/.test(stageCode)
+        ? getLatestScheduleImport(stageCode).catch(() => null) : Promise.resolve(null),
+    ])
     if (this.data.currentStageCode !== stageCode || generation !== this.viewGeneration) return
-
+    const scheduleCourseCount = latestSchedule?.schedule?.stageCode === stageCode
+      ? latestSchedule.schedule.courses.length : 0
     this.setData({
       studentName: result.student.name,
-      plans: result.plans.map((plan) => toPlanCard(plan, this.data.scheduleCourseCount)),
+      scheduleCourseCount,
+      plans: result.plans.map((plan) => toPlanCard(plan, scheduleCourseCount)),
       showGuidance: result.showGuidance,
       guidanceRecordsReady: result.guidanceRecordsReady,
       mentors: result.mentors,
@@ -224,13 +241,15 @@ Page({
   },
 
   onStageChange(event: WechatMiniprogram.BaseEvent) {
-    const index = Number(event.currentTarget.dataset.index)
+    const code = String(event.currentTarget.dataset.code || '')
     const stages = this.data.stages as ClassroomStage[]
+    const index = code ? stages.findIndex(item => item.code === code) : Number(event.currentTarget.dataset.index)
     const stage = stages[index]
     if (!stage) return
-    this.setData({ ...emptyStageView(stage, index), selectedView: 'stage' })
+    this.setData({ ...emptyStageView(stage, index), selectedView: 'stage', stagePickerOpen: false, scheduleCourseCount: 0 })
     void this.reloadStage(stage.code)
   },
+  onToggleStagePicker() { this.setData({ stagePickerOpen: !this.data.stagePickerOpen }) },
   async reloadStage(stageCode: string) {
     const generation = this.viewGeneration
     this.setData({ loading: true, loadError: '' })
@@ -248,21 +267,31 @@ Page({
   },
 
   onCurrentWeekSchedule() {
-    this.setData({ selectedView: 'week' })
+    this.setData({ selectedView: 'week', stagePickerOpen: false })
     void this.loadCurrentWeek()
   },
   async loadCurrentWeek() {
     const generation = this.viewGeneration, request = ++this.weekRequest
     this.setData({ weekLoading: true, weekError: '', weekCourses: [] })
     try {
-      // The current-week panel is independent of the stage navigation.
-      // The API's unfiltered endpoint returns the student's latest parsed schedule.
-      const latest = await getLatestScheduleImport()
+      // The current-week panel follows the student's actual stage, not the viewed stage.
+      const stageCode = this.data.actualStageCode
+      if (!stageCode) {
+        this.setData({ weekState: 'unknown', weekLabel: '档案当前阶段待确认' })
+        return
+      }
+      if (!/^(freshman|sophomore|junior|senior)-(fall|spring)$/.test(stageCode)) {
+        this.setData({ weekState: 'holiday', weekLabel: '档案当前阶段没有学期课表' })
+        return
+      }
+      const latest = await getLatestScheduleImport(stageCode)
       if (generation !== this.viewGeneration || request !== this.weekRequest) return
+      if (latest?.schedule && latest.schedule.stageCode !== stageCode) {
+        this.setData({ weekError: '课表阶段与档案当前阶段不一致，请核对课表' })
+        return
+      }
       const view = weeklyScheduleView(latest?.schedule || null)
-      const ownerStage = (this.data.stages as ClassroomStage[]).find(
-        stage => stage.code === latest?.schedule?.stageCode,
-      )
+      const ownerStage = (this.data.stages as ClassroomStage[]).find(stage => stage.code === stageCode)
       const weekLabel = ownerStage ? `${ownerStage.label} · ${view.currentWeekLabel}` : view.currentWeekLabel
       this.setData({ weekState: view.state, weekLabel, weekCourses: view.visibleCourses.map(c => ({ ...c, slot: courseTimeLabel(c) })) })
     } catch {
