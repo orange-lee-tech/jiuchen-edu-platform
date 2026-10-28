@@ -8,7 +8,7 @@
 - `main` 基线：`95d2bec67c8a75d333f2c0b82505603e4f63880f`
 - UI 工作分支：`codex/ui-redesign-20261028`
 - 初始源码候选：`e25d689017405f6143eb49e42f3b440081eaeb5d`
-- 当前分支最新 HEAD：`25930189f5e2d7d91f3d26e72ac82e17ce898581`（13 commits ahead / 0 behind；51 个文件差异）
+- 最近一次代码／样式 HEAD（不含后续交接文档提交）：`25930189f5e2d7d91f3d26e72ac82e17ce898581`（该时点 13 commits ahead / 0 behind；51 个文件差异）
 - 本轮审计后新增 UI 进度文档：`docs/handoff/ui-redesign-progress-and-residuals-2026-10-28.md`
 - 本分支尚未合并 `main`；`main` 未被本轮改动。分支最新 HEAD 以 GitHub 分支页面为准。
 - 本轮审计时 compare 为 ahead 3 / behind 0；审计文档随后另有提交。没有关联 PR，GitHub Actions 对本轮分支无 workflow run，源码候选 combined status 无状态记录。
