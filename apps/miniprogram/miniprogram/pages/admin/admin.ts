@@ -300,11 +300,24 @@ Page({
         })
         if(newsData.newsV2Enabled)void this.loadRetirementTasks()
       } else if (this.data.section === 'admin-assignments') {
-        const [students, teachers, assignments] = await Promise.all([
-          getAdminStudents(), getAdminTeachers(), getAdminAssignments(),
+        const [students, teachers, assignments, internalIds] = await Promise.all([
+          getAdminStudents(), getAdminTeachers(), getAdminAssignments(), getAdminInternalIds(),
         ])
-        this.setData({ students: students.map(item => ({ ...item, joinedLabel: joinedLabel(item.createdAt) })),
-          teachers: teachers.map(item => ({ ...item, joinedLabel: joinedLabel(item.createdAt) })), assignments,
+        const codeByEntity = new Map(internalIds.filter(item=>item.entityId)
+          .map(item=>[item.type+':'+item.entityId, item.businessId]))
+        const displayPerson = (name:string, role:'student'|'teacher', id:string) =>
+          /^(测试|待命名|待完善|未完善)/.test(name.trim())
+            ? (codeByEntity.get(role+':'+id) || '待完善档案')
+            : name
+        this.setData({ students: students.map(item => ({ ...item, joinedLabel: joinedLabel(item.createdAt),
+            displayLabel:displayPerson(item.name,'student',item.id) })),
+          teachers: teachers.map(item => ({ ...item, joinedLabel: joinedLabel(item.createdAt),
+            displayLabel:displayPerson(item.name,'teacher',item.id) })),
+          assignments: assignments.map(item=>({
+            ...item,
+            studentLabel:displayPerson(item.studentName,'student',item.studentId),
+            teacherLabel:displayPerson(item.teacherName,'teacher',item.teacherId),
+          })),
           studentIndex: Math.min(this.data.studentIndex, Math.max(0, students.length - 1)),
           teacherIndex: Math.min(this.data.teacherIndex, Math.max(0, teachers.length - 1)),
         })

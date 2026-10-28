@@ -172,12 +172,12 @@
   <block wx:elif="{{section === 'admin-assignments'}}">
     <view class="card">
       <text class="card-title">建立师生关系</text>
-      <picker range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="onStudentChange">
-        <view class="picker-field">{{students.length ? students[studentIndex].name : '暂无学员'}} ›</view>
+      <picker range="{{students}}" range-key="displayLabel" value="{{studentIndex}}" bindchange="onStudentChange">
+        <view class="picker-field">{{students.length ? students[studentIndex].displayLabel : '暂无学员'}} ›</view>
       </picker>
       <text wx:if="{{students.length}}" class="card-note">学员建档：{{students[studentIndex].joinedLabel}}</text>
-      <picker range="{{teachers}}" range-key="name" value="{{teacherIndex}}" bindchange="onTeacherChange">
-        <view class="picker-field">{{teachers.length ? teachers[teacherIndex].name : '暂无老师'}} ›</view>
+      <picker range="{{teachers}}" range-key="displayLabel" value="{{teacherIndex}}" bindchange="onTeacherChange">
+        <view class="picker-field">{{teachers.length ? teachers[teacherIndex].displayLabel : '暂无老师'}} ›</view>
       </picker>
       <text wx:if="{{teachers.length}}" class="card-note">老师建档：{{teachers[teacherIndex].joinedLabel}}（不代表实际入职日期）</text>
       <picker range="{{relationshipOptions}}" value="{{relationship === 'primary' ? 0 : 1}}" bindchange="onRelationshipChange">
@@ -190,7 +190,7 @@
       <text class="card-title">当前分配</text>
       <view wx:for="{{assignments}}" wx:key="id" class="list-row">
         <view class="row-main">
-          <text class="row-title">{{item.teacherName}} → {{item.studentName}}</text>
+          <text class="row-title">{{item.teacherLabel}} → {{item.studentLabel}}</text>
           <text class="row-desc">{{item.relationship === 'primary' ? '主辅导' : '协助'}}</text>
         </view>
         <button class="mini danger" data-id="{{item.id}}" bindtap="onDeleteAssignment">移除</button>
