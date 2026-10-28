@@ -54,7 +54,7 @@
 .reject-button,
 .approve-button {
   margin: 0;
-  border-radius: 14rpx;
+  border-radius: 8rpx;
   font-size: 22rpx;
 }
 
@@ -73,4 +73,4 @@
 .empty { color: #8b919a; font-size: 23rpx; }
 
 .student-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8rpx;}
-.edit-mini{margin:0;background:#eef5fd;border-radius:6rpx;color:#3167ad;font-size:19rpx;line-height:50rpx;padding:0 10rpx;}
+.edit-mini{margin:0;background:#eef5fd;border-radius: 6rpx;color:#3167ad;font-size:19rpx;line-height:50rpx;padding:0 10rpx;}
