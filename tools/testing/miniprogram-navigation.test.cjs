@@ -727,8 +727,9 @@ test('schedule picker accepts Monday only and keeps last saved date on a failed 
   await settle()
   assert.equal(page.data.termStartDate,'')
   assert.equal(page.data.schedule.courses.length,1)
-  assert.match(page.data.saveError,/HTTP 400/)
-  assert.match(h.modals.at(-1).content,/错误码/)
+  assert.match(page.data.saveError,/课表暂未通过保存校验/)
+  assert.doesNotMatch(page.data.saveError,/HTTP|invalid_schedule_edit_payload/)
+  assert.match(h.modals.at(-1).content,/原日期未被更改/)
 })
 
 test('schedule start-date edit sends only metadata and commits after server acknowledgement', async()=>{
@@ -779,7 +780,8 @@ test('old backend missing date-only route NEVER resubmits the entire timetable',
  assert.equal(h.requests.length,1,'no unsafe legacy PUT fallback')
  assert.equal(page.data.termStartDate,'')
  assert.equal(page.data.schedule.courses.length,1)
- assert.match(page.data.saveError,/服务端尚未部署/)
+ assert.match(page.data.saveError,/当前暂不能保存第一周日期/)
+ assert.doesNotMatch(page.data.saveError,/HTTP|backend_version_mismatch/)
 })
 test('compact planning selector keeps all academic years, holiday stages and week entry',()=>{
  const wxml=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8')
@@ -969,6 +971,183 @@ test('expired read token returns to the original session and target data never e
  assert.equal(h.auth.getSavedAuthResult().user.role,'admin')
 })
 
+test('growth record editor saves only confirmed facts and keeps a failed form for retry',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/growth-profile/growth-profile')
+ page.data.ownerKey=`${id}::`
+ page.data.recordFormOpen=true
+ page.data.recordForm={type:'language',title:'英语六级',organization:'学校',role:'',startDate:'2026-06',endDate:'',description:'参加真实考试',result:'成绩待确认'}
+ page.loadBootstrap=async()=>true
+ const first=page.onSaveRecord()
+ assert.equal(h.requests.length,1)
+ assert.equal(h.requests[0].method,'POST')
+ assert.ok(h.requests[0].url.endsWith('/me/growth-records'))
+ assert.equal(h.requests[0].data.title,'英语六级')
+ h.respond(0,{ok:false,error:'invalid_growth_record'},400)
+ await first
+ assert.equal(page.data.recordFormOpen,true)
+ assert.equal(page.data.recordForm.title,'英语六级')
+ assert.ok(page.data.recordError)
+
+ const retry=page.onSaveRecord()
+ assert.equal(h.requests.length,2)
+ h.respond(1,{ok:true,record:{id:'growth-1',type:'language',title:'英语六级'}},201)
+ await retry
+ assert.equal(page.data.recordFormOpen,false)
+ assert.equal(page.data.recordEditingId,'')
+
+ page.data.records=[{id:'growth-1',type:'language',title:'英语六级',source:{type:'manual'},description:'原始内容'}]
+ page.onEditRecord({currentTarget:{dataset:{id:'growth-1'}}})
+ assert.equal(page.data.recordEditingId,'growth-1')
+ page.data.recordForm.description='核对后的内容'
+ const update=page.onSaveRecord()
+ assert.equal(h.requests[2].method,'PUT')
+ assert.ok(h.requests[2].url.endsWith('/me/growth-records/growth-1'))
+ assert.equal(h.requests[2].data.description,'核对后的内容')
+ h.respond(2,{ok:true,record:{id:'growth-1',type:'language',title:'英语六级'}},200)
+ await update
+ assert.equal(page.data.recordFormOpen,false)
+
+ const view=h.load('utils/read-only-context')
+ view.setReadOnlyContext({kind:'student',id:secondId,role:'student',name:'合成学员',businessId:'JCS-SYNTHETIC',operatorUserId:id,readToken:'ro.synthetic',expiresAt:'2099-01-01'})
+ page.data.recordFormOpen=true
+ await page.onSaveRecord()
+ assert.equal(h.requests.length,3,'read-only view cannot submit a growth record')
+})
+
+test('growth profile discards an in-flight response after the account changes',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/growth-profile/growth-profile')
+ page.data.ownerKey=`${id}::`
+ const loading=page.loadBootstrap(true)
+ assert.equal(h.requests.length,1)
+ h.auth.saveAuthResult(authFixture('student',secondId,'other-session'))
+ h.respond(0,{ok:true,revision:'old-user-revision',growthSchemaReady:true,assessmentSchemaReady:true,
+   profile:{schemaVersion:'growth-profile-v1',identity:{displayName:'旧用户'},records:[]},
+   resumeProjections:{general:null,technical:null,academic:null},
+   applicationProjection:{fields:[]},pendingAssessmentImport:null})
+ assert.equal(await loading,false)
+ assert.equal(page.data.revision,'')
+ assert.equal(page.data.profile.identity.displayName,null)
+ page.data.profile.identity.displayName='旧缓存'
+ page.data.recordSaving=true
+ page.onShow()
+ assert.equal(page.data.profile.identity.displayName,null)
+ assert.equal(page.data.recordSaving,false)
+})
+
+test('growth profile retry clears an old error and ignores repeated taps while loading',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/growth-profile/growth-profile')
+ page.setData({ownerKey:`${id}::`,loading:false,error:'先前读取失败',records:[{id:'saved-record'}]})
+ page.onRetryLoad();page.onRetryLoad()
+ assert.equal(h.requests.length,1)
+ assert.equal(page.data.error,'')
+ assert.equal(page.data.loading,false,'existing records remain visible')
+ assert.equal(page.data.refreshing,true)
+ h.respond(0,{ok:false,error:'database_unavailable'},503)
+ await settle()
+ assert.equal(page.data.refreshing,false)
+
+ page.setData({records:[],error:'先前读取失败'})
+ page.onRetryLoad();page.onRetryLoad()
+ assert.equal(h.requests.length,2)
+ assert.equal(page.data.loading,true,'empty history shows a loading state')
+ h.respond(1,{ok:false,error:'database_unavailable'},503)
+ await settle()
+ assert.equal(page.data.loading,false)
+ assert.ok(page.data.error)
+})
+
+test('silent assessment history refresh keeps loaded rows visible on failure',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/assessment-history/assessment-history')
+ page.setData({loading:false,loadError:'',assessments:[{id:'running-assessment',status:'running'}]})
+ const refresh=page.loadAssessments(true)
+ h.respond(0,{ok:false,error:'database_unavailable'},503)
+ await refresh
+ assert.equal(page.data.assessments.length,1)
+ assert.equal(page.data.loadError,'')
+ assert.equal(page.data.loading,false)
+
+ page.setData({assessments:[]})
+ const first=page.loadAssessments(true)
+ h.respond(1,{ok:false,error:'database_unavailable'},503)
+ await first
+ assert.ok(page.data.loadError)
+ assert.match(fs.readFileSync(path.join(root,'pages/assessment-history/assessment-history.wxml'),'utf8'),/onRetryLoad/)
+})
+
+test('admin checkout copy follows live server state and JC000 platform restriction',()=>{
+ const admin=fs.readFileSync(path.join(root,'pages/admin/admin.wxml'),'utf8')
+ const source=fs.readFileSync(path.join(root,'pages/admin/admin.ts'),'utf8')
+ assert.match(admin,/checkoutStatusLabel/)
+ assert.match(source,/getCommercialMeta\(\)/)
+ assert.match(admin,/JC000 · \{\{planPriceLabels\.JC000\}\}（iOS 不可购买）/)
+ assert.doesNotMatch(admin,/JC000 内测道具|默认隐藏|购买是否开放请以当前商品页状态为准/)
+})
+
+test('growth cache never crosses accounts that reused the same business number',async()=>{
+ const h=harness(),cache=h.load('utils/growth-profile-cache')
+ const first=authFixture('student',id,'session-one')
+ first.businessIdentity={businessId:'JCS-REUSED',type:'student',status:'claimed'}
+ h.auth.saveAuthResult(first)
+ await cache.saveGrowthProfileBootstrap({revision:'first-account-only'})
+ const second=authFixture('student',secondId,'session-two')
+ second.businessIdentity={businessId:'JCS-REUSED',type:'student',status:'claimed'}
+ h.auth.saveAuthResult(second)
+ assert.equal(await cache.getCachedGrowthProfileBootstrap(),null)
+})
+
+test('position page shows profile read failure and offers a safe retry',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/position/position')
+ page.initializePosition()
+ assert.equal(h.requests.length,1)
+ h.respond(0,{ok:false,error:'database_unavailable'},503)
+ await settle()
+ assert.ok(page.data.profileError)
+ assert.equal(page.data.profileLoading,false)
+ page.onRetryProfile()
+ assert.equal(h.requests.length,2)
+ h.respond(1,{ok:true,profile:{university:'合成大学',major:'数学'}})
+ await settle()
+ assert.equal(page.data.profileError,'')
+ assert.equal(page.data.profileForm.university,'合成大学')
+ assert.match(fs.readFileSync(path.join(root,'pages/position/position.wxml'),'utf8'),/view-slot="mine"/)
+})
+
+test('every registered native page keeps its files and WXML handlers',()=>{
+ const app=JSON.parse(fs.readFileSync(path.join(root,'app.json'),'utf8'))
+ const routes=[...app.pages,...app.subpackages.flatMap(pack=>pack.pages.map(page=>`${pack.root}/${page}`))]
+ for(const route of routes){
+   for(const ext of ['ts','wxml','wxss','json']) assert.ok(fs.existsSync(path.join(root,`${route}.${ext}`)),`${route}.${ext}`)
+   const wxml=fs.readFileSync(path.join(root,`${route}.wxml`),'utf8')
+   const handlers=[...wxml.matchAll(/(?:bind|catch)(?:tap|input|change|error|confirm|blur|focus|longpress)="([A-Za-z_]\w*)"/g)]
+   if(!handlers.length) continue
+   const h=harness();let page
+   try { page=h.page(route) } catch(error) { throw new Error(`${route}: ${error.message}`) }
+   for(const match of handlers){
+     assert.equal(typeof page[match[1]],'function',`${route}: ${match[1]}`)
+   }
+ }
+ for(const component of Object.values(app.usingComponents)){
+   assert.ok(fs.existsSync(path.join(root,`${component}.wxml`.replace(/^[/\\]/,''))),component)
+ }
+})
+
+test('redesigned pages keep every native WXML event bound to a page method',()=>{
+ const pages=['admin','assessment-form','assessment-history','assessment-result','classroom',
+   'growth-profile','index','library','login','news','news-detail','profile','profile-edit','teacher-students']
+ for(const name of pages){
+   const h=harness(),page=h.page(`pages/${name}/${name}`)
+   const wxml=fs.readFileSync(path.join(root,`pages/${name}/${name}.wxml`),'utf8')
+   for(const match of wxml.matchAll(/(?:bind|catch)(?:tap|input|change|error|confirm|blur|focus|longpress)="([A-Za-z_]\w*)"/g)){
+     assert.equal(typeof page[match[1]],'function',`${name}: ${match[1]}`)
+   }
+ }
+})
+
 test('admin identity roster uses protected canonical projection without unrelated news/analytics APIs',async()=>{
  const h=harness()
  h.auth.saveAuthResult(authFixture('admin'))
@@ -986,7 +1165,8 @@ test('student homepage preserves action routes and shows real daily states',()=>
  const home=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  const ts=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
  assert.match(home,/进入我的规划/)
- for(const name of ['我的规划','保研资讯','AI 评估','联系顾问','院校库'])assert.ok(home.includes(name))
+ for(const name of ['我的规划','保研资讯','AI 评估','联系客服','院校库'])assert.ok(home.includes(name))
+ assert.match(home,/action-consult[^>]*bindtap="onCustomerService"/)
  assert.match(ts,/onPrimary\(\) \{[\s\S]*?openSlot\('plan'\)/)
  assert.match(home,/本周完整课表/)
  assert.match(home,/当天没有匹配课程/)

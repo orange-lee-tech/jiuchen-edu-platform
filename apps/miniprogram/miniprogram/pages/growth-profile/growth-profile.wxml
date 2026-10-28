@@ -1,27 +1,27 @@
 <auth-gate />
 <view class="growth-page">
   <view class="hero">
-    <text class="eyebrow">CANONICAL GROWTH RECORD</text>
     <text class="title">我的本科成长履历</text>
-    <text class="desc">这里保存事实，简历和招聘填空只是它的不同投影。修改原始资料后，可重新生成输出。</text>
     <text wx:if="{{refreshing}}" class="refresh-note">正在后台更新最新履历…</text>
     <text wx:elif="{{cacheState === 'stale'}}" class="refresh-note">已先显示本地缓存，正在尝试刷新</text>
   </view>
 
   <view wx:if="{{loading && !resume}}" class="state-card">正在整理你的履历…</view>
-  <view wx:elif="{{error}}" class="state-card error-card">{{error}}</view>
+  <view wx:elif="{{error}}" class="state-card error-card">
+    <text>{{error}}</text>
+    <button class="retry-button" bindtap="onRetryLoad">重新读取</button>
+  </view>
 
   <block wx:else>
     <view wx:if="{{!growthSchemaReady}}" class="schema-note">
       <text class="schema-title">当前展示基础档案</text>
-      <text class="schema-desc">成长经历扩展表尚未进入生产环境；院校、专业、绩点与排名仍直接来自现有个人资料，不会重复采集。</text>
+      <text class="schema-desc">目前可以查看和编辑基础学业资料；其他成长经历暂不可用。</text>
     </view>
 
     <view class="section-card">
       <view class="section-head">
         <view>
           <text class="section-title">基础身份与学业</text>
-          <text class="section-sub">来源：Canonical Profile</text>
         </view>
         <text wx:if="{{!readOnly}}" class="link" bindtap="onEditBaseProfile">修改 ›</text>
       </view>
@@ -39,7 +39,7 @@
       <view class="section-head">
         <view>
           <text class="section-title">复用你已经填过的资料</text>
-          <text class="section-sub">从历史 AI 评估中发现 {{importCandidates.length}} 条语言 / 科研 / 竞赛事实。请确认后再进入 Canonical Profile。</text>
+          <text class="section-sub">从历史评估中找到 {{importCandidates.length}} 条语言、科研或竞赛经历。确认后才会写入成长档案。</text>
         </view>
       </view>
       <view class="candidate-list">
@@ -66,15 +66,16 @@
         disabled="{{importing || readOnly}}"
         bindtap="onConfirmAssessmentImport"
       >确认所选内容并同步到成长履历</button>
-      <text class="confirm-note">未勾选的内容不会写入。以后修改 Canonical Fact 后，简历和填表包会重新投影。</text>
+      <text class="confirm-note">未勾选的内容不会写入。资料变更后，可以重新生成简历和填表内容。</text>
     </view>
 
     <view class="section-card">
       <view class="section-head">
         <view>
           <text class="section-title">已确认经历</text>
-          <text class="section-sub">{{records.length}} 条事实记录 · 只有确认后的内容进入输出</text>
+          <text class="section-sub">{{records.length}} 条事实记录</text>
         </view>
+        <button wx:if="{{growthSchemaReady && !readOnly}}" class="record-add" bindtap="onNewRecord">添加经历</button>
       </view>
       <view wx:if="{{records.length === 0}}" class="empty">
         目前还没有独立成长经历记录。既有评估中的语言、科研和竞赛资料可在确认后迁入，不会要求重新填写。
@@ -87,15 +88,38 @@
           </view>
           <text class="record-title">{{item.title}}</text>
           <text class="record-text">{{item.standardExpression}}</text>
+          <button wx:if="{{item.source.type === 'manual' && !readOnly}}" class="record-edit" data-id="{{item.id}}" bindtap="onEditRecord">编辑这条经历</button>
         </view>
       </view>
+    </view>
+
+    <view wx:if="{{recordFormOpen && growthSchemaReady && !readOnly}}" id="growth-record-editor" class="section-card record-editor">
+      <text class="section-title">{{recordEditingId ? '编辑经历' : '添加经历'}}</text>
+      <text class="record-field-label">经历类型</text>
+      <picker range="{{recordTypes}}" range-key="label" value="{{recordTypeIndex}}" bindchange="onRecordTypeChange"><view class="record-picker">{{recordTypes[recordTypeIndex].label}} ›</view></picker>
+      <text class="record-field-label">名称 *</text>
+      <input class="record-input" data-field="title" maxlength="220" value="{{recordForm.title}}" placeholder="例如：大学生创新训练项目" bindinput="onRecordInput" />
+      <text class="record-field-label">机构／主办方</text>
+      <input class="record-input" data-field="organization" maxlength="220" value="{{recordForm.organization}}" placeholder="按真实证明材料填写" bindinput="onRecordInput" />
+      <text class="record-field-label">担任角色</text>
+      <input class="record-input" data-field="role" maxlength="160" value="{{recordForm.role}}" placeholder="例如：项目成员" bindinput="onRecordInput" />
+      <view class="record-dates">
+        <view><text class="record-field-label">开始时间</text><input class="record-input" data-field="startDate" maxlength="32" value="{{recordForm.startDate}}" placeholder="例如：2025-09" bindinput="onRecordInput" /></view>
+        <view><text class="record-field-label">结束时间</text><input class="record-input" data-field="endDate" maxlength="32" value="{{recordForm.endDate}}" placeholder="可留空" bindinput="onRecordInput" /></view>
+      </view>
+      <text class="record-field-label">主要内容</text>
+      <textarea class="record-textarea" data-field="description" maxlength="2000" value="{{recordForm.description}}" placeholder="写清楚你实际完成的工作" bindinput="onRecordInput" />
+      <text class="record-field-label">成果／证明</text>
+      <textarea class="record-textarea record-textarea-short" data-field="result" maxlength="1200" value="{{recordForm.result}}" placeholder="例如：奖项、论文状态或可核查成果" bindinput="onRecordInput" />
+      <text wx:if="{{recordError}}" class="record-error">{{recordError}}</text>
+      <view class="record-form-actions"><button class="record-cancel" disabled="{{recordSaving}}" bindtap="onCancelRecord">取消</button><button class="record-save" loading="{{recordSaving}}" disabled="{{recordSaving}}" bindtap="onSaveRecord">保存经历</button></view>
     </view>
 
     <view class="section-card">
       <view class="section-head">
         <view>
-          <text class="section-title">Canonical Resume View</text>
-          <text class="section-sub">确定性投影，不重新调用 AI 理解已确认事实</text>
+          <text class="section-title">简历预览</text>
+          <text class="section-sub">仅使用你已确认的资料生成，不会添加未经确认的经历</text>
         </view>
       </view>
       <view class="target-row">
@@ -121,7 +145,7 @@
           <text class="trace">可追溯：{{item.sourceRefs[0]}}</text>
         </view>
       </view>
-      <view wx:else class="empty">当前没有可投影的已确认经历；不会为了凑简历内容虚构项目或技能。</view>
+      <view wx:else class="empty">还没有可用于简历的已确认经历。你可以先补充资料或确认上方找到的经历。</view>
 
       <button
         wx:if="{{resume}}"
@@ -130,14 +154,14 @@
         disabled="{{openingDocument || readOnly}}"
         bindtap="onOpenResumeDocx"
       >生成并打开 DOCX 简历</button>
-      <text wx:if="{{resume}}" class="artifact-note">即时基于当前已确认事实生成，不写回 Canonical Profile；可在微信文档预览中继续分享或保存。</text>
+      <text wx:if="{{resume}}" class="artifact-note">根据已确认资料即时生成，不会修改原始档案；可在微信文档预览中分享或保存。</text>
     </view>
 
     <view class="section-card">
       <view class="section-head">
         <view>
           <text class="section-title">招聘填空包</text>
-          <text class="section-sub">generic-recruitment-v1 · 为后续招聘网站 Adapter 提供稳定接口</text>
+          <text class="section-sub">整理已确认资料，方便你核对招聘网站需要的信息</text>
         </view>
       </view>
       <view class="status-grid">

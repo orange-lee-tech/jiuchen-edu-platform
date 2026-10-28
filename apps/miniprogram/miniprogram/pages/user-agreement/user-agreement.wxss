@@ -1,7 +1,7 @@
 .agreement-page {
   min-height: 100vh;
   padding: 36rpx 32rpx 64rpx;
-  background: #f5f7fa;
+  background: #f4f2ed;
   box-sizing: border-box;
 }
 

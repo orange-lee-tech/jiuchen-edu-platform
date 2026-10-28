@@ -72,7 +72,7 @@ const FALLBACK_STAGES: ClassroomStage[] = [
   { code: 'junior-fall', label: '大三上', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: ['gpa', 'english', 'competition', 'research'] },
   { code: 'junior-winter', label: '大三寒假', mode: 'holiday', description: '假期 · 英语、竞赛规划', planTypes: ['english', 'competition'] },
   { code: 'junior-spring', label: '大三下', mode: 'term', description: '正常学期 · GPA、英语、竞赛、科研', planTypes: ['gpa', 'english', 'competition', 'research'] },
-  { code: 'junior-summer', label: '大三暑假', mode: 'holiday', description: '阶段规划由九辰老师确认', planTypes: [] },
+  { code: 'junior-summer', label: '大三暑假', mode: 'holiday', description: '本阶段暂未配置可编辑计划', planTypes: [] },
   { code: 'senior-fall', label: '大四上', mode: 'internship', description: '大四阶段 · 实习规划', planTypes: ['internship'] },
   { code: 'senior-winter', label: '大四寒假', mode: 'internship', description: '大四寒假 · 实习规划', planTypes: ['internship'] },
   { code: 'senior-spring', label: '大四下', mode: 'internship', description: '大四阶段 · 实习规划', planTypes: ['internship'] },

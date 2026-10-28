@@ -2,9 +2,7 @@
   <role-shell view-slot="mine" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready'}}">
     <view class="identity-panel">
-      <text class="identity-eyebrow">九辰保研 · {{roleLabel}}</text>
       <text class="user-name">{{loggedIn ? userName : '把准备记录留在这里'}}</text>
-      <text class="identity-description">{{loggedIn ? (role === 'admin' || role === 'teacher' || role === 'staff' ? '内部身份与账号管理。业务权限及人员分配在对应工作台中处理。' : '你的学业资料和评估历史都保存在自己的账户里。') : '登录并绑定身份后，可以保存资料与查看记录。'}}</text>
       <view wx:if="{{businessId}}" class="identity-number">
         <text class="identity-number-label">我的九辰内部编号</text>
         <text class="identity-code" selectable>{{businessId}}</text>

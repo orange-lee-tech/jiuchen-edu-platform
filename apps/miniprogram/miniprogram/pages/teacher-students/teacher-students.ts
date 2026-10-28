@@ -27,6 +27,7 @@ const LABELS: Record<ClassroomPlanType, string> = {
 Page({
   data: {
     loading: true,
+    loadError: '',
     students: [] as TeacherStudent[],
     aiCosts:null as TeacherAiCosts|null,
     aiCostsNotice:'',
@@ -38,15 +39,15 @@ Page({
 
   async loadData() {
     try {
-      this.setData({ loading: true })
+      this.setData({ loading: true, loadError: '', students: [], aiCosts: null, aiCostsNotice: '' })
       const [students, costResult] = await Promise.all([
         getTeacherStudents(),
         getTeacherAiCosts().then(value=>({value})).catch(()=>({value:null})),
       ])
       this.setData({ students, aiCosts:costResult.value,
-        aiCostsNotice:costResult.value?'':'已分配学员的供应商请求摘要暂不可用；请核对成本表与 API 版本。' })
+        aiCostsNotice:costResult.value?'':'AI 请求摘要暂不可用；学员名单仍可查看，请稍后重试。' })
     } catch (error) {
-      wx.showToast({ title: '老师工作台加载失败', icon: 'none' })
+      this.setData({ loadError: '学员名单暂时无法读取，请重试。' })
     } finally {
       this.setData({ loading: false })
     }

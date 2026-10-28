@@ -1,13 +1,11 @@
 <view class="page-shell">
-  <role-shell slot="mine" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
+  <role-shell view-slot="mine" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready'}}">
   <view class="position-hero surface">
-    <text class="eyebrow">AI 保研定位</text>
-    <text class="hero-title">先认识自己，再决定冲哪里</text>
-    <text class="hero-desc">结合个人背景、目标院校与项目数据，形成结构化定位建议。结果用于辅助规划，不展示伪精确录取概率。</text>
+    <text class="hero-title">AI 保研定位</text>
+    <text class="hero-desc">结果仅供规划参考，不代表录取概率。</text>
     <button wx:if="{{!readOnly}}" class="primary-btn" bindtap="onStartAssessment">开始 AI 评估</button>
     <button class="history-btn" bindtap="onAssessmentHistory">查看历史评估</button>
-    <text class="quota">历史结果可再次查看；是否运行新评估由你决定。</text>
   </view>
 
   <view class="section-head">
@@ -18,7 +16,9 @@
     <text wx:if="{{canEditProfile && !readOnly}}" class="link" bindtap="onProfileCardTap">编辑资料 ›</text>
   </view>
 
-  <view wx:if="{{canEditProfile}}" class="profile-card surface" bindtap="onProfileCardTap">
+  <view wx:if="{{canEditProfile && profileLoading}}" class="profile-card surface profile-state">正在读取学业资料…</view>
+  <view wx:elif="{{canEditProfile && profileError}}" class="profile-card surface profile-state"><text>{{profileError}}</text><button bindtap="onRetryProfile">重新读取</button></view>
+  <view wx:elif="{{canEditProfile}}" class="profile-card surface" bindtap="onProfileCardTap">
     <label class="profile-row">
       <text class="profile-label">本科院校</text>
       <text class="profile-input">{{profileForm.university || '未填写'}}</text>
@@ -46,7 +46,6 @@
   <view class="section-head">
     <view>
       <text class="section-title">评估维度</text>
-      <text class="section-subtitle">不采用固定权重公式，后续由服务端 AI 结合资料分析</text>
     </view>
   </view>
 
@@ -66,9 +65,5 @@
     </view>
   </view>
 
-  <view class="notice surface">
-    <text class="notice-title">定位结果会包含什么？</text>
-    <text class="notice-text">目标梯度建议、优势与短板、下一阶段行动重点，以及可核查的院校 / 项目 / 案例依据。</text>
-  </view>
   </block>
 </view>

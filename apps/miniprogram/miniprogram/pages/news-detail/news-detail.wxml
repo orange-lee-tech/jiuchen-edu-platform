@@ -37,8 +37,8 @@
     </view>
 
     <view wx:else class="state-card body-missing">
-      <text class="missing-title">这条历史同步记录还没有站内正文</text>
-      <text class="missing-desc">管理员重新同步服务号后，已发布图文正文会保存到小程序数据层；当前可暂时查看服务号原文。</text>
+      <text class="missing-title">暂时无法在小程序内阅读全文</text>
+      <text class="missing-desc">你可以先查看服务号原文；如果原文也无法打开，请稍后重试。</text>
       <button class="secondary" bindtap="onOpenOriginal">查看服务号原文</button>
     </view>
 

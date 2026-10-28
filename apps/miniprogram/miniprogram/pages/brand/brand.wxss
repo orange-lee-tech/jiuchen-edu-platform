@@ -2,7 +2,7 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 24rpx 24rpx 70rpx;
-  background: #f6f7fb;
+  background: #f4f2ed;
 }
 
 .hero {
@@ -131,7 +131,7 @@
 }
 
 .bullet {
-  color: #2f6fed;
+  color: #245681;
 }
 
 .bullet-text,
@@ -172,7 +172,7 @@
   height: 14rpx;
   margin-top: 10rpx;
   border-radius: 50%;
-  background: #2f6fed;
+  background: #245681;
 }
 
 .line {
@@ -210,7 +210,7 @@
 
 .delivery {
   margin-top: 8rpx;
-  color: #2f6fed;
+  color: #245681;
   font-size: 20rpx;
 }
 
@@ -219,7 +219,7 @@
 }
 
 .metric-value {
-  color: #2f6fed;
+  color: #245681;
   font-size: 50rpx;
   font-weight: 800;
 }

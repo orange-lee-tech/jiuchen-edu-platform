@@ -1,6 +1,5 @@
 <view wx:if="{{active}}" class="guide-overlay" catchtouchmove="preventTouch">
   <view class="guide-card" role="dialog" aria-label="九辰首次使用引导">
-    <view class="guide-kicker">九辰保研 · 使用引导</view>
     <view class="guide-progress">第 {{current + 1}} 步 / 共 {{count}} 步</view>
     <view class="guide-title">{{title}}</view>
     <view class="guide-body">{{body}}</view>

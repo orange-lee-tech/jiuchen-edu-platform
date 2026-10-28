@@ -2,7 +2,7 @@
   min-height: 100vh;
   padding: 24rpx 22rpx 150rpx;
   box-sizing: border-box;
-  background: #f5f7fa;
+  background: #f4f2ed;
   color: #252932;
 }
 
@@ -68,7 +68,7 @@
 
 .service-model {
   margin-top: 16rpx;
-  color: #2f6fed;
+  color: #245681;
   font-size: 23rpx;
   font-weight: 700;
 }
@@ -99,7 +99,7 @@
   margin-top: 24rpx;
   border: 0;
   border-radius: 8rpx;
-  background: #2f6fed;
+  background: #245681;
   color: #fff;
   font-size: 25rpx;
   font-weight: 700;
@@ -137,7 +137,7 @@
 }
 
 .bullet {
-  color: #2f6fed;
+  color: #245681;
   font-weight: 800;
 }
 
@@ -194,7 +194,7 @@
   margin-top: 12rpx;
   border: 5rpx solid #dce7ff;
   border-radius: 50%;
-  background: #2f6fed;
+  background: #245681;
 }
 
 .timeline-body {
@@ -305,7 +305,7 @@
 
 .package-price {
   flex-shrink: 0;
-  color: #2f6fed;
+  color: #245681;
   font-size: 24rpx;
   font-weight: 800;
 }

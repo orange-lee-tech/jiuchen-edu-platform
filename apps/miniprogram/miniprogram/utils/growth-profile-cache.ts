@@ -21,7 +21,7 @@ let memoryKey=''
 
 function cacheIdentity(auth: BootstrapResult | null) {
   if (!auth) return 'anonymous'
-  return auth.businessIdentity?.businessId || auth.user.id
+  return `${auth.user.id}:${auth.businessIdentity?.businessId || ''}`
 }
 
 function key() {

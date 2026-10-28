@@ -30,6 +30,7 @@ import {
   getAdminTeachers,
   getAdminUsers,
   getAdminControls,
+  getCommercialMeta,
   activateAdminControlDraft,
   saveAdminControl,
   saveAdminControlDraft,
@@ -178,6 +179,7 @@ Page({
     keyCopySourcePin: '', keyCopyModel: '', keyCopyLabel: '', keyCopyNote: '',
     keyCopyModels: [] as Array<{id:string; label:string}>, keyCopyModelIndex: 0,
     activePlan: null as CreditPlan | null,
+    checkoutStatusLabel: '购买状态读取中',
     planPriceLabels: { JC000: '读取中', JC001: '读取中', JC002: '读取中', JC003: '读取中' },
     fixedPriceCatalogOk: false,
     planCostNotice: '尚未填写单次模型成本；估算状态，仍可凭口令启用。',
@@ -328,8 +330,9 @@ Page({
   async loadControls() {
     this.setData({ loading: true, loadError: '', keyObjectsReady: false, creditPlansReady: false })
     try {
-      const [result, keys, plans] = await Promise.all([
+      const [result, keys, plans, commercialMeta] = await Promise.all([
         getAdminControls(), getAssessmentKeyObjects(), getCreditPlans(),
+        getCommercialMeta().catch(() => null),
       ])
       const settings = result.settings.settings
       this.setData({ controlSettings: result.settings, controlKey: result.assessmentKey,
@@ -349,6 +352,9 @@ Page({
           keys.head.activeObjectId ? '已启用' : '待确认',
         creditPlansReady: true, planHead: plans.head, creditPlans: plans.plans,
         activePlan: plans.plans.find(item => item.id === plans.head.activePlanId) ?? null,
+        checkoutStatusLabel: commercialMeta
+          ? (commercialMeta.payment.checkoutEnabled ? '真实微信支付已开放' : '真实微信支付仍关闭')
+          : '购买状态暂未取得，请到商品页核实',
         planPriceLabels: Object.fromEntries(plans.prices.map(item => [item.key,
           `¥${(item.amountFen / 100).toFixed(2)}`])) as typeof this.data.planPriceLabels,
         fixedPriceCatalogOk: (Object.keys(FIXED_PRICES) as Array<keyof typeof FIXED_PRICES>)
@@ -812,18 +818,18 @@ Page({
         getAdminAnalytics(period), getAdminUsers(), getAdminAiCosts(), getAdminAiBalance()])
       if(statistics.status==='rejected')throw statistics.reason
       const analytics = statistics.value
-      if(!analytics.sources || !analytics.range || !analytics.summary)throw new Error('统计接口版本尚未更新，请先部署 API')
+      if(!analytics.sources || !analytics.range || !analytics.summary)throw new Error('当前统计数据暂不完整，请稍后重试')
       if(generation!==this.analyticsGeneration || period!==this.data.analyticsPeriod || owner!==getSavedAuthResult()?.user.id)return
       this.setData({
         userCount:accounts.status==='fulfilled' && Array.isArray(accounts.value) ? accounts.value.length : null,
-        assessmentUserCountLabel:typeof analytics.summary.assessmentUserCount==='number'?String(analytics.summary.assessmentUserCount):'当前 API 未提供',
-        userCountError:accounts.status==='rejected'?friendlyRequestError(accounts.reason,'账号来源读取失败'):accounts.status==='fulfilled' && !Array.isArray(accounts.value)?'账号接口版本不匹配':'',
+        assessmentUserCountLabel:typeof analytics.summary.assessmentUserCount==='number'?String(analytics.summary.assessmentUserCount):'暂未提供',
+        userCountError:accounts.status==='rejected'?friendlyRequestError(accounts.reason,'账号数量暂不可用'):accounts.status==='fulfilled' && !Array.isArray(accounts.value)?'账号数量暂不可用':'',
         analytics: { ...analytics, payers: analytics.payers.map(row => ({ ...row, amountYuan: (row.amountFen/100).toFixed(2) })) },
         aiCosts:costs.status==='fulfilled'?costs.value:null,
         aiBalance:balance.status==='fulfilled'?balance.value:null,
-        aiCostWarning:costs.status==='rejected'?'模型请求明细尚未接入；请先完成成本表迁移与新版 API 发布。':'',
+        aiCostWarning:costs.status==='rejected'?'模型请求明细暂不可用，请稍后重试。':'',
         rechargeAmountLabel:analytics.summary.rechargeAmountFen===null?'读取失败':(analytics.summary.rechargeAmountFen/100).toFixed(2),
-        analyticsWarning:Object.entries(analytics.sources).filter(([,state])=>state.status==='error').map(([source,state])=>({assessments:'评估',payments:'支付',ledger:'账本',reservations:'冻结记录'}[source]||source)+'读取失败：'+state.error).join('；'),
+        analyticsWarning:Object.entries(analytics.sources).filter(([,state])=>state.status==='error').map(([source])=>({assessments:'评估',payments:'支付',ledger:'账本',reservations:'冻结记录'}[source]||'部分统计')+'暂不可用').join('；'),
         analyticsPlots: [
           makePlot('assessmentCount', 'AI 评估使用次数', analytics.buckets),
           makePlot('createdCount', '创建评估任务', analytics.buckets),

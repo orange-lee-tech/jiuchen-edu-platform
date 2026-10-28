@@ -2,7 +2,6 @@
   <view class="brand-block">
     <view class="brand-mark">九</view>
     <text class="brand-title">九辰保研</text>
-    <text class="brand-desc">登录后由系统自动识别你的身份与权限</text>
   </view>
 
   <view class="login-card">
@@ -28,11 +27,10 @@
       手机号快捷登录
     </button>
 
-    <text class="native-note">手机号由微信官方快速验证能力提供，无需设置密码或输入短信验证码。</text>
 
     <checkbox-group class="agreement-row" bindchange="onAgreementChange">
       <label class="agreement-label">
-        <checkbox value="accepted" checked="{{agreed}}" color="#6b53d8" />
+        <checkbox value="accepted" checked="{{agreed}}" color="#173e67" />
         <text>我已阅读并同意</text>
       </label>
       <text class="agreement-link" bindtap="onAgreementTap">《用户协议》</text>
@@ -41,5 +39,4 @@
     <text wx:if="{{!agreed}}" class="agreement-hint">勾选用户协议后可使用本机号码登录。</text>
   </view>
 
-  <text class="login-footnote">两种登录方式都只用于确认账号身份；游客绑定九辰内部ID后，系统才会切换到对应学员、老师或管理员界面。</text>
 </view>

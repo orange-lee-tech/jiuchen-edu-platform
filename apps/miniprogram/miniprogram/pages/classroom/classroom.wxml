@@ -4,26 +4,22 @@
   <view class="classroom-top">
     <view>
       <text class="page-title">我的规划</text>
-      <text class="page-subtitle">{{mode === 'student' ? '真实计划、课表与辅导进度' : '大学阶段规划与辅导工作台'}}</text>
     </view>
     <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge">{{selectedView === 'week' ? '本周课表' : currentStageLabel}}</view>
   </view>
 
   <view wx:if="{{mode === 'guest'}}" class="entry-state surface">
     <text class="entry-title">接续你的大学阶段规划</text>
-    <text class="entry-desc">九辰学员登录并绑定学员编号后，可以查看自己的规划、课表与辅导记录。</text>
     <button class="entry-button" bindtap="onLogin">登录并绑定学员身份</button>
   </view>
 
   <view wx:elif="{{mode === 'unbound'}}" class="entry-state surface">
     <text class="entry-title">绑定学员身份，查看阶段规划</text>
-    <text class="entry-desc">填写九辰提供的学员编号即可接入服务，无需再次登录。尚未加入九辰的用户仍可从「今天」进入背景评估。</text>
     <button class="entry-button" bindtap="onBindIdentity">填写九辰学员编号</button>
   </view>
 
   <view wx:elif="{{mode === 'teacher'}}" class="entry-state surface">
     <text class="entry-title">老师工作台</text>
-    <text class="entry-desc">查看已分配学员的规划，并可直接编辑保存。</text>
     <button class="entry-button" bindtap="onTeacherWorkspace">进入我的学员</button>
   </view>
 
@@ -34,7 +30,6 @@
     <view class="student-tools surface">
       <view>
         <text class="tool-title">{{studentName || '我的计划'}}</text>
-        <text class="tool-desc">你和老师修改规划后，保存即生效。</text>
       </view>
       <button wx:if="{{!readOnly}}" class="schedule-import-button" bindtap="onScheduleImport">导入课表</button>
     </view>
@@ -77,7 +72,7 @@
 
         <view class="section-title-row">
           <text class="section-title">阶段规划</text>
-          <text class="section-note">{{loading ? '同步中…' : readOnly ? '只读查看' : '点击进入编辑'}}</text>
+          <text wx:if="{{loading || readOnly}}" class="section-note">{{loading ? '同步中…' : '只读查看'}}</text>
         </view>
 
         <view wx:if="{{plans.length > 0}}" class="plan-list">
@@ -94,12 +89,12 @@
                 <view class="plan-title-row">
                   <text class="plan-title">{{item.title}}</text>
                   <text class="revision-chip {{item.revisionStatus}}">
-                    {{item.revisionStatus === 'pending' ? '旧版草稿未生效' : item.revisionStatus === 'approved' ? '已保存' : '未建立'}}
+                    {{item.revisionStatus === 'pending' ? '旧版草稿未生效' : item.revisionStatus === 'approved' ? '已保存' : '可创建'}}
                   </text>
                 </view>
                 <text class="plan-note">{{item.note}}</text>
               </view>
-              <text class="plan-arrow">{{readOnly ? '查看' : '编辑'}} ›</text>
+              <text class="plan-arrow">{{readOnly ? '查看' : item.revisionStatus === 'none' ? '建立' + item.title : '编辑'}} ›</text>
             </view>
             <view wx:if="{{item.progress}}" class="plan-card-foot">
               <text class="progress-label">条目进度</text>
@@ -110,13 +105,11 @@
 
         <view wx:else class="pending-card surface">
           <text class="pending-title">本阶段暂无可编辑计划</text>
-          <text class="pending-desc">该阶段不自动生成虚构任务，等待九辰老师确认实际安排。</text>
         </view>
 
         <block wx:if="{{showGuidance}}">
           <view class="section-title-row">
             <text class="section-title">辅导老师</text>
-            <text class="section-note">点击查看老师介绍</text>
           </view>
 
           <view wx:if="{{mentors.length > 0}}" class="mentor-list">
@@ -132,12 +125,10 @@
 
           <view wx:else class="pending-card surface">
             <text class="pending-title">辅导老师待分配</text>
-            <text class="pending-desc">这里只展示后台真实建立的师生关系。</text>
           </view>
 
           <view class="section-title-row">
             <text class="section-title">辅导记录</text>
-            <text class="section-note">真实记录</text>
           </view>
 
           <view wx:if="{{records.length > 0}}" class="record-list surface">
@@ -152,8 +143,8 @@
           </view>
 
           <view wx:else class="pending-card surface">
-            <text class="pending-title">{{guidanceRecordsReady ? '暂无辅导记录' : '辅导记录模块正在准备'}}</text>
-            <text class="pending-desc">{{guidanceRecordsReady ? '不会再用演示记录填充这里。' : '当前计划与课表仍可正常使用；辅导记录数据库完成升级后会自动恢复。'}}</text>
+            <text class="pending-title">{{guidanceRecordsReady ? '暂无辅导记录' : '暂时无法查看辅导记录'}}</text>
+            <text class="pending-desc">{{guidanceRecordsReady ? '老师留下辅导记录后会显示在这里。' : '规划和课表仍可正常使用；请稍后再查看辅导记录。'}}</text>
           </view>
         </block>
         </block>

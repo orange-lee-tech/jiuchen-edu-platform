@@ -1,9 +1,14 @@
 import {
   friendlyRequestError,
   confirmAssessmentGrowthImport,
+  createMyGrowthRecord,
   getMyGrowthProfileBootstrap,
+  updateMyGrowthRecord,
   type ApplicationProjection,
+  type CanonicalGrowthRecord,
   type CanonicalGrowthProfile,
+  type GrowthRecordInput,
+  type GrowthRecordType,
   type GrowthImportCandidate,
   type GrowthProfileBootstrap,
   type ResumeProjection,
@@ -15,6 +20,8 @@ import {
 } from '../../utils/growth-profile-cache'
 import { openResumeDocx } from '../../utils/resume-document'
 import { authorizePage } from '../../utils/navigation'
+import { getSavedAuthResult } from '../../utils/auth'
+import { getReadOnlyContext, isReadOnly } from '../../utils/read-only-context'
 
 type ResumeTarget = 'general' | 'technical' | 'academic'
 
@@ -38,6 +45,25 @@ const TYPE_LABELS: Record<string, string> = {
   other: '其他经历',
 }
 
+const RECORD_TYPES: Array<{ key: GrowthRecordType; label: string }> = [
+  { key: 'language', label: '语言考试' },
+  { key: 'research', label: '科研经历' },
+  { key: 'publication', label: '论文成果' },
+  { key: 'competition', label: '竞赛经历' },
+  { key: 'award', label: '荣誉奖项' },
+  { key: 'project', label: '项目经历' },
+  { key: 'internship', label: '实习经历' },
+  { key: 'campus', label: '校园经历' },
+  { key: 'skill', label: '技能' },
+  { key: 'other', label: '其他经历' },
+  { key: 'course', label: '课程与成绩（请先核对已导入课表）' },
+]
+
+const EMPTY_RECORD_FORM: GrowthRecordInput = {
+  type: 'language', title: '', organization: '', role: '',
+  startDate: '', endDate: '', description: '', result: '',
+}
+
 function emptyProfile(): CanonicalGrowthProfile {
   return {
     schemaVersion: 'growth-profile-v1',
@@ -53,9 +79,19 @@ function emptyProfile(): CanonicalGrowthProfile {
   }
 }
 
+function currentOwnerKey() {
+  const auth = getSavedAuthResult()
+  const viewed = getReadOnlyContext()
+  return `${auth?.user.id ?? ''}:${auth?.businessIdentity?.businessId ?? ''}:${viewed?.id ?? ''}`
+}
+
+const bootstrapOwnerInFlight = new WeakMap<object, string>()
+
 Page({
   data: {
     loading: true,
+    ownerKey: '',
+    readOnly: false,
     refreshing: false,
     error: '',
     cacheState: '' as '' | 'fresh' | 'stale',
@@ -63,7 +99,14 @@ Page({
     growthSchemaReady: true,
     assessmentSchemaReady: true,
     profile: emptyProfile(),
-    records: [] as Array<Record<string, unknown>>,
+    records: [] as Array<CanonicalGrowthRecord & { typeLabel: string; sourceLabel: string }>,
+    recordTypes: RECORD_TYPES,
+    recordTypeIndex: 0,
+    recordFormOpen: false,
+    recordEditingId: '',
+    recordForm: { ...EMPTY_RECORD_FORM },
+    recordSaving: false,
+    recordError: '',
     target: 'general' as ResumeTarget,
     targets: TARGETS,
     resume: null as ResumeProjection | null,
@@ -79,7 +122,30 @@ Page({
   },
 
   onLoad(options: Record<string, string>) {
-    authorizePage('pages/growth-profile/growth-profile', options, () => { void this.loadBootstrap() })
+    authorizePage('pages/growth-profile/growth-profile', options, () => {
+      this.setData({ readOnly: isReadOnly(), ownerKey: currentOwnerKey() })
+      void this.loadBootstrap()
+    })
+  },
+
+  onShow() {
+    if (this.data.ownerKey && this.data.ownerKey !== currentOwnerKey()) {
+      this.setData({
+        ownerKey: '', readOnly: isReadOnly(), loading: true, refreshing: false,
+        error: '', revision: '', cacheState: '',
+        profile: emptyProfile(), records: [], resume: null, resumeProjections: null,
+        application: null, matchedCount: 0, confirmCount: 0, missingCount: 0,
+        importAssessmentId: '', importCandidates: [], importing: false,
+        openingDocument: false, recordFormOpen: false, recordSaving: false,
+        recordError: '', recordEditingId: '', recordForm: { ...EMPTY_RECORD_FORM },
+      })
+      authorizePage('pages/growth-profile/growth-profile', this.options || {}, () => {
+        this.setData({ readOnly: isReadOnly(), ownerKey: currentOwnerKey() })
+        void this.loadBootstrap()
+      })
+      return
+    }
+    if (this.data.revision) void this.loadBootstrap(true)
   },
 
   applyBootstrap(
@@ -122,10 +188,15 @@ Page({
   },
 
   async loadBootstrap(force = false) {
+    const ownerKey = this.data.ownerKey
+    if (bootstrapOwnerInFlight.get(this) === ownerKey) return false
+    bootstrapOwnerInFlight.set(this, ownerKey)
+    try {
     let usedCache = false
 
     if (!force) {
       const cached = await getCachedGrowthProfileBootstrap()
+      if (ownerKey !== currentOwnerKey() || ownerKey !== this.data.ownerKey) return false
       if (cached) {
         usedCache = true
         this.applyBootstrap(cached.data, cached.fresh ? 'fresh' : 'stale')
@@ -134,11 +205,13 @@ Page({
     }
 
     if (!usedCache) {
-      this.setData({ loading: true, refreshing: false, error: '' })
+      const keepRecordsVisible = force && this.data.records.length > 0
+      this.setData({ loading: !keepRecordsVisible, refreshing: keepRecordsVisible, error: '' })
     }
 
     try {
       const fresh = await getMyGrowthProfileBootstrap()
+      if (ownerKey !== currentOwnerKey() || ownerKey !== this.data.ownerKey) return false
       if (fresh.revision !== this.data.revision || !usedCache) {
         this.applyBootstrap(fresh, '')
       } else {
@@ -149,7 +222,9 @@ Page({
         })
       }
       void saveGrowthProfileBootstrap(fresh)
+      return true
     } catch (error) {
+      if (ownerKey !== currentOwnerKey() || ownerKey !== this.data.ownerKey) return false
       if (!usedCache) {
         this.setData({
           error: friendlyRequestError(error, '成长履历暂时无法加载'),
@@ -161,8 +236,14 @@ Page({
           duration: 2200,
         })
       }
+      return false
     } finally {
-      this.setData({ loading: false, refreshing: false })
+      if (ownerKey === currentOwnerKey() && ownerKey === this.data.ownerKey) {
+        this.setData({ loading: false, refreshing: false })
+      }
+    }
+    } finally {
+      if (bootstrapOwnerInFlight.get(this) === ownerKey) bootstrapOwnerInFlight.delete(this)
     }
   },
 
@@ -175,6 +256,8 @@ Page({
   },
 
   async onConfirmAssessmentImport() {
+    if (isReadOnly() || this.data.importing) return
+    const ownerKey = this.data.ownerKey
     const assessmentId = this.data.importAssessmentId
     const candidateKeys = this.data.importCandidates
       .filter((candidate) => candidate.selected)
@@ -188,17 +271,19 @@ Page({
     try {
       this.setData({ importing: true })
       const result = await confirmAssessmentGrowthImport(assessmentId, candidateKeys)
+      if (ownerKey !== currentOwnerKey() || ownerKey !== this.data.ownerKey) return
       await clearGrowthProfileBootstrapCache()
       wx.showToast({ title: `已同步${result.imported}条履历`, icon: 'success' })
       await this.loadBootstrap(true)
     } catch (error) {
+      if (ownerKey !== currentOwnerKey() || ownerKey !== this.data.ownerKey) return
       wx.showToast({
         title: friendlyRequestError(error, '同步履历失败，请稍后重试'),
         icon: 'none',
         duration: 2600,
       })
     } finally {
-      this.setData({ importing: false })
+      if (ownerKey === currentOwnerKey() && ownerKey === this.data.ownerKey) this.setData({ importing: false })
     }
   },
 
@@ -235,6 +320,90 @@ Page({
   },
 
   onEditBaseProfile() {
+    if (isReadOnly()) return
     wx.navigateTo({ url: '/pages/profile-edit/profile-edit' })
+  },
+
+  onRetryLoad() {
+    if (this.data.loading || this.data.refreshing ||
+      bootstrapOwnerInFlight.get(this) === this.data.ownerKey) return
+    this.setData({ error: '' })
+    void this.loadBootstrap(true)
+  },
+
+  onNewRecord() {
+    if (isReadOnly() || !this.data.growthSchemaReady) return
+    this.setData({
+      recordFormOpen: true, recordEditingId: '', recordTypeIndex: 0,
+      recordForm: { ...EMPTY_RECORD_FORM }, recordError: '',
+    })
+  },
+
+  onEditRecord(event: WechatMiniprogram.BaseEvent) {
+    if (isReadOnly() || !this.data.growthSchemaReady) return
+    const record = this.data.records.find((item) => item.id === event.currentTarget.dataset.id)
+    if (!record || record.source.type !== 'manual') return
+    this.setData({
+      recordFormOpen: true, recordEditingId: record.id,
+      recordTypeIndex: RECORD_TYPES.findIndex((item) => item.key === record.type),
+      recordForm: {
+        type: record.type, title: record.title, organization: record.organization || '',
+        role: record.role || '', startDate: record.startDate || '', endDate: record.endDate || '',
+        description: record.description || '', result: record.result || '',
+      },
+      recordError: '',
+    })
+  },
+
+  onRecordTypeChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const index = Number(event.detail.value)
+    const type = RECORD_TYPES[index]
+    if (type) this.setData({ recordTypeIndex: index, 'recordForm.type': type.key })
+  },
+
+  onRecordInput(event: WechatMiniprogram.Input) {
+    const field = String(event.currentTarget.dataset.field || '')
+    if (!['title', 'organization', 'role', 'startDate', 'endDate', 'description', 'result'].includes(field)) return
+    this.setData({ ['recordForm.' + field]: event.detail.value })
+  },
+
+  onCancelRecord() {
+    if (this.data.recordSaving) return
+    this.setData({ recordFormOpen: false, recordEditingId: '', recordError: '' })
+  },
+
+  async onSaveRecord() {
+    if (isReadOnly() || this.data.recordSaving || !this.data.growthSchemaReady) return
+    const ownerKey = this.data.ownerKey
+    const form = this.data.recordForm
+    const title = form.title.trim()
+    if (!title) {
+      this.setData({ recordError: '请先填写这段经历的名称。' })
+      return
+    }
+    const input: GrowthRecordInput = {
+      ...form, title,
+      organization: form.organization?.trim() || null,
+      role: form.role?.trim() || null,
+      startDate: form.startDate?.trim() || null,
+      endDate: form.endDate?.trim() || null,
+      description: form.description?.trim() || null,
+      result: form.result?.trim() || null,
+    }
+    this.setData({ recordSaving: true, recordError: '' })
+    try {
+      if (this.data.recordEditingId) await updateMyGrowthRecord(this.data.recordEditingId, input)
+      else await createMyGrowthRecord(input)
+      if (ownerKey !== currentOwnerKey() || ownerKey !== this.data.ownerKey) return
+      await clearGrowthProfileBootstrapCache()
+      const refreshed = await this.loadBootstrap(true)
+      this.setData({ recordFormOpen: false, recordEditingId: '' })
+      wx.showToast({ title: refreshed ? '经历已保存' : '已保存，请稍后刷新', icon: refreshed ? 'success' : 'none' })
+    } catch (error) {
+      if (ownerKey !== currentOwnerKey() || ownerKey !== this.data.ownerKey) return
+      this.setData({ recordError: friendlyRequestError(error, '经历暂时无法保存，请重试') })
+    } finally {
+      if (ownerKey === currentOwnerKey() && ownerKey === this.data.ownerKey) this.setData({ recordSaving: false })
+    }
   },
 })

@@ -3,12 +3,10 @@
 }
 
 .page-title,
-.page-desc,
 .import-icon,
 .import-title,
 .import-desc,
 .term-title,
-.term-desc,
 .course-name,
 .course-meta,
 .field-label,
@@ -20,13 +18,6 @@
 .page-title {
   font-size: 38rpx;
   font-weight: 800;
-}
-
-.page-desc {
-  margin-top: 10rpx;
-  color: #777e89;
-  font-size: 22rpx;
-  line-height: 1.7;
 }
 
 .mode-tabs {
@@ -71,13 +62,6 @@
   color: #2c333d;
   font-size: 25rpx;
   font-weight: 800;
-}
-
-.term-desc {
-  margin-top: 6rpx;
-  color: #828a95;
-  font-size: 19rpx;
-  line-height: 1.5;
 }
 
 .date-picker {

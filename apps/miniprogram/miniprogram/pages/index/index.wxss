@@ -1,10 +1,9 @@
 /* Home RC1: one visual system, one accent, centered equal-weight entry cards. */
-.home-page{box-sizing:border-box;min-height:100vh;padding:24rpx 22rpx calc(42rpx + env(safe-area-inset-bottom));background:#edf3f8;color:#142d48;}
-.eyebrow,.home-title,.home-description,.home-caption,.section-heading,.action-title,.action-description,.service-title,.service-description{display:block;}
+.home-page{box-sizing:border-box;min-height:100vh;padding:24rpx 22rpx calc(42rpx + env(safe-area-inset-bottom));background:#f4f2ed;color:#142d48;}
+.eyebrow,.home-title,.home-caption,.section-heading,.action-title,.service-title{display:block;}
 .home-intro{padding:32rpx 27rpx 30rpx;background:linear-gradient(140deg,#143a62 0%,#155b75 100%);border:1rpx solid #2b6279;border-radius: 8rpx;box-shadow:0 6rpx 16rpx rgba(16,52,77,.11);}
 .eyebrow{font-size:22rpx;font-weight:700;color:#eed39a;letter-spacing:1rpx;}
 .home-title{font-size:40rpx;line-height:1.35;font-weight:800;margin-top:13rpx;color:#fff;}
-.home-description{font-size:24rpx;line-height:1.62;color:#e3edf3;margin-top:11rpx;}
 button{box-sizing:border-box;margin-left:0;margin-right:0;border-radius: 8rpx;white-space:normal;}
 button::after{border:0;}
 .home-primary{display:flex;width:100%;justify-content:center;align-items:center;margin:23rpx 0 0;min-height:86rpx;padding:12rpx 20rpx;background:#ecca80;color:#173951;font-size:28rpx;line-height:1.4;font-weight:800;}
@@ -22,7 +21,6 @@ button::after{border:0;}
 .home-course-location{margin-top:5rpx;font-size:20rpx;color:#687f8d;}
 .home-section-bar{display:flex;align-items:center;justify-content:space-between;gap:10rpx;margin:28rpx 0 15rpx;}
 .section-heading{font-size:30rpx;font-weight:800;line-height:1.45;color:#142d48;margin:0;}
-.section-supplement{font-size:19rpx;color:#647b8c;text-align:right;}
 .action-list,.service-links{display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;row-gap:14rpx;}
 .action-row,.service-link{position:relative;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;align-items:center;width:49%;text-align:center;background:#fff;border:1rpx solid #cbdbe5;border-top:4rpx solid #28768b;border-radius: 8rpx;box-shadow:0 3rpx 9rpx rgba(20,57,81,.055);}
 .action-row{min-height:220rpx;padding:26rpx 15rpx 23rpx;}
@@ -30,7 +28,6 @@ button::after{border:0;}
 .action-symbol,.service-symbol{display:flex;align-items:center;justify-content:center;width:73rpx;height:73rpx;background:#dcebf2;border-radius: 8rpx;flex-shrink:0;}
 .action-icon,.service-icon{width:46rpx;height:46rpx;}
 .action-title,.service-title{font-size:28rpx;font-weight:800;line-height:1.35;color:#173b57;margin-top:13rpx;}
-.action-description,.service-description{font-size:20rpx;line-height:1.45;color:#637989;margin-top:6rpx;padding:0;text-align:center;}
 .action-more{position:absolute;right:15rpx;top:17rpx;color:#66899a;font-size:28rpx;line-height:1;}
 .service-section{margin-top:28rpx;padding-top:19rpx;border-top:2rpx solid #cfdde5;}
 .service-links{margin-top:15rpx;}
@@ -51,12 +48,14 @@ button::after{border:0;}
 .action-row:active,.service-link:active,.action-pressed,.service-pressed{background:#10496d;}
 .action-symbol,.service-symbol{background:#eac263;}
 .action-title,.service-title{color:#fff;}
-.action-description,.service-description{color:#e3eef5;}
 .action-more{color:#f3cf74;}
 
 /* Daily workbench: warm surfaces carry content, blue and gold mark actions. */
 .home-page{background:#f4f2ed;color:#193750;}
 .home-intro{background:linear-gradient(135deg,#173c62,#245d76);border:0;border-radius: 8rpx;padding:29rpx 28rpx;box-shadow:0 12rpx 28rpx rgba(18,52,77,.12);}
+.home-intro-compact{padding:20rpx 26rpx;box-shadow:none;}
+.home-intro-compact .home-title{margin-top:6rpx;font-size:31rpx;}
+.home-intro-compact .home-caption{margin-top:7rpx;}
 .home-title{font-size:37rpx;}
 .home-primary{width:auto;min-height:70rpx;padding:12rpx 26rpx;border-radius: 8rpx;font-size:25rpx;}
 .home-card{box-sizing:border-box;margin-top:20rpx;padding:25rpx;background:#fffdf9;border:1rpx solid #e7ded0;border-radius: 8rpx;box-shadow:0 5rpx 18rpx rgba(27,59,77,.055);}
@@ -80,16 +79,13 @@ button::after{border:0;}
 .action-row:active,.action-pressed,.service-link:active,.service-pressed{background:#edf4f5;}
 .action-symbol,.service-symbol{background:#e4edf0;}
 .action-title,.service-title{color:#1a4666;}
-.action-description,.service-description{color:#687d89;}
 .action-more{color:#af8548;}
 .service-section{border-top-color:#e7ded0;}
-.section-supplement{color:#71818a;}
 .action-consult{width:100%;min-height:118rpx;flex-direction:row;justify-content:flex-start;gap:16rpx;text-align:left;padding:18rpx 25rpx;}
 .action-consult .action-symbol{width:60rpx;height:60rpx;}
-.action-consult .action-title,.action-consult .action-description{margin-top:0;text-align:left;}
+.action-consult .action-title{margin-top:0;text-align:left;}
 .service-links{display:flex;flex-direction:column;gap:9rpx;}
 .service-link,.service-website{width:100%;min-height:86rpx;flex-direction:row;justify-content:flex-start;gap:13rpx;padding:13rpx 17rpx;}
 .service-symbol,.service-website .service-symbol{width:42rpx;height:42rpx;}
 .service-icon,.service-website .service-icon{width:30rpx;height:30rpx;}
 .service-title{margin-top:0;font-size:23rpx;}
-.service-description{margin-top:0;font-size:20rpx;}

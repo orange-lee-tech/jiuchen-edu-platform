@@ -1,7 +1,7 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import {isReadOnly,getReadOnlyContext} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeShell, openSlot, shellView } from '../../utils/navigation'
-import { getMyAcademicProfile } from '../../utils/request'
+import { friendlyRequestError, getMyAcademicProfile } from '../../utils/request'
 
 const EMPTY_PROFILE = {
   university: '',
@@ -15,12 +15,14 @@ Page({
   data: {
     ...INITIAL_SHELL,
     canEditProfile: false,
+    profileLoading: false,
+    profileError: '',
     profileForm: { ...EMPTY_PROFILE },
     dimensions: [
-      { key: 'profile', title: '学业基础', desc: '绩点、排名与核心课程', status: '填写 ›' },
-      { key: 'english', title: '英语能力', desc: '四六级、雅思、托福等', status: '填写 ›' },
-      { key: 'research', title: '科研经历', desc: '项目、论文与导师经历', status: '填写 ›' },
-      { key: 'competition', title: '竞赛实践', desc: '竞赛、创新创业与作品', status: '填写 ›' },
+      { key: 'profile', title: '学业基础', desc: '绩点、排名与核心课程', status: '查看 / 补充 ›' },
+      { key: 'english', title: '英语能力', desc: '四六级、雅思、托福等', status: '查看 / 补充 ›' },
+      { key: 'research', title: '科研经历', desc: '项目、论文与导师经历', status: '查看 / 补充 ›' },
+      { key: 'competition', title: '竞赛实践', desc: '竞赛、创新创业与作品', status: '查看 / 补充 ›' },
     ],
   },
 
@@ -31,7 +33,7 @@ Page({
     this.stopAuth = observeShell((state) => {
       this.setData(shellView(state))
       if (state.phase === 'ready') this.initializePosition()
-      else this.setData({ canEditProfile: false })
+      else this.setData({ canEditProfile: false, profileLoading: false, profileError: '', profileForm: { ...EMPTY_PROFILE } })
     })
   },
   onHide() { this.stopAuth?.() },
@@ -41,10 +43,10 @@ Page({
       Boolean(auth) &&
       ((getReadOnlyContext()?.role||auth?.user.role) === 'user' || (getReadOnlyContext()?.role||auth?.user.role) === 'student')
 
-    const sameOwner = this.profileOwner === auth?.user.id
-    if (canEditProfile && !sameOwner) {
-      this.profileOwner = auth!.user.id
-      this.setData({ profileForm: { ...EMPTY_PROFILE } })
+    const owner = canEditProfile ? `${auth!.user.id}:${auth!.businessIdentity?.businessId || ''}:${getReadOnlyContext()?.id || ''}` : null
+    if (owner !== this.profileOwner) {
+      this.profileOwner = owner
+      this.setData({ profileForm: { ...EMPTY_PROFILE }, profileError: '' })
     }
     this.setData({ canEditProfile })
     if (canEditProfile) void this.loadAcademicProfile()
@@ -52,10 +54,12 @@ Page({
 
   async loadAcademicProfile() {
     const owner = this.profileOwner
+    if (!owner) return
+    this.setData({ profileLoading: true, profileError: '' })
     try {
       const profile = await getMyAcademicProfile()
       if (!this.data.canEditProfile ||
-        owner !== this.profileOwner || owner !== getSavedAuthResult()?.user.id) return
+        owner !== this.profileOwner) return
       const normalized = {
         university: profile.university || '',
         major: profile.major || '',
@@ -65,9 +69,13 @@ Page({
       }
       this.setData({ profileForm: normalized })
     } catch (error) {
-      console.info('Academic profile is unavailable on position page.', error)
+      if (owner === this.profileOwner) this.setData({ profileError: friendlyRequestError(error, '学业资料暂时无法读取，请重试') })
+    } finally {
+      if (owner === this.profileOwner) this.setData({ profileLoading: false })
     }
   },
+
+  onRetryProfile() { void this.loadAcademicProfile() },
 
   onUnload() { this.stopAuth?.() },
 

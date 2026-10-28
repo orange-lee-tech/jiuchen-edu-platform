@@ -341,16 +341,14 @@ Page({
     } catch (error) {
       const message = friendlyRequestError(error, '课表暂时未能保存，请稍后再试')
       const code = error instanceof ApiRequestError
-        ? 'HTTP ' + error.statusCode + ' / ' + error.code
-        : error instanceof Error ? error.message : 'unknown'
+        ? error.code
+        : 'request_failed'
       // Keep the imported courses visible. Never present an unsaved date as saved.
-      this.setData({ saveError: message + '（' + code + '）' })
-      console.warn('schedule_save_failed', {
-        code, detail: error instanceof ApiRequestError ? error.detail.slice(0, 320) : '',
-      })
+      this.setData({ saveError: message })
+      console.warn('schedule_save_failed', { code })
       wx.showModal({
         title: '课表没有保存成功',
-        content: message + '。识别出的课程仍在当前页面，未被清空。\n错误码：' + code,
+        content: message + '。识别出的课程仍在当前页面，未被清空。',
         showCancel: false,
       })
       return false
@@ -381,18 +379,16 @@ Page({
       const missingRoute = error instanceof ApiRequestError &&
         error.code === 'backend_version_mismatch'
       const message = missingRoute
-        ? '服务端尚未部署第一周日期的独立保存接口。课表已保留，日期未变；需完成 API 受控发布。'
+        ? '当前暂不能保存第一周日期。课表已保留，日期未变；请稍后重试或联系客服。'
         : friendlyRequestError(error, '本学期起始日期保存失败，请稍后再试')
       const code = error instanceof ApiRequestError
-        ? 'HTTP ' + error.statusCode + ' / ' + error.code
-        : error instanceof Error ? error.message : 'unknown'
-      this.setData({ saveError: message + '（' + code + '）' })
-      console.warn('schedule_date_save_failed', {
-        code, detail: error instanceof ApiRequestError ? error.detail.slice(0, 320) : '',
-      })
+        ? error.code
+        : 'request_failed'
+      this.setData({ saveError: message })
+      console.warn('schedule_date_save_failed', { code })
       wx.showModal({
         title: '第一周日期未保存',
-        content: message + ' 课表课程仍然保留，原日期未被更改。\n错误码：' + code,
+        content: message + ' 课表课程仍然保留，原日期未被更改。',
         showCancel: false,
       })
     } finally {

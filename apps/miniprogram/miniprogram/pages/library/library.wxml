@@ -1,7 +1,11 @@
 <view class="page-shell">
   <view class="library-head">
-    <text class="page-title">院校与项目资料库</text>
-    <text class="page-desc">当前检索真实同步资讯与已结构化九辰服务资料，不展示虚构院校数据。</text>
+    <text class="page-title">资料与文章</text>
+  </view>
+
+  <view class="school-entry surface" bindtap="onSchools" hover-class="school-entry-pressed" aria-role="button">
+    <view><text class="school-entry-title">进入院校库</text></view>
+    <text class="school-entry-arrow">›</text>
   </view>
 
   <view class="search-box surface">
@@ -16,7 +20,13 @@
 
   <view wx:if="{{loading}}" class="state-card surface">资料加载中…</view>
 
+  <view wx:elif="{{loadError}}" class="state-card surface error-state">
+    <text>{{loadError}}</text>
+    <button class="retry-button" bindtap="loadData">重新加载</button>
+  </view>
+
   <view wx:else class="result-list">
+    <view wx:if="{{partialNotice}}" class="state-card surface partial-state"><text>{{partialNotice}}</text><button class="retry-button" bindtap="loadData">刷新资料</button></view>
     <view
       wx:for="{{items}}"
       wx:key="id"
@@ -30,7 +40,7 @@
       <text class="result-action">{{item.kind === 'product' ? '查看详情 ›' : '查看原文 ›'}}</text>
     </view>
     <view wx:if="{{items.length === 0}}" class="state-card surface">
-      暂无匹配的真实资料。后续院校数据源接入后会继续扩充这里，而不是填充示例数据。
+      {{query ? '没有匹配的资料，请换个关键词。' : '目前没有可浏览的资料，请稍后刷新。'}}
     </view>
   </view>
 </view>

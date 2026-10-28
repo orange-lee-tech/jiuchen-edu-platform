@@ -2,7 +2,7 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 28rpx 28rpx 72rpx;
-  background: #f6f7f9;
+  background: #f4f2ed;
   color: #242a32;
 }
 

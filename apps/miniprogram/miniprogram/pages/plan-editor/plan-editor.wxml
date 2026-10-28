@@ -2,7 +2,6 @@
 <view class="page-shell">
   <view class="editor-head">
     <text class="page-title">{{studentName || '计划编辑'}}</text>
-    <text class="page-desc">保存后立即更新正式规划，无需审核。</text>
     <text wx:if="{{!teacherMode}}" class="status-line">当前规划：{{revisionStatus === 'pending' ? '旧版草稿未生效' : revisionStatus === 'approved' ? '已保存' : '尚未建立'}}</text>
   </view>
 

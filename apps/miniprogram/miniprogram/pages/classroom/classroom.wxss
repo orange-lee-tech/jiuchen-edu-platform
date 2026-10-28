@@ -1,18 +1,18 @@
-.classroom-page { padding:28rpx 24rpx calc(40rpx + env(safe-area-inset-bottom)); background:#f2f4f6; color:#18202a; }
+.classroom-page { padding:28rpx 24rpx calc(40rpx + env(safe-area-inset-bottom)); background:#f4f2ed; color:#18202a; }
 .classroom-top { display:flex; flex-wrap:wrap; gap:16rpx; justify-content:space-between; margin-bottom:24rpx; }
-.page-title,.page-subtitle,.stage-title,.stage-desc,.plan-title,.plan-note,.mentor-name,.mentor-desc,.record-title,.record-content,.pending-title,.pending-desc,.entry-title,.entry-desc,.tool-title,.tool-desc,.record-teacher,.course-slot { display:block; }
+.page-title,.stage-title,.stage-desc,.plan-title,.plan-note,.mentor-name,.mentor-desc,.record-title,.record-content,.pending-title,.pending-desc,.entry-title,.tool-title,.record-teacher,.course-slot { display:block; }
 .page-title { font-size:42rpx; font-weight:800; color:#173b73; }
-.page-subtitle,.stage-desc,.tool-desc,.entry-desc { color:#5f6b78; font-size:25rpx; line-height:1.7; margin-top:10rpx; }
+.stage-desc { color:#5f6b78; font-size:25rpx; line-height:1.7; margin-top:10rpx; }
 .stage-badge { background:#fff3cf; color:#705015; font-size:24rpx; padding:12rpx 18rpx; align-self:flex-start; border-radius: 6rpx; }
 .surface { border:1rpx solid #d8dee6; border-radius: 8rpx; background:#fafbfc; }
 .student-tools,.entry-state { padding:24rpx; margin-bottom:24rpx; }
 .student-tools { display:flex; flex-wrap:wrap; align-items:center; gap:20rpx; border-left:6rpx solid #f2b544; }
 .student-tools > view { flex:1 1 280rpx; min-width:0; }
-.entry-state { background:#e7eef8; border-left:6rpx solid #2f6fed; }
+.entry-state { background:#eaf2fa; border-left:6rpx solid #245681; }
 .entry-title,.tool-title { font-size:30rpx; font-weight:700; }
 button { border-radius: 8rpx; white-space:normal; box-sizing:border-box; }
 button::after { border:0; }
-.entry-button,.schedule-import-button,.plan-error button { margin:20rpx 0 0; padding:18rpx 20rpx; font-size:26rpx; line-height:1.5; background:#2f6fed; color:#fff; }
+.entry-button,.schedule-import-button,.plan-error button { margin:20rpx 0 0; padding:18rpx 20rpx; font-size:26rpx; line-height:1.5; background:#245681; color:#fff; }
 .schedule-import-button { margin:0; }
 .entry-button:active,.schedule-import-button:active,.plan-error button:active { background:#2459be; }
 .classroom-layout { display:flex; align-items:flex-start; gap:16rpx; }
@@ -27,7 +27,7 @@ button::after { border:0; }
 .timeline-item.active .timeline-label,.current-week-nav.active .current-week-label { color:#fff; font-weight:700; }
 .timeline-item.active .timeline-dot,.current-week-nav.active .timeline-dot { background:#f2b544; }
 .classroom-main { flex:1; min-width:0; }
-.stage-summary { padding:20rpx; background:#e7eef8; border-left:4rpx solid #2f6fed; }
+.stage-summary { padding:20rpx; background:#eaf2fa; border-left:4rpx solid #245681; }
 .stage-summary-head { display:flex; flex-wrap:wrap; gap:12rpx; }
 .stage-title { font-size:32rpx; font-weight:800; color:#173b73; }
 .stage-state { font-size:23rpx; color:#2459be; }
@@ -36,7 +36,7 @@ button::after { border:0; }
 .section-note { font-size:23rpx; color:#5f6b78; }
 .plan-list,.mentor-list,.week-list { display:flex; flex-direction:column; gap:14rpx; margin-top:16rpx; }
 .plan-card,.mentor-card,.pending-card,.week-course { padding:20rpx; }
-.plan-card:active { background:#e7eef8; }
+.plan-card:active { background:#eaf2fa; }
 .plan-card-head { display:flex; flex-wrap:wrap; align-items:center; gap:12rpx; }
 .plan-icon { display:none; }
 .plan-heading { flex:1 1 100%; min-width:0; }
@@ -53,7 +53,7 @@ button::after { border:0; }
 .pending-card { margin-top:16rpx; }
 .mentor-card { display:flex; flex-wrap:wrap; align-items:center; gap:12rpx; }
 .mentor-main { flex:1 1 180rpx; min-width:0; }
-.mentor-avatar { color:#2459be; background:#e7eef8; padding:12rpx; font-size:24rpx; }
+.mentor-avatar { color:#2459be; background:#eaf2fa; padding:12rpx; font-size:24rpx; }
 .arrow { color:#2459be; font-size:34rpx; }
 .record-list { padding:0 20rpx; background:#fff3cf; }
 .record-row { padding:20rpx 0; border-bottom:1rpx solid #e5d9b6; }
@@ -67,12 +67,10 @@ button::after { border:0; }
 .classroom-page{background:#eaf1f7;color:#122640;padding:24rpx 24rpx calc(40rpx + env(safe-area-inset-bottom));}
 .classroom-top{gap:9rpx;margin-bottom:18rpx;align-items:center;flex-wrap:nowrap;}
 .page-title{color:#103d75;}
-.page-subtitle{font-size:23rpx;line-height:1.5;margin-top:5rpx;color:#405c77;}
 .stage-badge{flex:none;max-width:200rpx;line-height:1.35;background:#ffdc83;color:#6e4609;font-weight:700;font-size:22rpx;padding:9rpx 12rpx;}
-.student-tools{display:flex;flex-wrap:nowrap;gap:12rpx;align-items:center;padding:19rpx 17rpx;margin-bottom:17rpx;border-left:7rpx solid #08a49b;background:#f9fffe;}
+.student-tools{display:flex;flex-wrap:nowrap;gap:12rpx;align-items:center;padding:19rpx 17rpx;margin-bottom:17rpx;border-left:7rpx solid #d7ad67;background:#fffdf9;}
 .student-tools > view{flex:1 1 0;min-width:0;}
 .tool-title{color:#103d75;}
-.tool-desc{font-size:23rpx;line-height:1.5;}
 .schedule-import-button{flex:none;padding:14rpx 16rpx;background:#1e65d6;font-size:24rpx;}
 .classroom-layout{display:block;width:100%;min-width:0;}
 .stage-sidebar{display:block;position:relative;top:auto;box-sizing:border-box;width:100%;height:94rpx;margin:0 0 18rpx;background:#dae7f7;border-radius: 9rpx;white-space:nowrap;overflow:hidden;}
@@ -123,7 +121,6 @@ button::after { border:0; }
 .classroom-page{background:#f4f2ed;color:#18374f;}
 .classroom-top{align-items:flex-start;}
 .page-title{color:#183f62;}
-.page-subtitle{color:#627987;}
 .surface{background:#fffdf9;border-color:#e4ded2;border-radius: 8rpx;box-shadow:0 4rpx 16rpx rgba(24,57,74,.05);}
 .student-tools{background:#fffdf9;border-left-color:#d7ad66;border-radius: 8rpx;}
 .schedule-import-button,.entry-button,.plan-error button{background:#205b7d;border-radius: 8rpx;}

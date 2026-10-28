@@ -1,8 +1,7 @@
 <auth-gate />
 <view class="admin-page">
   <view class="admin-head">
-    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : section === 'admin-readonly' ? '只读切换身份' : section === 'admin-analytics' ? 'AI 评估与充值统计' : section === 'admin-controls' ? '商业服务管理' : '资讯运营'}}</text>
-    <text class="admin-desc">当前工作页只处理一类业务。其他功能从底部工作台直接进入，不必在这里重复切换菜单。</text>
+    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : section === 'admin-readonly' ? '只读切换身份' : section === 'admin-analytics' ? 'AI 评估与购买统计' : section === 'admin-controls' ? '商业服务管理' : '资讯运营'}}</text>
   </view>
 
   <view class="admin-quick-return" bindtap="onReturnWorkspace">‹ 返回管理工作台</view>
@@ -64,8 +63,8 @@
         <text class="control-eyebrow">当前全局 AI · 版本 {{keyHead.version}}</text>
         <text class="control-active-title">{{activeKey ? activeKey.label : '尚无生效服务'}}</text>
         <text class="card-note">状态：{{keyCurrentStatus}} · 实际来源：{{keySourceLabel}}</text>
-        <text class="card-note">{{activeKey ? activeKey.provider + ' · ' + activeKey.model + ' · 对象版本 ' + activeKey.version : '保存第一个服务后自动生效'}}。后续新发起的评估读取服务器现役配置。</text>
-        <text wx:if="{{activeKey}}" class="card-note">生效对象 ID：{{activeKey.id}} · 最近报告格式测试：{{activeKey.lastTestResult === 'passed' ? '通过' : activeKey.lastTestResult === 'failed' ? '失败' : '未测试'}}</text>
+        <text class="card-note">{{activeKey ? activeKey.provider + ' · ' + activeKey.model + ' · 对象版本 ' + activeKey.version : '保存第一个服务后自动生效'}}</text>
+        <text wx:if="{{activeKey}}" class="card-note">最近报告格式测试：{{activeKey.lastTestResult === 'passed' ? '通过' : activeKey.lastTestResult === 'failed' ? '失败' : '未测试'}}</text>
         <text class="card-note">密钥由服务端加密保存。连接测试会调用供应商，可能产生费用。</text>
         <button wx:if="{{keyHead.activeObjectId}}" class="secondary" data-action="disable" data-id="{{keyHead.activeObjectId}}" disabled="{{actionLoading}}" bindtap="onOpenKeyAction">停用服务</button>
       </view>
@@ -117,7 +116,7 @@
       </view>
     </block>
     <block wx:else>
-      <view class="card control-status"><text class="control-eyebrow">当前次数方案 · 版本 {{planHead.version}}</text><text class="control-active-title">{{activePlan ? activePlan.name : '新订单暂无生效方案'}}</text><text class="card-note">免费赠送、商品兑换和评估扣次由服务器统一记账；旧订单保留购买时的金额和次数快照。真实微信支付仍关闭。</text></view>
+      <view class="card control-status"><text class="control-eyebrow">当前次数方案 · 版本 {{planHead.version}}</text><text class="control-active-title">{{activePlan ? activePlan.name : '新订单暂无生效方案'}}</text><text class="card-note">{{checkoutStatusLabel}}。旧订单保留购买时的金额和次数。</text></view>
       <view class="card"><text class="card-title">免费赠送次数</text><text class="card-note">游客首次 {{controlSettings.settings.guestFree}} 次；学员累计 {{controlSettings.settings.studentTotalFree}} 次。修改只作用于此后尚未领取的额度。</text>
         <text class="row-desc">游客首次</text><input class="input" type="number" data-name="guestFreeInput" value="{{guestFreeInput}}" bindinput="onControlInput" />
         <text class="row-desc">学员累计</text><input class="input" type="number" data-name="studentFreeInput" value="{{studentFreeInput}}" bindinput="onControlInput" />
@@ -130,7 +129,7 @@
       <view class="card" wx:if="{{creditPlansReady}}"><view class="list-toolbar"><text class="card-title">固定售价兑换次数</text><button class="mini" bindtap="onTogglePlanForm">{{planFormOpen ? '收起' : '＋ 新建方案'}}</button></view>
         <text wx:if="{{!fixedPriceCatalogOk}}" class="control-warning">服务端商品价格与固定目录不一致，已阻止创建方案及真实入账；请核对微信商户商品配置。</text>
         <view wx:if="{{planFormOpen}}" class="control-form">
-          <text class="row-desc">JC000 内测道具 · {{planPriceLabels.JC000}} · 默认隐藏</text><input class="input" type="number" data-name="planJc000" value="{{planJc000}}" bindinput="onPlanInput" placeholder="兑换次数" />
+          <text class="row-desc">JC000 · {{planPriceLabels.JC000}}（iOS 不可购买）</text><input class="input" type="number" data-name="planJc000" value="{{planJc000}}" bindinput="onPlanInput" placeholder="兑换次数" />
           <text class="row-desc">JC001 体验包 · {{planPriceLabels.JC001}}</text><input class="input" type="number" data-name="planJc001" value="{{planJc001}}" bindinput="onPlanInput" placeholder="兑换次数" />
           <text class="row-desc">JC002 五次包 · {{planPriceLabels.JC002}}</text><input class="input" type="number" data-name="planJc002" value="{{planJc002}}" bindinput="onPlanInput" placeholder="兑换次数" />
           <text class="row-desc">JC003 十次包 · {{planPriceLabels.JC003}}</text><input class="input" type="number" data-name="planJc003" value="{{planJc003}}" bindinput="onPlanInput" placeholder="兑换次数" />
@@ -142,7 +141,7 @@
           <button class="primary" disabled="{{actionLoading || !fixedPriceCatalogOk}}" bindtap="onCreateCreditPlan">保存{{planHead.initialized ? '候选方案' : '并启用首套方案'}}</button>
         </view>
         <view wx:if="{{creditPlans.length}}" class="control-pin-panel"><input class="input" password type="number" maxlength="6" data-name="planControlPin" value="{{planControlPin}}" bindinput="onPlanInput" placeholder="当前方案控制口令" /><input class="input" password type="number" maxlength="6" data-name="planTargetPin" value="{{planTargetPin}}" bindinput="onPlanInput" placeholder="目标方案口令" /><button wx:if="{{planHead.activePlanId}}" class="secondary" disabled="{{actionLoading}}" bindtap="onDisableCreditPlan">暂停新订单</button></view>
-        <view wx:for="{{creditPlans}}" wx:key="id" class="list-row"><view class="row-main"><text class="row-title">{{item.name}} · {{item.status}}</text><text class="row-desc">JC000 {{item.counts.JC000}} / JC001 {{item.counts.JC001}} / JC002 {{item.counts.JC002}} / JC003 {{item.counts.JC003}} 次</text><text class="row-desc">成本：{{item.costVerificationLabel}} · {{item.note || '无备注'}}</text></view><button wx:if="{{!item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onSetupLegacyPlanPin">设置口令</button><button wx:if="{{item.status !== 'active' && item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onActivateCreditPlan">启用</button><button wx:if="{{item.status !== 'active' && item.status !== 'archived'}}" class="mini danger" data-id="{{item.id}}" bindtap="onArchiveCreditPlan">归档</button></view>
+        <view wx:for="{{creditPlans}}" wx:key="id" class="list-row"><view class="row-main"><text class="row-title">{{item.name}} · {{item.status === 'active' ? '当前已启用' : item.status === 'candidate' ? '候选方案' : item.status === 'disabled' ? '已停用' : '已归档'}}</text><text class="row-desc">JC000 {{item.counts.JC000}} / JC001 {{item.counts.JC001}} / JC002 {{item.counts.JC002}} / JC003 {{item.counts.JC003}} 次</text><text class="row-desc">成本：{{item.costVerificationLabel}} · {{item.note || '无备注'}}</text></view><button wx:if="{{!item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onSetupLegacyPlanPin">设置口令</button><button wx:if="{{item.status !== 'active' && item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-id="{{item.id}}" bindtap="onActivateCreditPlan">启用</button><button wx:if="{{item.status !== 'active' && item.status !== 'archived'}}" class="mini danger" data-id="{{item.id}}" bindtap="onArchiveCreditPlan">归档</button></view>
       </view>
     </block>
   </block>

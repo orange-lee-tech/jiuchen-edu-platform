@@ -71,7 +71,7 @@
 }
 
 .add-link {
-  color: #2f6fed;
+  color: #245681;
   font-size: 23rpx;
 }
 
@@ -118,7 +118,7 @@
   margin-top: 24rpx;
   border: 0;
   border-radius: 8rpx;
-  background: #2f6fed;
+  background: #245681;
   color: #fff;
   font-size: 26rpx;
   font-weight: 700;

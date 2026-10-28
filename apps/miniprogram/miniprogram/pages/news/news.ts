@@ -92,11 +92,21 @@ Page({
 
   stopShell: undefined as (() => void) | undefined,
   viewGeneration: 0,
+  viewerKey: '',
+  selectedCategoryName: '全部',
   onShow() {
     this.stopShell?.()
     this.stopShell = observeSlot('opportunity', (state) => {
       this.viewGeneration += 1
       const view=shellView(state)
+      if (state.phase === 'ready' && state.auth) {
+        const viewerKey = [state.auth.user.id, state.auth.user.role, state.auth.businessIdentity?.businessId || ''].join(':')
+        if (viewerKey !== this.viewerKey) this.selectedCategoryName = '全部'
+        this.viewerKey = viewerKey
+      } else if (state.phase !== 'loading') {
+        this.viewerKey = ''
+        this.selectedCategoryName = '全部'
+      }
       this.setData({ ...view, showReferenceNews: state.phase === 'ready' && view.shellKind !== 'student',
         allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0,
         favorites: [], favoritesError: '', retiring: [], newsV2Enabled: false })
@@ -174,16 +184,17 @@ Page({
         return
       }
 
-      const first = cards[0]
       const categories = ['全部', ...uniqueTags(cards)]
+      const currentCategory = Math.max(0, categories.indexOf(this.selectedCategoryName))
+      const filtered = this.filterArticles(cards, currentCategory, categories)
 
       this.setData({
         sourceLabel: '真实资讯 · 人工分类',
         categories,
-        currentCategory: 0,
-        featured: first,
+        currentCategory,
+        featured: filtered[0] || FALLBACK_FEATURED,
         allArticles: cards,
-        articles: cards.slice(1),
+        articles: filtered.slice(1),
         pendingClassificationCount,
         pendingClassificationRole,
       })
@@ -224,6 +235,8 @@ Page({
 
   onCategoryTap(event: WechatMiniprogram.BaseEvent) {
     const currentCategory = Number(event.currentTarget.dataset.index)
+    if (!this.data.categories[currentCategory]) return
+    this.selectedCategoryName = this.data.categories[currentCategory]
     const filtered = this.filterArticles(
       this.data.allArticles,
       currentCategory,
