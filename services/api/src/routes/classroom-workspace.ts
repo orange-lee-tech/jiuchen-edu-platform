@@ -323,10 +323,10 @@ export function registerClassroomWorkspaceRoutes(
     if (session.role !== 'student' || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_stage_edit_forbidden' })
     const student = await resolveStudentByUser(database, session.userId)
     if (!student) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
-    const [profile] = await database.db.select({ enrollmentYear: userProfiles.enrollmentYear })
+    const [profile] = await database.db.select({ enrollmentYear: userProfiles.enrollmentYear, currentGrade: userProfiles.currentGrade })
       .from(userProfiles).where(eq(userProfiles.userId, session.userId)).limit(1)
     return { ok: true, currentStage: student.currentStage,
-      suggestedStage: suggestAcademicStage(profile?.enrollmentYear ?? null) }
+      suggestedStage: suggestAcademicStage(profile?.enrollmentYear ?? null, new Date(), profile?.currentGrade ?? null) }
   })
 
   app.put<{ Body: unknown }>('/me/classroom/current-stage', async (request, reply) => {

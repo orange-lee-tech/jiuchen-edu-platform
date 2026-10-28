@@ -11,7 +11,7 @@ function fixture(role = 'student') {
   const session = { userId: 'student-user', role, status: 'active', internalIdStatus: 'claimed', expiresAt: new Date('2099-01-01') }
   const db = {
     select: () => { let table: unknown; const q = { from(t: unknown) { table = t; return q }, innerJoin() { return q }, leftJoin() { return q }, where() { return q },
-      async limit() { return table === userSessions ? [session] : table === userProfiles ? [{ enrollmentYear: 2024 }] : table === students ? [{ id: 's1', currentStage: state.stage }] : [] } }; return q },
+      async limit() { return table === userSessions ? [session] : table === userProfiles ? [{ enrollmentYear: 2024, currentGrade: '大三' }] : table === students ? [{ id: 's1', currentStage: state.stage }] : [] } }; return q },
     transaction: async <T>(work: (tx: unknown) => Promise<T>) => work({
       execute: async () => [[{ id: 's1', currentStage: state.stage }]],
       update: (table: unknown) => ({ set: (values: { currentStage: string }) => ({ where: async () => {
