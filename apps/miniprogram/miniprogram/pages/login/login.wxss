@@ -51,7 +51,7 @@
   margin-top: 54rpx;
   padding: 30rpx 26rpx;
   border: 1rpx solid #eceef3;
-  border-radius: 28rpx;
+  border-radius: 8rpx;
   background: #ffffff;
   box-shadow: 0 16rpx 42rpx rgba(36, 41, 55, 0.06);
 }
