@@ -14,7 +14,8 @@
   </view>
 
   <view class="school-entry" bindtap="onSchools" hover-class="school-entry-hover" aria-role="button">
-    <view class="school-entry-icon"><text>校</text></view>
+    <image class="school-entry-art" src="/assets/jiuchen-visual-v1/banners/school-library-hero.webp" mode="aspectFill" aria-hidden="true" />
+    <view class="school-entry-icon"><image src="/assets/jiuchen-visual-v1/icons/library.webp" mode="aspectFit" /></view>
     <view class="school-entry-copy"><text class="school-entry-title">院校库 · 双一流与特色高校</text></view>
     <text class="school-entry-arrow">›</text>
   </view>
@@ -25,23 +26,6 @@
       <text class="pending-news-desc">{{pendingClassificationRole === 'admin' ? '分类后学员才能在资讯中看到，点击处理标签。' : '新同步文章需要管理员添加标签后才能向学员展示。'}}</text>
     </view>
     <button wx:if="{{pendingClassificationRole === 'admin'}}" class="pending-news-action" bindtap="onManageNewsTags">处理标签</button>
-  </view>
-
-  <view wx:if="{{newsV2Enabled && retiring.length}}" class="news-extra">
-    <text class="section-title">即将从资讯列表下架 · {{retiring.length}} 篇</text>
-    <view wx:for="{{retiring}}" wx:key="id" class="news-extra-row" data-id="{{item.id}}" bindtap="onArticleTap">
-      <text class="news-extra-title">{{item.title}}</text>
-      <text class="news-extra-meta">{{item.sourceLabel}} · {{item.dateLabel}} · 将于 {{item.retireAt}} 退出资讯列表</text>
-    </view>
-  </view>
-  <view wx:if="{{newsV2Enabled}}" class="news-extra">
-    <text class="section-title">我的收藏 · {{favorites.length}} 篇</text>
-    <text wx:if="{{favoritesError}}" class="news-extra-meta">{{favoritesError}}</text>
-    <text wx:elif="{{!favorites.length}}" class="news-extra-meta">暂无收藏文章</text>
-    <view wx:for="{{favorites}}" wx:key="postId" class="news-extra-row" data-id="{{item.postId}}" bindtap="onFavoriteTap">
-      <text class="news-extra-title">{{item.title}}</text>
-      <text class="news-extra-meta">在小程序内阅读 ›</text>
-    </view>
   </view>
 
   <view wx:if="{{loadError}}" class="news-error"><text>{{loadError}}</text><button bindtap="loadNews">重新加载文章</button></view>
@@ -130,6 +114,23 @@
     </view>
   </view>
   </block>
+  <view wx:if="{{newsV2Enabled && retiring.length}}" class="news-extra">
+    <text class="section-title">即将从资讯列表下架 · {{retiring.length}} 篇</text>
+    <view wx:for="{{retiring}}" wx:key="id" class="news-extra-row" data-id="{{item.id}}" bindtap="onArticleTap">
+      <text class="news-extra-title">{{item.title}}</text>
+      <text class="news-extra-meta">{{item.sourceLabel}} · {{item.dateLabel}} · 将于 {{item.retireAt}} 退出资讯列表</text>
+    </view>
+  </view>
+  <view wx:if="{{newsV2Enabled}}" class="news-extra">
+    <text class="section-title">我的收藏 · {{favorites.length}} 篇</text>
+    <text wx:if="{{favoritesError}}" class="news-extra-meta">{{favoritesError}}</text>
+    <text wx:elif="{{!favorites.length}}" class="news-extra-meta">暂无收藏文章</text>
+    <view wx:for="{{favorites}}" wx:key="postId" class="news-extra-row" data-id="{{item.postId}}" bindtap="onFavoriteTap">
+      <text class="news-extra-title">{{item.title}}</text>
+      <text class="news-extra-meta">在小程序内阅读 ›</text>
+    </view>
+  </view>
+
   </block>
 </view>
 <first-use-guide wx:if="{{!readOnly}}" />

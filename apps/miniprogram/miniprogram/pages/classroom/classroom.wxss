@@ -145,3 +145,26 @@ button::after { border:0; }
 .plan-card:nth-child(2n){border-left-color:#87aeb5;}
 .plan-arrow,.course-slot{color:#24647f;}
 .revision-chip.pending{background:#fff3da;color:#795921;}
+
+/* Semester banner and compact real-data plan rows. */
+.classroom-page{background:#f6f4f0;padding-left:24rpx;padding-right:24rpx;}
+.student-tools{padding:14rpx 20rpx;margin-bottom:12rpx;}
+.stage-picker{position:relative;overflow:hidden;padding:22rpx;border-radius:16rpx;background:#f7ecde;}
+.stage-banner{position:absolute;top:0;left:0;width:100%;height:175rpx;}
+.stage-picker-top,.stage-correction,.stage-group-list,.current-week-link{position:relative;z-index:1;}
+.stage-picker-top{min-height:70rpx;}
+.stage-picker-top>view{max-width:62%;}
+.stage-picker-current{font-size:30rpx;line-height:1.35;}
+.stage-picker-toggle{background:rgba(255,254,252,.9);}
+.stage-group-list{padding:14rpx;border-radius:10rpx;background:#fffefc;}
+.current-week-link{padding:10rpx 0;margin-top:10rpx;}
+.classroom-main .stage-summary{padding:15rpx 18rpx;border:0;border-radius:14rpx;background:#eaf2f5;}
+.plan-list,.mentor-list,.week-list{gap:10rpx;}
+.plan-card{padding:17rpx 18rpx;border:1rpx solid #e8e3d9;border-left:0;border-radius:14rpx;box-shadow:none;}
+.plan-card:nth-child(2n){border-left:0;}
+.plan-card-head{align-items:center;gap:13rpx;}
+.plan-icon-image{display:block;flex:none;width:60rpx;height:60rpx;background:transparent;}
+.plan-title{font-size:26rpx;line-height:1.35;}
+.plan-note{margin-top:5rpx;font-size:21rpx;line-height:1.45;}
+.plan-arrow{font-size:21rpx;}
+.pending-card{border-radius:14rpx;background:#fffefc;}

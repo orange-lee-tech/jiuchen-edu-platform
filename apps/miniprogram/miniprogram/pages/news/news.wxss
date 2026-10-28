@@ -299,3 +299,22 @@
 .article-tag{background:#edf2f0;color:#4a6a75;}
 .news-extra,.news-error,.news-empty,.news-loading{background:#fffdf9;border-color:#e6dfd3;border-radius: 8rpx;}
 .news-error button{background:#205b7d;}
+
+/* A compact reading stream, with generic campus art confined to the directory entry. */
+.page-shell{background:#f6f4f0;padding-left:24rpx;padding-right:24rpx;}
+.news-head{padding:18rpx 20rpx;background:#edf4f7;border:0;border-radius:14rpx;}
+.school-entry{position:relative;overflow:hidden;min-height:175rpx;padding:22rpx;border:0;border-radius:16rpx;background:#174e78;}
+.school-entry-art{position:absolute;top:0;left:0;width:100%;height:100%;}
+.school-entry-icon,.school-entry-copy,.school-entry-arrow{position:relative;z-index:1;}
+.school-entry-icon{width:62rpx;height:62rpx;background:transparent;}
+.school-entry-icon image{width:60rpx;height:60rpx;}
+.school-entry-copy{max-width:58%;}
+.school-entry-title{font-size:29rpx;line-height:1.4;}
+.category-scroll{margin-bottom:12rpx;}
+.category{font-size:23rpx;}
+.featured,.article-card{margin-bottom:9rpx;border-radius:12rpx;box-shadow:none;}
+.featured-media,.article-media{flex-basis:148rpx;width:148rpx;min-height:145rpx;}
+.featured-body,.article-main{min-height:145rpx;padding:14rpx 16rpx;}
+.featured-title,.article-title{font-size:25rpx;line-height:1.4;}
+.featured-summary,.article-summary{-webkit-line-clamp:2;font-size:20rpx;}
+.news-extra{padding:17rpx 20rpx;border-radius:12rpx;}

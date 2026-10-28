@@ -161,3 +161,23 @@ button::after{border:0;}
 .favorite-actions{display:flex;align-items:stretch;gap:13rpx;margin-top:17rpx;}
 .favorite-action{display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex:1;min-width:0;min-height:70rpx;padding:9rpx 12rpx;background:#e8eff0;color:#1d5876;font-size:23rpx;font-weight:700;border-radius:6rpx;white-space:nowrap;}
 .favorite-reader{background:#173e67;color:#fff;}
+
+/* Personal overview: keep identity actions accessible below the main shortcuts. */
+.mine-page{background:#f6f4f0;padding-left:24rpx;padding-right:24rpx;}
+.identity-panel{position:relative;overflow:hidden;min-height:175rpx;padding:24rpx;border:0;border-radius:16rpx;background:#174e78;}
+.identity-art{position:absolute;top:0;left:0;width:100%;height:100%;}
+.identity-content{position:relative;z-index:1;}
+.identity-person{display:flex;align-items:center;gap:12rpx;}
+.identity-person-icon{width:56rpx;height:56rpx;flex:none;}
+.identity-role-label{display:block;color:#e7f2f6;font-size:21rpx;line-height:1.4;}
+.identity-panel .user-name{margin-top:8rpx;color:#fff;font-size:32rpx;line-height:1.35;}
+.identity-number{display:flex;align-items:center;flex-wrap:wrap;gap:8rpx;margin-top:8rpx;padding:7rpx 10rpx;}
+.identity-buttons{margin-top:10rpx;}
+.primary-menus{display:flex;flex-wrap:wrap;gap:10rpx;}
+.primary-menus .menu-row{box-sizing:border-box;display:flex;flex:1 1 calc(50% - 10rpx);min-width:0;min-height:115rpx;margin:0;padding:15rpx;border:1rpx solid #e5e4dc;border-radius:14rpx;box-shadow:none;}
+.primary-menus .menu-service{flex-basis:100%;min-height:86rpx;background:#fffaf0;}
+.primary-menus .menu-symbol{width:58rpx;height:58rpx;flex:none;background:transparent;}
+.primary-menus .menu-icon{width:56rpx;height:56rpx;}
+.primary-menus .menu-main{min-width:0;}
+.primary-menus .menu-title{font-size:23rpx;line-height:1.4;}
+.primary-menus .menu-description{font-size:19rpx;line-height:1.4;}

@@ -806,7 +806,8 @@ test('setting the viewed stage requires confirmation and reloads only after serv
  let reloads=0;page.initializeClassroom=async()=>{reloads++}
  page.onSetViewedStage();assert.equal(h.requests.length,0)
  h.modals[0].success({confirm:false});assert.equal(h.requests.length,0)
- page.onSetViewedStage();h.modals[1].success({confirm:true})
+ page.onSetViewedStage();page.viewGeneration++;h.modals[1].success({confirm:true});assert.equal(h.requests.length,0)
+ page.onSetViewedStage();h.modals[2].success({confirm:true})
  assert.equal(h.requests[0].method,'PUT');assert.match(h.requests[0].url,/\/me\/classroom\/current-stage$/)
  assert.equal(h.requests[0].data.expectedCurrentStage,'freshman-fall')
  h.respond(0,{ok:true,currentStage:'junior-fall'});await settle();await settle()
@@ -1295,9 +1296,9 @@ test('home shortcuts prioritize core actions and retain the countdown tile',()=>
  assert.ok(positions.every((position,index)=>index===0 || positions[index-1]<position),'home shortcut order must stay intentional')
 })
 
-test('today artwork references only the six selected decodable WebP assets',()=>{
+test('today artwork references only its selected WebP assets',()=>{
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
- const assets=['banners/today-campus-hero.webp','icons/ai-assessment.webp','icons/library.webp','icons/news.webp','icons/clock.webp','icons/headset.webp']
+ const assets=['banners/today-campus-hero.webp','icons/ai-assessment.webp','icons/library.webp','icons/news.webp','icons/clock.webp','icons/headset.webp','icons/calendar.webp']
  for(const asset of assets){
   const resource='/assets/jiuchen-visual-v1/'+asset
   assert.ok(source.includes(`src="${resource}"`),`${asset} must be referenced from Today`)
@@ -1308,6 +1309,20 @@ test('today artwork references only the six selected decodable WebP assets',()=>
   assert.deepEqual([width,height],asset.startsWith('banners/')?[1344,516]:[256,256])
  }
  assert.equal((source.match(/\/assets\/jiuchen-visual-v1\//g)||[]).length,assets.length)
+})
+
+test('four primary views keep their supplied artwork and real-data entry order',()=>{
+ const pages={index:'today-campus-hero',classroom:'semester-books-banner',news:'school-library-hero',profile:'profile-calm-campus'}
+ for(const [page,banner] of Object.entries(pages)){
+  const source=fs.readFileSync(path.join(root,'pages',page,page+'.wxml'),'utf8')
+  const asset=`/assets/jiuchen-visual-v1/banners/${banner}.webp`
+  assert.ok(source.includes(asset),`${page} must reference its banner`)
+  assert.equal(fs.readFileSync(path.join(root,asset.slice(1))).toString('ascii',8,12),'WEBP')
+ }
+ const news=fs.readFileSync(path.join(root,'pages/news/news.wxml'),'utf8')
+ assert.ok(news.indexOf('class="article-list"')<news.indexOf('class="news-extra"'))
+ const mine=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
+ assert.ok(mine.indexOf('class="menu-list primary-menus"')<mine.indexOf('identities.length'))
 })
 
 test('PKU media/map are real sourced assets and consultation uses the shared chat entry',()=>{
@@ -1551,11 +1566,28 @@ test('home countdown is isolated by authenticated identity and saved only on dev
  const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  assert.match(index,/COUNTDOWN_PREFIX \+ this\.countdownOwner/)
  assert.match(index,/this\.loadCountdowns\(studentId\)/)
- assert.match(index,/pageScrollTo\(\{selector:'\.countdown-panel',duration:220\}\)/)
+ assert.match(index,/pageScrollTo\(\{selector:'\.countdown-panel',duration:220/)
  assert.match(index,/wx\.setStorageSync\(this\.countdownKey\(\),entries\)/)
  assert.match(template,/bindtap="onCountdownSave"/)
  assert.match(template,/bindtap="onCountdownDelete"/)
  assert.match(template,/仅保存在本机当前学员账号/)
+})
+test('countdown opens, saves and deletes locally without crossing identities',()=>{
+ const h=harness(), page=h.page('pages/index/index'); let scrolled=''
+ page.setData=function(data,done){Object.assign(this.data,data);if(done)done()}
+ h.wx.pageScrollTo=options=>{scrolled=options.selector}
+ page.loadCountdowns('student-a');page.onCountdownToggle()
+ assert.equal(scrolled,'.countdown-panel');assert.equal(page.data.countdownOpen,true)
+ page.onCountdownTitleInput({detail:{value:'考试'}})
+ page.onCountdownDateChange({detail:{value:'2099-12-30'}});page.onCountdownSave()
+ assert.equal(page.data.countdowns.length,1)
+ const entry=page.data.countdowns[0]
+ page.onCountdownDelete({currentTarget:{dataset:{id:entry.id}}})
+ page.loadCountdowns('student-b');h.modals[0].success({confirm:true})
+ assert.equal(page.data.countdowns.length,0)
+ page.loadCountdowns('student-a');assert.equal(page.data.countdowns.length,1)
+ page.onCountdownDelete({currentTarget:{dataset:{id:entry.id}}});h.modals[1].success({confirm:true})
+ assert.equal(page.data.countdowns.length,0);assert.equal(h.requests.length,0)
 })
 test('school photo provenance remains in data while favorites have separate full-width actions',()=>{
  const detail=fs.readFileSync(path.join(root,'packages/schools/detail/detail.wxml'),'utf8')

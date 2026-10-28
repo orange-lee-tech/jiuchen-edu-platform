@@ -12,7 +12,7 @@
       </view>
     </view>
     <view class="home-schedule home-card">
-      <view class="home-card-head"><text class="section-heading">课表</text><text class="home-card-link" bindtap="onPlanning">本周完整课表 ›</text></view>
+      <view class="home-card-head"><view class="home-heading-with-icon"><image class="home-heading-icon" src="/assets/jiuchen-visual-v1/icons/calendar.webp" mode="aspectFit" /><text class="section-heading">今日课表</text></view><text class="home-card-link" bindtap="onPlanning">本周完整课表 ›</text></view>
       <view class="day-tabs"><view class="day-tab {{scheduleDay === 0 ? 'active' : ''}}" data-day="0" bindtap="onScheduleDay">今天</view><view class="day-tab {{scheduleDay === 1 ? 'active' : ''}}" data-day="1" bindtap="onScheduleDay">明天</view></view>
       <text class="home-schedule-meta">{{scheduleDateLabel}}{{scheduleStage ? ' · 档案阶段：' + scheduleStage : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
       <text wx:if="{{scheduleLoading}}" class="home-state">正在读取课表…</text>

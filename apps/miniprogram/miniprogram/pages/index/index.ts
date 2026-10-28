@@ -75,7 +75,8 @@ Page({
       countdownOpen: opening, countdownTitle: '', countdownDate: dateText(new Date()),
     }, () => {
       // Editor is below the shortcut grid: without scrolling the tap looks unresponsive.
-      if (opening) wx.pageScrollTo({selector:'.countdown-panel',duration:220})
+      if (opening) wx.pageScrollTo({selector:'.countdown-panel',duration:220,
+        fail:()=>wx.showToast({title:'请向下查看倒数日',icon:'none'})})
     })
   },
   onCountdownTitleInput(event:WechatMiniprogram.Input) {
@@ -108,9 +109,10 @@ Page({
   onCountdownDelete(event:WechatMiniprogram.BaseEvent) {
     const id=String(event.currentTarget.dataset.id||'')
     if (!this.countdownOwner || !this.data.countdowns.some(e=>e.id===id)) return
+    const owner=this.countdownOwner
     wx.showModal({title:'删除倒数日',content:'确定删除这个倒数日吗？',
       success:result=>{
-        if (!result.confirm || !this.countdownOwner) return
+        if (!result.confirm || this.countdownOwner !== owner || !this.data.countdowns.some(e=>e.id===id)) return
         try {
           const entries=this.data.countdowns.filter(e=>e.id!==id).map(({id,title,date})=>({id,title,date}))
           wx.setStorageSync(this.countdownKey(),entries)

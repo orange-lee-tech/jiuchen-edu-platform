@@ -224,3 +224,25 @@ button::after{border:0;}
   width: 60rpx;
   height: 60rpx;
 }
+
+/* Four-tab workbench: compact actions and a legible schedule timeline. */
+.home-page{padding:22rpx 24rpx calc(40rpx + env(safe-area-inset-bottom));}
+.home-intro{border-radius:16rpx;}
+.home-heading-with-icon{display:flex;align-items:center;gap:10rpx;min-width:0;}
+.home-heading-icon{width:44rpx;height:44rpx;flex:none;}
+.home-schedule.home-card,.home-plan.home-card{padding:21rpx 23rpx;border-radius:16rpx;}
+.home-schedule-course,.home-schedule-course.next-course{position:relative;margin:12rpx 0 0 8rpx;padding:13rpx 10rpx 13rpx 20rpx;border-top:0;border-left:2rpx solid #b7ccdb;border-radius:0 10rpx 10rpx 0;}
+.home-schedule-course::before{content:'';position:absolute;top:26rpx;left:-7rpx;width:12rpx;height:12rpx;border-radius:50%;background:#7f9fb3;}
+.home-schedule-course.next-course{background:#dcecf8;border-left-color:#2a6b92;}
+.home-schedule-course.next-course::before{background:#2a6b92;}
+.home-course-when{flex:0 0 150rpx;padding-right:10rpx;border-right:0;}
+.home-course-time{margin:0;color:#31566c;font-size:22rpx;}
+.home-state{padding:15rpx 17rpx;border-radius:10rpx;background:rgba(255,255,255,.54);}
+.home-shortcuts .action-row,.home-shortcuts .action-row:nth-child(even){min-height:132rpx;flex-direction:row;justify-content:flex-start;gap:13rpx;padding:14rpx 16rpx;text-align:left;}
+.home-shortcuts .action-title{margin-top:0;font-size:25rpx;}
+.home-shortcuts .action-symbol{width:62rpx;height:62rpx;}
+.home-shortcuts .action-icon{width:60rpx;height:60rpx;}
+.home-shortcuts .action-more{top:50%;transform:translateY(-50%);}
+.home-shortcuts .action-countdown-days{margin:0 15rpx 0 auto;font-size:19rpx;}
+.home-shortcuts .action-consult{min-height:86rpx;}
+.countdown-panel{border-radius:16rpx;}

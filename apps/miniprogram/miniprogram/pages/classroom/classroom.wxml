@@ -35,6 +35,7 @@
     </view>
 
     <view class="stage-picker surface">
+      <image class="stage-banner" src="/assets/jiuchen-visual-v1/banners/semester-books-banner.webp" mode="aspectFill" aria-hidden="true" />
       <view class="stage-picker-top"><view><text class="stage-picker-caption">档案当前阶段：{{actualStageLabel}}</text><text class="stage-picker-current">正在查看：{{currentStageLabel}}</text></view><text class="stage-picker-toggle" bindtap="onToggleStagePicker">{{stagePickerOpen ? '收起' : '选择学期'}} ›</text></view>
       <view wx:if="{{!readOnly}}" class="stage-correction"><text bindtap="onReviewCurrentStage">按入学年份核对 ›</text><text wx:if="{{currentStageCode !== actualStageCode}}" bindtap="onSetViewedStage">设为当前阶段 ›</text></view>
       <view wx:if="{{stagePickerOpen}}" class="stage-group-list">
@@ -85,7 +86,7 @@
             bindtap="onPlanTap"
           >
             <view class="plan-card-head">
-              <view class="plan-icon">{{item.badge}}</view>
+              <image class="plan-icon plan-icon-image" src="{{item.type === 'gpa' ? '/assets/jiuchen-visual-v1/icons/courses.webp' : item.type === 'english' ? '/assets/jiuchen-visual-v1/icons/english.webp' : item.type === 'competition' ? '/assets/jiuchen-visual-v1/icons/trophy.webp' : item.type === 'research' ? '/assets/jiuchen-visual-v1/icons/flask.webp' : '/assets/jiuchen-visual-v1/icons/profile.webp'}}" mode="aspectFit" />
               <view class="plan-heading">
                 <view class="plan-title-row">
                   <text class="plan-title">{{item.title}}</text>
