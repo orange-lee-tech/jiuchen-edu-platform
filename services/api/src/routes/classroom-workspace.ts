@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, asc, desc, eq, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, lte, ne, sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
@@ -36,10 +36,12 @@ import {
 import { createScheduleStorageProvider } from '../services/schedule-storage.js'
 import { resolveSessionUser } from '../services/session.js'
 import { suggestAcademicStage } from '../domain/academic-stage.js'
+import { planDueDateSchema, upcomingTaskWindow } from '../domain/plan-dates.js'
 
 const itemSchema = z.object({
   name: z.string().trim().min(1).max(160),
   target: z.string().trim().max(255).nullable().optional(),
+  dueDate: planDueDateSchema.nullable().optional(),
   status: z.enum(['pending', 'in_progress', 'done']).default('pending'),
 })
 
@@ -160,7 +162,7 @@ export async function applyApprovedPlan(
     if (items.length) {
       await tx.insert(planItems).values(items.map((item, index) => ({
         id: randomUUID(), planId, sortOrder: index, name: item.name,
-        target: item.target ?? null, status: item.status,
+        target: item.target ?? null, dueDate: item.dueDate ?? null, status: item.status,
       })))
     }
     // Older pending revisions remain in history, but can never supersede this save.
@@ -221,6 +223,7 @@ export async function loadClassroom(
           sortOrder: planItems.sortOrder,
           name: planItems.name,
           target: planItems.target,
+          dueDate: planItems.dueDate,
           status: planItems.status,
         })
         .from(planItems)
@@ -308,6 +311,18 @@ export async function loadClassroom(
   }
 }
 
+export async function loadUpcomingTasks(database: Extract<DatabaseContext, { configured: true }>, studentId: string, now = new Date()) {
+  const window = upcomingTaskWindow(now)
+  const rows = await database.db.select({
+    id: planItems.id, name: planItems.name, dueDate: planItems.dueDate, status: planItems.status,
+    planId: studentPlans.id, planTitle: studentPlans.title, stageCode: studentPlans.stageCode, type: studentPlans.type,
+  }).from(planItems).innerJoin(studentPlans, eq(planItems.planId, studentPlans.id))
+    .where(and(eq(studentPlans.studentId, studentId), ne(planItems.status, 'done'),
+      gte(planItems.dueDate, window.from), lte(planItems.dueDate, window.to)))
+    .orderBy(asc(planItems.dueDate), asc(studentPlans.stageCode), asc(studentPlans.type), asc(planItems.sortOrder), asc(planItems.id))
+  return { ...window, tasks: rows.filter(item => isPlanTypeAllowed(item.stageCode, item.type)) }
+}
+
 export function registerClassroomWorkspaceRoutes(
   app: FastifyInstance,
   database: DatabaseContext,
@@ -315,6 +330,16 @@ export function registerClassroomWorkspaceRoutes(
 ) {
   const scheduleStorage = createScheduleStorageProvider(env)
   const scheduleImageAI = createScheduleAIProvider(env)
+
+  app.get('/me/classroom/upcoming-tasks', async (request, reply) => {
+    if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
+    const session = await resolveSessionUser(request, database)
+    if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
+    if (session.role !== 'student') return reply.code(403).send({ ok: false, error: 'student_tasks_forbidden' })
+    const student = await resolveStudentByUser(database, session.userId)
+    if (!student) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
+    return { ok: true, ...await loadUpcomingTasks(database, student.id) }
+  })
 
   app.get('/me/classroom/stage-suggestion', async (request, reply) => {
     if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })

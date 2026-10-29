@@ -16,6 +16,7 @@
     "db:upgrade:auth": "tsx src/db/upgrade-auth-foundation.ts",
     "db:upgrade:enrollment-year": "tsx src/db/upgrade-enrollment-year.ts",
     "db:upgrade:academic-stage-mode": "tsx src/db/upgrade-academic-stage-mode.ts",
+    "db:upgrade:plan-item-due-date": "tsx src/db/upgrade-plan-item-due-date.ts",
     "db:upgrade:identity-v2": "tsx src/db/upgrade-identity-v2.ts",
     "db:seed:test-internal-ids": "tsx src/db/seed-test-internal-ids.ts",
     "news:test:official-account": "tsx src/scripts/test-official-account.ts",

@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm'
 import {
   boolean,
+  date,
   int,
   index,
   json,
@@ -389,6 +390,7 @@ export const planItems = mysqlTable('plan_items', {
   sortOrder: int('sort_order').notNull().default(0),
   name: varchar('name', { length: 160 }).notNull(),
   target: varchar('target', { length: 255 }),
+  dueDate: date('due_date', { mode: 'string' }),
   status: mysqlEnum('status', ['pending', 'in_progress', 'done']).notNull().default('pending'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
