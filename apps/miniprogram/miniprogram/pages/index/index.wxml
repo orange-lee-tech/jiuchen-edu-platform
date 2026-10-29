@@ -75,11 +75,11 @@
         </view>
       </view>
       <text wx:else class="countdown-empty">{{loggedIn ? '记录考试、报名截止或个人目标日期。添加后会直接显示在这里。' : '登录学员身份后，可记录考试、报名截止和个人目标日期。'}}</text>
-      <text class="countdown-local-note">保存在本机当前学员账号，不会自动同步到其他设备</text>
+      <text class="countdown-local-note">仅保存在本机当前学员账号，不会自动同步到其他设备</text>
     </view>
     <view wx:if="{{countdownOpen}}" class="home-card countdown-panel">
       <view class="home-card-head"><text class="section-heading">管理倒数日</text><text class="home-card-link" bindtap="onCountdownToggle">收起 ›</text></view>
-      <text class="countdown-local-note">保存在本机当前学员账号</text>
+      <text class="countdown-local-note">仅保存在本机当前学员账号</text>
       <view wx:for="{{countdowns}}" wx:key="id" class="countdown-item">
         <view class="countdown-main"><text class="countdown-name">{{item.title}}</text><text class="countdown-date">{{item.date}}</text></view>
         <text class="countdown-remaining">{{item.remainingDays === 0 ? '就是今天' : '还剩 ' + item.remainingDays + ' 天'}}</text>
