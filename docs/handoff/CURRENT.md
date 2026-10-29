@@ -11,7 +11,7 @@
 - 代码候选 SHA：`7805ad60a6bd3caf2e985383f9926343add9c57d`；随后新增 CI 迁移覆盖提交：`b5c591d5bfe52a4c670c9252b96ff501a668bcf6`。
 - PR 范围：131 个文件；包含 106 个小程序路径、14 个 API 路径，以及设计／交接文档和测试。该 PR **不只是视觉样式调整**。
 - [CI run 40810726757](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/40810726757)：在代码候选 `7805ad6` 上全绿。小程序类型检查与导航／真实数据／导出回归、管理端测试与构建、API 测试与构建、既有 MySQL 8 商业迁移门禁均通过。
-- 本轮发现 `current_stage_mode` 新迁移未纳入原 MySQL CI 序列，已补充 disposable MySQL 8 双次执行门禁，并将 fixture 的 `students.current_stage` 补齐。新 CI run：[40811712026](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/40811712026)，当前待结果；不得提前记为通过。
+- 本轮发现 `current_stage_mode` 新迁移未纳入原 MySQL CI 序列，已补充 disposable MySQL 8 双次执行门禁，并将 fixture 的 `students.current_stage` 补齐。首次门禁 run 因随后更新交接文档而取消；**合并前必须检查 PR #10 最新 HEAD 对应的 CI**，不可用旧 SHA 的绿灯替代。
 
 ## 当前代码与业务变更
 
@@ -32,7 +32,7 @@
 
 ## 接下来
 
-1. 等待并检查 CI run `40811712026`；失败则修复具体原因，不削弱业务断言。
+1. 检查 PR #10 最新 HEAD 对应的 CI；若有新提交，旧 run 可能被取消。失败时修复具体原因，不削弱业务断言。
 2. 由 Codex 在本地微信开发者工具完成四个 Tab 的视觉验收并提交截图与通过／失败矩阵。
 3. 合并前单独核对“规划直接保存替代老师审核”及“大四阶段指导权限”的业务决定。
 4. 所有代码与视觉门禁通过后，仍需独立生产预检及明确授权；不得因 CI 全绿自动合并、迁移或部署。
