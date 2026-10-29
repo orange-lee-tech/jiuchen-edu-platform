@@ -8,6 +8,11 @@
     <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge"><text wx:if="{{selectedView === 'week'}}">本周课表</text><text wx:else>当前档案：{{actualStageLabel}}</text></view>
   </view>
 
+  <view wx:if="{{mode === 'student' && stageSaveError}}" class="plan-error">
+    <text>{{stageSaveError}}</text>
+    <button disabled="{{stageChangeBusy}}" bindtap="onReloadCurrentStage">重新读取档案</button>
+  </view>
+
   <view wx:if="{{mode === 'guest'}}" class="entry-state surface">
     <text class="entry-title">接续你的大学阶段规划</text>
     <button class="entry-button" bindtap="onLogin">登录并绑定学员身份</button>

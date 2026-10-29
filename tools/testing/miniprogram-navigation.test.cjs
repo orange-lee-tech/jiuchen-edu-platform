@@ -810,15 +810,93 @@ test('horizontal planning selector keeps all academic terms and holidays reachab
 test('setting the viewed stage requires confirmation and reloads only after server success',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
  page.setData({currentStageCode:'junior-fall',currentStageLabel:'大三上',actualStageCode:'freshman-fall',actualStageKnown:true,stageModeKnown:true,stageMode:null})
- let reloads=0;page.initializeClassroom=async()=>{reloads++}
+ let reloads=0;page.initializeClassroom=async()=>{reloads++;page.viewGeneration++;page.setData({actualStageCode:'junior-fall',stageMode:'manual',actualStageKnown:true,stageModeKnown:true})}
  page.onSetViewedStage();assert.equal(h.requests.length,0)
  h.modals[0].success({confirm:false});assert.equal(h.requests.length,0)
  page.onSetViewedStage();page.viewGeneration++;h.modals[1].success({confirm:true});assert.equal(h.requests.length,0)
  page.onSetViewedStage();h.modals[2].success({confirm:true})
  assert.equal(h.requests[0].method,'PUT');assert.match(h.requests[0].url,/\/me\/classroom\/current-stage$/)
  assert.equal(h.requests[0].data.expectedCurrentStage,'freshman-fall')
- h.respond(0,{ok:true,currentStage:'junior-fall'});await settle();await settle()
+ h.respond(0,{ok:true,currentStage:'junior-fall',mode:'manual'});await settle()
+ assert.equal(reloads,0,'a save response alone cannot confirm persisted state')
+ assert.match(h.requests[1].url,/\/me\/classroom\/stage-suggestion$/)
+ h.respond(1,{ok:true,currentStage:'junior-fall',mode:'manual',suggestedStage:'sophomore-fall'});await settle();await settle()
  assert.equal(reloads,1)
+})
+
+test('manual calibration distinguishes unsupported, session, permission, conflict and service failures',async()=>{
+ const cases=[
+  [404,{message:'Route PUT:/me/classroom/current-stage not found',error:'Not Found'},/尚未支持.*更新服务/],
+  [401,{error:'unauthorized'},/登录已失效/],
+  [403,{error:'student_stage_edit_forbidden'},/学员身份/],
+  [409,{error:'current_stage_changed'},/重新读取/],
+  [500,{error:'internal_server_error',message:'synthetic confidential server detail'},/服务暂不可用/],
+  [400,{error:'unrecognized_failure'},/联系客服/],
+ ]
+ for(const [status,payload,expected] of cases){
+  const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
+  const toasts=[];h.wx.showToast=o=>toasts.push(o)
+  page.setData({actualStageCode:'freshman-fall',actualStageKnown:true,stageModeKnown:true,stageMode:null,stageCalibrationMode:true})
+  const saving=page.saveCurrentStage('senior-fall','freshman-fall','manual',null)
+  assert.equal(h.requests[0].method,'PUT')
+  assert.deepEqual(JSON.parse(JSON.stringify(h.requests[0].data)),{stageCode:'senior-fall',expectedCurrentStage:'freshman-fall',mode:'manual',expectedMode:null})
+  h.respond(0,payload,status);await saving
+  assert.match(page.data.stageSaveError,expected)
+  assert.doesNotMatch(page.data.stageSaveError,/confidential|internal_server_error/)
+  assert.equal(page.data.actualStageCode,'freshman-fall');assert.equal(page.data.stageChangeBusy,false)
+  assert.equal(page.data.stageCalibrationMode,true,'failed save keeps the selection recovery available')
+  assert.equal(toasts.some(t=>t.icon==='success'),false);assert.equal(h.requests.length,1)
+ }
+})
+
+test('calibration verifies the stage and mode then rereads the official classroom without enabling auto',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
+ page.selectedOwner=id;page.setData({actualStageCode:'freshman-fall',actualStageKnown:true,stageModeKnown:true,stageMode:null})
+ const toasts=[];h.wx.showToast=o=>toasts.push(o)
+ const saving=page.saveCurrentStage('senior-fall','freshman-fall','manual',null)
+ h.respond(0,{ok:true,currentStage:'senior-fall',mode:'manual'});await settle()
+ assert.equal(toasts.length,0)
+ h.respond(1,{ok:true,currentStage:'senior-fall',mode:'manual',suggestedStage:'sophomore-fall'});await settle()
+ const stages=h.requests.findIndex((r,i)=>i>1&&r.url.endsWith('/classroom/stages'))
+ const suggestion=h.requests.findIndex((r,i)=>i>1&&r.url.endsWith('/me/classroom/stage-suggestion'))
+ h.respond(stages,{ok:true,stages:page.data.stages})
+ h.respond(suggestion,{ok:true,currentStage:'senior-fall',mode:'manual',suggestedStage:'sophomore-fall'});await settle()
+ const classroom=h.requests.findIndex(r=>r.url.endsWith('/me/classroom?stage=senior-fall'))
+ assert.ok(classroom>=0)
+ h.respond(classroom,{ok:true,student:{name:'合成学员',currentStage:'senior-fall'},stage:page.data.stages.find(s=>s.code==='senior-fall'),plans:[],mentors:[],records:[],showGuidance:false,guidanceRecordsReady:true})
+ await saving
+ assert.equal(page.data.actualStageCode,'senior-fall');assert.equal(page.data.stageMode,'manual')
+ assert.equal(page.data.currentStageCode,'senior-fall');assert.equal(page.data.stageScheduleSafe,true)
+ assert.equal(h.requests.filter(r=>r.method==='PUT').length,1)
+ assert.equal(toasts.at(-1).icon,'success');assert.equal(page.data.stageSaveError,'')
+})
+
+test('calibration cannot report success from malformed save responses or mismatched/failed readback',async()=>{
+ for(const readback of [null,{currentStage:'freshman-fall',mode:'manual'},{currentStage:'senior-fall',mode:'auto'},'unavailable']){
+  const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
+  const toasts=[];h.wx.showToast=o=>toasts.push(o)
+  page.setData({actualStageCode:'freshman-fall'})
+  const pending=page.saveCurrentStage('senior-fall','freshman-fall','manual')
+  h.respond(0,{ok:true,currentStage:'senior-fall',...(readback===null?{}:{mode:'manual'})});await settle()
+  if(readback!==null){
+   if(readback==='unavailable')h.respond(1,{error:'internal_server_error'},500)
+   else h.respond(1,{ok:true,...readback,suggestedStage:null})
+  }
+  await pending
+  assert.equal(toasts.some(t=>t.icon==='success'),false)
+  assert.equal(page.data.actualStageCode,'freshman-fall')
+  assert.match(page.data.stageSaveError,readback===null?/响应不完整/:/暂未核实结果/)
+ }
+})
+
+test('read-only calibration writes nothing and a hidden page ignores a late save',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
+ h.load('utils/read-only-context').setReadOnlyContext({kind:'student',id:secondId,role:'student',name:'合成只读',businessId:'synthetic',operatorUserId:id,readToken:'ro.synthetic',expiresAt:'2099-01-01T00:00:00Z'})
+ await page.saveCurrentStage('senior-fall','freshman-fall');assert.equal(h.requests.length,0)
+ h.load('utils/read-only-context').clearReadOnlyContext()
+ const saving=page.saveCurrentStage('senior-fall','freshman-fall');page.onHide()
+ h.respond(0,{ok:true,currentStage:'senior-fall',mode:'manual'});await saving
+ assert.equal(h.requests.length,1);assert.equal(page.data.actualStageCode,'')
 })
 
 test('manual calibration omits stale compare tokens when stage lookup failed', () => {

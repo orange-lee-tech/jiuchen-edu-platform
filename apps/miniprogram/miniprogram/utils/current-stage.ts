@@ -1,17 +1,17 @@
 import { getSavedAuthResult } from './auth'
 import { isReadOnly } from './read-only-context'
-import { getCurrentStageSuggestion, setCurrentClassroomStage, type CurrentStageMode } from './request'
+import { ApiRequestError, getCurrentStageSuggestion, setCurrentClassroomStage, type CurrentStageMode } from './request'
 
 export type StageResolution = { stage: string | null; suggested: string | null; mode: CurrentStageMode; notice: string; scheduleSafe: boolean }
 
 /** The server supplies the suggestion; old and manually selected stages are never silently overwritten. */
 export async function resolveCurrentStage(): Promise<StageResolution> {
   const auth = getSavedAuthResult()
-  if (!auth || auth.user.role !== 'student' || isReadOnly()) throw new Error('stage_read_only')
+  if (!auth || auth.user.role !== 'student' || isReadOnly()) throw new ApiRequestError(403, 'stage_read_only')
   const owner = auth.user.id
   const checkOwner = () => {
     const current = getSavedAuthResult()
-    if (!current || current.user.id !== owner || current.user.role !== 'student' || isReadOnly()) throw new Error('session_changed')
+    if (!current || current.user.id !== owner || current.user.role !== 'student' || isReadOnly()) throw new ApiRequestError(409, 'session_changed')
   }
   for (let attempt = 0; attempt < 2; attempt++) {
     const value = await getCurrentStageSuggestion()
@@ -34,5 +34,5 @@ export async function resolveCurrentStage(): Promise<StageResolution> {
     if (mode === 'manual' && value.currentStage !== suggestion) return { stage: value.currentStage, suggested: suggestion, mode, notice: '当前为手动阶段，与入学年份建议不同。', scheduleSafe: true }
     return { stage: value.currentStage, suggested: suggestion, mode, notice: '', scheduleSafe: Boolean(value.currentStage) }
   }
-  throw new Error('current_stage_changed')
+  throw new ApiRequestError(409, 'current_stage_changed')
 }

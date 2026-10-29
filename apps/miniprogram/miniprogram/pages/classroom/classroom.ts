@@ -4,6 +4,8 @@ import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../..
 import { weeklyScheduleView, courseTimeLabel } from '../../utils/schedule-view'
 import { resolveCurrentStage } from '../../utils/current-stage'
 import {
+  ApiRequestError,
+  friendlyRequestError,
   getClassroomStages,
   getLatestScheduleImport,
   getMyClassroom,
@@ -15,6 +17,29 @@ import {
   type ClassroomPlanType,
   type ClassroomStage,
 } from '../../utils/request'
+
+function stageErrorMessage(error: unknown) {
+  if (error instanceof ApiRequestError && (error.code === 'backend_version_mismatch' || ((error.statusCode === 404 || error.statusCode === 405) && error.code !== 'student_profile_not_bound')))
+    return '当前服务尚未支持学期校准，请联系管理员更新服务'
+  if (error instanceof ApiRequestError && error.statusCode >= 500)
+    return '学期服务暂不可用，请联系管理员核查'
+  const fallback = error instanceof ApiRequestError
+    ? error.statusCode === 404 || error.statusCode === 405
+      ? '当前服务尚未支持学期校准，请联系管理员更新服务'
+      : error.statusCode === 403 ? '当前身份无权校准学期，请返回本人学员身份'
+        : error.statusCode === 409 ? '学期状态有变化，请重新读取档案后再选择'
+          : error.statusCode >= 500 ? '学期服务暂不可用，请联系管理员核查'
+            : '学期校准未完成，请保留页面并联系客服'
+    : '学期校准未完成，请保留页面并联系客服'
+  return friendlyRequestError(error, fallback)
+}
+
+function logStageFailure(operation: 'load' | 'suggest' | 'save' | 'verify', error: unknown) {
+  console.warn('Academic stage request failed.', {
+    operation, statusCode: error instanceof ApiRequestError ? error.statusCode : 0,
+    code: error instanceof ApiRequestError && /^[a-z][a-z0-9_]{0,79}$/.test(error.code) ? error.code : 'unknown_error',
+  })
+}
 
 type PlanCard = {
   type: ClassroomPlanType
@@ -89,7 +114,7 @@ Page({
     stages: stageLabels(FALLBACK_STAGES),
     stageScrollTarget: 'semester-freshman-fall', actualStageLabel: '待确认',
     actualStageCode: '', actualStageKnown: false, stageMode: null as 'auto' | 'manual' | null, stageModeKnown: false, stageNotice: '', stageScheduleSafe: false,
-    stageChangeBusy: false, stageCalibrationMode: false,
+    stageChangeBusy: false, stageCalibrationMode: false, stageSaveError: '',
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
 
@@ -132,10 +157,15 @@ Page({
     if (!sameOwner) this.setData({ selectedView: 'stage' })
 
     this.setData({ mode: 'student', loading: true, loadError: '', studentName: '', actualStageKnown: false, stageModeKnown: false, plans: [], mentors: [], records: [] })
+    let stageSuggestionError = ''
     try {
       const [stages, resolution] = await Promise.all([
         getClassroomStages().catch(() => FALLBACK_STAGES),
-        isReadOnly() ? Promise.resolve(null) : resolveCurrentStage().catch(() => null),
+        isReadOnly() ? Promise.resolve(null) : resolveCurrentStage().catch(error => {
+          logStageFailure('suggest', error)
+          stageSuggestionError = stageErrorMessage(error)
+          return null
+        }),
       ])
       if (generation !== this.viewGeneration) return
       const browsingAnotherStage = sameOwner && this.data.currentStageCode !== this.data.actualStageCode
@@ -155,7 +185,7 @@ Page({
         actualStageKnown: true,
         stageMode: resolution?.mode ?? null,
         stageModeKnown: Boolean(resolution),
-        stageNotice: isReadOnly() ? '只读查看档案中保存的阶段。' : stageChanged ? '档案阶段已变化，请刷新后核对。' : resolution?.notice || (resolution ? '' : '自动定位暂不可用，请核对当前学期。'),
+        stageNotice: isReadOnly() ? '只读查看档案中保存的阶段。' : stageChanged ? '档案阶段已变化，请重新读取后核对。' : resolution?.notice || (resolution ? '' : stageSuggestionError),
         stageScheduleSafe: isReadOnly() || Boolean(resolution?.scheduleSafe && !stageChanged),
         ...emptyStageView(stage, index),
         studentName: initial.student.name,
@@ -167,11 +197,12 @@ Page({
           ...record,
           dateLabel: this.formatRecordDate(record.occurredAt),
         })),
+        stageSaveError: '',
       })
       if (this.data.selectedView === 'week') void this.loadCurrentWeek()
     } catch (error) {
       if (generation !== this.viewGeneration) return
-      console.info('Current student classroom unavailable.', error)
+      logStageFailure('load', error)
       this.setData({ loadError: '规划资料暂时无法加载，请重试。' })
     } finally {
       if (generation === this.viewGeneration) this.setData({ loading: false })
@@ -196,6 +227,7 @@ Page({
   },
 
   onStageChange(event: WechatMiniprogram.BaseEvent) {
+    if (this.data.stageChangeBusy) return
     const code = String(event.currentTarget.dataset.code || '')
     const stages = this.data.stages as ClassroomStage[]
     const index = code ? stages.findIndex(item => item.code === code) : Number(event.currentTarget.dataset.index)
@@ -204,7 +236,7 @@ Page({
     if (this.data.stageCalibrationMode) {
       const expected = this.data.actualStageKnown ? (this.data.actualStageCode || null) : undefined
       const expectedMode = this.data.stageModeKnown ? this.data.stageMode : undefined
-      this.setData({ stageCalibrationMode: false, stageScrollTarget: `semester-${stage.code}` })
+      this.setData({ stageScrollTarget: `semester-${stage.code}` })
       void this.saveCurrentStage(stage.code, expected, 'manual', expectedMode)
       return
     }
@@ -233,7 +265,13 @@ Page({
         wx.showModal({ title: '启用自动定位', content: `按普通四年制及入学年份估算为${stage.label}。如有休学或其他学制，请手动选择实际阶段。`, confirmText: '启用自动',
           success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(stage.code, result.currentStage, 'auto', result.mode) } })
       }
-    } catch { wx.showToast({ title: '暂无法读取阶段建议，请稍后重试', icon: 'none' }) }
+    } catch (error) {
+      if (generation === this.viewGeneration && owner === this.selectedOwner) {
+        logStageFailure('suggest', error)
+        this.setData({ stageSaveError: stageErrorMessage(error) })
+        wx.showToast({ title: this.data.stageSaveError, icon: 'none' })
+      }
+    }
     finally { this.setData({ stageChangeBusy: false }) }
   },
   onSetViewedStage() {
@@ -252,21 +290,41 @@ Page({
   },
   async saveCurrentStage(code: string, expected: string | null | undefined, mode: 'auto' | 'manual' = 'manual', expectedMode?: 'auto' | 'manual' | null) {
     if (this.data.stageChangeBusy || isReadOnly()) return
-    const generation = this.viewGeneration
-    this.setData({ stageChangeBusy: true })
+    const generation = this.viewGeneration, owner = this.selectedOwner
+    let operation: 'save' | 'verify' = 'save'
+    this.setData({ stageChangeBusy: true, stageSaveError: '' })
     try {
       const modeToCheck = expectedMode === undefined ? (this.data.stageModeKnown ? this.data.stageMode : undefined) : expectedMode
       const options = { mode, ...(modeToCheck !== undefined ? { expectedMode: modeToCheck } : {}), ...(mode === 'auto' ? { confirmAuto: true } : {}) }
       const result = await setCurrentClassroomStage(code, expected, options)
-      if (generation !== this.viewGeneration) return
-      const index = (this.data.stages as ClassroomStage[]).findIndex(item => item.code === result.currentStage)
-      if (index < 0) throw new Error('unknown_stage')
+      if (generation !== this.viewGeneration || owner !== this.selectedOwner) return
+      if (!result.ok || result.currentStage !== code || result.mode !== mode) throw new ApiRequestError(409, 'stage_save_response_invalid')
+      operation = 'verify'
+      const confirmed = await getCurrentStageSuggestion()
+      if (generation !== this.viewGeneration || owner !== this.selectedOwner) return
+      if (!confirmed.ok || confirmed.currentStage !== code || confirmed.mode !== mode) throw new ApiRequestError(409, 'current_stage_changed')
+      const index = (this.data.stages as ClassroomStage[]).findIndex(item => item.code === confirmed.currentStage)
+      if (index < 0) throw new ApiRequestError(409, 'stage_save_response_invalid')
       this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage', stageScrollTarget: `semester-${this.data.stages[index].code}`, stageCalibrationMode: false })
+      const refreshedGeneration = this.viewGeneration + 1
       await this.initializeClassroom()
-      wx.showToast({ title: '当前阶段已更新', icon: 'success' })
-    } catch { if (generation === this.viewGeneration) wx.showToast({ title: '阶段未更新，请刷新后重试', icon: 'none' }) }
+      if (owner !== this.selectedOwner || refreshedGeneration !== this.viewGeneration) return
+      if (this.data.actualStageKnown && this.data.stageModeKnown && this.data.actualStageCode === code && this.data.stageMode === mode) {
+        wx.showToast({ title: '当前阶段已更新', icon: 'success' })
+      } else {
+        this.setData({ stageSaveError: '学期已保存并核实，但规划页面尚未同步，请重新读取档案' })
+      }
+    } catch (error) {
+      if (generation === this.viewGeneration && owner === this.selectedOwner) {
+        logStageFailure(operation, error)
+        const reason = stageErrorMessage(error)
+        this.setData({ stageSaveError: operation === 'verify' ? `保存请求已受理，暂未核实结果。${reason}` : reason })
+        wx.showToast({ title: this.data.stageSaveError, icon: 'none', duration: 3500 })
+      }
+    }
     finally { this.setData({ stageChangeBusy: false }) }
   },
+  onReloadCurrentStage() { if (!this.data.stageChangeBusy) void this.initializeClassroom() },
   async reloadStage(stageCode: string) {
     const generation = this.viewGeneration
     this.setData({ loading: true, loadError: '' })
