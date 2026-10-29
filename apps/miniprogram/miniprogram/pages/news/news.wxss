@@ -338,3 +338,10 @@
 .news-sections-row{display:flex;width:max-content;gap:12rpx;}
 .news-section-tab{padding:10rpx 12rpx;color:#536b7b;font-size:22rpx;}
 .news-section-tab.active{color:#174e78;font-weight:800;border-bottom:3rpx solid #174e78;}
+
+
+/* Keep all editorial destinations visible like the reference, even when a category is empty. */
+.news-sections{overflow:hidden;}
+.news-sections-row{display:flex;justify-content:space-between;align-items:center;gap:8rpx;width:100%;}
+.news-section-tab{flex:0 0 auto;padding:10rpx 3rpx;font-size:20rpx;line-height:1.4;white-space:nowrap;}
+.news-section-tab.active{border-bottom-width:4rpx;}

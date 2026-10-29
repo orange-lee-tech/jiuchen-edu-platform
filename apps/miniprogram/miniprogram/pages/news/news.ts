@@ -173,6 +173,7 @@ Page({
         this.setData({
           categories: ['全部'],
           currentCategory: 0,
+          sections: NEWS_SECTIONS, currentSection: '最新',
           featured: FALLBACK_FEATURED,
           allArticles: [],
           articles: [],
@@ -197,6 +198,7 @@ Page({
         this.setData({
           categories: ['全部'],
           currentCategory: 0,
+          sections: NEWS_SECTIONS, currentSection: '最新',
           featured: FALLBACK_FEATURED,
           allArticles: [],
           articles: [],
@@ -206,7 +208,7 @@ Page({
         return
       }
 
-      const sections = NEWS_SECTIONS.filter(section => section === '最新' || cards.some(card => matchesNewsSection(card, section)))
+      const sections = NEWS_SECTIONS
       const currentSection = sections.includes(this.data.currentSection) ? this.data.currentSection : '最新'
       const categories = ['全部', ...uniqueTags(cards.filter(card => matchesNewsSection(card, currentSection)))]
       const currentCategory = Math.max(0, categories.indexOf(this.selectedCategoryName))

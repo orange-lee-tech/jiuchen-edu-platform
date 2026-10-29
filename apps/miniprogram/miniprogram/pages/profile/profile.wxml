@@ -4,14 +4,13 @@
     <view class="identity-panel">
       <image class="identity-art" src="/assets/jiuchen-visual-v1/banners/profile-calm-campus.png" mode="aspectFill" aria-hidden="true" />
       <view class="identity-content">
-      <view class="identity-person"><image class="identity-person-icon" src="/assets/jiuchen-visual-v1/icons/profile.png" mode="aspectFit" /><view class="identity-person-text"><text class="user-name">{{loggedIn ? userName : '把准备记录留在这里'}}</text><text class="identity-role-label">{{roleLabel}}{{profileStageLabel ? ' · ' + profileStageLabel : ''}}</text></view></view>
-      <view wx:if="{{businessId}}" class="identity-number">
-        <text class="identity-number-label">我的九辰内部编号</text>
-        <text class="identity-code" selectable>{{businessId}}</text>
-      </view>
-      <view class="identity-buttons">
-        <view wx:if="{{businessId}}" class="identity-control identity-copy" bindtap="onCopyIdentity" hover-class="identity-control-pressed" aria-role="button">复制编号</view>
-        <view wx:if="{{!readOnly}}" class="identity-control identity-primary" bindtap="onIdentityTap" hover-class="identity-control-pressed" aria-role="button">{{!loggedIn ? '登录并绑定身份' : role === 'admin' || role === 'teacher' || role === 'staff' ? '查看身份与绑定' : '编辑我的学业资料'}}</view>
+      <view class="identity-person">
+        <image class="identity-person-icon" src="/assets/jiuchen-visual-v1/icons/profile.png" mode="aspectFit" />
+        <view class="identity-person-text">
+          <text class="user-name">{{loggedIn ? userName : '把准备记录留在这里'}}</text>
+          <text class="identity-role-label">{{roleLabel}}{{profileStageLabel ? ' · ' + profileStageLabel : ''}}</text>
+        </view>
+        <view wx:if="{{!readOnly}}" class="identity-control identity-primary" bindtap="onIdentityTap" hover-class="identity-control-pressed" aria-role="button">{{!loggedIn ? '登录' : role === 'admin' || role === 'teacher' || role === 'staff' ? '身份与绑定' : '编辑资料'}}</view>
       </view>
       </view>
     </view>
@@ -39,25 +38,34 @@
       </view>
     </view>
     <view class="website-row" bindtap="onWebsite" hover-class="menu-pressed" aria-role="button"><image class="menu-icon" src="/assets/icons/website-active.png" mode="aspectFit" /><text>九辰官网 · 复制地址</text><text class="arrow">›</text></view>
-    <view id="identity-section" wx:if="{{loggedIn && !readOnly && identities.length}}" class="card">
-      <text class="section-heading">我的身份</text>
-      <text class="card-note">当前使用：{{roleLabel}}。切换后服务器按新身份验证权限。</text>
-      <view wx:for="{{identities}}" wx:key="id" class="identity-role-row">
-        <view class="identity-role-info">
-          <text class="identity-role-name">{{item.type === 'admin' ? '管理员' : item.type === 'teacher' ? '老师' : '学员'}}</text>
-          <text class="identity-role-code" selectable>{{item.businessId}}</text>
-          <text wx:if="{{role === item.type}}" class="identity-role-current">当前使用</text>
-        </view>
-        <view class="identity-role-actions">
-          <button wx:if="{{role !== item.type}}" class="identity-role-button identity-role-switch" disabled="{{identityBusy}}" data-role="{{item.type}}" bindtap="onSwitchIdentity">切换身份</button>
-          <button class="identity-role-button identity-role-unbind" disabled="{{identityBusy}}" data-id="{{item.id}}" bindtap="onUnbindIdentity">解除绑定</button>
-        </view>
+    <view id="identity-section" wx:if="{{loggedIn && !readOnly && (identities.length || businessId)}}" class="identity-settings-card">
+      <view class="identity-settings-toggle" bindtap="onToggleIdentityDetails" aria-role="button">
+        <text>我的身份与编号</text><text>{{identityDetailsOpen ? '收起 ⌃' : '查看编号与绑定 ›'}}</text>
       </view>
-      <view wx:if="{{identities.length === 1 && identities[0].type === 'admin'}}">
-        <input class="identity-bind-input" placeholder-class="identity-bind-input-placeholder" value="{{identityInput}}" placeholder="请填写未认领的学员或老师内部编号" bindinput="onAdditionalIdInput" />
-        <button disabled="{{identityBusy}}" bindtap="onBindAdditionalIdentity">绑定兼任身份</button>
+      <view wx:if="{{identityDetailsOpen}}" class="identity-settings-body">
+        <view wx:if="{{businessId}}" class="identity-number">
+          <text class="identity-number-label">九辰内部编号</text>
+          <text class="identity-code" selectable>{{businessId}}</text>
+          <text class="identity-copy-inline" bindtap="onCopyIdentity">复制编号</text>
+        </view>
+        <text class="card-note">当前使用：{{roleLabel}}。切换后服务器按新身份验证权限。</text>
+        <view wx:for="{{identities}}" wx:key="id" class="identity-role-row">
+          <view class="identity-role-info">
+            <text class="identity-role-name">{{item.type === 'admin' ? '管理员' : item.type === 'teacher' ? '老师' : '学员'}}</text>
+            <text class="identity-role-code" selectable>{{item.businessId}}</text>
+            <text wx:if="{{role === item.type}}" class="identity-role-current">当前使用</text>
+          </view>
+          <view class="identity-role-actions">
+            <button wx:if="{{role !== item.type}}" class="identity-role-button identity-role-switch" disabled="{{identityBusy}}" data-role="{{item.type}}" bindtap="onSwitchIdentity">切换身份</button>
+            <button class="identity-role-button identity-role-unbind" disabled="{{identityBusy}}" data-id="{{item.id}}" bindtap="onUnbindIdentity">解除绑定</button>
+          </view>
+        </view>
+        <view wx:if="{{identities.length === 1 && identities[0].type === 'admin'}}">
+          <input class="identity-bind-input" placeholder-class="identity-bind-input-placeholder" value="{{identityInput}}" placeholder="请填写未认领的学员或老师内部编号" bindinput="onAdditionalIdInput" />
+          <button disabled="{{identityBusy}}" bindtap="onBindAdditionalIdentity">绑定兼任身份</button>
+        </view>
+        <text wx:if="{{identityError}}" class="card-note">{{identityError}}</text>
       </view>
-      <text wx:if="{{identityError}}" class="card-note">{{identityError}}</text>
     </view>
     <view wx:if="{{loggedIn && !readOnly}}" class="account-settings">
       <view class="account-settings-toggle" bindtap="onToggleAccountSettings" aria-role="button">账号与设置 <text>{{accountSettingsOpen ? '收起 ⌃' : '查看 ›'}}</text></view>

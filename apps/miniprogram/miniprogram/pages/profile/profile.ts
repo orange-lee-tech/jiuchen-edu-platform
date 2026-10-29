@@ -33,14 +33,14 @@ Page({
     ...INITIAL_SHELL, loggedIn: false, role: '' as UserRole | '', roleLabel: '未登录',
     businessId: '', userName: '', profileStageLabel: '', menus: PERSONAL_MENUS, loggingOut: false, deleting: false,
     favoritesVisible:false,favoritesLoading:false,favoritesError:'',favorites:[] as NewsFavorite[],
-    identities: [] as MyIdentity[], identityInput: '', identityBusy: false, identityError: '', accountSettingsOpen: false,
+    identities: [] as MyIdentity[], identityInput: '', identityBusy: false, identityError: '', identityDetailsOpen: false, accountSettingsOpen: false,
   },
   stopShell: undefined as (() => void) | undefined,
   profileViewEpoch: 0,
   onShow() {
     this.stopShell?.()
     const epoch = ++this.profileViewEpoch
-    this.setData({favoritesVisible:false,favorites:[],favoritesError:''})
+    this.setData({favoritesVisible:false,favorites:[],favoritesError:'',identityDetailsOpen:false})
     this.stopShell = observeSlot('mine', (state) => {
       const auth = state.auth
       const role = auth?.user.role || ''
@@ -129,15 +129,16 @@ Page({
     finally { this.setData({ identityBusy: false }) }
   },
   onHide() { this.profileViewEpoch += 1; this.stopShell?.(); this.setData({ shellPhase: 'loading', identities: [], profileStageLabel: '',
-    favorites: [], favoritesVisible: false, identityInput: '' }) },
+    favorites: [], favoritesVisible: false, identityInput: '', identityDetailsOpen: false }) },
   onUnload() { this.profileViewEpoch += 1; this.stopShell?.() },
   onCustomerServiceTap() { void openVerifiedWechatCustomerService('账号及运营支持') },
   onToggleAccountSettings() { this.setData({ accountSettingsOpen: !this.data.accountSettingsOpen }) },
+  onToggleIdentityDetails() { this.setData({ identityDetailsOpen: !this.data.identityDetailsOpen }) },
   onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },
   onIdentityTap() {
     if(isReadOnly()){wx.showToast({title:'当前为只读查看，不能编辑资料',icon:'none'});return}
     if (this.data.loggedIn && this.data.identities.some(item => item.type === 'admin')) {
-      wx.pageScrollTo({ selector: '#identity-section', duration: 200 })
+      this.setData({ identityDetailsOpen: true }, () => wx.pageScrollTo({ selector: '#identity-section', duration: 200 }))
       return
     }
     if (this.data.loggedIn) openPage('/pages/profile-edit/profile-edit')

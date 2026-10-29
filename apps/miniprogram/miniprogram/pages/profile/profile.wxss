@@ -201,3 +201,22 @@ button::after{border:0;}
 .profile-services .menu-service{display:flex;align-items:center;gap:13rpx;margin:10rpx 0 0;padding:15rpx;background:#fffefc;border:0;border-radius:10rpx;}
 .profile-services .menu-icon{width:54rpx;height:54rpx;flex:none;}
 .profile-services .menu-main{flex:1;min-width:0;}
+
+
+/* Match the reference profile: personal identity first, technical identifiers on demand. */
+.identity-panel{min-height:130rpx;padding:20rpx 22rpx 18rpx;border-radius:15rpx;}
+.identity-person{gap:12rpx;align-items:center;}
+.identity-person-icon{width:68rpx;height:68rpx;}
+.identity-person-text{flex:1;min-width:0;}
+.identity-panel .user-name{margin:0;font-size:31rpx;line-height:1.35;}
+.identity-role-label{margin-top:4rpx;font-size:21rpx;}
+.identity-primary{flex:0 0 auto;min-width:135rpx;min-height:54rpx;padding:8rpx 10rpx;font-size:20rpx;white-space:normal;line-height:1.3;}
+.identity-settings-card{box-sizing:border-box;margin-top:15rpx;padding:0 17rpx;border:1rpx solid #e4ded2;border-radius:11rpx;background:#fffdf9;}
+.identity-settings-toggle{display:flex;align-items:center;justify-content:space-between;gap:12rpx;min-height:74rpx;color:#214b64;font-size:24rpx;font-weight:800;}
+.identity-settings-toggle text:last-child{color:#66808e;font-size:21rpx;font-weight:650;}
+.identity-settings-body{padding:0 0 16rpx;}
+.identity-settings-body .identity-number{display:flex;flex-wrap:wrap;align-items:center;gap:7rpx 10rpx;margin:4rpx 0 12rpx;padding:12rpx;background:#f1f5f4;border:1rpx solid #dce6e2;border-radius:8rpx;}
+.identity-settings-body .identity-number-label{color:#607782;font-size:20rpx;}
+.identity-settings-body .identity-code{color:#193f5c;font-size:23rpx;letter-spacing:0;}
+.identity-copy-inline{display:inline-block;padding:6rpx 10rpx;border-radius:6rpx;background:#e5eff0;color:#205b7d;font-size:20rpx;font-weight:750;}
+.identity-settings-body .card-note{display:block;margin:10rpx 0;color:#5c7480;font-size:21rpx;line-height:1.5;}
