@@ -4,7 +4,7 @@ import { bindMyAdditionalIdentity, friendlyRequestError, getMyIdentities, getMyC
   type MyIdentity, type NewsFavorite } from '../../utils/request'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { openOfficialArticle } from '../../utils/official-article'
-import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
+import { clearLoginIntent, INITIAL_SHELL, loginFor, observeSlot, openPage, openSlot, shellView } from '../../utils/navigation'
 import {getReadOnlyContext,clearReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 import { clearCachedAcademicProfile } from '../../utils/profile-cache'
 import { clearGrowthProfileBootstrapCache } from '../../utils/growth-profile-cache'
@@ -31,7 +31,7 @@ const ADMIN_MENUS = [
 Page({
   data: {
     ...INITIAL_SHELL, loggedIn: false, role: '' as UserRole | '', roleLabel: '未登录',
-    businessId: '', userName: '', profileStageLabel: '', menus: PERSONAL_MENUS, loggingOut: false, deleting: false,
+    businessId: '', userName: '', profileStageLabel: '', mentorName: '', menus: PERSONAL_MENUS, loggingOut: false, deleting: false,
     favoritesVisible:false,favoritesLoading:false,favoritesError:'',favorites:[] as NewsFavorite[],
     identities: [] as MyIdentity[], identityInput: '', identityBusy: false, identityError: '', identityDetailsOpen: false, accountSettingsOpen: false,
   },
@@ -47,20 +47,22 @@ Page({
       this.setData({
         ...shellView(state), loggedIn: Boolean(auth), role,
         roleLabel: shellView(state).shellRoleLabel, businessId: auth?.businessIdentity?.businessId || '',
-        userName: auth?.user.displayName || (role === 'staff' ? '九辰内部员工' : role === 'teacher' ? '九辰辅导老师' : role === 'admin' ? '九辰管理员' : role === 'student' ? '九辰学员' : '我的保研档案'), profileStageLabel: '',
+        userName: auth?.user.displayName || (role === 'staff' ? '九辰内部员工' : role === 'teacher' ? '九辰辅导老师' : role === 'admin' ? '九辰管理员' : role === 'student' ? '九辰学员' : '我的保研档案'), profileStageLabel: '', mentorName: '',
         menus: role === 'admin' ? ADMIN_MENUS : role === 'teacher' || role === 'staff' ? TEACHER_MENUS : PERSONAL_MENUS,
       })
       if (state.phase === 'ready' && role === 'student' && auth && !isReadOnly()) {
         const owner = auth.user.id
         void (async () => {
-          const resolution = await resolveCurrentStage()
+          const resolution = await resolveCurrentStage().catch(() => null)
           if (epoch !== this.profileViewEpoch || isReadOnly() || getSavedAuthResult()?.user.id !== owner) return
-          if (!resolution.stage || !resolution.scheduleSafe) { this.setData({ profileStageLabel: '学期待核对' }); return }
-          const view = await getMyClassroom(resolution.stage)
+          const view = await getMyClassroom(resolution?.stage || undefined).catch(() => null)
           if (epoch === this.profileViewEpoch && !isReadOnly() && getSavedAuthResult()?.user.id === owner && getSavedAuthResult()?.user.role === 'student') {
-            this.setData({ profileStageLabel: view.student.currentStage === resolution.stage ? view.stage.label : '学期待核对' })
+            this.setData({
+              profileStageLabel: resolution?.stage && resolution.scheduleSafe && view?.student.currentStage === resolution.stage ? view.stage.label : '学期待核对',
+              mentorName: view?.mentors?.[0]?.name || '',
+            })
           }
-        })().catch(() => { if (epoch === this.profileViewEpoch && !isReadOnly() && getSavedAuthResult()?.user.id === owner) this.setData({ profileStageLabel: '学期待核对' }) })
+        })().catch(() => { if (epoch === this.profileViewEpoch && !isReadOnly() && getSavedAuthResult()?.user.id === owner) this.setData({ profileStageLabel: '学期待核对', mentorName: '' }) })
       }
     })
     if (getSavedAuthResult() && !isReadOnly()) void this.loadIdentities()
@@ -129,9 +131,10 @@ Page({
     finally { this.setData({ identityBusy: false }) }
   },
   onHide() { this.profileViewEpoch += 1; this.stopShell?.(); this.setData({ shellPhase: 'loading', identities: [], profileStageLabel: '',
-    favorites: [], favoritesVisible: false, identityInput: '', identityDetailsOpen: false }) },
+    favorites: [], favoritesVisible: false, identityInput: '', identityDetailsOpen: false, mentorName: '' }) },
   onUnload() { this.profileViewEpoch += 1; this.stopShell?.() },
   onCustomerServiceTap() { void openVerifiedWechatCustomerService('账号及运营支持') },
+  onMyTeacher() { openSlot('plan') },
   onToggleAccountSettings() { this.setData({ accountSettingsOpen: !this.data.accountSettingsOpen }) },
   onToggleIdentityDetails() { this.setData({ identityDetailsOpen: !this.data.identityDetailsOpen }) },
   onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },

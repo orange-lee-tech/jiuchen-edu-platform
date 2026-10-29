@@ -220,3 +220,15 @@ button::after{border:0;}
 .identity-settings-body .identity-code{color:#193f5c;font-size:23rpx;letter-spacing:0;}
 .identity-copy-inline{display:inline-block;padding:6rpx 10rpx;border-radius:6rpx;background:#e5eff0;color:#205b7d;font-size:20rpx;font-weight:750;}
 .identity-settings-body .card-note{display:block;margin:10rpx 0;color:#5c7480;font-size:21rpx;line-height:1.5;}
+
+
+/* Two equal service cards when an actual mentor is assigned; support remains full width otherwise. */
+.profile-service-links{display:flex;align-items:stretch;gap:12rpx;margin-top:10rpx;}
+.profile-service-links .menu-service,.profile-service-links .menu-teacher-service{box-sizing:border-box;flex:1 1 0;min-width:0;margin:0;padding:13rpx 11rpx;display:flex;align-items:center;gap:8rpx;border:0;border-radius:10rpx;}
+.profile-service-links .menu-service{background:#fffaf0;}
+.profile-service-links .menu-teacher-service{background:#eaf3f8;color:#173f59;}
+.profile-service-links .menu-main{flex:1;min-width:0;}
+.profile-service-links .menu-icon{width:40rpx;height:40rpx;flex:none;}
+.profile-service-links .menu-description{font-size:19rpx;line-height:1.4;word-break:break-word;}
+.profile-service-links .arrow{flex:none;}
+@media screen and (max-width: 360px){.profile-service-links{gap:8rpx;}.profile-service-links .menu-service,.profile-service-links .menu-teacher-service{padding:11rpx 8rpx;}}

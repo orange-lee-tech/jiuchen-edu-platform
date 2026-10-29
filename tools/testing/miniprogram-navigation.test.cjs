@@ -1494,6 +1494,8 @@ test('administrator identity actions stay accessible on demand, and workbench ke
  assert.match(p,/identity-settings-toggle/)
  assert.match(p,/class="identity-copy-inline" bindtap="onCopyIdentity"/)
  assert.match(p,/bindtap="onSwitchIdentity"/)
+ assert.match(p,/menu-teacher-service/)
+ assert.match(p,/bindtap="onMyTeacher"/)
  assert.doesNotMatch(p,/class="copy-code"/)
  assert.match(w,/class="admin-action.*" data-key/)
  assert.match(css,/\.admin-action\{[^}]*width:100%/)

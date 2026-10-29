@@ -52,5 +52,5 @@ export function isPlanTypeAllowed(stageCode: string, planType: PlanType): boolea
 
 
 export function isGuidanceAllowed(stageCode: string): boolean {
-  return getStageDefinition(stageCode)?.mode !== 'internship'
+  return Boolean(getStageDefinition(stageCode))
 }

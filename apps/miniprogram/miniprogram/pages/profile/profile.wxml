@@ -23,7 +23,22 @@
         </view>
       </block>
     </view>
-    <view class="profile-services"><text class="section-heading">我的服务</text><view class="menu-row menu-service" bindtap="onCustomerServiceTap" hover-class="menu-pressed" aria-role="button"><image class="menu-icon" src="/assets/jiuchen-visual-v1/icons/headset.png" mode="aspectFit" /><view class="menu-main"><text class="menu-title">{{shellKind === 'student' ? '联系客服' : '联系运营'}}</text><text class="menu-description">账号与服务咨询</text></view><text class="arrow">›</text></view><view wx:if="{{readOnly}}" class="menu-row" bindtap="onExitReadOnly"><text class="menu-title">退出只读查看</text><text class="arrow">›</text></view></view>
+    <view class="profile-services">
+      <text class="section-heading">我的服务</text>
+      <view class="profile-service-links">
+        <view class="menu-row menu-service" bindtap="onCustomerServiceTap" hover-class="menu-pressed" aria-role="button">
+          <image class="menu-icon" src="/assets/jiuchen-visual-v1/icons/headset.png" mode="aspectFit" />
+          <view class="menu-main"><text class="menu-title">{{shellKind === 'student' ? '联系客服' : '联系运营'}}</text><text class="menu-description">账号与服务咨询</text></view>
+          <text class="arrow">›</text>
+        </view>
+        <view wx:if="{{shellKind === 'student' && mentorName && !readOnly}}" class="menu-row menu-teacher-service" bindtap="onMyTeacher" hover-class="menu-pressed" aria-role="button">
+          <image class="menu-icon" src="/assets/jiuchen-visual-v1/icons/profile.png" mode="aspectFit" />
+          <view class="menu-main"><text class="menu-title">我的老师</text><text class="menu-description">{{mentorName}} · 查看辅导与规划</text></view>
+          <text class="arrow">›</text>
+        </view>
+      </view>
+      <view wx:if="{{readOnly}}" class="menu-row" bindtap="onExitReadOnly"><text class="menu-title">退出只读查看</text><text class="arrow">›</text></view>
+    </view>
     <view wx:if="{{favoritesVisible}}" class="menu-list">
       <text class="section-heading">我的收藏</text>
       <text wx:if="{{favoritesLoading}}">正在读取个人收藏…</text>
