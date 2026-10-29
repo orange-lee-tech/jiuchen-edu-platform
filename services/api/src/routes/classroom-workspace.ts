@@ -11,6 +11,7 @@ import {
   scheduleImports,
   studentPlans,
   students,
+  userProfiles,
   studentTeacherAssignments,
   teachers,
 } from '../db/schema.js'
@@ -34,6 +35,7 @@ import {
 } from '../services/schedule-parser.js'
 import { createScheduleStorageProvider } from '../services/schedule-storage.js'
 import { resolveSessionUser } from '../services/session.js'
+import { suggestAcademicStage } from '../domain/academic-stage.js'
 
 const itemSchema = z.object({
   name: z.string().trim().min(1).max(160),
@@ -411,6 +413,58 @@ export function registerClassroomWorkspaceRoutes(
 ) {
   const scheduleStorage = createScheduleStorageProvider(env)
   const scheduleImageAI = createScheduleAIProvider(env)
+
+  app.get('/me/classroom/stage-suggestion', async (request, reply) => {
+    if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
+    const session = await resolveSessionUser(request, database)
+    if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
+    if (session.role !== 'student' || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_stage_edit_forbidden' })
+    const student = await resolveStudentByUser(database, session.userId)
+    if (!student) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
+    const [stageSettings] = await database.db.select({ mode: students.currentStageMode, currentStage: students.currentStage })
+      .from(students).where(eq(students.userId, session.userId)).limit(1)
+    if (!stageSettings) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
+    const [profile] = await database.db.select({ enrollmentYear: userProfiles.enrollmentYear, currentGrade: userProfiles.currentGrade })
+      .from(userProfiles).where(eq(userProfiles.userId, session.userId)).limit(1)
+    return { ok: true, currentStage: stageSettings?.currentStage ?? null, mode: stageSettings?.mode ?? null,
+      suggestedStage: suggestAcademicStage(profile?.enrollmentYear ?? null, new Date(), profile?.currentGrade ?? null) }
+  })
+
+  app.put<{ Body: unknown }>('/me/classroom/current-stage', async (request, reply) => {
+    if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
+    const session = await resolveSessionUser(request, database)
+    if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
+    if (session.role !== 'student' || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_stage_edit_forbidden' })
+    const parsed = z.object({ stageCode: z.string(), expectedCurrentStage: z.string().nullable().optional(),
+      mode: z.enum(['auto', 'manual']).optional(), expectedMode: z.enum(['auto', 'manual']).nullable().optional(),
+      confirmAuto: z.boolean().optional() }).strict().safeParse(request.body)
+    if (!parsed.success || !getStageDefinition(parsed.data.stageCode)) return reply.code(400).send({ ok: false, error: 'invalid_stage' })
+    if ((parsed.data.mode ?? 'manual') === 'auto' && parsed.data.expectedCurrentStage === undefined) return reply.code(400).send({ ok: false, error: 'expected_stage_required' })
+    const result = await database.db.transaction(async (tx) => {
+      const rows = await tx.execute(sql`SELECT id, current_stage AS currentStage, current_stage_mode AS mode FROM students WHERE user_id = ${session.userId} FOR UPDATE`)
+      const student = (rows[0] as unknown as Array<{ id: string; currentStage: string | null; mode: 'auto' | 'manual' | null }>)[0]
+      if (!student) return 'missing' as const
+      if (parsed.data.expectedCurrentStage !== undefined && student.currentStage !== parsed.data.expectedCurrentStage) return 'changed' as const
+      if (parsed.data.expectedMode !== undefined && student.mode !== parsed.data.expectedMode) return 'changed' as const
+      const mode = parsed.data.mode ?? 'manual'
+      if (mode === 'auto') {
+        if (student.mode !== 'auto' && student.currentStage !== null && !(student.mode === null && student.currentStage === parsed.data.stageCode) && !parsed.data.confirmAuto) return 'confirmation' as const
+        const profileRows = await tx.execute(sql`SELECT enrollment_year AS enrollmentYear, current_grade AS currentGrade FROM user_profiles WHERE user_id = ${session.userId} FOR UPDATE`)
+        const profile = (profileRows[0] as unknown as Array<{ enrollmentYear: number | null; currentGrade: string | null }>)[0]
+        if (suggestAcademicStage(profile?.enrollmentYear ?? null, new Date(), profile?.currentGrade ?? null) !== parsed.data.stageCode) return 'invalidSuggestion' as const
+      }
+      await tx.update(students).set({ currentStage: parsed.data.stageCode, currentStageMode: mode }).where(eq(students.id, student.id))
+      return 'saved' as const
+    })
+    if (result === 'missing') return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
+    if (result === 'changed') return reply.code(409).send({ ok: false, error: 'current_stage_changed' })
+    if (result === 'confirmation') return reply.code(409).send({ ok: false, error: 'stage_auto_confirmation_required' })
+    if (result === 'invalidSuggestion') return reply.code(409).send({ ok: false, error: 'stage_suggestion_changed' })
+    const [confirmed] = await database.db.select({ currentStage: students.currentStage, mode: students.currentStageMode })
+      .from(students).where(eq(students.userId, session.userId)).limit(1)
+    if (!confirmed || confirmed.currentStage !== parsed.data.stageCode || confirmed.mode !== (parsed.data.mode ?? 'manual')) return reply.code(409).send({ ok: false, error: 'current_stage_changed' })
+    return { ok: true, currentStage: confirmed.currentStage, mode: confirmed.mode }
+  })
 
   app.get<{ Querystring: { stage?: string } }>('/me/classroom', async (request, reply) => {
     if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
