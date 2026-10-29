@@ -1,6 +1,6 @@
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, openSlot, shellView } from '../../utils/navigation'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
-import { getLatestScheduleImport, getMyAcademicProfile, getMyClassroom, getUpcomingPlanTasks, type UpcomingPlanTask, type ParsedSchedule } from '../../utils/request'
+import { ApiRequestError, getLatestScheduleImport, getMyAcademicProfile, getMyClassroom, getUpcomingPlanTasks, type UpcomingPlanTask, type ParsedSchedule } from '../../utils/request'
 import { courseTimeLabel, dailyScheduleView } from '../../utils/schedule-view'
 import { resolveCurrentStage } from '../../utils/current-stage'
 
@@ -11,6 +11,7 @@ const STAGE_NAMES: Record<string, string> = {
   'senior-fall':'大四上','senior-winter':'大四寒假','senior-spring':'大四下',
 }
 const TERM_STAGE = /^(freshman|sophomore|junior|senior)-(fall|spring)$/
+const PLAN_TYPE_NAMES: Record<string, string> = { gpa: '课程成绩', english: '英语', competition: '竞赛', research: '科研', internship: '实习' }
 
 function courseStartMinutes(value: string | null) {
   const match = value?.match(/(?:^|\s)(\d{1,2}):(\d{2})/)
@@ -42,7 +43,7 @@ Page({
     planLoading: false, planError: '', planState: 'unbound', planStageLabel: '', stageNotice: '',
     stageConfirmed: false, stageNeedsEnrollmentYear: false,
     planPreview: [] as Array<{title:string;status:string}>,
-    upcomingTasks: [] as Array<UpcomingPlanTask & { stageLabel: string }>, upcomingError: '',
+    upcomingTasks: [] as Array<UpcomingPlanTask & { stageLabel: string; typeLabel: string }>, upcomingError: '', upcomingLoading: false,
     countdowns: [] as CountdownView[], countdownPreview: [] as CountdownView[], countdownOpen: false,
     countdownTitle: '', countdownDate: dateText(new Date()), countdownEditingId: '', countdownPickerStart: dateText(new Date()),
     countdownToday: dateText(new Date()), countdownSaving: false, countdownEntryCount: 0,
@@ -246,21 +247,35 @@ Page({
     const epoch = this.homeEpoch
     const studentId = this.currentHomeStudentId
     if (!studentId) return
-    this.setData({ upcomingError: '' })
+    this.setData({ upcomingError: '', upcomingLoading: true, upcomingTasks: [] })
     try {
       const result = await getUpcomingPlanTasks()
+      if (!result || !Array.isArray(result.tasks)) throw new ApiRequestError(0, 'invalid_task_response')
       if (epoch !== this.homeEpoch || studentId !== this.currentHomeStudentId) return
-      this.setData({ upcomingTasks: result.tasks.map(task => ({ ...task, stageLabel: STAGE_NAMES[task.stageCode] || task.stageCode })) })
-    } catch {
-      if (epoch === this.homeEpoch && studentId === this.currentHomeStudentId)
-        this.setData({ upcomingTasks: [], upcomingError: '近期任务暂时无法读取' })
+      this.setData({ upcomingTasks: result.tasks.map(task => ({ ...task, stageLabel: STAGE_NAMES[task.stageCode] || task.stageCode,
+        typeLabel: PLAN_TYPE_NAMES[task.type] || '规划' })) })
+    } catch (error) {
+      if (epoch === this.homeEpoch && studentId === this.currentHomeStudentId) {
+        const code = error instanceof ApiRequestError ? error.code : 'unknown'
+        const status = error instanceof ApiRequestError ? error.statusCode : 0
+        const message = code === 'unauthorized' ? '登录已失效，请重新登录' :
+          code === 'student_tasks_forbidden' || status === 403 ? '当前身份无法查看学员任务，请切换身份' :
+          code === 'student_profile_not_bound' ? '请先绑定学员档案' :
+          code === 'backend_version_mismatch' ? '当前服务尚未支持近期任务，请联系管理员' :
+          code === 'network_unavailable' ? '网络连接失败，请检查网络后重试' :
+          status >= 500 ? '任务服务暂不可用，请稍后重试' : '任务数据读取失败，请重试'
+        console.warn('Upcoming tasks failed', { status, code })
+        this.setData({ upcomingTasks: [], upcomingError: message })
+      }
+    } finally {
+      if (epoch === this.homeEpoch && studentId === this.currentHomeStudentId) this.setData({ upcomingLoading: false })
     }
   },
   onUpcomingRetry() { void this.loadUpcomingTasks() },
   onUpcomingTask(event: WechatMiniprogram.BaseEvent) {
     const task = this.data.upcomingTasks.find(item => item.id === event.currentTarget.dataset.id)
     if (!task || !this.currentHomeStudentId || this.data.shellPhase !== 'ready') return
-    openPage(`/pages/plan-editor/plan-editor?stage=${encodeURIComponent(task.stageCode)}&type=${encodeURIComponent(task.type)}`)
+    openPage(`/pages/plan-editor/plan-editor?stage=${encodeURIComponent(task.stageCode)}&type=${encodeURIComponent(task.type)}&taskId=${encodeURIComponent(task.id)}`)
   },
 
   renderScheduleDay() {
@@ -287,7 +302,7 @@ Page({
     }
     this.renderScheduleDay()
   },
-  onHide() { ++this.homeEpoch; this.currentHomeStudentId = null; this.countdownOwner = ''; this.homeSchedule = null; this.stopShell?.(); this.setData({ shellPhase: 'loading', assessmentReady: false, scheduleCourses: [], planPreview: [], countdowns: [], countdownPreview: [], countdownOpen: false, countdownEditingId: '' }) },
+  onHide() { ++this.homeEpoch; this.currentHomeStudentId = null; this.countdownOwner = ''; this.homeSchedule = null; this.stopShell?.(); this.setData({ shellPhase: 'loading', assessmentReady: false, scheduleCourses: [], planPreview: [], upcomingTasks: [], upcomingError: '', upcomingLoading: false, countdowns: [], countdownPreview: [], countdownOpen: false, countdownEditingId: '' }) },
   onUnload() { ++this.homeEpoch; this.stopShell?.() },
   onPrimary() {
     // The daily workflow starts with the plan, not another AI request.

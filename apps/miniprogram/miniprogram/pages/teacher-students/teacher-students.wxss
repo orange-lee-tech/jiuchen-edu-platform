@@ -61,10 +61,13 @@
 
 .student-card {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16rpx;
 }
+.student-summary { width: 100%; display: flex; flex-direction: column; gap: 8rpx; color: #5f6b78; font-size: 22rpx; }
+.pending-review input { padding: 16rpx; margin-top: 12rpx; background: #f4f7fa; }
 
 .student-name { font-size: 27rpx; font-weight: 750; }
 .arrow { color: #245681; font-size: 24rpx; }

@@ -15,6 +15,7 @@ import {
   getAdminAssignments,
   getAdminAnalytics,
   getAdminAiCosts, getAdminAiBalance,
+  getAiBalanceLedger, recordAiBalance, type AiBalanceLedger,
   getAdminVirtualPurchaseOrders,getAdminVirtualPurchaseCases,
   getAdminVirtualReconciliation,
   recheckAdminVirtualPurchaseOrder,reviewAdminVirtualPurchaseCase,
@@ -155,6 +156,9 @@ Page({
     paymentReconciliation:null as VirtualPurchaseReconciliation|null,
     paymentStatusFilter:'all',
     aiCosts:null as AdminAiCosts|null, aiBalance:null as AdminAiBalance|null,
+    balanceAccounts: [] as AssessmentKeyObject[], balanceAccountIndex: -1, balanceCurrencyIndex: 0,
+    balanceCurrencies: ['CNY', 'USD'], balanceAmount: '', balanceThreshold: '', balanceNote: '', balanceObservedDate: '', balanceObservedTime: '',
+    balanceLedger: null as AiBalanceLedger | null, balanceLedgerError: '',
     aiCostWarning:'',
     aiPriceModel:'deepseek-v4-pro',aiPriceHit:'',aiPriceMiss:'',aiPriceOutput:'',
     aiPricePeakMiss:'',aiPricePeakOutput:'',aiPricePeakWindow:'',
@@ -278,6 +282,7 @@ Page({
     }
     if (this.data.section === 'admin-analytics') {
       void this.loadVirtualPaymentOps()
+      void this.loadBalanceAccounts()
       await this.loadAnalytics()
       return
     }
@@ -760,6 +765,61 @@ Page({
     finally { this.setData({ actionLoading: false, keyTestPin: '' }) }
   },
   analyticsGeneration:0,
+  balanceGeneration: 0,
+  onHide() {
+    ++this.balanceGeneration
+    this.setData({ balanceAccounts: [], balanceAccountIndex: -1, balanceLedger: null, balanceLedgerError: '', balanceAmount: '', balanceThreshold: '', balanceNote: '', balanceObservedDate: '', balanceObservedTime: '' })
+  },
+  async loadBalanceAccounts() {
+    const generation = ++this.balanceGeneration, owner = getSavedAuthResult()?.user.id
+    try {
+      const result = await getAssessmentKeyObjects()
+      if (generation !== this.balanceGeneration || owner !== getSavedAuthResult()?.user.id) return
+      const accounts = result.objects.filter(item => Boolean(item.provider))
+      this.setData({ balanceAccounts: accounts, balanceAccountIndex: -1, balanceLedger: null, balanceLedgerError: '' })
+    } catch (error) { if (generation === this.balanceGeneration && owner === getSavedAuthResult()?.user.id) this.setData({ balanceLedgerError: friendlyRequestError(error, '服务账户暂不可读取') }) }
+  },
+  async onBalanceAccount(event: WechatMiniprogram.PickerChange) {
+    const index = Number(event.detail.value), account = this.data.balanceAccounts[index]
+    if (!account) return
+    const generation = ++this.balanceGeneration, owner = getSavedAuthResult()?.user.id
+    this.setData({ balanceAccountIndex: index, balanceLedger: null, balanceLedgerError: '' })
+    try {
+      const ledger = await getAiBalanceLedger(account.id)
+      if (generation === this.balanceGeneration && owner === getSavedAuthResult()?.user.id && this.data.balanceAccounts[this.data.balanceAccountIndex]?.id === account.id) this.setData({ balanceLedger: ledger })
+    } catch (error) { if (generation === this.balanceGeneration && owner === getSavedAuthResult()?.user.id) this.setData({ balanceLedgerError: friendlyRequestError(error, '余额快照暂不可读取') }) }
+  },
+  onBalanceCurrency(event: WechatMiniprogram.PickerChange) { this.setData({ balanceCurrencyIndex: Number(event.detail.value) }) },
+  onBalanceDate(event: WechatMiniprogram.PickerChange) { this.setData({ balanceObservedDate: String(event.detail.value) }) },
+  onBalanceTime(event: WechatMiniprogram.PickerChange) { this.setData({ balanceObservedTime: String(event.detail.value) }) },
+  onBalanceInput(event: WechatMiniprogram.Input) {
+    const name = String(event.currentTarget.dataset.name)
+    if (['balanceAmount', 'balanceThreshold', 'balanceNote'].includes(name)) this.setData({ [name]: event.detail.value })
+  },
+  async onSaveBalance() {
+    const account = this.data.balanceAccounts[this.data.balanceAccountIndex]
+    if (!account || this.data.actionLoading) return
+    const generation = this.balanceGeneration, owner = getSavedAuthResult()?.user.id
+    if (!/^(?:0|[1-9]\d{0,11})(?:\.\d{1,6})?$/.test(this.data.balanceAmount) || !/^(?:0|[1-9]\d{0,11})(?:\.\d{1,6})?$/.test(this.data.balanceThreshold)) {
+      wx.showToast({ title: '请输入余额与预警阈值', icon: 'none' }); return
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(this.data.balanceObservedDate) || !/^\d{2}:\d{2}$/.test(this.data.balanceObservedTime)) {
+      wx.showToast({ title: '请选择核验日期与时间', icon: 'none' }); return
+    }
+    const observed = new Date(`${this.data.balanceObservedDate}T${this.data.balanceObservedTime}:00+08:00`)
+    if (Number.isNaN(observed.getTime()) || observed.getTime() > Date.now()) { wx.showToast({ title: '核验时间不能晚于现在', icon: 'none' }); return }
+    this.setData({ actionLoading: true })
+    try {
+      await recordAiBalance({ objectId: account.id, currency: this.data.balanceCurrencyIndex === 1 ? 'USD' : 'CNY',
+        balance: this.data.balanceAmount, warningThreshold: this.data.balanceThreshold, verifiedAt: observed.toISOString(), note: this.data.balanceNote.trim() || null })
+      if (generation !== this.balanceGeneration || owner !== getSavedAuthResult()?.user.id) return
+      const ledger = await getAiBalanceLedger(account.id)
+      if (generation !== this.balanceGeneration || owner !== getSavedAuthResult()?.user.id) return
+      this.setData({ balanceLedger: ledger, balanceAmount: '', balanceThreshold: '', balanceNote: '', balanceObservedDate: '', balanceObservedTime: '' })
+      wx.showToast({ title: '已保存人工核验', icon: 'success' })
+    } catch (error) { wx.showToast({ title: friendlyRequestError(error, '余额快照保存失败'), icon: 'none' }) }
+    finally { this.setData({ actionLoading: false }) }
+  },
   onAiCostInput(event:WechatMiniprogram.Input){
     const name=String(event.currentTarget.dataset.name)
     if(['aiPriceModel','aiPriceHit','aiPriceMiss','aiPriceOutput','aiPricePeakMiss',
@@ -985,7 +1045,7 @@ Page({
     const section = String(event.currentTarget.dataset.section) as Section
     if (!['admin-users', 'admin-assignments', 'admin-news', 'admin-analytics', 'admin-readonly', 'admin-controls'].includes(section)) return
     this.setData({ section })
-    if (section === 'admin-analytics') {void this.loadAnalytics();void this.loadVirtualPaymentOps()}
+    if (section === 'admin-analytics') {void this.loadAnalytics();void this.loadVirtualPaymentOps();void this.loadBalanceAccounts()}
     else if (section === 'admin-controls') void this.loadControls()
     else if (section === 'admin-readonly') void this.loadReadOnlyRoster()
     else if(section==='admin-news'&&this.data.newsV2Enabled)void this.loadRetirementTasks()

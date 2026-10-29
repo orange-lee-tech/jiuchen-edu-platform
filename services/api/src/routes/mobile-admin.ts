@@ -33,6 +33,7 @@ import { readAdminAssessmentAiCosts, readAdminDeepseekBalance,
 import { checkDeepseekPriceSource, reviewDeepseekPrice, reviewExchangeRate } from '../services/assessment-ai-cost.js'
 import { ControlError } from '../services/admin-control-boxes.js'
 import { reconcileNewsWindow, withNewsLock } from '../services/news-v2-store.js'
+import { readAiBalanceSnapshots, recordAiBalance } from '../services/ai-balance-ledger.js'
 
 const createIdSchema = z.object({
   type: z.enum(['student', 'teacher', 'admin']),
@@ -70,6 +71,9 @@ const priceReviewSchema=z.object({
 }).strict()
 const fxReviewSchema=z.object({rate:z.number().positive().max(20),sourceUrl:z.string().url().max(500),
   observedAt:z.iso.datetime(),reviewNote:z.string().trim().min(8).max(500)}).strict()
+const moneyText = z.string().regex(/^(?:0|[1-9]\d{0,11})(?:\.\d{1,6})?$/)
+const manualBalanceSchema = z.object({ objectId: z.string().uuid(), currency: z.enum(['CNY', 'USD']),
+  balance: moneyText, warningThreshold: moneyText, verifiedAt: z.iso.datetime(), note: z.string().trim().max(500).nullable().optional() }).strict()
 
 async function requireAdmin(
   request: FastifyRequest,
@@ -106,6 +110,23 @@ export function registerMobileAdminRoutes(
   }
 
   const configuredDatabase = database
+  app.get<{ Querystring: { objectId?: string } }>('/me/admin/ai-balance-snapshots', async (request, reply) => {
+    if (!(await requireAdmin(request, reply, configuredDatabase))) return
+    if (!z.string().uuid().safeParse(request.query.objectId).success) return reply.code(400).send({ ok: false, error: 'invalid_account' })
+    return { ok: true, ...await readAiBalanceSnapshots(configuredDatabase.pool, request.query.objectId!) }
+  })
+  app.post<{ Body: unknown }>('/me/admin/ai-balance-snapshots', async (request, reply) => {
+    const user = await requireAdmin(request, reply, configuredDatabase)
+    if (!user) return
+    if ('readOnly' in user && user.readOnly) return reply.code(403).send({ ok: false, error: 'read_only_forbidden' })
+    const parsed = manualBalanceSchema.safeParse(request.body)
+    if (!parsed.success || Date.parse(parsed.data.verifiedAt) > Date.now() || Date.parse(parsed.data.verifiedAt) < Date.UTC(2000, 0, 1) ||
+      /(?:\bsk-[A-Za-z0-9_-]{12,}|\bbearer\s+[A-Za-z0-9._-]{12,}|\b(?:api[_ -]?key|secret|token)\s*[:=])/i.test(parsed.data.note || ''))
+      return reply.code(400).send({ ok: false, error: 'invalid_manual_balance' })
+    const id = await recordAiBalance(configuredDatabase.pool, user.userId, parsed.data)
+    if (!id) return reply.code(404).send({ ok: false, error: 'ai_account_not_found' })
+    return reply.code(201).send({ ok: true, id })
+  })
   app.get<{ Querystring: { period?: string } }>('/me/admin/assessment-analytics', async (request, reply) => {
     if (!(await requireAdmin(request, reply, configuredDatabase))) return
     const period = request.query.period ?? 'week'

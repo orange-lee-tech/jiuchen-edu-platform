@@ -89,6 +89,26 @@ export const assessmentInputSchema = z
   })
   .strict()
 
+// Drafts retain partial form input; formal execution still uses assessmentInputSchema.
+const draftText = (max: number) => z.string().max(max).nullable().optional()
+const draftLevel = z.union([z.enum(['school', 'provincial', 'national', 'international', 'other']), z.literal('')]).nullable().optional()
+export const assessmentDraftInputSchema = z.object({
+  profile: z.object({ university: draftText(160), major: draftText(160), currentGrade: draftText(40),
+    gpaText: draftText(80), rankText: draftText(80), backgroundNote: draftText(1000) }).strict().optional(),
+  english: z.array(z.object({ type: z.union([z.enum(['cet4', 'cet6', 'ielts', 'toefl', 'gre', 'other']), z.literal('')]).nullable().optional(),
+    score: draftText(80), note: draftText(255) }).strict()).max(6).optional(),
+  research: z.array(z.object({ title: draftText(160), type: z.union([z.enum(['project', 'paper', 'patent', 'lab', 'other']), z.literal('')]).nullable().optional(),
+    achievementTier: z.union([z.enum(['Nature', 'Science', 'SCI/SSCI', 'EI', '普通期刊', '科研项目', '专利/软著', '其他']), z.literal('')]).nullable().optional(),
+    role: draftText(120), organization: draftText(160), level: draftLevel, description: draftText(1000), output: draftText(500) }).strict()).max(12).optional(),
+  competitions: z.array(z.object({ name: draftText(160), level: draftLevel, award: draftText(160),
+    role: draftText(120), description: draftText(800) }).strict()).max(12).optional(),
+  targets: z.array(z.object({ schoolName: draftText(160), programName: draftText(160),
+    researchDirection: draftText(160), note: draftText(500) }).strict()).max(5).optional(),
+  contextOptions: z.object({ includePlanning: z.boolean().optional(), includeRecentAssessments: z.boolean().optional() }).strict().optional(),
+  preferences: z.object({ preferredRegions: z.array(z.string().max(80)).max(10).optional(),
+    researchDirection: draftText(200), note: draftText(1000) }).strict().optional(),
+}).strict()
+
 const evidenceReferenceSchema = z.string().trim().min(1).max(120)
 
 const findingSchema = z

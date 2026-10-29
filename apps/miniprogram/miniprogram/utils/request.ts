@@ -170,6 +170,8 @@ export function friendlyRequestError(
         : ''
 
   const messages: Record<string, string> = {
+    invalid_assessment_draft: '草稿内容格式或长度有误，请检查后保存',
+    assessment_input_invalid: '评估资料不完整，请补齐必填项后提交',
     backend_version_mismatch: '当前服务暂不支持此操作，请稍后重试或联系客服',
     plan_direct_save_unavailable: '当前服务尚未支持规划直接保存，请稍后重试',
     network_unavailable: '暂时无法连接服务，请检查网络后重试',
@@ -216,7 +218,6 @@ export function friendlyRequestError(
     assessment_ai_invalid_json: '模型未返回有效报告，请稍后重试',
     assessment_ai_invalid_schema: '模型报告结构未通过校验，请稍后重试',
     assessment_execution_failed: '评估执行失败，请记录诊断编号并联系管理员',
-    assessment_input_invalid: '原评估输入已无效，请核对资料后重新发起',
     assessment_key_creator_required: '仅该服务对象的创建管理员可以查看，请联系创建者',
     object_pin_invalid: '对象口令不正确，请核对后重试；连续五次错误会锁定',
     object_pin_locked: '对象口令已暂时锁定，请稍后再试',
@@ -402,6 +403,33 @@ export type UpcomingPlanTask = {
 
 export function getUpcomingPlanTasks(): Promise<{ ok: true; from: string; to: string; tasks: UpcomingPlanTask[] }> {
   return request('/me/classroom/upcoming-tasks')
+}
+
+export type TeacherTodo = { id: string; title: string; description: string | null; dueDate: string | null; status: 'pending' | 'done' }
+export async function getTeacherTodos() { return (await request<{ ok: true; todos: TeacherTodo[] }>('/me/teacher/todos')).todos }
+export function saveTeacherTodo(id: string, todo: Omit<TeacherTodo, 'id'>) {
+  return request(id ? `/me/teacher/todos/${encodeURIComponent(id)}` : '/me/teacher/todos', id ? 'PUT' : 'POST', todo)
+}
+export function deleteTeacherTodo(id: string) { return request(`/me/teacher/todos/${encodeURIComponent(id)}`, 'DELETE') }
+export type TeacherStudentSummary = { assessments: { total: number; succeeded: number; failed: number; lastUsed: string | null } | null;
+  orders: { total: number; paid: number; refunded: number; paidFen: number } | null; credits: { purchased: number; balance: number } | null;
+  refunds: { pending: number; succeeded: number; failed: number } | null;
+  plans: { total: number; done: number; overdue: number; upcoming: number }; schedule: { latestImport: string | null } }
+export async function getTeacherStudentSummary(id: string) {
+  return (await request<{ ok: true; summary: TeacherStudentSummary }>(`/me/teacher/students/${encodeURIComponent(id)}/summary`)).summary
+}
+
+export type AiBalanceSnapshot = { id: string; objectId: string; provider: string; currency: string; balance: string;
+  warningThreshold: string; verifiedAt: string; actorUserId: string; note: string | null }
+export type AiBalanceLedger = { history: AiBalanceSnapshot[]; estimate: null | { estimatedSpend: string | null;
+  estimatedRemaining: string | null; lowBalance: boolean | null; calls: number; unknownCalls: number; stale: boolean;
+  models: Array<{ provider: string; model: string; calls: number; unknownCalls: number; estimatedSpend: string | null }> } }
+export async function getAiBalanceLedger(objectId: string) {
+  return request<{ ok: true } & AiBalanceLedger>(`/me/admin/ai-balance-snapshots?objectId=${encodeURIComponent(objectId)}`)
+}
+export function recordAiBalance(payload: { objectId: string; currency: 'CNY' | 'USD'; balance: string;
+  warningThreshold: string; verifiedAt: string; note: string | null }) {
+  return request('/me/admin/ai-balance-snapshots', 'POST', payload)
 }
 
 export async function saveMyClassroomPlan(

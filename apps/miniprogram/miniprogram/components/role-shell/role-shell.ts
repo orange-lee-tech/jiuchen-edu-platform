@@ -8,7 +8,7 @@ const mirror: Action = { key:'mirror', title:'只读查看学员与老师', desc
 const users: Action = { key: 'users', title: '管理用户与编号', description: '查看账号、内部编号及绑定状态。', url: '/pages/admin/admin?section=admin-users' }
 const assignments: Action = { key: 'assignments', title: '管理师生分配', description: '查看和维护老师与学员的辅导关系。', url: '/pages/admin/admin?section=admin-assignments' }
 const articles: Action = { key: 'articles', title: '管理资讯与标签', description: '维护文章分类，按需同步服务号内容。', url: '/pages/admin/admin?section=admin-news' }
-const analytics: Action = { key: 'analytics', title: 'AI 评估与充值统计', description: '真实评估次数、充值订单与金额排行榜。', url: '/pages/admin/admin?section=admin-analytics' }
+const analytics: Action = { key: 'analytics', title: 'AI 收支台账参考', description: '评估、次数账本与供应商成本参考。', url: '/pages/admin/admin?section=admin-analytics' }
 const controls: Action = { key: 'controls', title: '评估收费与密钥设置', description: '管理两套独立密码、价格、赠送次数和 AI 密钥。', url: '/pages/admin/admin?section=admin-controls' }
 const content: Record<string, { title: string; description: string; actions: Action[] }> = {
   'teacher-home': { title: '从学员的下一步开始', description: '查看已分配学员的资料与阶段规划，继续日常辅导。', actions: [students] },

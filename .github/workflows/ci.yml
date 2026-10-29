@@ -93,6 +93,30 @@ jobs:
         run: |
           npm run db:upgrade:academic-stage-mode
           npm run db:upgrade:academic-stage-mode
+      - name: Verify teacher todos and AI balance snapshot migrations twice on MySQL 8
+        working-directory: services/api
+        env:
+          DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_commercial_controls_ci
+        run: |
+          npm run db:upgrade:teacher-todos
+          npm run db:upgrade:teacher-todos
+          npm run db:upgrade:ai-balance-snapshots
+          npm run db:upgrade:ai-balance-snapshots
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict'
+          import mysql from 'mysql2/promise'
+          const db = await mysql.createConnection(process.env.DATABASE_URL)
+          try {
+            const [rows] = await db.query("SELECT TABLE_NAME,COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('teacher_todos','ai_balance_snapshots')")
+            const column = (table,name) => rows.find(row => row.TABLE_NAME===table && row.COLUMN_NAME===name)
+            assert.equal(column('ai_balance_snapshots','balance').COLUMN_TYPE, 'decimal(18,6)')
+            assert.equal(column('ai_balance_snapshots','warning_threshold').COLUMN_TYPE, 'decimal(18,6)')
+            assert.equal(column('teacher_todos','due_date').IS_NULLABLE, 'YES')
+            assert.ok(column('teacher_todos','teacher_id'))
+            const [users] = await db.query('SELECT COUNT(*) AS n FROM users')
+            assert.equal(users[0].n, 2)
+          } finally { await db.end() }
+          JS
       - name: Run new commercial migrations twice on MySQL 8
         working-directory: services/api
         env:

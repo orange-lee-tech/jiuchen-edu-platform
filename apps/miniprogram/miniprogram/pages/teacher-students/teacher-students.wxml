@@ -12,6 +12,24 @@
 
   <block wx:else>
 
+  <view class="surface pending-review">
+    <text class="review-title">个人待办</text>
+    <view wx:if="{{todoError}}"><text>{{todoError}}</text><button bindtap="loadTodos">重新读取</button></view>
+    <view wx:for="{{todos}}" wx:key="id" class="student-card">
+      <view><text class="student-name">{{item.title}}</text><text class="student-meta">{{item.dueDate || '未设置截止日期'}} · {{item.status === 'done' ? '已完成' : '待完成'}}</text><text wx:if="{{item.description}}" class="student-meta">{{item.description}}</text></view>
+      <view wx:if="{{!readOnly}}" class="student-actions"><button data-id="{{item.id}}" bindtap="onTodoToggle" disabled="{{todoSaving}}">{{item.status === 'done' ? '恢复' : '完成'}}</button><button data-id="{{item.id}}" bindtap="onTodoEdit">编辑</button><button data-id="{{item.id}}" bindtap="onTodoDelete" disabled="{{todoSaving}}">删除</button></view>
+    </view>
+    <text wx:if="{{!todos.length && !todoError}}" class="student-meta">暂无个人待办</text>
+    <block wx:if="{{!readOnly}}">
+      <input placeholder="待办标题" maxlength="160" value="{{todoTitle}}" data-field="todoTitle" bindinput="onTodoInput" />
+      <input placeholder="说明（可选）" maxlength="1000" value="{{todoDescription}}" data-field="todoDescription" bindinput="onTodoInput" />
+      <picker mode="date" value="{{todoDate}}" bindchange="onTodoDate"><view>截止日期：{{todoDate || '未设置'}} ›</view></picker>
+      <text wx:if="{{todoDate}}" bindtap="onTodoClearDate">清除日期</text>
+      <button bindtap="onTodoSave" loading="{{todoSaving}}" disabled="{{todoSaving}}">{{todoEditingId ? '保存待办' : '新增待办'}}</button>
+      <button wx:if="{{todoEditingId}}" bindtap="onTodoCancel">取消编辑</button>
+    </block>
+  </view>
+
   <view class="surface pending-review" wx:if="{{aiCosts}}">
     <text class="review-title">已分配学员的 AI 请求</text>
     <text class="review-meta">首次生成 {{aiCosts.usage.initialCalls}} 次 · 自动修复 {{aiCosts.usage.repairCalls}} 次</text>
@@ -26,6 +44,12 @@
   <view class="section-head">
     <text class="section-title">已分配学员</text>
   </view>
+  <view wx:if="{{!readOnly && students.length}}" class="surface pending-review">
+    <text class="review-title">新增学员规划</text>
+    <picker range="{{students}}" range-key="name" bindchange="onStudentSelect"><view>{{selectedStudentIndex === -1 ? '选择已分配学员' : students[selectedStudentIndex].name}} ›</view></picker>
+    <picker range="{{stageLabels}}" bindchange="onStageSelect"><view>{{selectedStageIndex === -1 ? '选择规划阶段' : stageLabels[selectedStageIndex]}} ›</view></picker>
+    <button bindtap="onNewStudentPlan">选择计划类型</button>
+  </view>
 
   <view class="student-list">
     <view wx:for="{{students}}" wx:key="studentId" class="student-card surface" data-index="{{index}}" bindtap="onStudentTap">
@@ -36,7 +60,22 @@
       </view>
       <view class="student-actions">
         <text class="arrow">只读查看 ›</text>
+        <button class="edit-mini" catchtap="onStudentSummary" data-id="{{item.studentId}}">查看学员情况</button>
         <button wx:if="{{!readOnly}}" class="edit-mini" catchtap="onEditStudentPlan" data-index="{{index}}">编辑计划</button>
+      </view>
+      <view wx:if="{{summaryStudentId === item.studentId}}" class="student-summary">
+        <text wx:if="{{studentSummaryLoading}}">正在读取学员情况…</text>
+        <text wx:elif="{{studentSummaryError}}">{{studentSummaryError}}</text>
+        <block wx:elif="{{studentSummary}}">
+          <text>课表最近导入：{{studentSummary.schedule.latestImport || '暂无已解析课表'}}</text>
+          <text>规划任务 {{studentSummary.plans.total}} · 已完成 {{studentSummary.plans.done}} · 近期 {{studentSummary.plans.upcoming}} · 逾期 {{studentSummary.plans.overdue}}</text>
+          <text wx:if="{{studentSummary.assessments}}">AI 评估任务（含草稿）{{studentSummary.assessments.total}} · 成功 {{studentSummary.assessments.succeeded}} · 失败 {{studentSummary.assessments.failed}} · 最近使用 {{studentSummary.assessments.lastUsed || '暂无'}}</text>
+          <text wx:else>AI 使用暂不可读取：学员尚未绑定账号。</text>
+          <text wx:if="{{studentSummary.orders}}">购买订单 {{studentSummary.orders.total}} · 已支付 {{studentSummary.orders.paid}} · 已退款 {{studentSummary.orders.refunded}} · 当前已支付未退款金额 {{studentSummary.orders.paidFen / 100}} 元</text>
+          <text wx:if="{{studentSummary.credits}}">到账购买次数 {{studentSummary.credits.purchased}} · 已结算余额 {{studentSummary.credits.balance}}</text>
+          <text wx:else>购买与次数暂不可读取：学员尚未绑定账号。</text>
+          <text wx:if="{{studentSummary.refunds}}">退款事件：处理中 {{studentSummary.refunds.pending}} · 成功 {{studentSummary.refunds.succeeded}} · 失败 {{studentSummary.refunds.failed}}</text>
+        </block>
       </view>
     </view>
   </view>

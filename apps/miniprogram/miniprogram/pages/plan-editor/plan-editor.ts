@@ -42,6 +42,7 @@ Page({
     versions: [] as PlanRevision[],
     revisionStatus: 'none' as 'none' | 'pending' | 'approved',
     schedulePrefillCount: 0,
+    focusTaskId: '', focusTaskIndex: -1,
     statusOptions: STATUS_OPTIONS,
   },
 
@@ -59,6 +60,7 @@ Page({
       studentId,
       teacherMode: Boolean(studentId),
       studentName: decodeURIComponent(options.studentName || ''),
+      focusTaskId: decodeURIComponent(options.taskId || ''),
     })
     void this.loadPlan()
   },
@@ -73,6 +75,7 @@ Page({
       if (!plan) throw new Error('当前阶段没有该计划')
 
       const revisionStatus = plan.revisionStatus || (plan.id ? 'approved' : 'none')
+      const focusTaskIndex = this.data.focusTaskId ? plan.items.findIndex(item => item.id === this.data.focusTaskId) : -1
       const items = plan.items.map((item) => ({
         name: item.name,
         target: item.target,
@@ -85,6 +88,7 @@ Page({
         items,
         revisionStatus,
         schedulePrefillCount: 0,
+        focusTaskIndex,
       })
 
       if (!isReadOnly() && !this.data.teacherMode && this.data.type === 'gpa' && items.length === 0 && revisionStatus === 'none') {
@@ -118,7 +122,9 @@ Page({
     } catch (error) {
       this.setData({ loadError: friendlyRequestError(error, '计划加载失败，请稍后重试') })
     } finally {
-      this.setData({ loading: false })
+      this.setData({ loading: false }, () => {
+        if (!this.data.loadError && this.data.focusTaskIndex >= 0) wx.pageScrollTo({ selector: '#focused-plan-task', duration: 250 })
+      })
     }
   },
 

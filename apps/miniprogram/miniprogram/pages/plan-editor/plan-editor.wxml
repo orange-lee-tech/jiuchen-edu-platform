@@ -21,7 +21,7 @@
       <text wx:if="{{!readOnly}}" class="add-link" bindtap="onAddItem">+ 添加任务</text>
     </view>
 
-    <view wx:for="{{items}}" wx:key="index" class="item-card">
+    <view wx:for="{{items}}" wx:key="index" id="{{index === focusTaskIndex ? 'focused-plan-task' : ''}}" class="item-card {{index === focusTaskIndex ? 'focused-task' : ''}}">
       <input disabled="{{readOnly}}" class="item-input strong" data-index="{{index}}" data-field="name" value="{{item.name}}" placeholder="任务名称" bindinput="onItemInput" />
       <input disabled="{{readOnly}}" class="item-input" data-index="{{index}}" data-field="target" value="{{item.target}}" placeholder="目标 / 说明（可选）" bindinput="onItemInput" />
       <view class="due-date-row">

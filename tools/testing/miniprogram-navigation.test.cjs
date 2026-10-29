@@ -99,6 +99,20 @@ test('virtual payment distinguishes order creation failure before invoking WeCha
   assert.equal(h.modals.at(-1).title, '创建订单失败')
 })
 
+test('saving an incomplete assessment draft retains partial targets without starting payment or AI',async()=>{
+  const {h,p}=virtualPaymentPage()
+  p.data.targets=[{schoolName:'',programName:'部分填写',researchDirection:'',note:''}]
+  const save=p.onSaveDraft();await settle()
+  assert.equal(h.requests.length,1);assert.match(h.requests[0].url,/\/me\/assessments$/)
+  assert.equal(h.requests[0].data.input.targets[0].programName,'部分填写')
+  h.respond(0,{ok:true,assessment:{id:secondId,status:'draft',input:h.requests[0].data.input}});await save
+  assert.equal(p.data.draftId,secondId);assert.equal(h.requests.length,1)
+  p.data.profile={university:'某校',major:'物理',currentGrade:'大三',gpaText:'',rankText:'',backgroundNote:''}
+  p.data.targets=[{schoolName:'目标院校',programName:'',researchDirection:'',note:''},{schoolName:'',programName:'未完成',researchDirection:'',note:''}]
+  assert.throws(()=>p.buildInput(),/未完成的目标院校/,'formal submission must not discard partial target rows')
+  assert.equal(p.buildDraftInput().targets.length,2)
+})
+
 test('cancelled or failed virtual payment retains the pending order and exposes only safe platform details', async () => {
   for (const failure of [
     { errCode: -2, errMsg: 'requestVirtualPayment:fail cancel' },
@@ -624,7 +638,7 @@ test('hidden classroom cannot apply a late response from a previous identity', a
 })
 
 test('WXML is balanced and changed surfaces use real registered handlers', () => {
-  const pages = ['index', 'classroom', 'news', 'profile', 'position', 'admin', 'news-detail']
+  const pages = ['index', 'classroom', 'news', 'profile', 'position', 'admin', 'news-detail', 'teacher-students', 'plan-editor']
   for (const name of pages) {
     const h = harness(), page = h.page(`pages/${name}/${name}`)
     const source = fs.readFileSync(path.join(root, `pages/${name}/${name}.wxml`), 'utf8')
@@ -1480,7 +1494,7 @@ test('home shortcuts retain core actions without a duplicate countdown tile',()=
 
 test('Today places countdown display and management between schedule and stage plans',()=>{
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
- const modules=['home-schedule home-card','home-card countdown-summary','home-card countdown-panel','home-plan home-card','home-card upcoming-tasks','home-shortcuts home-card','service-section']
+ const modules=['home-schedule home-card','home-card countdown-summary','home-card countdown-panel','home-card upcoming-tasks','home-plan home-card','home-shortcuts home-card','service-section']
  const positions=modules.map(name=>source.indexOf(`class="${name}"`))
  assert.ok(positions.every(p=>p>=0))
  assert.ok(positions.every((p,i)=>i===0||p>positions[i-1]),'module order must match the requested reading flow')
@@ -1490,6 +1504,21 @@ test('Today places countdown display and management between schedule and stage p
  for(const handler of ['onCountdownToggle','onCountdownEdit','onCountdownDelete','onCountdownSave','onCountdownCancelEdit'])assert.ok(panel.includes(handler))
  const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
  assert.match(css,/\.home-shortcuts \.action-row:nth-last-child\(-n\+2\)\{flex-basis:50%;width:50%;\}/)
+})
+
+test('upcoming tasks distinguish an empty result, permission failure and obsolete backend', async () => {
+ const h=harness();h.auth.saveAuthResult(authFixture('student'));const page=h.page('pages/index/index')
+ page.currentHomeStudentId=id;page.homeEpoch=1
+ let call=page.loadUpcomingTasks();await settle();h.respond(0,{ok:true,tasks:[]});await call
+ assert.equal(page.data.upcomingError,'');assert.equal(page.data.upcomingLoading,false);assert.equal(page.data.upcomingTasks.length,0)
+ call=page.loadUpcomingTasks();await settle();h.respond(1,{error:'student_tasks_forbidden'},403);await call
+ assert.match(page.data.upcomingError,/身份/)
+ call=page.loadUpcomingTasks();await settle();h.respond(2,{message:'Route GET:/me/classroom/upcoming-tasks not found'},404);await call
+ assert.match(page.data.upcomingError,/尚未支持/)
+ call=page.loadUpcomingTasks();await settle();h.respond(3,{ok:true,tasks:[{id:secondId,name:'任务',dueDate:'2026-10-31',status:'pending',stageCode:'junior-fall',type:'research',planTitle:'科研计划'}]});await call
+ assert.equal(page.data.upcomingTasks[0].typeLabel,'科研')
+ page.data.shellPhase='ready';page.onUpcomingTask({currentTarget:{dataset:{id:secondId}}})
+ assert.ok(h.navigations.some(item=>item.url.includes('stage=junior-fall')&&item.url.includes('type=research')&&item.url.includes('taskId='+secondId)))
 })
 
 test('countdown management still scrolls, collapses and enforces eight valid dates after relocation',()=>{

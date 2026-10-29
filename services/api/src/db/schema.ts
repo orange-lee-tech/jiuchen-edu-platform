@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import {
   boolean,
   date,
+  decimal,
   int,
   index,
   json,
@@ -93,6 +94,30 @@ export const teachers = mysqlTable('teachers', {
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 })
+
+export const teacherTodos = mysqlTable('teacher_todos', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  teacherId: varchar('teacher_id', { length: 36 }).notNull(),
+  title: varchar('title', { length: 160 }).notNull(),
+  description: varchar('description', { length: 1000 }),
+  dueDate: date('due_date', { mode: 'string' }),
+  status: mysqlEnum('status', ['pending', 'done']).notNull().default('pending'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+}, table => [index('teacher_todos_owner').on(table.teacherId, table.status, table.dueDate)])
+
+export const aiBalanceSnapshots = mysqlTable('ai_balance_snapshots', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  objectId: varchar('object_id', { length: 36 }).notNull(),
+  provider: varchar('provider', { length: 120 }).notNull(),
+  currency: varchar('currency', { length: 3 }).notNull(),
+  balance: decimal('balance', { precision: 18, scale: 6 }).notNull(),
+  warningThreshold: decimal('warning_threshold', { precision: 18, scale: 6 }).notNull(),
+  verifiedAt: timestamp('verified_at').notNull(),
+  actorUserId: varchar('actor_user_id', { length: 36 }).notNull(),
+  note: varchar('note', { length: 500 }),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+}, table => [index('ai_balance_snapshots_account').on(table.objectId, table.verifiedAt)])
 
 export const userAgreements = mysqlTable('user_agreements', {
   id: varchar('id', { length: 36 }).primaryKey(),

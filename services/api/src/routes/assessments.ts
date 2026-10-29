@@ -9,6 +9,7 @@ import {
   ASSESSMENT_INPUT_SCHEMA_VERSION,
   ASSESSMENT_OUTPUT_SCHEMA_VERSION,
   assessmentInputSchema,
+  assessmentDraftInputSchema,
 } from '../domain/assessment.js'
 import { canUseAssessment } from '../domain/auth-policy.js'
 import {
@@ -34,14 +35,11 @@ import {
 
 const createAssessmentSchema = z
   .object({
-    input: assessmentInputSchema,
+    input: assessmentDraftInputSchema,
   })
   .strict()
 
-/**
- * Recheck against account-owned academic fields on EACH draft write and run.
- * Read-only WXML alone would not prevent a modified client from forging them.
- */
+/** Recheck against account-owned academic fields before a formal run. */
 export function isAcademicProfileCurrent(
   received: z.infer<typeof assessmentInputSchema>['profile'],
   canonical: { university: string | null; major: string | null; currentGrade: string | null; gpaText: string | null; rankText: string | null } | null,
@@ -401,16 +399,12 @@ export function registerAssessmentRoutes(
       }, 'Assessment input validation failed')
       return reply.code(400).send({
         ok: false,
-        error: 'invalid_assessment_input',
+        error: 'invalid_assessment_draft',
         issues: parsed.error.issues.map((issue) => ({
           path: issue.path.join('.'),
           message: issue.message,
         })),
       })
-    }
-
-    if (!(await matchesAccountAcademicProfile(database, user.userId, parsed.data.input.profile))) {
-      return reply.code(409).send({ ok: false, error: 'assessment_academic_profile_outdated' })
     }
 
     const id = randomUUID()
@@ -493,16 +487,12 @@ export function registerAssessmentRoutes(
       }, 'Assessment input validation failed')
       return reply.code(400).send({
         ok: false,
-        error: 'invalid_assessment_input',
+        error: 'invalid_assessment_draft',
         issues: parsed.error.issues.map((issue) => ({
           path: issue.path.join('.'),
           message: issue.message,
         })),
       })
-    }
-
-    if (!(await matchesAccountAcademicProfile(database, user.userId, parsed.data.input.profile))) {
-      return reply.code(409).send({ ok: false, error: 'assessment_academic_profile_outdated' })
     }
 
     try {

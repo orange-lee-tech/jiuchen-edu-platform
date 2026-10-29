@@ -21,6 +21,7 @@ import {
   type AssessmentCompetitionExperience,
   type AssessmentEnglishRecord,
   type AssessmentImportCandidate,
+  type AssessmentInput,
   type AssessmentResearchExperience,
   type AssessmentTarget,
   type VirtualPurchaseOrder,
@@ -282,6 +283,7 @@ Page({
     materialImportConfigured: false,
     draftId: '',
     retryNotice: '',
+    draftPreferences: null as AssessmentInput['preferences'] | null,
     profile: {
       university: '',
       major: '',
@@ -569,22 +571,23 @@ Page({
         materialImportConfigured: meta.materialImport.enabled,
         draftId: retryFrom ? '' : draft?.id || '',
         retryNotice: retryFrom ? `已带入失败评估的输入。请核对后提交；新评估将另建任务，原记录保留。原诊断编号：${retryFrom}` : '',
+        draftPreferences: draftInput?.preferences ?? null,
         profileReady: true,
         includePlanning: draftInput?.contextOptions?.includePlanning !== false,
         includeRecentAssessments: draftInput?.contextOptions?.includeRecentAssessments !== false,
         profile: {
-          university: profile.university || '',
-          major: profile.major || '',
-          currentGrade: profile.currentGrade || '',
-          gpaText: profile.gpaText || '',
-          rankText: profile.rankText || '',
+          university: draftProfile?.university ?? profile.university ?? '',
+          major: draftProfile?.major ?? profile.major ?? '',
+          currentGrade: draftProfile?.currentGrade ?? profile.currentGrade ?? '',
+          gpaText: draftProfile?.gpaText ?? profile.gpaText ?? '',
+          rankText: draftProfile?.rankText ?? profile.rankText ?? '',
           backgroundNote: draftProfile?.backgroundNote || '',
         },
         english: draftInput?.english ?? [],
         research: draftInput?.research ?? [],
         competitions: draftInput?.competitions ?? [],
         competitionSuggestions: (draftInput?.competitions ?? []).map(() => []),
-        targets: draftInput?.targets?.length
+        targets: draftInput?.targets
           ? draftInput.targets
           : [
               {
@@ -1035,11 +1038,16 @@ Page({
     if (!profile.university || !profile.major || !profile.currentGrade) {
       throw new Error('请先完善本科院校、专业和当前年级')
     }
+    if (this.data.english.some(item => !(item.score || '').trim())) throw new Error('请完善或删除未填写分数的英语记录')
+    if (this.data.research.some(item => !(item.title || '').trim())) throw new Error('请完善或删除未完成的科研经历')
+    if (this.data.competitions.some(item => !(item.name || '').trim())) throw new Error('请完善或删除未完成的竞赛经历')
+    if (this.data.targets.some(item => !(item.schoolName || '').trim()) && this.data.targets.some(item => (item.schoolName || '').trim()))
+      throw new Error('请完善或删除未完成的目标院校')
 
     const english = this.data.english
       .map((item) => ({
         ...item,
-        score: item.score.trim(),
+        score: (item.score || '').trim(),
         note: item.note?.trim() || null,
       }))
       .filter((item) => item.score)
@@ -1047,7 +1055,7 @@ Page({
     const research = this.data.research
       .map((item) => ({
         ...item,
-        title: item.title.trim(),
+        title: (item.title || '').trim(),
         role: item.role?.trim() || null,
         organization: item.organization?.trim() || null,
         description: item.description?.trim() || null,
@@ -1058,7 +1066,7 @@ Page({
     const competitions = this.data.competitions
       .map((item) => ({
         ...item,
-        name: item.name.trim(),
+        name: (item.name || '').trim(),
         award: item.award?.trim() || null,
         role: item.role?.trim() || null,
         description: item.description?.trim() || null,
@@ -1067,7 +1075,7 @@ Page({
 
     const targets = this.data.targets
       .map((item) => ({
-        schoolName: item.schoolName.trim(),
+        schoolName: (item.schoolName || '').trim(),
         programName: item.programName?.trim() || null,
         researchDirection: item.researchDirection?.trim() || null,
         note: item.note?.trim() || null,
@@ -1097,12 +1105,19 @@ Page({
       },
     }
   },
+  buildDraftInput() {
+    return { profile: { ...this.data.profile }, english: this.data.english.map(item => ({ ...item })),
+      research: this.data.research.map(item => ({ ...item })), competitions: this.data.competitions.map(item => ({ ...item })),
+      targets: this.data.targets.map(item => ({ ...item })),
+      contextOptions: { includePlanning: this.data.includePlanning, includeRecentAssessments: this.data.includeRecentAssessments },
+      ...(this.data.draftPreferences ? { preferences: this.data.draftPreferences } : {}) }
+  },
 
   async onSaveDraft() {
     if (this.data.saving) return
     try {
       this.setData({ saving: true })
-      const input = this.buildInput()
+      const input = this.buildDraftInput()
       const draft = this.data.draftId
         ? await updateAssessmentDraft(this.data.draftId, input)
         : await createAssessmentDraft(input)

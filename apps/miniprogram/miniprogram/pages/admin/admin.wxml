@@ -1,7 +1,7 @@
 <auth-gate />
 <view class="admin-page">
   <view class="admin-head">
-    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : section === 'admin-readonly' ? '只读切换身份' : section === 'admin-analytics' ? 'AI 评估与购买统计' : section === 'admin-controls' ? '商业服务管理' : '资讯运营'}}</text>
+    <text class="admin-title">{{section === 'admin-users' ? '用户与内部编号' : section === 'admin-assignments' ? '师生分配' : section === 'admin-readonly' ? '只读切换身份' : section === 'admin-analytics' ? 'AI 收支台账参考' : section === 'admin-controls' ? '商业服务管理' : '资讯运营'}}</text>
   </view>
 
   <view class="admin-quick-return" bindtap="onReturnWorkspace">‹ 返回管理工作台</view>
@@ -199,6 +199,29 @@
   </block>
 
   <block wx:elif="{{section === 'admin-analytics'}}">
+    <view class="card">
+      <text class="card-title">人工核验的 API 账户余额</text>
+      <text class="card-note">仅按所选服务对象的已记录调用估算；其他服务对象可能使用同一供应商账户，实际余额请以供应商账单为准。备注中请勿填写密钥。</text>
+      <text wx:if="{{balanceLedgerError}}" class="card-note">{{balanceLedgerError}}</text>
+      <picker range="{{balanceAccounts}}" range-key="label" bindchange="onBalanceAccount"><view class="input">{{balanceAccountIndex === -1 ? '选择供应商服务对象' : balanceAccounts[balanceAccountIndex].label + ' · ' + balanceAccounts[balanceAccountIndex].provider}} ›</view></picker>
+      <block wx:if="{{balanceAccountIndex >= 0}}">
+        <picker range="{{balanceCurrencies}}" bindchange="onBalanceCurrency"><view class="input">币种 {{balanceCurrencies[balanceCurrencyIndex]}} ›</view></picker>
+        <input class="input" type="digit" data-name="balanceAmount" value="{{balanceAmount}}" bindinput="onBalanceInput" placeholder="人工核验余额" />
+        <input class="input" type="digit" data-name="balanceThreshold" value="{{balanceThreshold}}" bindinput="onBalanceInput" placeholder="低余额预警阈值" />
+        <picker mode="date" value="{{balanceObservedDate}}" bindchange="onBalanceDate"><view class="input">核验日期：{{balanceObservedDate || '请选择'}} ›</view></picker>
+        <picker mode="time" value="{{balanceObservedTime}}" bindchange="onBalanceTime"><view class="input">核验时间（北京时间）：{{balanceObservedTime || '请选择'}} ›</view></picker>
+        <input class="input" data-name="balanceNote" value="{{balanceNote}}" bindinput="onBalanceInput" maxlength="500" placeholder="核验备注（可选）" />
+        <button class="secondary" bindtap="onSaveBalance" disabled="{{actionLoading}}">保存本次核验</button>
+      </block>
+      <block wx:if="{{balanceLedger && balanceLedger.history.length}}">
+        <text class="card-note">人工余额 {{balanceLedger.history[0].currency}} {{balanceLedger.history[0].balance}} · 核验于 {{balanceLedger.history[0].verifiedAt}} · 阈值 {{balanceLedger.history[0].warningThreshold}}</text>
+        <text class="card-note">本服务对象快照后估算支出 {{balanceLedger.estimate.estimatedSpend === null ? '待核对' : balanceLedger.estimate.estimatedSpend}} · 仅按本对象估算剩余 {{balanceLedger.estimate.estimatedRemaining === null ? '待核对' : balanceLedger.estimate.estimatedRemaining}}</text>
+        <text class="card-note">{{balanceLedger.estimate.unknownCalls ? '存在用量或价格缺失，请核对供应商账单' : balanceLedger.estimate.lowBalance ? '预计余额低于阈值，请核实并补充' : '按已记录调用估算'}}{{balanceLedger.estimate.stale ? ' · 人工余额已超过 24 小时，请重新核验' : ''}}</text>
+        <text wx:for="{{balanceLedger.estimate.models}}" wx:key="model" wx:for-item="modelCost" class="card-note">{{modelCost.provider}} · {{modelCost.model}}：{{modelCost.calls}} 次，估算 {{modelCost.estimatedSpend === null ? '待核对' : modelCost.estimatedSpend}}，{{modelCost.unknownCalls}} 次待核对</text>
+        <text wx:for="{{balanceLedger.history}}" wx:key="id" class="card-note">{{item.verifiedAt}} · {{item.currency}} {{item.balance}} · 操作人 {{item.actorUserId}}{{item.note ? ' · ' + item.note : ''}}</text>
+      </block>
+      <text wx:elif="{{balanceAccountIndex >= 0 && !balanceLedgerError}}" class="card-note">暂无人工核验记录</text>
+    </view>
     <view class="card">
       <view class="analytics-switch">
         <button class="mini {{analyticsPeriod === 'week' ? 'selected' : ''}}" data-period="week" bindtap="onAnalyticsPeriod">周</button>
