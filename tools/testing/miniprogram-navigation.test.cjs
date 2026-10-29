@@ -1816,3 +1816,14 @@ test('opportunity navigation keeps all six reference sections and profile identi
   assert.match(profileWxml, /onCopyIdentity/)
   assert.match(profileWxml, /onSwitchIdentity/)
 })
+
+
+test('plan editor exposes the active read-only session state in its controls',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/plan-editor/plan-editor.ts'),'utf8')
+ const template=fs.readFileSync(path.join(root,'pages/plan-editor/plan-editor.wxml'),'utf8')
+ assert.match(source,/readOnly:\s*false/)
+ assert.match(source,/readOnly:\s*isReadOnly\(\)/)
+ assert.match(template,/disabled="\{\{readOnly\}\}"/)
+ assert.match(template,/disabled="\{\{readOnly \|\| saving\}\}"/)
+ assert.match(template,/wx:if="\{\{!readOnly\}\}"/)
+})

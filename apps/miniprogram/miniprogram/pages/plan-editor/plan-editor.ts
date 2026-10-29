@@ -31,6 +31,7 @@ Page({
     loading: true,
     loadError: '',
     saving: false,
+    readOnly: false,
     teacherMode: false,
     studentId: '',
     studentName: '',
@@ -52,6 +53,7 @@ Page({
     const type = decodeURIComponent(options.type || '') as ClassroomPlanType
     const studentId = decodeURIComponent(options.studentId || '')
     this.setData({
+      readOnly: isReadOnly(),
       stageCode,
       type,
       studentId,
