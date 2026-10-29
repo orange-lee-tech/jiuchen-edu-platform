@@ -165,3 +165,7 @@
 .history-status.pending { color: #9a6a00; background: #fff3d7; }
 .history-status.approved { color: #257a4b; background: #eaf7ef; }
 .history-status.rejected { color: #a34b43; background: #fbeceb; }
+
+.due-date-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12rpx; margin: 14rpx 0; }
+.due-date-picker { padding: 16rpx 12rpx; color: #22536d; background: #edf5fa; border-radius: 12rpx; font-size: 26rpx; }
+.clear-date { padding: 12rpx; color: #657480; font-size: 24rpx; }

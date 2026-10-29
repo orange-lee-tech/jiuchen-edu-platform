@@ -1,6 +1,6 @@
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, openSlot, shellView } from '../../utils/navigation'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
-import { getLatestScheduleImport, getMyAcademicProfile, getMyClassroom, type ParsedSchedule } from '../../utils/request'
+import { getLatestScheduleImport, getMyAcademicProfile, getMyClassroom, getUpcomingPlanTasks, type UpcomingPlanTask, type ParsedSchedule } from '../../utils/request'
 import { courseTimeLabel, dailyScheduleView } from '../../utils/schedule-view'
 import { resolveCurrentStage } from '../../utils/current-stage'
 
@@ -42,6 +42,7 @@ Page({
     planLoading: false, planError: '', planState: 'unbound', planStageLabel: '', stageNotice: '',
     stageConfirmed: false, stageNeedsEnrollmentYear: false,
     planPreview: [] as Array<{title:string;status:string}>,
+    upcomingTasks: [] as Array<UpcomingPlanTask & { stageLabel: string }>, upcomingError: '',
     countdowns: [] as CountdownView[], countdownPreview: [] as CountdownView[], countdownOpen: false,
     countdownTitle: '', countdownDate: dateText(new Date()), countdownEditingId: '', countdownPickerStart: dateText(new Date()),
     countdownToday: dateText(new Date()), countdownSaving: false, countdownEntryCount: 0,
@@ -175,10 +176,12 @@ Page({
       const studentId = state.phase === 'ready' && state.auth?.user.role === 'student'
         ? state.auth.user.id : null
       this.currentHomeStudentId = studentId
+      this.setData({ upcomingTasks: [], upcomingError: '' })
       this.loadCountdowns(studentId)
       this.setData({ ...shellView(state), loggedIn: Boolean(state.auth), userName: state.auth?.user.displayName || '同学', assessmentReady: false })
       if (!studentId) { this.homeSchedule = null; this.setData({ planLoading: false, planError: '', planState: 'unbound', planPreview: [], stageNotice: '', stageConfirmed:false, stageNeedsEnrollmentYear:false, scheduleLoading: false, scheduleError: '', scheduleStage: '', scheduleCourses: [], scheduleState: 'missing' }); return }
       this.setData({ scheduleLoading: true, scheduleError: '', scheduleStage: '', scheduleCourses: [], planLoading: true, planError: '', planPreview: [], stageNotice: '' })
+      void this.loadUpcomingTasks()
       void (async () => {
         const resolution = await resolveCurrentStage().catch(() => null)
         if (epoch !== this.homeEpoch || studentId !== this.currentHomeStudentId) return null
@@ -239,6 +242,27 @@ Page({
       })
     })
   },
+  async loadUpcomingTasks() {
+    const epoch = this.homeEpoch
+    const studentId = this.currentHomeStudentId
+    if (!studentId) return
+    this.setData({ upcomingError: '' })
+    try {
+      const result = await getUpcomingPlanTasks()
+      if (epoch !== this.homeEpoch || studentId !== this.currentHomeStudentId) return
+      this.setData({ upcomingTasks: result.tasks.map(task => ({ ...task, stageLabel: STAGE_NAMES[task.stageCode] || task.stageCode })) })
+    } catch {
+      if (epoch === this.homeEpoch && studentId === this.currentHomeStudentId)
+        this.setData({ upcomingTasks: [], upcomingError: '近期任务暂时无法读取' })
+    }
+  },
+  onUpcomingRetry() { void this.loadUpcomingTasks() },
+  onUpcomingTask(event: WechatMiniprogram.BaseEvent) {
+    const task = this.data.upcomingTasks.find(item => item.id === event.currentTarget.dataset.id)
+    if (!task || !this.currentHomeStudentId || this.data.shellPhase !== 'ready') return
+    openPage(`/pages/plan-editor/plan-editor?stage=${encodeURIComponent(task.stageCode)}&type=${encodeURIComponent(task.type)}`)
+  },
+
   renderScheduleDay() {
     const view = dailyScheduleView(this.homeSchedule, this.data.scheduleDay)
     const now = new Date()

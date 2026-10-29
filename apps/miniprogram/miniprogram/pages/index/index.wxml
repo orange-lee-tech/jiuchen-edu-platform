@@ -33,6 +33,14 @@
       <text wx:elif="{{planState === 'unbound'}}" class="home-state">绑定学员身份后，即可查看和编辑自己的阶段规划。</text>
       <block wx:else><text class="home-plan-stage">档案阶段：{{planStageLabel}}{{stageConfirmed ? '' : ' · 待校准'}}</text><view wx:for="{{planPreview}}" wx:key="title" class="home-plan-row"><text class="home-plan-name">{{item.title}}</text><text class="home-plan-status">{{item.status}}</text></view><text wx:if="{{!planPreview.length}}" class="home-state">本阶段暂无计划，进入规划页查看可用内容。</text></block>
     </view>
+    <view wx:if="{{upcomingTasks.length || upcomingError}}" class="home-card upcoming-tasks">
+      <view class="home-card-head"><text class="section-heading">近期任务</text><text class="upcoming-hint">今天至后天</text></view>
+      <view wx:if="{{upcomingError}}" class="home-state"><text>{{upcomingError}}</text><text class="home-state-link" bindtap="onUpcomingRetry">重新读取 ›</text></view>
+      <view wx:for="{{upcomingTasks}}" wx:key="id" class="upcoming-task" data-id="{{item.id}}" bindtap="onUpcomingTask" hover-class="action-pressed">
+        <view class="upcoming-task-main"><text class="upcoming-task-name">{{item.name}}</text><text class="upcoming-task-meta">{{item.stageLabel}} · {{item.planTitle}}</text></view>
+        <view class="upcoming-task-date"><text>{{item.dueDate}}</text><text class="upcoming-task-meta">{{item.status === 'in_progress' ? '进行中' : '未开始'}} ›</text></view>
+      </view>
+    </view>
     <view class="home-shortcuts home-card">
       <view class="home-section-bar"><text class="section-heading">常用入口</text></view>
       <view class="action-list">

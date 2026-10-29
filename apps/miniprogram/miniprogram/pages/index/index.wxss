@@ -283,3 +283,11 @@ button::after{border:0;}
 .countdown-editor-actions{display:flex;flex-direction:column;gap:8rpx;}
 .countdown-cancel-edit{display:block;text-align:center;padding:10rpx;color:#6c7c86;font-size:21rpx;}
 .action-countdown-days{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+.upcoming-tasks { background: #fffdf7; }
+.upcoming-hint, .upcoming-task-meta { font-size: 23rpx; color: #687b87; }
+.upcoming-task { display: flex; align-items: center; gap: 16rpx; padding: 20rpx 0; border-top: 1rpx solid #ebe8dd; }
+.upcoming-task-main { flex: 1; min-width: 0; }
+.upcoming-task-name { display: block; color: #173f58; font-size: 28rpx; font-weight: 600; overflow-wrap: break-word; }
+.upcoming-task-meta { display: block; margin-top: 6rpx; }
+.upcoming-task-date { flex-shrink: 0; color: #8b6b2d; font-size: 24rpx; text-align: right; }

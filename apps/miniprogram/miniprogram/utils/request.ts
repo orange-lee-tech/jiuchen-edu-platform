@@ -53,6 +53,7 @@ export type ClassroomPlan = {
     sortOrder: number
     name: string
     target: string | null
+    dueDate?: string | null
     status: 'pending' | 'in_progress' | 'done'
   }>
 }
@@ -383,7 +384,17 @@ export function setCurrentClassroomStage(stageCode: string, expectedCurrentStage
 export type PlanEditorItem = {
   name: string
   target?: string | null
+  dueDate?: string | null
   status: 'pending' | 'in_progress' | 'done'
+}
+
+export type UpcomingPlanTask = {
+  id: string; name: string; dueDate: string; status: 'pending' | 'in_progress'
+  planId: string; planTitle: string; stageCode: string; type: ClassroomPlanType
+}
+
+export function getUpcomingPlanTasks(): Promise<{ ok: true; from: string; to: string; tasks: UpcomingPlanTask[] }> {
+  return request('/me/classroom/upcoming-tasks')
 }
 
 export async function saveMyClassroomPlan(

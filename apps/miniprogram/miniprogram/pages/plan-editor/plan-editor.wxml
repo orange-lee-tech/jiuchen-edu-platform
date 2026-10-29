@@ -24,6 +24,12 @@
     <view wx:for="{{items}}" wx:key="index" class="item-card">
       <input disabled="{{readOnly}}" class="item-input strong" data-index="{{index}}" data-field="name" value="{{item.name}}" placeholder="任务名称" bindinput="onItemInput" />
       <input disabled="{{readOnly}}" class="item-input" data-index="{{index}}" data-field="target" value="{{item.target}}" placeholder="目标 / 说明（可选）" bindinput="onItemInput" />
+      <view class="due-date-row">
+        <picker mode="date" disabled="{{readOnly || saving}}" start="1000-01-01" end="9999-12-31" value="{{item.dueDate || ''}}" data-index="{{index}}" bindchange="onDueDateChange">
+          <view class="due-date-picker">截止日期：{{item.dueDate || '未设置（可选）'}}{{readOnly ? '' : ' ›'}}</view>
+        </picker>
+        <text wx:if="{{item.dueDate && !readOnly}}" class="clear-date" data-index="{{index}}" bindtap="onClearDueDate">清除日期</text>
+      </view>
       <view class="item-actions">
         <picker disabled="{{readOnly}}" range="{{statusOptions}}" range-key="label" data-index="{{index}}" bindchange="onStatusChange">
           <text class="status-picker">{{item.status === 'done' ? '已完成' : item.status === 'in_progress' ? '进行中' : '未开始'}} ▾</text>

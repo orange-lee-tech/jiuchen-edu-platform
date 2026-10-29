@@ -63,6 +63,11 @@ jobs:
           npm run typecheck
           npm test
           npm run build
+      - name: Verify task due dates twice and classroom API on disposable MySQL 8
+        working-directory: services/api
+        env:
+          DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_plan_due_date_ci
+        run: node dist/db/verify-plan-due-date-mysql.js
       - name: Prepare disposable MySQL fixture for commercial migrations
         working-directory: services/api
         env:

@@ -74,6 +74,7 @@ Page({
       const items = plan.items.map((item) => ({
         name: item.name,
         target: item.target,
+        dueDate: item.dueDate ?? null,
         status: item.status,
       }))
       this.setData({
@@ -157,6 +158,24 @@ Page({
     this.setData({ items })
   },
 
+  onDueDateChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (isReadOnly() || this.data.saving) return
+    const index = Number(event.currentTarget.dataset.index)
+    const items = [...this.data.items]
+    if (!items[index]) return
+    items[index] = { ...items[index], dueDate: event.detail.value }
+    this.setData({ items })
+  },
+
+  onClearDueDate(event: WechatMiniprogram.BaseEvent) {
+    if (isReadOnly() || this.data.saving) return
+    const index = Number(event.currentTarget.dataset.index)
+    const items = [...this.data.items]
+    if (!items[index]) return
+    items[index] = { ...items[index], dueDate: null }
+    this.setData({ items })
+  },
+
   onRemoveItem(event: WechatMiniprogram.BaseEvent) {
     if(isReadOnly())return
     const index = Number(event.currentTarget.dataset.index)
@@ -177,6 +196,7 @@ Page({
       .map((item) => ({
         name: item.name.trim(),
         target: item.target?.trim() || null,
+        dueDate: item.dueDate || null,
         status: item.status,
       }))
       .filter((item) => item.name)
