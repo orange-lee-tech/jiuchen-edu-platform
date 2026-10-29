@@ -18,7 +18,7 @@ export async function resolveCurrentStage(): Promise<StageResolution> {
     checkOwner()
     const mode = value.mode ?? null
     const suggestion = value.suggestedStage
-    if (suggestion && ((mode === 'auto' && value.currentStage !== suggestion) || (mode === null && value.currentStage === null))) {
+    if (suggestion && ((mode === 'auto' && value.currentStage !== suggestion) || (mode === null && (value.currentStage === null || value.currentStage === suggestion)))) {
       try {
         const updated = await setCurrentClassroomStage(suggestion, value.currentStage, { mode: 'auto', expectedMode: mode })
         checkOwner()

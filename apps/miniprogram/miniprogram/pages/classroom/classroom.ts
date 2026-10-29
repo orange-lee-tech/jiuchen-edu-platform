@@ -18,49 +18,17 @@ import {
 
 type PlanCard = {
   type: ClassroomPlanType
-  badge: string
   title: string
   progress: string
-  note: string
   revisionStatus: 'none' | 'pending' | 'approved'
 }
 
-const PLAN_CARDS: Record<ClassroomPlanType, Omit<PlanCard, 'revisionStatus'>> = {
-  gpa: {
-    type: 'gpa',
-    badge: 'GPA',
-    title: '课程成绩计划',
-    progress: '0 / 0',
-    note: '按真实课程、课程难度与保研目标设置目标分数',
-  },
-  english: {
-    type: 'english',
-    badge: '英',
-    title: '英语计划',
-    progress: '0 / 0',
-    note: '四六级 / 雅思 / 托福等阶段性目标',
-  },
-  competition: {
-    type: 'competition',
-    badge: '赛',
-    title: '竞赛计划',
-    progress: '0 / 0',
-    note: '按阶段安排竞赛准备、参赛与成果沉淀',
-  },
-  research: {
-    type: 'research',
-    badge: '研',
-    title: '科研计划',
-    progress: '0 / 0',
-    note: '导师、项目、论文与科研能力积累',
-  },
-  internship: {
-    type: 'internship',
-    badge: '习',
-    title: '实习规划',
-    progress: '0 / 0',
-    note: '岗位方向、投递准备与实习执行安排',
-  },
+const PLAN_CARDS: Record<ClassroomPlanType, Pick<PlanCard, 'type' | 'title'>> = {
+  gpa: { type: 'gpa', title: '课程成绩计划' },
+  english: { type: 'english', title: '英语计划' },
+  competition: { type: 'competition', title: '竞赛计划' },
+  research: { type: 'research', title: '科研计划' },
+  internship: { type: 'internship', title: '实习规划' },
 }
 
 const FALLBACK_STAGES: ClassroomStage[] = [
@@ -97,23 +65,13 @@ function emptyStageView(stage: ClassroomStage, index: number) {
 function stageLabels(stages: ClassroomStage[]) {
   return stages.map(s => ({ ...s, yearLabel: s.label.slice(0, 2), periodLabel: s.label.slice(2) }))
 }
-function stageGroups(stages: ClassroomStage[]) {
-  const years = ['freshman', 'sophomore', 'junior', 'senior']
-  return years.map((year, index) => ({ year, label: `大${'一二三四'[index]}`,
-    stages: stages.filter(stage => stage.code.startsWith(year + '-')) }))
-}
-
-function toPlanCard(plan: ClassroomPlan, scheduleCourseCount = 0): PlanCard {
+function toPlanCard(plan: ClassroomPlan): PlanCard {
   const template = PLAN_CARDS[plan.type]
   const completed = plan.items.filter((item) => item.status === 'done').length
   return {
     ...template,
     title: plan.title,
     progress: plan.items.length ? `${completed} / ${plan.items.length}` : '',
-    note:
-      plan.type === 'gpa' && plan.items.length === 0 && scheduleCourseCount > 0
-        ? `已导入 ${scheduleCourseCount} 门课程，点击进入后生成课程成绩计划`
-        : template.note,
     revisionStatus: plan.revisionStatus || (plan.id ? 'approved' : 'none'),
   }
 }
@@ -125,12 +83,11 @@ Page({
     loading: false,
     loadError: '',
     studentName: '',
-    scheduleCourseCount: 0,
     selectedView: 'stage',
     weekLoading: false, weekError: '', weekState: 'missing', weekLabel: '',
     weekCourses: [] as Array<{ name: string; day: string; slot: string; location: string | null; teacher: string | null }>,
     stages: stageLabels(FALLBACK_STAGES),
-    stageGroups: stageGroups(FALLBACK_STAGES), stagePickerOpen: false, actualStageLabel: '待确认',
+    stageScrollTarget: 'semester-freshman-fall', actualStageLabel: '待确认',
     actualStageCode: '', actualStageKnown: false, stageMode: null as 'auto' | 'manual' | null, stageModeKnown: false, stageNotice: '', stageScheduleSafe: false,
     stageChangeBusy: false, stageCalibrationMode: false,
     ...emptyStageView(FALLBACK_STAGES[0], 0),
@@ -148,7 +105,7 @@ Page({
       else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
     })
   },
-  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stagePickerOpen: false, stageCalibrationMode: false }) },
+  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stageCalibrationMode: false }) },
   onUnload() { this.stopShell?.() },
 
   async initializeClassroom() {
@@ -185,21 +142,14 @@ Page({
       const initial = await getMyClassroom(browsingAnotherStage ? this.data.currentStageCode : resolution?.stage || undefined)
       if (generation !== this.viewGeneration) return
       const stageChanged = Boolean(resolution && initial.student.currentStage !== resolution.stage)
-      const matchingTerm = /^(freshman|sophomore|junior|senior)-(fall|spring)$/.test(initial.stage.code)
-      const latestSchedule = matchingTerm
-        ? await getLatestScheduleImport(initial.stage.code).catch(() => null)
-        : null
-      if (generation !== this.viewGeneration) return
       const index = Math.max(
         0,
         stages.findIndex((stage) => stage.code === initial.stage.code),
       )
       const stage = stages[index] || initial.stage
-      const scheduleCourseCount = latestSchedule?.schedule?.stageCode === initial.stage.code
-        ? latestSchedule.schedule.courses.length : 0
       this.setData({
         stages: stageLabels(stages),
-        stageGroups: stageGroups(stages),
+        stageScrollTarget: `semester-${stage.code}`,
         actualStageLabel: stages.find(item => item.code === initial.student.currentStage)?.label || '未设置',
         actualStageCode: initial.student.currentStage || '',
         actualStageKnown: true,
@@ -209,8 +159,7 @@ Page({
         stageScheduleSafe: isReadOnly() || Boolean(resolution?.scheduleSafe && !stageChanged),
         ...emptyStageView(stage, index),
         studentName: initial.student.name,
-        scheduleCourseCount,
-        plans: initial.plans.map((plan) => toPlanCard(plan, scheduleCourseCount)),
+        plans: initial.plans.map((plan) => toPlanCard(plan)),
         showGuidance: initial.showGuidance,
         guidanceRecordsReady: initial.guidanceRecordsReady,
         mentors: initial.mentors,
@@ -231,18 +180,11 @@ Page({
 
   async hydratePlanData(stageCode: string) {
     const generation = this.viewGeneration
-    const [result, latestSchedule] = await Promise.all([
-      getMyClassroom(stageCode),
-      /^(freshman|sophomore|junior|senior)-(fall|spring)$/.test(stageCode)
-        ? getLatestScheduleImport(stageCode).catch(() => null) : Promise.resolve(null),
-    ])
+    const result = await getMyClassroom(stageCode)
     if (this.data.currentStageCode !== stageCode || generation !== this.viewGeneration) return
-    const scheduleCourseCount = latestSchedule?.schedule?.stageCode === stageCode
-      ? latestSchedule.schedule.courses.length : 0
     this.setData({
       studentName: result.student.name,
-      scheduleCourseCount,
-      plans: result.plans.map((plan) => toPlanCard(plan, scheduleCourseCount)),
+      plans: result.plans.map((plan) => toPlanCard(plan)),
       showGuidance: result.showGuidance,
       guidanceRecordsReady: result.guidanceRecordsReady,
       mentors: result.mentors,
@@ -262,24 +204,17 @@ Page({
     if (this.data.stageCalibrationMode) {
       const expected = this.data.actualStageKnown ? (this.data.actualStageCode || null) : undefined
       const expectedMode = this.data.stageModeKnown ? this.data.stageMode : undefined
-      this.setData({ stagePickerOpen: false, stageCalibrationMode: false })
+      this.setData({ stageCalibrationMode: false, stageScrollTarget: `semester-${stage.code}` })
       void this.saveCurrentStage(stage.code, expected, 'manual', expectedMode)
       return
     }
-    this.setData({ ...emptyStageView(stage, index), selectedView: 'stage', stagePickerOpen: false, stageCalibrationMode: false, scheduleCourseCount: 0 })
+    this.setData({ ...emptyStageView(stage, index), selectedView: 'stage', stageCalibrationMode: false, stageScrollTarget: `semester-${stage.code}` })
     void this.reloadStage(stage.code)
-  },
-  onToggleStagePicker() {
-    this.setData({ stagePickerOpen: !this.data.stagePickerOpen, stageCalibrationMode: false })
   },
   onToggleStageCalibration() {
     if (isReadOnly() || this.data.stageChangeBusy) return
     const opening = !this.data.stageCalibrationMode
-    this.setData({ stageCalibrationMode: opening, stagePickerOpen: opening })
-  },
-  onPlanCategoryTap(event: WechatMiniprogram.BaseEvent) {
-    const type = String(event.currentTarget.dataset.type || '')
-    if (this.data.plans.some(item => item.type === type)) wx.pageScrollTo({ selector: '#plan-' + type, duration: 200 })
+    this.setData({ stageCalibrationMode: opening })
   },
   onAcademicProfile() { if (!isReadOnly()) openPage('/pages/profile-edit/profile-edit') },
   async onReviewCurrentStage() {
@@ -326,7 +261,7 @@ Page({
       if (generation !== this.viewGeneration) return
       const index = (this.data.stages as ClassroomStage[]).findIndex(item => item.code === result.currentStage)
       if (index < 0) throw new Error('unknown_stage')
-      this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage', stagePickerOpen: false, stageCalibrationMode: false })
+      this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage', stageScrollTarget: `semester-${this.data.stages[index].code}`, stageCalibrationMode: false })
       await this.initializeClassroom()
       wx.showToast({ title: '当前阶段已更新', icon: 'success' })
     } catch { if (generation === this.viewGeneration) wx.showToast({ title: '阶段未更新，请刷新后重试', icon: 'none' }) }
@@ -349,7 +284,7 @@ Page({
   },
 
   onCurrentWeekSchedule() {
-    this.setData({ selectedView: 'week', stagePickerOpen: false })
+    this.setData({ selectedView: 'week' })
     void this.loadCurrentWeek()
   },
   async loadCurrentWeek() {

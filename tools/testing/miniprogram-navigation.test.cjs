@@ -668,10 +668,14 @@ test('role-shell uses an ordinary view-slot property instead of reserved WXML sl
   }
 })
 
-test('planning header distinguishes saved current stage from the stage being viewed', () => {
+test('planning header distinguishes saved current stage and exposes an always-visible horizontal semester rail', () => {
   const html = fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxml'), 'utf8')
   assert.match(html, /本周课表/)
-  assert.match(html, /当前档案：\{\{actualStageLabel\}\}/)
+  assert.match(html, /档案当前阶段：\{\{actualStageLabel\}\}/)
+  assert.match(html, /class="semester-rail" scroll-x/)
+  assert.match(html, /wx:for="\{\{stages\}\}"/)
+  assert.doesNotMatch(html, /wx:if="\{\{stagePickerOpen\}\}"/)
+  assert.match(html, /bindtap="onToggleStageCalibration"/)
 })
 
 test('new user and each claimed business role receive a separate, dismissible 4-step guide', () => {
@@ -846,6 +850,18 @@ test('stage resolution updates opted-in auto and unset stages, while preserving 
   assert.equal(h.requests.length,1);assert.equal(result.stage,'freshman-fall');assert.ok(result.notice)
   assert.equal(result.scheduleSafe,mode==='manual')
  }
+})
+
+test('stage resolution adopts auto mode when a legacy saved stage already matches the enrollment-year suggestion',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const pending=h.load('utils/current-stage').resolveCurrentStage()
+ h.respond(0,{ok:true,currentStage:'freshman-fall',mode:null,suggestedStage:'freshman-fall'});await settle()
+ assert.equal(h.requests[1].method,'PUT')
+ assert.equal(h.requests[1].data.stageCode,'freshman-fall')
+ assert.equal(h.requests[1].data.mode,'auto')
+ assert.equal(h.requests[1].data.expectedCurrentStage,'freshman-fall')
+ h.respond(1,{ok:true,currentStage:'freshman-fall',mode:'auto'})
+ const result=await pending
+ assert.equal(result.mode,'auto');assert.equal(result.scheduleSafe,true)
 })
 
 test('stage resolution rejects stale identity and rechecks concurrent mode changes',async()=>{
@@ -1433,12 +1449,17 @@ test('numeric news labels remain traceable without becoming bare category names'
  page.onSectionTap({currentTarget:{dataset:{section:'学科竞赛'}}});assert.equal(page.data.featured.id,'a')
 })
 
-test('planning category navigation only scrolls to a plan actually available in that stage',()=>{
- const h=harness(), page=h.page('pages/classroom/classroom');let selector=''
- h.wx.pageScrollTo=options=>{selector=options.selector}
- page.setData({plans:[{type:'english'}]})
- page.onPlanCategoryTap({currentTarget:{dataset:{type:'research'}}});assert.equal(selector,'')
- page.onPlanCategoryTap({currentTarget:{dataset:{type:'english'}}});assert.equal(selector,'#plan-english')
+test('planning plan cards open details directly without redundant category jump tabs',()=>{
+  const h=harness(), page=h.page('pages/classroom/classroom')
+  const html=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8')
+  page.setData({currentStageCode:'junior-fall'})
+  page.onPlanTap({currentTarget:{dataset:{type:'research'}}})
+  assert.equal(h.navigations.at(-1).url,'/pages/plan-editor/plan-editor?stage=junior-fall&type=research')
+  assert.doesNotMatch(html,/class="plan-tabs"/)
+  assert.match(html,/class="semester-rail" scroll-x/)
+  assert.match(html,/class="plan-action-label"/)
+  assert.doesNotMatch(html,/revision-chip|item\.note/)
+  assert.match(html,/'创建'\s*\+\s*item\.title/)
 })
 
 test('PKU media/map are real sourced assets and consultation uses the shared chat entry',()=>{
