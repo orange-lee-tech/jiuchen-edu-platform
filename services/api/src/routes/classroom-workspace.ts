@@ -375,7 +375,7 @@ export function registerClassroomWorkspaceRoutes(
       if (parsed.data.expectedMode !== undefined && student.mode !== parsed.data.expectedMode) return 'changed' as const
       const mode = parsed.data.mode ?? 'manual'
       if (mode === 'auto') {
-        if (student.mode !== 'auto' && student.currentStage !== null && !parsed.data.confirmAuto) return 'confirmation' as const
+        if (student.mode !== 'auto' && student.currentStage !== null && !(student.mode === null && student.currentStage === parsed.data.stageCode) && !parsed.data.confirmAuto) return 'confirmation' as const
         const profileRows = await tx.execute(sql`SELECT enrollment_year AS enrollmentYear, current_grade AS currentGrade FROM user_profiles WHERE user_id = ${session.userId} FOR UPDATE`)
         const profile = (profileRows[0] as unknown as Array<{ enrollmentYear: number | null; currentGrade: string | null }>)[0]
         if (suggestAcademicStage(profile?.enrollmentYear ?? null, new Date(), profile?.currentGrade ?? null) !== parsed.data.stageCode) return 'invalidSuggestion' as const

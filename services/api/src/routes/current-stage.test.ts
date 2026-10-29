@@ -92,3 +92,19 @@ test('administrator and read-only contexts cannot use student stage writes', asy
     assert.equal(admin.state.writes, 0); assert.equal(student.state.writes, 0)
   } finally { await admin.app.close(); await student.app.close() }
 })
+
+
+test('legacy saved stage matching suggestion can enable auto mode without changing the stage', async () => {
+  const { app, state, headers } = fixture()
+  try {
+    const suggestion = (await app.inject({ url: '/me/classroom/stage-suggestion', headers })).json().suggestedStage as string
+    assert.ok(suggestion)
+    state.stage = suggestion
+    const result = await app.inject({ method: 'PUT', url: '/me/classroom/current-stage', headers,
+      payload: { stageCode: suggestion, expectedCurrentStage: suggestion, mode: 'auto', expectedMode: null } })
+    assert.equal(result.statusCode, 200)
+    assert.equal(state.stage, suggestion)
+    assert.equal(state.mode, 'auto')
+    assert.equal(state.writes, 1)
+  } finally { await app.close() }
+})
