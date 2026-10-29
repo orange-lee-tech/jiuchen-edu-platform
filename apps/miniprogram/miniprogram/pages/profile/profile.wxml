@@ -2,64 +2,93 @@
   <role-shell view-slot="mine" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready'}}">
     <view class="identity-panel">
-      <text class="identity-eyebrow">九辰保研 · {{roleLabel}}</text>
-      <text class="user-name">{{loggedIn ? userName : '把准备记录留在这里'}}</text>
-      <text class="identity-description">{{loggedIn ? (role === 'admin' || role === 'teacher' || role === 'staff' ? '内部身份与账号管理。业务权限及人员分配在对应工作台中处理。' : '你的学业资料和评估历史都保存在自己的账户里。') : '登录并绑定身份后，可以保存资料与查看记录。'}}</text>
-      <view wx:if="{{businessId}}" class="identity-number">
-        <text class="identity-number-label">我的九辰内部编号</text>
-        <text class="identity-code" selectable>{{businessId}}</text>
+      <image class="identity-art" src="/assets/jiuchen-visual-v1/banners/profile-calm-campus.png" mode="aspectFill" aria-hidden="true" />
+      <view class="identity-content">
+      <view class="identity-person">
+        <image class="identity-person-icon" src="/assets/jiuchen-visual-v1/icons/profile.png" mode="aspectFit" />
+        <view class="identity-person-text">
+          <text class="user-name">{{loggedIn ? userName : '把准备记录留在这里'}}</text>
+          <text class="identity-role-label">{{roleLabel}}{{profileStageLabel ? ' · ' + profileStageLabel : ''}}</text>
+        </view>
+        <view wx:if="{{!readOnly}}" class="identity-control identity-primary" bindtap="onIdentityTap" hover-class="identity-control-pressed" aria-role="button">{{!loggedIn ? '登录' : role === 'admin' || role === 'teacher' || role === 'staff' ? '身份与绑定' : '编辑资料'}}</view>
       </view>
-      <view class="identity-buttons">
-        <view wx:if="{{businessId}}" class="identity-control identity-copy" bindtap="onCopyIdentity" hover-class="identity-control-pressed" aria-role="button">复制编号</view>
-        <view wx:if="{{!readOnly}}" class="identity-control identity-primary" bindtap="onIdentityTap" hover-class="identity-control-pressed" aria-role="button">{{!loggedIn ? '登录并绑定身份' : role === 'admin' || role === 'teacher' || role === 'staff' ? '查看身份与绑定' : '编辑我的学业资料'}}</view>
       </view>
     </view>
-    <view wx:if="{{loggedIn && !readOnly && identities.length}}" class="card">
-      <text class="section-heading">我的身份</text>
-      <text class="card-note">当前使用：{{roleLabel}}。切换后服务器按新身份验证权限。</text>
-      <view wx:for="{{identities}}" wx:key="id" class="identity-role-row">
-        <view class="identity-role-info">
-          <text class="identity-role-name">{{item.type === 'admin' ? '管理员' : item.type === 'teacher' ? '老师' : '学员'}}</text>
-          <text class="identity-role-code" selectable>{{item.businessId}}</text>
-          <text wx:if="{{role === item.type}}" class="identity-role-current">当前使用</text>
-        </view>
-        <view class="identity-role-actions">
-          <button wx:if="{{role !== item.type}}" class="identity-role-button identity-role-switch" disabled="{{identityBusy}}" data-role="{{item.type}}" bindtap="onSwitchIdentity">切换身份</button>
-          <button class="identity-role-button identity-role-unbind" disabled="{{identityBusy}}" data-id="{{item.id}}" bindtap="onUnbindIdentity">解除绑定</button>
-        </view>
-      </view>
-      <view wx:if="{{identities.length === 1 && identities[0].type === 'admin'}}">
-        <input class="identity-bind-input" placeholder-class="identity-bind-input-placeholder" value="{{identityInput}}" placeholder="请填写未认领的学员或老师内部编号" bindinput="onAdditionalIdInput" />
-        <button disabled="{{identityBusy}}" bindtap="onBindAdditionalIdentity">绑定兼任身份</button>
-      </view>
-      <text wx:if="{{identityError}}" class="card-note">{{identityError}}</text>
-    </view>
-    <text class="section-heading">{{shellKind === 'student' ? '我的资料与记录' : '我的账号与支持'}}</text>
-    <view class="menu-list">
+    <text class="section-heading">{{shellKind === 'student' ? '成长与记录' : '工作与支持'}}</text>
+    <view class="menu-list primary-menus">
       <block wx:for="{{menus}}" wx:key="key">
-        <view wx:if="{{item.key === 'service'}}" class="menu-row menu-service" bindtap="onCustomerServiceTap" hover-class="menu-pressed" aria-role="button">
-          <view class="menu-symbol"><image class="menu-icon" src="/assets/icons/service-active.png" mode="aspectFit" /></view>
+        <view wx:if="{{item.key !== 'service'}}" class="menu-row menu-{{item.key}}" data-key="{{item.key}}" bindtap="onMenuTap" hover-class="menu-pressed" aria-role="button">
+          <view class="menu-symbol"><image class="menu-icon" src="{{item.key === 'growth' ? '/assets/jiuchen-visual-v1/icons/profile.png' : item.key === 'assessment' ? '/assets/jiuchen-visual-v1/icons/history.png' : item.key === 'position' ? '/assets/jiuchen-visual-v1/icons/ai-assessment.png' : item.key === 'favorites' ? '/assets/jiuchen-visual-v1/icons/bookmark.png' : '/assets/jiuchen-visual-v1/icons/profile.png'}}" mode="aspectFit" /></view>
           <view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text>
         </view>
-        <view wx:else class="menu-row menu-{{item.key}}" data-key="{{item.key}}" bindtap="onMenuTap" hover-class="menu-pressed" aria-role="button">
-          <view class="menu-symbol"><image class="menu-icon" src="/assets/icons/{{item.key === 'growth' ? 'growth' : item.key === 'position' || item.key === 'assessment' ? 'assessment' : item.key === 'students' ? 'users' : 'mine'}}-active.png" mode="aspectFit" /></view>
-          <view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text>
-        </view>
-        <view wx:if="{{readOnly && item.key === 'service'}}" class="menu-row" bindtap="onExitReadOnly"><text class="menu-title">退出只读查看</text><text class="arrow">›</text></view>
       </block>
+    </view>
+    <view class="profile-services">
+      <text class="section-heading">我的服务</text>
+      <view class="profile-service-links">
+        <view class="menu-row menu-service" bindtap="onCustomerServiceTap" hover-class="menu-pressed" aria-role="button">
+          <image class="menu-icon" src="/assets/jiuchen-visual-v1/icons/headset.png" mode="aspectFit" />
+          <view class="menu-main"><text class="menu-title">{{shellKind === 'student' ? '联系客服' : '联系运营'}}</text><text class="menu-description">账号与服务咨询</text></view>
+          <text class="arrow">›</text>
+        </view>
+        <view wx:if="{{shellKind === 'student' && mentorName && !readOnly}}" class="menu-row menu-teacher-service" bindtap="onMyTeacher" hover-class="menu-pressed" aria-role="button">
+          <image class="menu-icon" src="/assets/jiuchen-visual-v1/icons/profile.png" mode="aspectFit" />
+          <view class="menu-main"><text class="menu-title">我的老师</text><text class="menu-description">{{mentorName}} · 查看辅导与规划</text></view>
+          <text class="arrow">›</text>
+        </view>
+      </view>
+      <view wx:if="{{readOnly}}" class="menu-row" bindtap="onExitReadOnly"><text class="menu-title">退出只读查看</text><text class="arrow">›</text></view>
     </view>
     <view wx:if="{{favoritesVisible}}" class="menu-list">
       <text class="section-heading">我的收藏</text>
       <text wx:if="{{favoritesLoading}}">正在读取个人收藏…</text>
       <view wx:elif="{{favoritesError}}"><text>{{favoritesError}}</text><button bindtap="onFavorites">重新读取收藏</button></view>
       <text wx:elif="{{!favorites.length}}">尚未收藏公众号原文</text>
-      <view wx:for="{{favorites}}" wx:key="postId" class="menu-row" data-id="{{item.postId}}" bindtap="onFavoriteOpen"><text class="menu-title">{{item.title}}</text><text class="arrow">服务号原文 ›</text><button data-id="{{item.postId}}" catchtap="onFavoriteReader">站内阅读</button></view>
+      <view wx:for="{{favorites}}" wx:key="postId" class="favorite-row">
+        <text class="favorite-title">{{item.title}}</text>
+        <view class="favorite-actions">
+          <view class="favorite-action" data-id="{{item.postId}}" bindtap="onFavoriteOpen" aria-role="button">服务号原文 ›</view>
+          <view class="favorite-action favorite-reader" data-id="{{item.postId}}" bindtap="onFavoriteReader" aria-role="button">站内阅读 ›</view>
+        </view>
+      </view>
     </view>
     <view class="website-row" bindtap="onWebsite" hover-class="menu-pressed" aria-role="button"><image class="menu-icon" src="/assets/icons/website-active.png" mode="aspectFit" /><text>九辰官网 · 复制地址</text><text class="arrow">›</text></view>
-    <view wx:if="{{loggedIn && !readOnly}}" class="account-actions">
+    <view id="identity-section" wx:if="{{loggedIn && !readOnly && (identities.length || businessId)}}" class="identity-settings-card">
+      <view class="identity-settings-toggle" bindtap="onToggleIdentityDetails" aria-role="button">
+        <text>我的身份与编号</text><text>{{identityDetailsOpen ? '收起 ⌃' : '查看编号与绑定 ›'}}</text>
+      </view>
+      <view wx:if="{{identityDetailsOpen}}" class="identity-settings-body">
+        <view wx:if="{{businessId}}" class="identity-number">
+          <text class="identity-number-label">九辰内部编号</text>
+          <text class="identity-code" selectable>{{businessId}}</text>
+          <text class="identity-copy-inline" bindtap="onCopyIdentity">复制编号</text>
+        </view>
+        <text class="card-note">当前使用：{{roleLabel}}。切换后服务器按新身份验证权限。</text>
+        <view wx:for="{{identities}}" wx:key="id" class="identity-role-row">
+          <view class="identity-role-info">
+            <text class="identity-role-name">{{item.type === 'admin' ? '管理员' : item.type === 'teacher' ? '老师' : '学员'}}</text>
+            <text class="identity-role-code" selectable>{{item.businessId}}</text>
+            <text wx:if="{{role === item.type}}" class="identity-role-current">当前使用</text>
+          </view>
+          <view class="identity-role-actions">
+            <button wx:if="{{role !== item.type}}" class="identity-role-button identity-role-switch" disabled="{{identityBusy}}" data-role="{{item.type}}" bindtap="onSwitchIdentity">切换身份</button>
+            <button class="identity-role-button identity-role-unbind" disabled="{{identityBusy}}" data-id="{{item.id}}" bindtap="onUnbindIdentity">解除绑定</button>
+          </view>
+        </view>
+        <view wx:if="{{identities.length === 1 && identities[0].type === 'admin'}}">
+          <input class="identity-bind-input" placeholder-class="identity-bind-input-placeholder" value="{{identityInput}}" placeholder="请填写未认领的学员或老师内部编号" bindinput="onAdditionalIdInput" />
+          <button disabled="{{identityBusy}}" bindtap="onBindAdditionalIdentity">绑定兼任身份</button>
+        </view>
+        <text wx:if="{{identityError}}" class="card-note">{{identityError}}</text>
+      </view>
+    </view>
+    <view wx:if="{{loggedIn && !readOnly}}" class="account-settings">
+      <view class="account-settings-toggle" bindtap="onToggleAccountSettings" aria-role="button">账号与设置 <text>{{accountSettingsOpen ? '收起 ⌃' : '查看 ›'}}</text></view>
+      <view wx:if="{{accountSettingsOpen}}" class="account-actions">
       <button class="logout-button" loading="{{loggingOut}}" disabled="{{loggingOut || deleting}}" bindtap="onLogout">退出当前登录</button>
       <button class="delete-button" loading="{{deleting}}" disabled="{{loggingOut || deleting}}" bindtap="onDeleteAccount">注销账号</button>
       <text class="account-note">退出保留账号资料。注销会清理自填资料并解除登录绑定，操作前会再次确认。</text>
+      </view>
     </view>
   </block>
 </view>

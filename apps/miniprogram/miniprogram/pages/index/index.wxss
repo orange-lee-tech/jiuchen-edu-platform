@@ -1,16 +1,15 @@
 /* Home RC1: one visual system, one accent, centered equal-weight entry cards. */
-.home-page{box-sizing:border-box;min-height:100vh;padding:24rpx 22rpx calc(42rpx + env(safe-area-inset-bottom));background:#edf3f8;color:#142d48;}
-.eyebrow,.home-title,.home-description,.home-caption,.section-heading,.action-title,.action-description,.service-title,.service-description{display:block;}
-.home-intro{padding:32rpx 27rpx 30rpx;background:linear-gradient(140deg,#143a62 0%,#155b75 100%);border:1rpx solid #2b6279;border-radius:10rpx;box-shadow:0 6rpx 16rpx rgba(16,52,77,.11);}
+.home-page{box-sizing:border-box;min-height:100vh;padding:24rpx 22rpx calc(42rpx + env(safe-area-inset-bottom));background:#f4f2ed;color:#142d48;}
+.eyebrow,.home-title,.home-caption,.section-heading,.action-title,.service-title{display:block;}
+.home-intro{padding:32rpx 27rpx 30rpx;background:linear-gradient(140deg,#143a62 0%,#155b75 100%);border:1rpx solid #2b6279;border-radius: 8rpx;box-shadow:0 6rpx 16rpx rgba(16,52,77,.11);}
 .eyebrow{font-size:22rpx;font-weight:700;color:#eed39a;letter-spacing:1rpx;}
 .home-title{font-size:40rpx;line-height:1.35;font-weight:800;margin-top:13rpx;color:#fff;}
-.home-description{font-size:24rpx;line-height:1.62;color:#e3edf3;margin-top:11rpx;}
-button{box-sizing:border-box;margin-left:0;margin-right:0;border-radius:8rpx;white-space:normal;}
+button{box-sizing:border-box;margin-left:0;margin-right:0;border-radius: 8rpx;white-space:normal;}
 button::after{border:0;}
 .home-primary{display:flex;width:100%;justify-content:center;align-items:center;margin:23rpx 0 0;min-height:86rpx;padding:12rpx 20rpx;background:#ecca80;color:#173951;font-size:28rpx;line-height:1.4;font-weight:800;}
 .home-caption{font-size:21rpx;line-height:1.55;color:#d6e6ef;margin-top:14rpx;}
 .home-minor-link{display:block;margin-top:12rpx;color:#f5dbac;font-size:22rpx;font-weight:700;text-decoration:underline;}
-.home-schedule{margin-top:18rpx;padding:20rpx 24rpx;background:#fff;border:1rpx solid #cbdbe5;border-radius:9rpx;}
+.home-schedule{margin-top:18rpx;padding:20rpx 24rpx;background:#fff;border:1rpx solid #cbdbe5;border-radius: 8rpx;}
 .home-schedule-meta{display:block;margin-top:8rpx;font-size:23rpx;line-height:1.5;color:#38566b;}
 .home-schedule-course{display:flex;align-items:stretch;gap:18rpx;margin-top:15rpx;padding-top:15rpx;border-top:1rpx solid #dce7ed;color:#38566b;}
 .home-course-when{display:flex;flex:0 0 168rpx;flex-direction:column;justify-content:center;padding-right:16rpx;border-right:1rpx solid #d5e2e9;}
@@ -22,15 +21,13 @@ button::after{border:0;}
 .home-course-location{margin-top:5rpx;font-size:20rpx;color:#687f8d;}
 .home-section-bar{display:flex;align-items:center;justify-content:space-between;gap:10rpx;margin:28rpx 0 15rpx;}
 .section-heading{font-size:30rpx;font-weight:800;line-height:1.45;color:#142d48;margin:0;}
-.section-supplement{font-size:19rpx;color:#647b8c;text-align:right;}
 .action-list,.service-links{display:flex;flex-wrap:wrap;justify-content:space-between;width:100%;row-gap:14rpx;}
-.action-row,.service-link{position:relative;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;align-items:center;width:49%;text-align:center;background:#fff;border:1rpx solid #cbdbe5;border-top:4rpx solid #28768b;border-radius:9rpx;box-shadow:0 3rpx 9rpx rgba(20,57,81,.055);}
+.action-row,.service-link{position:relative;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;align-items:center;width:49%;text-align:center;background:#fff;border:1rpx solid #cbdbe5;border-top:4rpx solid #28768b;border-radius: 8rpx;box-shadow:0 3rpx 9rpx rgba(20,57,81,.055);}
 .action-row{min-height:220rpx;padding:26rpx 15rpx 23rpx;}
 .action-pressed,.service-pressed{background:#e4f0f4;}
-.action-symbol,.service-symbol{display:flex;align-items:center;justify-content:center;width:73rpx;height:73rpx;background:#dcebf2;border-radius:10rpx;flex-shrink:0;}
+.action-symbol,.service-symbol{display:flex;align-items:center;justify-content:center;width:73rpx;height:73rpx;background:#dcebf2;border-radius: 8rpx;flex-shrink:0;}
 .action-icon,.service-icon{width:46rpx;height:46rpx;}
 .action-title,.service-title{font-size:28rpx;font-weight:800;line-height:1.35;color:#173b57;margin-top:13rpx;}
-.action-description,.service-description{font-size:20rpx;line-height:1.45;color:#637989;margin-top:6rpx;padding:0;text-align:center;}
 .action-more{position:absolute;right:15rpx;top:17rpx;color:#66899a;font-size:28rpx;line-height:1;}
 .service-section{margin-top:28rpx;padding-top:19rpx;border-top:2rpx solid #cfdde5;}
 .service-links{margin-top:15rpx;}
@@ -51,5 +48,246 @@ button::after{border:0;}
 .action-row:active,.service-link:active,.action-pressed,.service-pressed{background:#10496d;}
 .action-symbol,.service-symbol{background:#eac263;}
 .action-title,.service-title{color:#fff;}
-.action-description,.service-description{color:#e3eef5;}
 .action-more{color:#f3cf74;}
+
+/* Daily workbench: warm surfaces carry content, blue and gold mark actions. */
+.home-page{background:#f4f2ed;color:#193750;}
+.home-intro{background:linear-gradient(135deg,#173c62,#245d76);border:0;border-radius: 8rpx;padding:29rpx 28rpx;box-shadow:0 12rpx 28rpx rgba(18,52,77,.12);}
+.home-intro-compact{padding:20rpx 26rpx;box-shadow:none;}
+.home-intro-compact .home-title{margin-top:6rpx;font-size:31rpx;}
+.home-intro-compact .home-caption{margin-top:7rpx;}
+.home-title{font-size:37rpx;}
+.home-primary{width:auto;min-height:70rpx;padding:12rpx 26rpx;border-radius: 8rpx;font-size:25rpx;}
+.home-card{box-sizing:border-box;margin-top:20rpx;padding:25rpx;background:#fffdf9;border:1rpx solid #e7ded0;border-radius: 8rpx;box-shadow:0 5rpx 18rpx rgba(27,59,77,.055);}
+.home-card-head{display:flex;align-items:center;justify-content:space-between;gap:12rpx;}
+.home-card-link,.home-state-link{color:#276384;font-size:22rpx;font-weight:750;}
+.day-tabs{display:flex;gap:10rpx;margin-top:18rpx;}
+.day-tab{padding:10rpx 27rpx;background:#edf3f5;color:#456278;border-radius: 999rpx;font-size:24rpx;font-weight:700;}
+.day-tab.active{background:#1b5479;color:#fff;border-bottom:3rpx solid #e8bf71;}
+.home-schedule-meta{margin-top:15rpx;color:#667986;}
+.home-state{display:block;margin-top:18rpx;color:#536c79;font-size:23rpx;line-height:1.6;}
+.home-state-link{display:block;margin-top:8rpx;}
+.home-schedule-course{border-top-color:#e8e9e6;}
+.home-schedule-course.next-course{margin-left:-10rpx;padding-left:10rpx;border-left:5rpx solid #d7a957;background:#fbf8f0;}
+.home-course-when{flex-basis:152rpx;border-right-color:#e7e9e6;}
+.next-label{display:block;margin-top:5rpx;color:#94682c;font-size:18rpx;font-weight:800;}
+.home-plan-stage{display:block;margin-top:17rpx;color:#526b7b;font-size:23rpx;}
+.home-plan-row{display:flex;justify-content:space-between;gap:12rpx;padding:15rpx 0;border-bottom:1rpx solid #edf0ee;font-size:23rpx;}
+.home-plan-name{color:#1b3f58;font-weight:700;flex:1;min-width:0;}
+.home-plan-status{color:#8a6434;flex:none;}
+.action-row,.service-link,.action-row:nth-child(even),.service-link:nth-child(even){background:#fffdf9;border:1rpx solid #e3ddd0;border-top:4rpx solid #d9b368;border-radius: 8rpx;box-shadow:0 4rpx 12rpx rgba(25,57,75,.06);}
+.action-row:active,.action-pressed,.service-link:active,.service-pressed{background:#edf4f5;}
+.action-symbol,.service-symbol{background:#e4edf0;}
+.action-title,.service-title{color:#1a4666;}
+.action-more{color:#af8548;}
+.service-section{border-top-color:#e7ded0;}
+.action-consult{width:100%;min-height:118rpx;flex-direction:row;justify-content:flex-start;gap:16rpx;text-align:left;padding:18rpx 25rpx;}
+.action-consult .action-symbol{width:60rpx;height:60rpx;}
+.action-consult .action-title{margin-top:0;text-align:left;}
+.service-links{display:flex;flex-direction:column;gap:9rpx;}
+.service-link,.service-website{width:100%;min-height:86rpx;flex-direction:row;justify-content:flex-start;gap:13rpx;padding:13rpx 17rpx;}
+.service-symbol,.service-website .service-symbol{width:42rpx;height:42rpx;}
+.service-icon,.service-website .service-icon{width:30rpx;height:30rpx;}
+.service-title{margin-top:0;font-size:23rpx;}
+
+/* Compact self-service countdown; on-device, identity-scoped, no API writes. */
+.action-countdown{min-height:220rpx;}
+.action-countdown-days{display:block;margin-top:5rpx;color:#896526;font-size:21rpx;font-weight:750;}
+.countdown-panel{margin-top:18rpx;}
+.countdown-local-note{display:block;margin-top:8rpx;font-size:19rpx;color:#6b7c87;}
+.countdown-item{display:flex;align-items:center;gap:12rpx;padding:16rpx 0;border-bottom:1rpx solid #ebe7df;}
+.countdown-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5rpx;}
+.countdown-name{font-size:25rpx;font-weight:750;color:#193f5c;word-break:break-word;}
+.countdown-date{font-size:19rpx;color:#6b7c87;}
+.countdown-remaining{flex:none;font-size:22rpx;font-weight:750;color:#896526;}
+.countdown-remove{flex:none;padding:12rpx 2rpx;color:#a44740;font-size:20rpx;}
+.countdown-editor{display:flex;flex-direction:column;gap:14rpx;margin-top:15rpx;}
+.countdown-input,.countdown-date-picker{box-sizing:border-box;width:100%;min-height:74rpx;padding:17rpx 18rpx;border:1rpx solid #e2dccc;border-radius:6rpx;background:#fff;color:#193f5c;font-size:23rpx;}
+.countdown-save{width:100%;margin:0;background:#173e67;color:#fff;font-size:24rpx;font-weight:750;}
+
+
+/* UI refinement B1: gentle section color fields, not a new global design system. */
+.home-page {
+  background: #f6f4f0;
+  color: #1b3d54;
+}
+
+.home-schedule.home-card {
+  background: #e7f1f7;
+  border-color: #d7e5ec;
+  box-shadow: none;
+}
+
+.home-plan.home-card {
+  background: #f7ecde;
+  border-color: #eadbc7;
+  box-shadow: none;
+}
+
+.home-shortcuts.home-card {
+  margin-top: 20rpx;
+  padding: 22rpx;
+  background: #e8f2ec;
+  border-color: #d9e6dd;
+  border-radius: 16rpx;
+  box-shadow: none;
+}
+
+.home-shortcuts .home-section-bar {
+  margin: 0 0 15rpx;
+}
+
+.home-shortcuts .action-row,
+.home-shortcuts .action-row:nth-child(even) {
+  background: #fffefc;
+  border: 1rpx solid #d9e5dd;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(25, 57, 75, 0.035);
+}
+
+.home-shortcuts .action-row:active,
+.home-shortcuts .action-pressed {
+  background: #f0f6f2;
+}
+
+.home-shortcuts .action-symbol {
+  background: #e6eef2;
+}
+
+.home-shortcuts .action-title {
+  color: #1b3d54;
+}
+
+.home-shortcuts .action-more {
+  color: #6a8a8d;
+}
+
+.home-shortcuts .action-consult {
+  min-height: 96rpx;
+  border-top: 1rpx solid #d9e5dd;
+}
+
+/* B2: compact campus art and source-colored icons on the existing Today workbench. */
+.home-intro {
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  min-height: 170rpx;
+  padding: 22rpx 26rpx;
+  border-radius: 16rpx;
+  background: #174e78;
+  box-shadow: none;
+}
+
+.home-intro-compact {
+  min-height: 150rpx;
+  padding: 18rpx 24rpx;
+}
+
+.home-hero-art {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.home-intro-content {
+  position: relative;
+  z-index: 1;
+  max-width: 62%;
+}
+
+.home-intro .eyebrow { color: #f3dfa9; }
+.home-intro .home-title { margin-top: 3rpx; }
+.home-intro .home-caption { color: #eef7fa; }
+.home-intro .home-minor-link { color: #ffe3ae; }
+
+.home-shortcuts .action-symbol,
+.home-shortcuts .action-consult .action-symbol {
+  width: 74rpx;
+  height: 74rpx;
+  background: transparent;
+}
+
+.home-shortcuts .action-icon {
+  width: 72rpx;
+  height: 72rpx;
+}
+
+.home-shortcuts .action-consult .action-symbol {
+  width: 62rpx;
+  height: 62rpx;
+}
+
+.home-shortcuts .action-consult .action-icon {
+  width: 60rpx;
+  height: 60rpx;
+}
+
+/* Four-tab workbench: compact actions and a legible schedule timeline. */
+.home-page{padding:22rpx 24rpx calc(40rpx + env(safe-area-inset-bottom));}
+.home-intro{border-radius:16rpx;}
+.home-heading-with-icon{display:flex;align-items:center;gap:10rpx;min-width:0;}
+.home-heading-icon{width:44rpx;height:44rpx;flex:none;}
+.home-schedule.home-card,.home-plan.home-card{padding:21rpx 23rpx;border-radius:16rpx;}
+.home-schedule-course,.home-schedule-course.next-course{position:relative;margin:12rpx 0 0 8rpx;padding:13rpx 10rpx 13rpx 20rpx;border-top:0;border-left:2rpx solid #b7ccdb;border-radius:0 10rpx 10rpx 0;}
+.home-schedule-course::before{content:'';position:absolute;top:26rpx;left:-7rpx;width:12rpx;height:12rpx;border-radius:50%;background:#7f9fb3;}
+.home-schedule-course.next-course{background:#dcecf8;border-left-color:#2a6b92;}
+.home-schedule-course.next-course::before{background:#2a6b92;}
+.home-course-when{flex:0 0 150rpx;padding-right:10rpx;border-right:0;}
+.home-course-time{margin:0;color:#31566c;font-size:22rpx;}
+.home-state{padding:15rpx 17rpx;border-radius:10rpx;background:rgba(255,255,255,.54);}
+.home-shortcuts .action-row,.home-shortcuts .action-row:nth-child(even){min-height:132rpx;flex-direction:row;justify-content:flex-start;gap:13rpx;padding:14rpx 16rpx;text-align:left;}
+.home-shortcuts .action-title{margin-top:0;font-size:25rpx;}
+.home-shortcuts .action-symbol{width:62rpx;height:62rpx;}
+.home-shortcuts .action-icon{width:60rpx;height:60rpx;}
+.home-shortcuts .action-more{top:50%;transform:translateY(-50%);}
+.home-shortcuts .action-countdown-days{margin:0 15rpx 0 auto;font-size:19rpx;}
+.home-shortcuts .action-consult{min-height:86rpx;}
+.countdown-panel{border-radius:16rpx;}
+
+/* Reference layout: a three-by-two shortcut grid beneath the real daily cards. */
+.home-intro{min-height:190rpx;padding:25rpx;border-radius:16rpx;}
+.home-intro-compact{min-height:180rpx;}
+.home-intro-content{max-width:64%;}
+.home-intro .home-title{font-size:34rpx;line-height:1.35;word-break:break-word;}
+.home-intro .eyebrow{margin-top:12rpx;font-size:21rpx;letter-spacing:0;}
+.home-shortcuts.home-card{padding:14rpx;background:#fffefc;}
+.home-shortcuts .action-list{justify-content:flex-start;gap:0;}
+.home-shortcuts .action-row,.home-shortcuts .action-row:nth-child(even),.home-shortcuts .action-consult{box-sizing:border-box;flex:0 0 33.333%;width:33.333%;min-width:0;min-height:142rpx;flex-direction:column;justify-content:center;gap:5rpx;padding:12rpx 5rpx;border:1rpx solid #f0f1ed;border-radius:0;box-shadow:none;text-align:center;}
+.home-shortcuts .action-symbol,.home-shortcuts .action-consult .action-symbol{width:62rpx;height:62rpx;}
+.home-shortcuts .action-icon,.home-shortcuts .action-consult .action-icon{width:60rpx;height:60rpx;}
+.home-shortcuts .action-title,.home-shortcuts .action-consult .action-title{margin:0;text-align:center;font-size:22rpx;line-height:1.35;}
+.home-shortcuts .action-more{display:none;}
+.home-shortcuts .action-countdown-days{margin:0;font-size:18rpx;line-height:1.3;}
+.stage-notice{margin-top:12rpx;padding:12rpx 14rpx;border-radius:9rpx;background:#fff7e6;color:#805928;font-size:21rpx;line-height:1.5;}
+
+
+/* A real countdown list stays visible on the Today workbench; management is optional. */
+.stage-notice{display:flex;flex-direction:column;gap:6rpx;padding:12rpx 14rpx;background:#fff8e8;border:1rpx solid #eadbc7;border-radius:8rpx;color:#805928;font-size:21rpx;line-height:1.5;}
+.stage-notice-action{display:block;color:#236383;font-size:22rpx;font-weight:800;}
+.countdown-summary{background:#fffdf9;border-color:#e5dfd3;}
+.countdown-preview-list{margin-top:7rpx;}
+.countdown-preview-item{display:flex;align-items:center;gap:12rpx;padding:13rpx 0;border-bottom:1rpx solid #ebe7df;}
+.countdown-preview-item:last-child{border-bottom:0;}
+.countdown-preview-item .countdown-main{flex:1;min-width:0;}
+.countdown-preview-item .countdown-name{font-size:24rpx;}
+.countdown-preview-item .countdown-date{font-size:19rpx;}
+.countdown-empty{display:block;margin-top:9rpx;padding:12rpx 14rpx;border-radius:7rpx;background:#f5f2eb;color:#627986;font-size:22rpx;line-height:1.55;}
+.countdown-row-actions{display:flex;flex:none;gap:12rpx;align-items:center;}
+.countdown-edit,.countdown-remove{display:inline-block;padding:9rpx 2rpx;font-size:20rpx;}
+.countdown-edit{color:#236383;}
+.countdown-remove{color:#a44740;}
+.countdown-expired{color:#8a7770;font-weight:600;}
+.countdown-editor-actions{display:flex;flex-direction:column;gap:8rpx;}
+.countdown-cancel-edit{display:block;text-align:center;padding:10rpx;color:#6c7c86;font-size:21rpx;}
+.action-countdown-days{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+.upcoming-tasks { background: #fffdf7; }
+.upcoming-hint, .upcoming-task-meta { font-size: 23rpx; color: #687b87; }
+.upcoming-task { display: flex; align-items: center; gap: 16rpx; padding: 20rpx 0; border-top: 1rpx solid #ebe8dd; }
+.upcoming-task-main { flex: 1; min-width: 0; }
+.upcoming-task-name { display: block; color: #173f58; font-size: 28rpx; font-weight: 600; overflow-wrap: break-word; }
+.upcoming-task-meta { display: block; margin-top: 6rpx; }
+.upcoming-task-date { flex-shrink: 0; color: #8b6b2d; font-size: 24rpx; text-align: right; }

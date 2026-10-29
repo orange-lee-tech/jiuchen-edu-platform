@@ -15,7 +15,7 @@
 .news-head { flex-wrap: wrap; }
 .news-head > view { flex: 1; min-width: 240rpx; }
 .page-shell .page-desc { color: #5f6b78; font-size: 26rpx; line-height: 1.75; }
-.surface { border-radius: 6rpx; background: #fafbfc; box-shadow: none; border-color: #d8dee6; }
+.surface { border-radius: 8rpx; background: #fafbfc; box-shadow: none; border-color: #d8dee6; }
 .page-shell .category { font-size: 25rpx; padding: 16rpx 20rpx; border-radius: 6rpx; }
 .page-shell .category.active { background: #2f6fed; color: #fff; }
 .page-shell .featured-summary, .page-shell .article-summary { color: #5f6b78; font-size: 25rpx; line-height: 1.75; }
@@ -27,7 +27,6 @@
 .reference-news-button::after, .news-error button::after, .news-empty button::after { border: 0; }
 .news-error, .news-empty, .news-loading { padding: 28rpx; color: #46586e; background: #edf2f7; font-size: 27rpx; line-height: 1.75; }
 .news-error button { background: #2f6fed; color: #fff; }
-.empty-description { display: block; margin-top: 12rpx; color: #5f6b78; font-size: 25rpx; }
 .page-shell .pending-news-note { flex-wrap: wrap; }
 .page-shell .pending-news-text { min-width: 0; }
 .page-shell .pending-news-title, .page-shell .pending-news-desc { font-size: 25rpx; line-height: 1.7; }
@@ -250,23 +249,22 @@
 .pending-news-title, .pending-news-desc { display: block; }
 .pending-news-title { color: #2b3c50; font-size: 24rpx; font-weight: 700; }
 .pending-news-desc { margin-top: 6rpx; color: #667788; font-size: 20rpx; line-height: 1.5; }
-.pending-news-action { flex-shrink: 0; margin: 0; padding: 0 14rpx; background: #375f92; border-radius: 7rpx; color: #fff; font-size: 21rpx; line-height: 58rpx; }
+.pending-news-action { flex-shrink: 0; margin: 0; padding: 0 14rpx; background: #375f92; border-radius: 8rpx; color: #fff; font-size: 21rpx; line-height: 58rpx; }
 .pending-news-action::after { border: 0; }
 
 /* School directory is a separately-loaded native subpackage, never a fake feed card. */
-.school-entry{display:flex;box-sizing:border-box;align-items:center;gap:17rpx;width:100%;margin:8rpx 0 22rpx;padding:18rpx 20rpx;background:#0d8079;color:#fff;border-radius:12rpx;border-left:7rpx solid #f2b03c;}
+.school-entry{display:flex;box-sizing:border-box;align-items:center;gap:17rpx;width:100%;margin:8rpx 0 22rpx;padding:18rpx 20rpx;background:#0d8079;color:#fff;border-radius: 8rpx;border-left:7rpx solid #f2b03c;}
 .school-entry-hover{opacity:.78;}
-.school-entry-icon{display:flex;align-items:center;justify-content:center;flex:none;width:65rpx;height:65rpx;background:rgba(255,255,255,.19);border-radius:9rpx;font-weight:800;font-size:29rpx;}
+.school-entry-icon{display:flex;align-items:center;justify-content:center;flex:none;width:65rpx;height:65rpx;background:rgba(255,255,255,.19);border-radius: 8rpx;font-weight:800;font-size:29rpx;}
 .school-entry-copy{flex:1 1 0;min-width:0;display:flex;flex-direction:column;}
 .school-entry-title{font-size:29rpx;font-weight:800;color:#fff;line-height:1.4;}
-.school-entry-desc{font-size:21rpx;line-height:1.5;color:#e5faf5;margin-top:5rpx;}
 .school-entry-arrow{font-size:38rpx;line-height:1;color:#ffe5a1;}
 
 /* Optional reference reading uses full-row aligned affordance, not a centered native button. */
-.reference-news-link{box-sizing:border-box;width:100%;min-height:76rpx;margin:15rpx 0;display:flex;align-items:center;justify-content:space-between;gap:12rpx;padding:15rpx 22rpx;background:#e7eef8;border:1rpx solid #d2dfe9;border-radius:6rpx;color:#215a9f;font-size:23rpx;font-weight:800;}
+.reference-news-link{box-sizing:border-box;width:100%;min-height:76rpx;margin:15rpx 0;display:flex;align-items:center;justify-content:space-between;gap:12rpx;padding:15rpx 22rpx;background:#e7eef8;border:1rpx solid #d2dfe9;border-radius: 6rpx;color:#215a9f;font-size:23rpx;font-weight:800;}
 .reference-news-pressed{background:#d8e6f8;}
 .reference-news-arrow{flex:none;color:#2459be;font-size:34rpx;line-height:1;}
-.news-extra{margin:18rpx 0;padding:20rpx;background:#fff;border:1rpx solid #d8dee6;border-radius:8rpx;}
+.news-extra{margin:18rpx 0;padding:20rpx;background:#fff;border:1rpx solid #d8dee6;border-radius: 8rpx;}
 .news-extra-row{display:flex;flex-direction:column;gap:6rpx;padding:18rpx 0;border-bottom:1rpx solid #e6eaf0;}
 .news-extra-row:last-child{border-bottom:0;}
 .news-extra-title{font-size:26rpx;font-weight:700;color:#273548;line-height:1.5;}
@@ -282,3 +280,68 @@
 .news-card-footer{margin-top:auto;}
 .news-card-footer .article-tags{max-height:46rpx;overflow:hidden;flex-wrap:nowrap;}
 .featured-meta,.article-meta{display:block;overflow:hidden;margin-top:5rpx;color:#7b8793;font-size:19rpx;line-height:1.35;white-space:nowrap;text-overflow:ellipsis;}
+
+/* Opportunity reading list: source and date stay visible beside a compact cover. */
+.page-shell{background:#f4f2ed;color:#193b55;padding:24rpx 22rpx calc(38rpx + env(safe-area-inset-bottom));}
+.news-head{background:#e8eff0;border-left-color:#d7ad67;border-radius: 8rpx;margin-bottom:17rpx;}
+.page-shell .page-desc{font-size:23rpx;line-height:1.6;color:#59717e;}
+.school-entry{background:#1b5678;border-left-color:#d7ad67;border-radius: 8rpx;}
+.page-shell .category.active{background:#1b5678;}
+.page-shell .surface{background:#fffdf9;border:1rpx solid #e6dfd3;border-radius: 8rpx;box-shadow:0 4rpx 14rpx rgba(25,60,78,.055);}
+.featured,.article-card{display:flex;flex-direction:row-reverse;align-items:stretch;min-height:155rpx;}
+.featured-media,.article-media{position:relative;flex:0 0 132rpx;width:132rpx;height:auto;min-height:155rpx;padding-top:0;background:#e7edef;}
+.featured-cover,.article-cover,.featured-media .cover-fallback,.article-media .cover-fallback{position:absolute;inset:0;width:100%;height:100%;min-height:0;}
+.featured-body,.article-main{box-sizing:border-box;flex:1;min-width:0;height:auto;min-height:155rpx;padding:17rpx 19rpx;}
+.featured-title,.article-title{min-height:0;margin-top:0;color:#173f5d;font-size:27rpx;line-height:1.45;}
+.featured-summary,.article-summary{min-height:0;max-height:none;margin:8rpx 0;color:#627986;font-size:21rpx;line-height:1.45;-webkit-line-clamp:2;}
+.news-card-footer .article-tags{max-height:none;flex-wrap:wrap;}
+.featured-meta,.article-meta{white-space:normal;color:#627986;line-height:1.4;}
+.article-tag{background:#edf2f0;color:#4a6a75;}
+.news-extra,.news-error,.news-empty,.news-loading{background:#fffdf9;border-color:#e6dfd3;border-radius: 8rpx;}
+.news-error button{background:#205b7d;}
+
+/* A compact reading stream, with generic campus art confined to the directory entry. */
+.page-shell{background:#f6f4f0;padding-left:24rpx;padding-right:24rpx;}
+.news-head{padding:18rpx 20rpx;background:#edf4f7;border:0;border-radius:14rpx;}
+.school-entry{position:relative;overflow:hidden;min-height:175rpx;padding:22rpx;border:0;border-radius:16rpx;background:#174e78;}
+.school-entry-art{position:absolute;top:0;left:0;width:100%;height:100%;}
+.school-entry-icon,.school-entry-copy,.school-entry-arrow{position:relative;z-index:1;}
+.school-entry-icon{width:62rpx;height:62rpx;background:transparent;}
+.school-entry-icon image{width:60rpx;height:60rpx;}
+.school-entry-copy{max-width:58%;}
+.school-entry-title{font-size:29rpx;line-height:1.4;}
+.category-scroll{margin-bottom:12rpx;}
+.category{font-size:23rpx;}
+.featured,.article-card{margin-bottom:9rpx;border-radius:12rpx;box-shadow:none;}
+.featured-media,.article-media{flex-basis:148rpx;width:148rpx;min-height:145rpx;}
+.featured-body,.article-main{min-height:145rpx;padding:14rpx 16rpx;}
+.featured-title,.article-title{font-size:25rpx;line-height:1.4;}
+.featured-summary,.article-summary{-webkit-line-clamp:2;font-size:20rpx;}
+.news-extra{padding:17rpx 20rpx;border-radius:12rpx;}
+
+.news-head{padding:10rpx 2rpx;background:transparent;}
+.news-head .page-title{font-size:32rpx;}
+.news-head .page-desc{font-size:20rpx;line-height:1.4;}
+.news-search{display:flex;align-items:center;gap:10rpx;margin:8rpx 0 16rpx;}
+.news-search-input{box-sizing:border-box;flex:1;min-width:0;height:72rpx;padding:0 20rpx;border:1rpx solid #e1e9ed;border-radius:10rpx;background:#fff;color:#193f5c;font-size:24rpx;}
+.news-filter-button{flex:none;height:72rpx;margin:0;padding:0 20rpx;border-radius:10rpx;background:#e9f2f6;color:#174e78;font-size:22rpx;line-height:72rpx;}
+.news-filter-button::after{border:0;}
+.school-entry{min-height:145rpx;margin:0 0 14rpx;}
+.featured,.article-card{min-height:135rpx;}
+.featured-media,.article-media{flex-basis:138rpx;width:138rpx;min-height:135rpx;}
+.featured-body,.article-main{min-height:135rpx;padding:13rpx 15rpx;}
+.page-shell .featured-summary,.page-shell .article-summary{font-size:20rpx;line-height:1.4;}
+.news-card-footer{display:flex;flex-wrap:wrap;align-items:center;gap:3rpx 10rpx;}
+.news-card-footer .article-tags{flex-basis:100%;}
+.featured-meta,.article-meta{font-size:19rpx;line-height:1.35;}
+.news-sections{width:100%;margin:2rpx 0 8rpx;white-space:nowrap;}
+.news-sections-row{display:flex;width:max-content;gap:12rpx;}
+.news-section-tab{padding:10rpx 12rpx;color:#536b7b;font-size:22rpx;}
+.news-section-tab.active{color:#174e78;font-weight:800;border-bottom:3rpx solid #174e78;}
+
+
+/* Keep all editorial destinations visible like the reference, even when a category is empty. */
+.news-sections{overflow:hidden;}
+.news-sections-row{display:flex;justify-content:space-between;align-items:center;gap:8rpx;width:100%;}
+.news-section-tab{flex:0 0 auto;padding:10rpx 3rpx;font-size:20rpx;line-height:1.4;white-space:nowrap;}
+.news-section-tab.active{border-bottom-width:4rpx;}

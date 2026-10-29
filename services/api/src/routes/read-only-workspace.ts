@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from 'drizzle-orm'
+import { and, asc, desc, eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
 import {
@@ -54,8 +54,8 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
       if(!student)return reply.code(404).send({ok:false,error:'student_not_found'})
       const stageCode=request.query.stage || student.currentStage || 'freshman-fall'
       if(!getStageDefinition(stageCode))return reply.code(400).send({ok:false,error:'invalid_stage'})
-      // Keep stage plans loaded by the canonical classroom logic (incl. pending revisions).
-      const classroom=await loadClassroom(database,student,stageCode,true)
+      // The canonical classroom view reads only directly saved plans; old revisions are history.
+      const classroom=await loadClassroom(database,student,stageCode)
       if(request.query.only==='classroom'){
         return {ok:true,readOnly:true,classroom}
       }
@@ -128,18 +128,7 @@ export function registerReadOnlyWorkspaceRoutes(app:FastifyInstance,database:Dat
         .innerJoin(students,eq(studentTeacherAssignments.studentId,students.id))
         .where(eq(studentTeacherAssignments.teacherId,teacher.id))
         .orderBy(asc(students.name))
-      const pending=assigned.length
-        ? await database.db.select({
-            id:planRevisions.id,studentId:planRevisions.studentId,
-            stageCode:planRevisions.stageCode,type:planRevisions.type,
-            title:planRevisions.title,itemsJson:planRevisions.itemsJson,
-            createdAt:planRevisions.createdAt,
-          }).from(planRevisions).where(and(
-            inArray(planRevisions.studentId,assigned.map(item=>item.studentId)),
-            eq(planRevisions.status,'pending'),
-          )).orderBy(desc(planRevisions.createdAt))
-        : []
-      return {ok:true,readOnly:true,targetType:'teacher' as const,teacher,assigned,pending}
+      return {ok:true,readOnly:true,targetType:'teacher' as const,teacher,assigned,pending:[]}
     },
   )
 }

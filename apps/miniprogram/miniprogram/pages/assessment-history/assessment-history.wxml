@@ -1,12 +1,15 @@
 <auth-gate />
 <view class="history-page">
   <view class="hero">
-    <text class="eyebrow">ASSESSMENT HISTORY</text>
     <text class="title">我的保研评估</text>
-    <text class="desc">提交后可直接离开，后台分析进度与完成结果会在这里持续更新。</text>
   </view>
 
   <view wx:if="{{loading}}" class="state-card">正在加载…</view>
+  <view wx:elif="{{loadError}}" class="state-card error-card">
+    <text class="empty-title">历史评估暂时无法读取</text>
+    <text class="empty-desc">{{loadError}}</text>
+    <button class="primary" bindtap="onRetryLoad">重新读取</button>
+  </view>
   <view wx:elif="{{assessments.length === 0}}" class="state-card">
     <text class="empty-title">还没有评估记录</text>
     <text class="empty-desc">{{canCreateAssessment ? '完善背景和目标后，生成第一份结构化定位报告。' : '本账号暂无历史结果，当前内部身份不发起新评估。'}}</text>

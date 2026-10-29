@@ -6,20 +6,9 @@
       <view class="hero-top"><text>九辰 · 目标院校</text><text class="hero-mark">{{tierLabel}}</text></view>
       <view class="hero-main"><view class="hero-identity"><text class="hero-name">{{school.name}}</text><text class="hero-city">{{cityLabel}}</text></view></view>
       <view wx:if="{{school.heroPhoto && photoVisible}}" class="hero-photo-indicator">校园实拍 · {{school.heroPhoto.caption}}</view>
-      <view wx:else class="hero-photo-indicator hero-illustrated">九辰院校档案 · {{school.name}}</view>
+      <view wx:else class="hero-photo-indicator hero-illustrated" bindtap="onRetryPhoto">九辰院校档案 · {{school.name}}</view>
       <view class="hero-tags"><text wx:if="{{school.isDoubleFirst}}">双一流 · 2022名单</text><text wx:if="{{school.affiliationLabel}}">{{school.affiliationLabel}}</text><text wx:if="{{school.isC9}}">C9 联盟</text><text wx:for="{{school.groupTags}}" wx:for-item="tag" wx:key="key">{{tag.label}}</text><text wx:if="{{!school.is211}}">非985/211</text></view>
     </view>
-  </view>
-  <view wx:if="{{school.heroPhoto && photoVisible}}" class="photo-credit">
-    <text>{{school.heroPhoto.caption}} · {{school.heroPhoto.author}} · {{school.heroPhoto.license}}</text>
-    <text class="photo-actions" bindtap="onPreviewPhoto">预览大图 ›</text>
-    <text class="photo-actions" data-key="photo" bindtap="copyUrl">图片出处 ›</text>
-    <text class="photo-actions" data-key="photoLicense" bindtap="copyUrl">许可 ›</text>
-  </view>
-  <view wx:elif="{{school.heroPhoto && !photoVisible}}" class="photo-credit">
-    <text>校园照片暂时未能加载；已保留可核验的原图来源。</text>
-    <text class="photo-actions" bindtap="onRetryPhoto">重新加载 ›</text>
-    <text class="photo-actions" data-key="photo" bindtap="copyUrl">查看出处 ›</text>
   </view>
 
   <view class="detail-overview">

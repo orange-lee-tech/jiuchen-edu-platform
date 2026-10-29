@@ -47,6 +47,8 @@ Page({
   data: {
     query: '',
     loading: true,
+    loadError: '',
+    partialNotice: '',
     allItems: [] as LibraryItem[],
     items: [] as LibraryItem[],
   },
@@ -57,21 +59,37 @@ Page({
 
   async loadData() {
     try {
-      const [products, news] = await Promise.all([
+      this.setData({ loading: true, loadError: '', partialNotice: '' })
+      const [productsResult, newsResult] = await Promise.allSettled([
         getProducts(),
-        getNewsPosts().catch(() => []),
+        getNewsPosts(),
       ])
+      if (productsResult.status === 'rejected' && newsResult.status === 'rejected') {
+        this.setData({ loadError: '资料暂时无法读取，请检查网络后重试。', allItems: [], items: [] })
+        return
+      }
+      const products = productsResult.status === 'fulfilled' ? productsResult.value : []
+      const news = newsResult.status === 'fulfilled' ? newsResult.value : []
       const allItems = [
         ...news.map(newsItem),
         ...products.map(productItem),
       ]
-      this.setData({ allItems, items: allItems })
+      const query = this.data.query.trim().toLowerCase()
+      const items = query ? allItems.filter((item) =>
+        [item.eyebrow, item.title, item.desc].join(' ').toLowerCase().includes(query),
+      ) : allItems
+      this.setData({ allItems, items,
+        partialNotice: productsResult.status === 'rejected' || newsResult.status === 'rejected'
+          ? '部分资料暂时无法读取，可刷新重试。' : '' })
     } catch (error) {
-      console.info('Library data unavailable.', error)
-      wx.showToast({ title: '资料库暂时无法加载', icon: 'none' })
+      this.setData({ loadError: '资料暂时无法读取，请检查网络后重试。', allItems: [], items: [] })
     } finally {
       this.setData({ loading: false })
     }
+  },
+
+  onSchools() {
+    wx.navigateTo({ url: '/packages/schools/directory/directory' })
   },
 
   onSearchInput(event: WechatMiniprogram.Input) {

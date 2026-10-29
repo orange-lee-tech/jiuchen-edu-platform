@@ -45,7 +45,6 @@
 
     <view wx:if="{{view.timeline.length}}" class="section-card">
       <text class="section-title">本科阶段成长路径</text>
-      <text class="section-note">按品牌手册视觉阅读顺序还原，不擅自重排源图。</text>
       <view wx:for="{{view.timeline}}" wx:key="index" class="timeline-row">
         <view class="dot"></view>
         <view class="timeline-main">

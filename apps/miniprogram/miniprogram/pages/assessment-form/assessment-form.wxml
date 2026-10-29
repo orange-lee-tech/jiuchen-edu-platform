@@ -1,9 +1,7 @@
 <auth-gate />
 <view class="assessment-page">
   <view class="hero">
-    <text class="eyebrow">AI 保研评估</text>
-    <text class="title">把背景与目标整理成可验证的评估输入</text>
-    <text class="desc">结构化资料将与有限条真实案例证据一起用于评估；模型未配置时不会生成模拟结果。</text>
+    <text class="title">了解自己的优势与下一步方向</text>
   </view>
 
   <view wx:if="{{loading}}" class="card">正在加载资料…</view>
@@ -40,7 +38,7 @@
     <view class="card import-card">
       <view class="import-copy">
         <text class="section-title">导入已有材料</text>
-        <text class="import-desc">支持 Word、PDF 与常见图片。系统提取英语、科研、竞赛及目标等可补充信息；本科院校、专业、年级、绩点和排名以“我的个人资料”为准。</text>
+        <text class="import-desc">支持 Word、PDF 与图片；学业资料以“我的个人资料”为准。</text>
       </view>
       <button
         class="import-button"
@@ -55,7 +53,6 @@
         <text class="section-title">基础背景 · 只读</text>
         <text class="link" bindtap="onOpenProfileEdit">去编辑个人资料 ›</text>
       </view>
-      <text class="profile-lock-note">以下学业资料与“我的个人资料”同步，评估页不能直接修改。</text>
       <view class="profile-row"><text>本科院校</text><text class="locked-profile-value">{{profile.university || '未填写'}}</text></view>
       <view class="profile-row"><text>专业</text><text class="locked-profile-value">{{profile.major || '未填写'}}</text></view>
       <view class="profile-row"><text>当前年级</text><text class="locked-profile-value">{{profile.currentGrade || '未填写'}}</text></view>
@@ -147,23 +144,18 @@
     <view class="card context-card">
       <view class="section-head"><text class="section-title">评估时参考的个人记录</text></view>
       <view class="context-choice">
-        <view class="context-copy"><text class="context-title">导入我的规划</text><text class="context-hint">默认开启。提炼本人已保存的阶段计划、任务进展和课表；没有内容则自动跳过，待审核内容会单独标记。</text></view>
-        <switch checked="{{includePlanning}}" color="#0d9488" bindchange="onIncludePlanning" />
+        <view class="context-copy"><text class="context-title">导入我的规划</text><text class="context-hint">默认开启。提炼本人已保存的阶段计划、任务进展和课表；没有内容则自动跳过。</text></view>
+        <switch checked="{{includePlanning}}" color="#173e67" bindchange="onIncludePlanning" />
       </view>
       <view class="context-choice">
         <view class="context-copy"><text class="context-title">考虑历史评估记录</text><text class="context-hint">默认开启。仅参考本人最近最多 3 次成功评估的精简摘要，去除重复；不会重新调用历史评估或收费。</text></view>
-        <switch checked="{{includeRecentAssessments}}" color="#0d9488" bindchange="onIncludeHistory" />
+        <switch checked="{{includeRecentAssessments}}" color="#173e67" bindchange="onIncludeHistory" />
       </view>
       <text class="context-disclaimer">两个选项保存到当前草稿，仅影响新评估。原始个人记录由服务端按登录账号查取，不接收他人数据。</text>
     </view>
 
     <view class="status-card">
-      <text class="status-title">{{providerConfigured ? 'AI 运行环境已配置' : '当前仅保存 Draft'}}</text>
-      <text class="status-desc">
-        {{providerConfigured
-          ? '提交后将在后台完成分析，可离开此页并在历史评估中查看进度。'
-          : '案例 Retriever 与真实模型接入前，不生成模拟匹配分或录取概率。'}}
-      </text>
+      <text class="status-title">{{providerConfigured ? '评估服务已配置' : '当前仅可保存草稿'}}</text>
     </view>
 
     <view class="actions">

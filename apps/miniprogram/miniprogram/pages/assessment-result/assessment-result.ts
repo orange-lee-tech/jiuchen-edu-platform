@@ -157,6 +157,7 @@ Page({
     ownerUserId: '',
     viewVersion:0,
     error: '',
+    recordId: '',
     displayName: '',
     assessmentDate: '',
     assessment: null as AssessmentRecord | null,
@@ -188,6 +189,14 @@ Page({
       this.setData({ loading: false, error: '缺少评估记录 ID' })
       return
     }
+    this.setData({ recordId: id })
+    void this.loadResult(id)
+  },
+
+  onRetryLoad() {
+    const id = this.data.recordId
+    if (!id) return
+    this.setData({ loading: true, error: '', output: null })
     void this.loadResult(id)
   },
 

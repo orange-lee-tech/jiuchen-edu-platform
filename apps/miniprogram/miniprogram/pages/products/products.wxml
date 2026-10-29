@@ -1,8 +1,7 @@
 <view class="products-page">
   <view class="hero">
-    <text class="eyebrow">九辰教育 · 服务方案</text>
     <text class="title">从长期规划到关键阶段冲刺</text>
-    <text class="desc">内容来自九辰产品手册的结构化版本。课程与服务仅展示与咨询，不在小程序内直接售卖。</text>
+    <text class="desc">课程与服务仅展示与咨询，不在小程序内直接售卖。</text>
   </view>
 
   <view wx:if="{{loading}}" class="state-card">正在加载服务方案…</view>

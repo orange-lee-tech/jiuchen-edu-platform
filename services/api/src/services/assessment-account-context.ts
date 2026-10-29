@@ -1,12 +1,11 @@
 /** Bounded, server-owned context. Never accept plan/history text from the client. */
 import { and, desc, eq, inArray, ne } from 'drizzle-orm'
 import type { DatabaseContext } from '../db/client.js'
-import { assessments, planItems, planRevisions, scheduleImports, studentPlans, students } from '../db/schema.js'
+import { assessments, planItems, scheduleImports, studentPlans, students } from '../db/schema.js'
 import { assessmentOutputSchema, type AssessmentEvidenceItem } from '../domain/assessment.js'
 
 type JsonObject = Record<string, unknown>
 type Plan = { id: string; stageCode: string; type: string; title: string }
-type Revision = { stageCode: string; type: string; title: string; itemsJson: unknown }
 type Item = { planId: string; name: string; target: string | null; status: string }
 type Schedule = { parsedJson: unknown }
 type Report = { completedAt: Date | null; outputJson: unknown }
@@ -24,16 +23,11 @@ const unique = (items: string[], max: number) => {
   }).slice(0,max)
 }
 
-export function summarizePlanning(data: { plans: Plan[]; pending: Revision[]; items: Item[]; schedules: Schedule[] }) {
+export function summarizePlanning(data: { plans: Plan[]; items: Item[]; schedules: Schedule[] }) {
   const chosen = new Map<string,{stage:string;type:string;title:string;state:string;items:unknown[]}>()
   for (const plan of data.plans) chosen.set(plan.stageCode + ':' + plan.type, {
-    stage:plan.stageCode,type:plan.type,title:plan.title,state:'老师认可版',
+    stage:plan.stageCode,type:plan.type,title:plan.title,state:'已保存规划',
     items:data.items.filter(item => item.planId === plan.id),
-  })
-  // Pending is newest-first. Apply oldest first so the latest visible revision wins.
-  for (const rev of [...data.pending].reverse()) chosen.set(rev.stageCode + ':' + rev.type,{
-    stage:rev.stageCode,type:rev.type,title:rev.title,state:'学员待审核版（尚未被老师批准）',
-    items:Array.isArray(rev.itemsJson) ? rev.itemsJson.slice(0,50) : [],
   })
   const statuses: Record<string,string> = {done:'完成',in_progress:'进行中',pending:'未开始'}
   const entries: string[] = []
@@ -101,13 +95,10 @@ export function createAssessmentAccountContextLoader(db: Extract<DatabaseContext
       const [student]=await db.db.select({id:students.id}).from(students)
         .where(eq(students.userId,args.userId)).limit(1)
       if (student) {
-        const [plans,pending,schedules]=await Promise.all([
+        const [plans,schedules]=await Promise.all([
           db.db.select({id:studentPlans.id,stageCode:studentPlans.stageCode,type:studentPlans.type,title:studentPlans.title})
             .from(studentPlans).where(eq(studentPlans.studentId,student.id))
             .orderBy(desc(studentPlans.updatedAt)).limit(40),
-          db.db.select({stageCode:planRevisions.stageCode,type:planRevisions.type,title:planRevisions.title,itemsJson:planRevisions.itemsJson})
-            .from(planRevisions).where(and(eq(planRevisions.studentId,student.id),eq(planRevisions.status,'pending')))
-            .orderBy(desc(planRevisions.createdAt)).limit(40),
           db.db.select({parsedJson:scheduleImports.parsedJson}).from(scheduleImports)
             .where(and(eq(scheduleImports.userId,args.userId),eq(scheduleImports.studentId,student.id),
               eq(scheduleImports.status,'parsed'))).orderBy(desc(scheduleImports.updatedAt)).limit(8),
@@ -116,8 +107,8 @@ export function createAssessmentAccountContextLoader(db: Extract<DatabaseContext
           planId:planItems.planId,name:planItems.name,target:planItems.target,status:planItems.status,
         }).from(planItems).where(inArray(planItems.planId,plans.map(p=>p.id)))
           .orderBy(planItems.sortOrder).limit(400):[]
-        const excerpt=summarizePlanning({plans,pending,items,schedules})
-        if(excerpt)result.push(asEvidence('account:planning','个人计划、课程进度和版本状态',excerpt))
+        const excerpt=summarizePlanning({plans,items,schedules})
+        if(excerpt)result.push(asEvidence('account:planning','个人计划与课程进度',excerpt))
       }
     }
     if (args.includeRecentAssessments) {

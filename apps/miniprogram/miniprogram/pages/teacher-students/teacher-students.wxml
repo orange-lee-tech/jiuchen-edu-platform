@@ -2,11 +2,18 @@
 <view class="page-shell">
   <view class="teacher-head">
     <text class="page-title">我的学员</text>
-    <text class="page-desc">只显示后台已授权的师生关系。学员更新需要老师审核后才进入正式档案。</text>
   </view>
 
+  <view wx:if="{{loading}}" class="empty surface">正在读取已分配学员…</view>
+  <view wx:elif="{{loadError}}" class="empty surface">
+    <text>{{loadError}}</text>
+    <button class="retry-button" bindtap="loadData">重新读取</button>
+  </view>
+
+  <block wx:else>
+
   <view class="surface pending-review" wx:if="{{aiCosts}}">
-    <text class="review-title">已授权学员 · AI 请求摘要</text>
+    <text class="review-title">已分配学员的 AI 请求</text>
     <text class="review-meta">首次生成 {{aiCosts.usage.initialCalls}} 次 · 自动修复 {{aiCosts.usage.repairCalls}} 次</text>
     <text class="review-meta">供应商返回用量 {{aiCosts.usage.usageReturned}} 次 · 待对账 {{aiCosts.usage.awaitingReconciliation}} 次</text>
     <text class="review-meta" wx:if="{{aiCosts.tokenForecast}}">按已有上下文长度，下次请求约 {{aiCosts.tokenForecast.lowerTokens}}–{{aiCosts.tokenForecast.upperTokensWithOneRepair}} token；上限含一次自动修复，仅供容量规划。</text>
@@ -17,26 +24,7 @@
   <view class="empty surface" wx:elif="{{aiCostsNotice}}">{{aiCostsNotice}}</view>
 
   <view class="section-head">
-    <text class="section-title">待审核更新</text>
-    <text class="section-note">{{pending.length}} 项</text>
-  </view>
-
-  <view wx:if="{{pending.length}}" class="pending-list">
-    <view wx:for="{{pending}}" wx:key="id" class="pending-review surface">
-      <text class="review-student">{{item.studentName}}</text>
-      <text class="review-title">{{item.title}}</text>
-      <text class="review-meta">{{item.stageCode}} · {{item.type}} · {{item.itemsJson.length}} 项任务</text>
-      <view wx:if="{{!readOnly}}" class="review-actions">
-        <button class="reject-button" data-id="{{item.id}}" bindtap="onReject">否决</button>
-        <button class="approve-button" data-id="{{item.id}}" bindtap="onApprove">通过进档</button>
-      </view>
-    </view>
-  </view>
-  <view wx:else class="empty surface">当前没有待审核更新。</view>
-
-  <view class="section-head">
     <text class="section-title">已分配学员</text>
-    <text class="section-note">点击姓名以只读身份查看完整学员档案</text>
   </view>
 
   <view class="student-list">
@@ -53,5 +41,6 @@
     </view>
   </view>
 
-  <view wx:if="{{!loading && students.length === 0}}" class="empty surface">暂无已分配学员。</view>
+  <view wx:if="{{students.length === 0}}" class="empty surface">目前还没有分配给你的学员。分配完成后会在这里显示。</view>
+  </block>
 </view>

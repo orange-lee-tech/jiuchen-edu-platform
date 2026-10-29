@@ -7,19 +7,19 @@ const report={
     rationale:'未有证据',gapItems:[],actions:[],evidenceRefs:['input:target:1']}],
   recommendedActions:[],similarCases:[],uncertainties:[],disclaimer:'仅供规划参考',
 }
-test('pending plan supersedes approved version and skips empty items',()=>{
+test('planning context uses saved plan and ignores historical pending drafts',()=>{
   const text=summarizePlanning({
-    plans:[{id:'a',stageCode:'junior-fall',type:'gpa',title:'已审核'}],
-    pending:[{stageCode:'junior-fall',type:'gpa',title:'新稿',itemsJson:[{name:'高数',status:'in_progress'},{}]}],
+    plans:[{id:'a',stageCode:'junior-fall',type:'gpa',title:'正式规划'}],
     items:[{planId:'a',name:'旧目标',target:null,status:'done'}],
     schedules:[{parsedJson:{stageCode:'junior-fall',courses:[{name:'传热学'},{name:'传热学'}]}}],
   })
-  assert.match(text,/新稿/);assert.match(text,/待审核/);assert.match(text,/高数/)
-  assert.match(text,/传热学/);assert.equal(text.includes('旧目标'),false)
+  assert.match(text,/正式规划/);assert.match(text,/已保存规划/);assert.match(text,/旧目标/)
+  assert.doesNotMatch(text,/待审核|老师认可/)
+  assert.match(text,/传热学/)
   assert.equal((text.match(/传热学/g)||[]).length,1)
 })
 test('no real plans or courses yields empty context',()=>{
-  assert.equal(summarizePlanning({plans:[],pending:[],items:[],schedules:[{parsedJson:{courses:[]}}]}),'')
+  assert.equal(summarizePlanning({plans:[],items:[],schedules:[{parsedJson:{courses:[]}}]}),'')
 })
 test('history is limited to 3 and deduplicates repeated advice',()=>{
   const rows=Array.from({length:5},(_,index)=>({completedAt:new Date(2026,9,index+1),outputJson:report}))

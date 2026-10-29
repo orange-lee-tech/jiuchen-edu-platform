@@ -60,7 +60,7 @@ export async function createInternalIdentity(
       await tx.insert(students).values({
         id: entityId,
         name: input.name?.trim() || '待命名学员',
-        currentStage: 'freshman-fall',
+        currentStage: null,
       })
     } else if (input.type === 'teacher') {
       entityId = randomUUID()

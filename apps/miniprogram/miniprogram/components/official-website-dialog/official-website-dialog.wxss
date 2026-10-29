@@ -1,10 +1,8 @@
 .website-mask { position:fixed; inset:0; z-index:1001; padding:30rpx; display:flex; align-items:center; justify-content:center; background:rgba(8,23,46,.65); box-sizing:border-box; }
 .website-dialog { background:#fff; border-top:8rpx solid #f2b544; width:100%; max-width:640rpx; padding:36rpx; box-sizing:border-box; border-radius:12rpx; color:#18202a; }
 .heading { font-size:36rpx; line-height:1.4; font-weight:800; color:#173b73; }
-.lead { margin-top:24rpx; font-size:27rpx; line-height:1.65; font-weight:600; }
 .description { margin-top:14rpx; font-size:25rpx; line-height:1.75; color:#46586e; }
 .url-link { display:block; margin-top:22rpx; padding:20rpx; background:#e7eef8; color:#2459be; font-size:29rpx; font-weight:700; text-align:center; border-radius:8rpx; }
-.tip { margin-top:20rpx; padding:16rpx; color:#73531c; background:#fff3cf; font-size:23rpx; line-height:1.65; }
 .actions { display:flex; gap:12rpx; margin-top:30rpx; }
 .actions button { margin:0; flex:1; font-size:24rpx; line-height:1.5; padding:20rpx 8rpx; border-radius:8rpx; }
 .cancel { background:#edf2f7; color:#46586e; }

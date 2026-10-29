@@ -1,15 +1,15 @@
 .profile-edit-page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 24rpx 24rpx 56rpx;
-  background: #f6f7fb;
+  padding: 24rpx 28rpx calc(56rpx + env(safe-area-inset-bottom));
+  background: #f4f2ed;
 }
 
 .intro-card,
 .form-card {
-  border: 1rpx solid #eceef3;
-  border-radius: 24rpx;
-  background: #ffffff;
+  border: 1rpx solid #e8e2d6;
+  border-radius: 8rpx;
+  background: #fffdf9;
   box-shadow: 0 8rpx 24rpx rgba(33, 40, 58, 0.04);
 }
 
@@ -18,23 +18,14 @@
 }
 
 .intro-title,
-.intro-desc,
-.field-label,
-.privacy-note {
+.field-label {
   display: block;
 }
 
 .intro-title {
-  color: #292c33;
+  color: #173e67;
   font-size: 30rpx;
   font-weight: 800;
-}
-
-.intro-desc {
-  margin-top: 10rpx;
-  color: #858b95;
-  font-size: 22rpx;
-  line-height: 1.65;
 }
 
 .form-card {
@@ -45,7 +36,7 @@
 .field {
   display: block;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #eef0f4;
+  border-bottom: 1rpx solid #e8e2d6;
 }
 
 .field:last-child {
@@ -67,9 +58,9 @@
 
 .save-button {
   margin-top: 26rpx;
-  border-radius: 18rpx;
-  background: #6b53d8;
-  color: #ffffff;
+  border-radius: 8rpx;
+  background: #173e67;
+  color: #fffdf9;
   font-size: 27rpx;
   font-weight: 700;
 }
@@ -78,21 +69,13 @@
   border: 0;
 }
 
-.privacy-note {
-  margin: 22rpx 12rpx 0;
-  color: #9a9fa8;
-  font-size: 19rpx;
-  line-height: 1.55;
-  text-align: center;
-}
-
 
 .identity-card {
   margin-top: 20rpx;
   padding: 26rpx;
-  border: 1rpx solid #eceef3;
-  border-radius: 24rpx;
-  background: #ffffff;
+  border: 1rpx solid #e8e2d6;
+  border-radius: 8rpx;
+  background: #fffdf9;
   box-shadow: 0 8rpx 24rpx rgba(33, 40, 58, 0.04);
 }
 
@@ -112,14 +95,14 @@
 }
 
 .identity-title {
-  color: #292c33;
+  color: #173e67;
   font-size: 26rpx;
   font-weight: 800;
 }
 
 .identity-desc {
   margin-top: 8rpx;
-  color: #90959e;
+  color: #66707d;
   font-size: 20rpx;
   line-height: 1.5;
 }
@@ -128,8 +111,8 @@
   flex-shrink: 0;
   padding: 7rpx 12rpx;
   border-radius: 999rpx;
-  background: #f0edff;
-  color: #6b53d8;
+  background: #eaf2fa;
+  color: #173e67;
   font-size: 18rpx;
 }
 
@@ -145,8 +128,8 @@
   box-sizing: border-box;
   padding: 0 18rpx;
   border: 1rpx solid #dfe2e8;
-  border-radius: 14rpx;
-  background: #fafbfc;
+  border-radius: 6rpx;
+  background: #f3f7fc;
   font-size: 24rpx;
 }
 
@@ -155,9 +138,9 @@
   width: 176rpx;
   min-height: 72rpx;
   margin: 0;
-  border-radius: 14rpx;
-  background: #6b53d8;
-  color: #ffffff;
+  border-radius: 8rpx;
+  background: #173e67;
+  color: #fffdf9;
   font-size: 22rpx;
 }
 
@@ -172,7 +155,7 @@
   margin-top: 22rpx;
   padding: 20rpx;
   border-radius: 16rpx;
-  background: #f7f8fb;
+  background: #f3f7fc;
 }
 
 .locked-code {
@@ -183,7 +166,7 @@
 }
 
 .locked-role {
-  color: #6b53d8;
+  color: #173e67;
   font-size: 21rpx;
   font-weight: 700;
 }
@@ -198,9 +181,13 @@
 .role-note {
   margin-top: 20rpx;
   padding: 24rpx;
-  border-radius: 20rpx;
-  background: #f0edff;
-  color: #6f668d;
+  border-radius: 8rpx;
+  background: #eaf2fa;
+  color: #245681;
   font-size: 21rpx;
   line-height: 1.6;
 }
+
+.load-error { margin-top: 18rpx; padding: 20rpx; border: 1rpx solid #e4c6ae; border-radius: 8rpx; background: #fff8f1; color: #704a2f; font-size: 23rpx; line-height: 1.6; }
+.load-error button { margin: 16rpx 0 0; border-radius: 8rpx; background: #173e67; color: #fffdf9; font-size: 23rpx; }
+.load-error button::after { border: 0; }

@@ -3,12 +3,12 @@
   <view wx:if="{{loading}}" class="state-card">正在加载评估报告…</view>
   <view wx:elif="{{error}}" class="state-card error-card">
     <text>{{error}}</text>
+    <button wx:if="{{recordId}}" class="secondary" bindtap="onRetryLoad">重新读取报告</button>
     <button class="secondary" bindtap="onViewHistory">返回历史评估</button>
   </view>
 
   <block wx:elif="{{output}}">
     <view class="report-hero">
-      <text class="eyebrow">AI 保研评估报告</text>
       <text class="report-title">{{assessment.input.profile.university}} · {{assessment.input.profile.major}}</text>
       <text class="report-meta">{{assessmentDate}} · {{assessment.model.name || '评估模型'}}</text>
       <view class="report-actions">

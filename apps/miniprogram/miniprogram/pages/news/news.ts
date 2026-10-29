@@ -12,6 +12,8 @@ type NewsCard = {
   sourceLabel: string
   dateLabel: string
   tags: string[]
+  rawTags: string[]
+  rawTagNote: string
   primaryTag: string
   coverUrl: string
   coverFailed: boolean
@@ -25,6 +27,8 @@ const FALLBACK_FEATURED: NewsCard = {
   sourceLabel: '',
   dateLabel: '',
   tags: [],
+  rawTags: [],
+  rawTagNote: '',
   primaryTag: '近期关注',
   coverUrl: '',
   coverFailed: false,
@@ -40,14 +44,30 @@ function toCard(post: NewsPost): NewsCard {
     isVideo:post.mediaType==='video',
     id: post.id,
     title: post.title,
-    summary: post.summary ?? '',
+    summary: (post.summary ?? '').replace(/\\(?:x0[ad]|[nr])/gi, ' ').replace(/\s+/g, ' ').trim(),
     sourceLabel: post.source === 'manual' ? '九辰编辑' : post.publicationTimeSource === 'admin_verified_publish_record' ? '九辰教育服务号 · 管理员核实原文' : '九辰教育服务号',
     dateLabel: newsPublicationLabel(post),
-    tags: post.tags,
+    tags: [...new Set(post.tags.map(tag => /^\d+$/.test(tag.trim()) ? '分类待核实' : tag))],
+    rawTags: post.tags,
+    rawTagNote: post.tags.some(tag => /^\d+$/.test(tag.trim())) ? `原始标签 ${post.tags.filter(tag => /^\d+$/.test(tag.trim())).join('、')}，待核实` : '',
     primaryTag: post.tags[0] || '未分类',
     coverUrl: normalizeRemoteUrl(post.coverUrl),
     coverFailed: false,
   }
+}
+
+const NEWS_SECTIONS = ['最新', '招生通知', '经验分享', '学科竞赛', '就业', '其他']
+function newsSection(tag: string) {
+  if (['招生通知', '招生', '推免通知', '夏令营通知'].includes(tag)) return '招生通知'
+  if (['经验分享', '经验', '案例分享'].includes(tag)) return '经验分享'
+  if (['学科竞赛', '竞赛', '比赛'].includes(tag)) return '学科竞赛'
+  if (['就业', '招聘', '秋招', '实习'].includes(tag)) return '就业'
+  return '其他'
+}
+function matchesNewsSection(card: NewsCard, section: string) {
+  if (section === '最新') return true
+  const tags = card.rawTags || card.tags
+  return tags.length ? tags.some(tag => newsSection(tag) === section) : section === '其他'
 }
 
 function uniqueTags(cards: NewsCard[]) {
@@ -74,9 +94,11 @@ Page({
   data: {
     ...INITIAL_SHELL,
     categories: ['全部'],
+    sections: ['最新'], currentSection: '最新',
     loadError: '',
     showReferenceNews: false,
     currentCategory: 0,
+    searchQuery: '',
     loading: false,
     sourceLabel: '真实资讯',
     featured: FALLBACK_FEATURED,
@@ -92,16 +114,29 @@ Page({
 
   stopShell: undefined as (() => void) | undefined,
   viewGeneration: 0,
+  viewerKey: '',
+  selectedCategoryName: '全部',
   onShow() {
     this.stopShell?.()
     this.stopShell = observeSlot('opportunity', (state) => {
       this.viewGeneration += 1
       const view=shellView(state)
-      this.setData({ ...view, showReferenceNews: state.phase === 'ready' && view.shellKind !== 'student', allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0 })
+      if (state.phase === 'ready' && state.auth) {
+        const viewerKey = [state.auth.user.id, state.auth.user.role, state.auth.businessIdentity?.businessId || ''].join(':')
+        if (viewerKey !== this.viewerKey) this.selectedCategoryName = '全部'
+        this.viewerKey = viewerKey
+      } else if (state.phase !== 'loading') {
+        this.viewerKey = ''
+        this.selectedCategoryName = '全部'
+      }
+      this.setData({ ...view, showReferenceNews: state.phase === 'ready' && view.shellKind !== 'student',
+        allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0, sections: ['最新'], currentSection: '最新',
+        favorites: [], favoritesError: '', retiring: [], newsV2Enabled: false })
       if (state.phase === 'ready') void this.loadNews()
     })
   },
-  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading' }) },
+  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading',
+    favorites: [], retiring: [], articles: [], allArticles: [], searchQuery: '' }) },
   onUnload() { this.stopShell?.() },
   onSchools() { openPage('/packages/schools/directory/directory') },
   onReferenceNews() {
@@ -138,6 +173,7 @@ Page({
         this.setData({
           categories: ['全部'],
           currentCategory: 0,
+          sections: NEWS_SECTIONS, currentSection: '最新',
           featured: FALLBACK_FEATURED,
           allArticles: [],
           articles: [],
@@ -162,6 +198,7 @@ Page({
         this.setData({
           categories: ['全部'],
           currentCategory: 0,
+          sections: NEWS_SECTIONS, currentSection: '最新',
           featured: FALLBACK_FEATURED,
           allArticles: [],
           articles: [],
@@ -171,16 +208,20 @@ Page({
         return
       }
 
-      const first = cards[0]
-      const categories = ['全部', ...uniqueTags(cards)]
+      const sections = NEWS_SECTIONS
+      const currentSection = sections.includes(this.data.currentSection) ? this.data.currentSection : '最新'
+      const categories = ['全部', ...uniqueTags(cards.filter(card => matchesNewsSection(card, currentSection)))]
+      const currentCategory = Math.max(0, categories.indexOf(this.selectedCategoryName))
+      const filtered = this.filterArticles(cards, currentCategory, categories, undefined, currentSection)
 
       this.setData({
         sourceLabel: '真实资讯 · 人工分类',
         categories,
-        currentCategory: 0,
-        featured: first,
+        sections, currentSection,
+        currentCategory,
+        featured: filtered[0] || FALLBACK_FEATURED,
         allArticles: cards,
-        articles: cards.slice(1),
+        articles: filtered.slice(1),
         pendingClassificationCount,
         pendingClassificationRole,
       })
@@ -205,13 +246,33 @@ Page({
     articles: NewsCard[],
     categoryIndex: number,
     categories: string[],
+    query?: string,
+    section?: string,
   ) {
-    if (categoryIndex === 0) return articles
     const category = categories[categoryIndex]
-    if (category === '未分类') {
-      return articles.filter((article) => article.tags.length === 0)
-    }
-    return articles.filter((article) => article.tags.includes(category))
+    const keyword = (query ?? this.data.searchQuery).trim().toLocaleLowerCase()
+    return articles.filter(article => {
+      const categoryMatches = categoryIndex === 0 || (category === '未分类' ? article.tags.length === 0 : article.tags.includes(category))
+      return matchesNewsSection(article, section ?? this.data.currentSection) && categoryMatches && (!keyword || [article.title, article.summary, article.sourceLabel, ...article.tags, ...(article.rawTags || [])].some(value => value.toLocaleLowerCase().includes(keyword)))
+    })
+  },
+
+  onSearchInput(event: WechatMiniprogram.Input) {
+    const searchQuery = String(event.detail.value || '').slice(0, 80)
+    const filtered = this.filterArticles(this.data.allArticles, this.data.currentCategory, this.data.categories, searchQuery)
+    this.setData({ searchQuery, featured: filtered[0] || FALLBACK_FEATURED, articles: filtered.slice(1) })
+  },
+  onFilterTap() {
+    if (!this.data.allArticles.length) { wx.showToast({ title: '暂无可筛选资讯', icon: 'none' }); return }
+    wx.pageScrollTo({ selector: '.category-scroll', duration: 200 })
+  },
+  onSectionTap(event: WechatMiniprogram.BaseEvent) {
+    const section = String(event.currentTarget.dataset.section || '')
+    if (!this.data.sections.includes(section)) return
+    const categories = ['全部', ...uniqueTags(this.data.allArticles.filter(card => matchesNewsSection(card, section)))]
+    const filtered = this.filterArticles(this.data.allArticles, 0, categories, undefined, section)
+    this.selectedCategoryName = '全部'
+    this.setData({ currentSection: section, categories, currentCategory: 0, featured: filtered[0] || FALLBACK_FEATURED, articles: filtered.slice(1) })
   },
 
   onManageNewsTags() {
@@ -221,6 +282,8 @@ Page({
 
   onCategoryTap(event: WechatMiniprogram.BaseEvent) {
     const currentCategory = Number(event.currentTarget.dataset.index)
+    if (!this.data.categories[currentCategory]) return
+    this.selectedCategoryName = this.data.categories[currentCategory]
     const filtered = this.filterArticles(
       this.data.allArticles,
       currentCategory,

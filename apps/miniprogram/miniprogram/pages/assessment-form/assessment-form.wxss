@@ -2,50 +2,34 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 28rpx 24rpx 70rpx;
-  background: #f6f7fb;
+  background: #f4f2ed;
 }
 
 .hero {
   padding: 16rpx 6rpx 24rpx;
 }
 
-.eyebrow,
 .title,
-.desc,
 .section-title,
-.status-title,
-.status-desc {
+.status-title {
   display: block;
-}
-
-.eyebrow {
-  color: #2f6fed;
-  font-size: 22rpx;
-  font-weight: 700;
 }
 
 .title {
   margin-top: 12rpx;
-  color: #252830;
+  color: #173e67;
   font-size: 36rpx;
   font-weight: 800;
   line-height: 1.35;
-}
-
-.desc {
-  margin-top: 12rpx;
-  color: #7d838e;
-  font-size: 22rpx;
-  line-height: 1.6;
 }
 
 .card,
 .status-card {
   margin-bottom: 18rpx;
   padding: 24rpx;
-  border: 1rpx solid #eceef3;
-  border-radius: 22rpx;
-  background: #ffffff;
+  border: 1rpx solid #dbe3e8;
+  border-radius: 8rpx;
+  background: #fffdf9;
 }
 
 .section-head {
@@ -62,7 +46,7 @@
 }
 
 .link {
-  color: #2f6fed;
+  color: #245681;
   font-size: 21rpx;
 }
 
@@ -96,7 +80,7 @@
   min-height: 70rpx;
   padding: 0 16rpx;
   border: 1rpx solid #e1e4e9;
-  border-radius: 14rpx;
+  border-radius: 6rpx;
   background: #fafbfc;
   color: #40454d;
   font-size: 21rpx;
@@ -122,7 +106,7 @@
 .remove {
   margin: 0;
   padding: 0 16rpx;
-  border-radius: 12rpx;
+  border-radius: 8rpx;
   background: #fff1ef;
   color: #b4534b;
   font-size: 20rpx;
@@ -149,13 +133,6 @@
   font-weight: 800;
 }
 
-.status-desc {
-  margin-top: 8rpx;
-  color: #68748a;
-  font-size: 21rpx;
-  line-height: 1.55;
-}
-
 .actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -165,13 +142,13 @@
 
 .primary,
 .secondary {
-  border-radius: 16rpx;
+  border-radius: 8rpx;
   font-size: 24rpx;
   font-weight: 700;
 }
 
 .primary {
-  background: #2f6fed;
+  background: #173e67;
   color: #ffffff;
 }
 
@@ -260,8 +237,8 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 14rpx;
-  background: #2f6fed;
+  border-radius: 8rpx;
+  background: #173e67;
   color: #ffffff;
   font-size: 22rpx;
   font-weight: 700;
@@ -280,22 +257,14 @@
   overflow-wrap: anywhere;
   font-weight: 600;
 }
-.profile-lock-note {
-  display: block;
-  padding: 0 0 12rpx;
-  color: #596980;
-  font-size: 21rpx;
-  line-height: 1.55;
-}
-
 /* Small native credit purchasing panel: no chart or payment bundle on the client. */
-.credit-panel { border-left: 6rpx solid #2f6fed; }
-.credit-balance { display:block; font-size:48rpx; font-weight:800; color:#1b4d98; margin:12rpx 0; }
+.credit-panel { border-left: 6rpx solid #896526; }
+.credit-balance { display:block; font-size:48rpx; font-weight:800; color:#173e67; margin:12rpx 0; }
 .credit-subtitle { display:block; font-size:22rpx; line-height:1.65; color:#53677d; }
 .credit-status { display:block; color:#987026; font-size:22rpx; margin:12rpx 0; }
 .credit-offers { display:flex; gap:12rpx; flex-wrap:wrap; margin:18rpx 0 6rpx; }
-.credit-offer { margin:0; flex:1 1 220rpx; padding:14rpx; font-size:24rpx; line-height:1.6; color:white; background:#2f6fed; border-radius:8rpx; }
-.credit-verify { margin:16rpx 0 0; background:#e7eef8; color:#2459be; border-radius:6rpx; font-size:24rpx; }
+.credit-offer { margin:0; flex:1 1 220rpx; padding:14rpx; font-size:24rpx; line-height:1.6; color:white; background:#173e67; border-radius: 8rpx; }
+.credit-verify { margin:16rpx 0 0; background:#eaf2fa; color:#245681; border-radius: 8rpx; font-size:24rpx; }
 
 .context-card{border-left:5rpx solid #0d9488;background:#f7fcfb;}
 .context-choice{display:flex;gap:20rpx;align-items:center;justify-content:space-between;padding:19rpx 0;border-top:1rpx solid #dceee9;}

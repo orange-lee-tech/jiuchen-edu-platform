@@ -43,6 +43,7 @@ function formatDate(value: string) {
 Page({
   data: {
     loading: true,
+    loadError: '',
     canCreateAssessment: false,
     assessments: [] as AssessmentListItem[],
   },
@@ -94,7 +95,7 @@ Page({
           ),
         }
       })
-      this.setData({ assessments })
+      this.setData({ assessments, loadError: '' })
       clearRefreshTimer()
       if (pageVisible && getSavedAuthResult() && assessments.some((item) => item.status === 'running')) {
         refreshTimer = setTimeout(() => {
@@ -103,8 +104,13 @@ Page({
       }
     } catch (error) {
       console.info('Assessment history load failed.')
+      this.setData({
+        loadError: silent && this.data.assessments.length
+          ? ''
+          : friendlyRequestError(error, '历史评估暂时无法读取，请重试'),
+      })
       if (!silent) {
-        wx.showToast({ title: friendlyRequestError(error, '历史评估加载失败，请重试'), icon: 'none' })
+        wx.showToast({ title: '历史评估未能读取', icon: 'none' })
       } else if (pageVisible && getSavedAuthResult()) {
         clearRefreshTimer()
         refreshTimer = setTimeout(() => {
@@ -114,6 +120,10 @@ Page({
     } finally {
       if (!silent) this.setData({ loading: false })
     }
+  },
+
+  onRetryLoad() {
+    void this.loadAssessments(false)
   },
 
   onAssessmentTap(event: WechatMiniprogram.BaseEvent) {

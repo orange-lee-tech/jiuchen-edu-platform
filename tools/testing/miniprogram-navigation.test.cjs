@@ -193,8 +193,8 @@ test('WeChat callback success with failed official query remains unresolved unti
   assert.equal(p.data.pendingPaymentOrderId, '')
 })
 
-test('shared week filter covers ranges, odd/even weeks, date boundaries and sorted sections', () => {
-  const { weeklyScheduleView, weekMatches, currentWeekFromStart } = harness().load('utils/schedule-view')
+test('shared week and today/tomorrow filters cover China dates, odd/even weeks and sorted sections', () => {
+  const { weeklyScheduleView, dailyScheduleView, weekMatches, currentWeekFromStart } = harness().load('utils/schedule-view')
   assert.equal(currentWeekFromStart('2026-09-07', new Date('2026-09-13T15:59:59Z')), 1)
   assert.equal(currentWeekFromStart('2026-09-07', new Date('2026-09-13T16:00:00Z')), 2)
   assert.equal(currentWeekFromStart('2026-09-07', new Date('2026-09-01')), 0)
@@ -208,13 +208,103 @@ test('shared week filter covers ranges, odd/even weeks, date boundaries and sort
   assert.equal(weeklyScheduleView({ termStartDate: '2026-09-07', courses: [] }, today).state, 'empty')
   const view = weeklyScheduleView({ termStartDate: '2026-09-07', courses: [{ name: 'later', dayIndex: 2, startSection: 1, weeks: null }, { name: 'last', dayIndex: 1, startSection: 5, weeks: '1-8' }, { name: 'first', dayIndex: 1, startSection: 1, weeks: '双' }] }, today)
   assert.equal(view.state, 'ready'); assert.equal(view.visibleCourses.map(c => c.name).join(','), 'first,last,later')
+  const schedule = { termStartDate:'2026-09-07', courses:[
+    {name:'Monday late',dayIndex:1,startSection:5,weeks:'1-8'},
+    {name:'Monday early',dayIndex:1,startSection:1,weeks:'单'},
+    {name:'Tuesday',dayIndex:2,startSection:1,weeks:'双'},
+  ] }
+  const sunday = new Date('2026-09-06T15:59:00Z') // Sunday 23:59 in China
+  assert.equal(dailyScheduleView(schedule, 0, sunday).state, 'before')
+  assert.deepEqual(Array.from(dailyScheduleView(schedule, 1, sunday).courses, c => c.name), ['Monday early','Monday late'])
+  const monday = new Date('2026-09-13T16:00:00Z') // Next Monday 00:00 in China
+  assert.equal(dailyScheduleView(schedule, 0, monday).week, 2)
+  assert.deepEqual(Array.from(dailyScheduleView(schedule, 0, monday).courses, c => c.name), ['Monday late'])
+  assert.deepEqual(Array.from(dailyScheduleView(schedule, 1, monday).courses, c => c.name), ['Tuesday'])
+  assert.equal(dailyScheduleView(null, 0, monday).state, 'missing')
+  assert.equal(dailyScheduleView({ courses: [] }, 0, monday).state, 'date')
+  assert.equal(dailyScheduleView({ termStartDate:'2026-09-07',courses:[] }, 0, monday).state, 'empty')
+})
+
+test('today workbench shows the saved classroom plan state', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture('student'))
+  const page = h.page('pages/index/index'); page.onShow()
+  h.respond(0, { ok:true, user:authFixture('student').user, businessIdentity:null }); await settle()
+  h.respond(h.requests.findIndex(item => item.url.endsWith('/me/classroom/stage-suggestion')), {ok:true,currentStage:'junior-fall',suggestedStage:'junior-fall',mode:'manual'}); await settle()
+  const classroom = h.requests.findIndex(item => item.url.includes('/me/classroom?stage=junior-fall'))
+  const profile = h.requests.findIndex(item => item.url.endsWith('/me/profile'))
+  assert.ok(classroom >= 0 && profile >= 0)
+  assert.equal(h.requests.some(item => item.url.includes('/schedule-imports/latest')), false,
+    'schedule query waits for the actual classroom stage')
+  h.respond(classroom, {ok:true, student:{currentStage:'junior-fall'}, stage:{code:'junior-fall'},
+    plans:[{type:'gpa',title:'课程成绩计划',id:'saved-plan',revisionStatus:'approved',items:[]}], mentors:[],records:[]})
+  await settle()
+  const schedule = h.requests.findIndex(item => item.url.includes('/schedule-imports/latest'))
+  assert.ok(schedule >= 0)
+  assert.match(h.requests[schedule].url, /stageCode=junior-fall/)
+  h.respond(schedule, {ok:true,import:null})
+  h.respond(profile, {ok:true,profile:{university:'测试大学',major:'测试专业',currentGrade:'大三'}})
+  await settle()
+  assert.equal(page.data.planStageLabel,'大三上')
+  assert.equal(page.data.planPreview[0].status,'已保存')
+  assert.equal(page.data.scheduleState,'missing')
+  page.onHide()
+  assert.equal(page.data.planPreview.length,0,'private preview is cleared when the tab hides')
+})
+
+test('today workbench never displays a schedule from another semester or a holiday', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture('student'))
+  const page = h.page('pages/index/index'); page.onShow()
+  h.respond(0, { ok:true, user:authFixture('student').user, businessIdentity:null }); await settle()
+  h.respond(h.requests.findIndex(item => item.url.endsWith('/me/classroom/stage-suggestion')), {ok:true,currentStage:'junior-winter',suggestedStage:'junior-winter',mode:'manual'}); await settle()
+  const classroom = h.requests.findIndex(item => item.url.includes('/me/classroom?stage=junior-winter'))
+  const profile = h.requests.findIndex(item => item.url.endsWith('/me/profile'))
+  h.respond(classroom, {ok:true, student:{currentStage:'junior-winter'}, stage:{code:'junior-winter'},
+    plans:[], mentors:[],records:[]})
+  h.respond(profile, {ok:true,profile:{university:'测试大学',major:'测试专业',currentGrade:'大三'}})
+  await settle()
+  assert.equal(page.data.scheduleState, 'holiday')
+  assert.equal(h.requests.some(item => item.url.includes('/schedule-imports/latest')), false)
+  page.onScheduleDay({currentTarget:{dataset:{day:1}}})
+  assert.equal(page.data.scheduleState, 'holiday')
+  page.onHide()
+
+  const other = harness(); other.auth.saveAuthResult(authFixture('student'))
+  const termPage = other.page('pages/index/index'); termPage.onShow()
+  other.respond(0, { ok:true, user:authFixture('student').user, businessIdentity:null }); await settle()
+  other.respond(other.requests.findIndex(item => item.url.endsWith('/me/classroom/stage-suggestion')), {ok:true,currentStage:'junior-fall',suggestedStage:'junior-fall',mode:'manual'}); await settle()
+  const termClassroom = other.requests.findIndex(item => item.url.includes('/me/classroom?stage=junior-fall'))
+  other.respond(termClassroom, {ok:true, student:{currentStage:'junior-fall'}, stage:{code:'junior-fall'},
+    plans:[], mentors:[], records:[]})
+  await settle()
+  const schedule = other.requests.findIndex(item => item.url.includes('/schedule-imports/latest'))
+  assert.ok(schedule >= 0)
+  other.respond(schedule, {ok:true, import:{schedule:{stageCode:'sophomore-spring',
+    termStartDate:'2026-09-07',courses:[{name:'不得展示的课程',dayIndex:1,startSection:1}]}}})
+  await settle()
+  assert.equal(termPage.data.scheduleCourses.length, 0)
+  assert.match(termPage.data.scheduleError, /阶段与档案不一致/)
+  termPage.onHide()
+})
+
+test('plan save requires a direct-save response and rejects an old pending-review API', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture('student'))
+  const api = h.load('utils/request')
+  const payload = { title: '英语规划', items: [{ name: '练习', status: 'pending' }] }
+  const stale = api.saveMyClassroomPlan('junior-fall', 'english', payload)
+  h.respond(0, { ok: true, revision: { id: 'old-revision', status: 'pending' } })
+  await assert.rejects(stale, /plan_direct_save_unavailable/)
+  const saved = api.saveMyClassroomPlan('junior-fall', 'english', payload)
+  h.respond(1, { ok: true, plan: { id: 'saved-plan', status: 'saved' } })
+  assert.equal((await saved).id, 'saved-plan')
 })
 
 test('current week switches the right-hand view without any navigation and failures are retryable', async () => {
   const h = harness(); h.auth.saveAuthResult(authFixture())
   const p = h.page('pages/classroom/classroom')
+  p.setData({ actualStageCode: 'junior-fall', stageScheduleSafe: true })
   p.onCurrentWeekSchedule()
   assert.equal(p.data.selectedView, 'week'); assert.equal(h.navigations.length, 0)
+  assert.match(h.requests[0].url, /stageCode=junior-fall/)
   h.respond(0, { error: 'failure' }, 500); await settle()
   assert.ok(p.data.weekError); assert.equal(p.data.weekLoading, false)
   p.loadCurrentWeek(); h.respond(1, { ok: true, import: null }); await settle()
@@ -223,6 +313,53 @@ test('current week switches the right-hand view without any navigation and failu
   assert.equal(p.data.selectedView, 'stage'); assert.equal(p.data.currentStageCode, 'freshman-winter')
   assert.equal(h.navigations.length, 0)
   h.respond(2, { error: 'failure' }, 500); await settle()
+})
+
+test('plan editor imports courses only from the selected semester and blocks saves after a failed read', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture('student'))
+  const page = h.page('pages/plan-editor/plan-editor')
+  page.onLoad({stage:'junior-fall',type:'gpa'})
+  h.respond(0, {ok:true,user:authFixture('student').user,businessIdentity:null}); await settle()
+  const classroom = h.requests.findIndex(item => item.url.includes('/me/classroom?stage=junior-fall'))
+  assert.ok(classroom >= 0)
+  h.respond(classroom, {ok:true,student:{name:'测试学员'},stage:{code:'junior-fall'},
+    plans:[{type:'gpa',title:'课程成绩计划',id:null,revisionStatus:'none',items:[]}],mentors:[],records:[]})
+  await settle()
+  const schedule = h.requests.findIndex(item => item.url.includes('/schedule-imports/latest'))
+  assert.ok(schedule >= 0)
+  assert.match(h.requests[schedule].url,/stageCode=junior-fall/)
+  h.respond(schedule,{ok:true,import:null}); await settle()
+  const versions = h.requests.findIndex(item => item.url.includes('/versions'))
+  if (versions >= 0) { h.respond(versions,{ok:true,revisions:[]}); await settle() }
+  assert.equal(page.data.loadError,'')
+
+  const failed = harness(); failed.auth.saveAuthResult(authFixture('student'))
+  const editor = failed.page('pages/plan-editor/plan-editor')
+  editor.onLoad({stage:'junior-fall',type:'gpa'})
+  failed.respond(0,{ok:true,user:authFixture('student').user,businessIdentity:null}); await settle()
+  const failedRead = failed.requests.findIndex(item => item.url.includes('/me/classroom?stage=junior-fall'))
+  failed.respond(failedRead,{ok:false,error:'network_unavailable'},503); await settle()
+  assert.ok(editor.data.loadError)
+  const beforeSave = failed.requests.length
+  await editor.onSave()
+  assert.equal(failed.requests.length,beforeSave,'failed read must not submit a stale plan')
+})
+
+test('opportunity and mine clear account-owned lists when hidden', () => {
+  const h = harness()
+  const news = h.page('pages/news/news')
+  news.setData({ favorites:[{postId:'old-article'}], retiring:[{id:'old-article'}],
+    articles:[{id:'old-article'}], allArticles:[{id:'old-article'}] })
+  news.onHide()
+  assert.equal(news.data.favorites.length, 0)
+  assert.equal(news.data.articles.length, 0)
+  const profile = h.page('pages/profile/profile')
+  profile.setData({ identities:[{id:'old-identity'}], favorites:[{postId:'old-article'}],
+    favoritesVisible:true, identityInput:'old-code' })
+  profile.onHide()
+  assert.equal(profile.data.identities.length, 0)
+  assert.equal(profile.data.favorites.length, 0)
+  assert.equal(profile.data.identityInput, '')
 })
 
 test('internal ID search, four Chinese states and actions follow real status and binding', () => {
@@ -308,7 +445,7 @@ test('401 invalidates auth and resets tabs; an older session 401 cannot clear a 
   const freshRequest = h.load('utils/request').request('/me/profile').catch(() => {})
   h.respond(1, { error: 'unauthorized' }, 401); await freshRequest
   assert.equal(h.auth.getSavedAuthResult(), null)
-  assert.equal(h.tabs.slice(-4).map((item) => item.text).join('|'), '首页|规划|机会|我的')
+  assert.equal(h.tabs.slice(-4).map((item) => item.text).join('|'), '今天|规划|机会|我的')
 })
 
 test('claim while validation is in flight is not overwritten by the old response', async () => {
@@ -340,7 +477,7 @@ test('all six role presentations select the expected stable native labels', asyn
     if (role) h.auth.saveAuthResult(authFixture(role))
     const home = h.page(`pages/${slot}/${slot}`); home.onShow()
     if (role) { h.respond(0, { ok: true, user: authFixture(role).user, businessIdentity: null }); await settle() }
-    const expected = role === 'admin' ? '工作台|查阅|运营|我的' : role === 'teacher' || role === 'staff' ? '工作台|学员|辅导|我的' : '首页|规划|机会|我的'
+    const expected = role === 'admin' ? '工作台|查阅|运营|我的' : role === 'teacher' || role === 'staff' ? '工作台|学员|辅导|我的' : '今天|规划|机会|我的'
     assert.equal(h.tabs.slice(-4).map((item) => item.text).join('|'), expected)
     assert.equal(home.data.shellPhase, 'ready')
     home.onHide()
@@ -474,11 +611,11 @@ test('hidden classroom cannot apply a late response from a previous identity', a
   const page = h.page('pages/classroom/classroom'); page.onShow()
   h.respond(0, { ok: true, user: authFixture('student').user, businessIdentity: null }); await settle()
   page.onHide()
-  const classroomRequest = h.requests.findIndex((item) => item.url.endsWith('/me/classroom'))
+  const suggestionRequest = h.requests.findIndex((item) => item.url.endsWith('/me/classroom/stage-suggestion'))
   const stagesRequest = h.requests.findIndex((item) => item.url.endsWith('/classroom/stages'))
   const scheduleRequest = h.requests.findIndex((item) => item.url.includes('/schedule-imports/latest'))
   h.respond(stagesRequest, { stages: [{ code: 'junior-fall', label: '大三上', planTypes: [] }] })
-  h.respond(classroomRequest, { student: { name: '旧账号测试数据' }, stage: { code: 'junior-fall' }, plans: [], mentors: [], records: [] })
+  h.respond(suggestionRequest, { ok:true, currentStage:'junior-fall', suggestedStage:'junior-fall', mode:'manual' })
   // Schedule fetch is now stage-scoped and deferred until the first requests
   // settle. A hidden page must not even issue it, nor apply stale results.
   if (scheduleRequest >= 0) h.respond(scheduleRequest, { scheduleImport: null })
@@ -531,9 +668,14 @@ test('role-shell uses an ordinary view-slot property instead of reserved WXML sl
   }
 })
 
-test('current-week plan badge follows the selected view', () => {
+test('planning header distinguishes saved current stage and exposes an always-visible horizontal semester rail', () => {
   const html = fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxml'), 'utf8')
-  assert.match(html, /selectedView === 'week' \? '本周课表' : currentStageLabel/)
+  assert.match(html, /本周课表/)
+  assert.match(html, /档案当前阶段：\{\{actualStageLabel\}\}/)
+  assert.match(html, /class="semester-rail" scroll-x/)
+  assert.match(html, /wx:for="\{\{stages\}\}"/)
+  assert.doesNotMatch(html, /wx:if="\{\{stagePickerOpen\}\}"/)
+  assert.match(html, /bindtap="onToggleStageCalibration"/)
 })
 
 test('new user and each claimed business role receive a separate, dismissible 4-step guide', () => {
@@ -593,8 +735,9 @@ test('schedule picker accepts Monday only and keeps last saved date on a failed 
   await settle()
   assert.equal(page.data.termStartDate,'')
   assert.equal(page.data.schedule.courses.length,1)
-  assert.match(page.data.saveError,/HTTP 400/)
-  assert.match(h.modals.at(-1).content,/错误码/)
+  assert.match(page.data.saveError,/课表暂未通过保存校验/)
+  assert.doesNotMatch(page.data.saveError,/HTTP|invalid_schedule_edit_payload/)
+  assert.match(h.modals.at(-1).content,/原日期未被更改/)
 })
 
 test('schedule start-date edit sends only metadata and commits after server acknowledgement', async()=>{
@@ -645,14 +788,143 @@ test('old backend missing date-only route NEVER resubmits the entire timetable',
  assert.equal(h.requests.length,1,'no unsafe legacy PUT fallback')
  assert.equal(page.data.termStartDate,'')
  assert.equal(page.data.schedule.courses.length,1)
- assert.match(page.data.saveError,/服务端尚未部署/)
+ assert.match(page.data.saveError,/当前暂不能保存第一周日期/)
+ assert.doesNotMatch(page.data.saveError,/HTTP|backend_version_mismatch/)
 })
-test('vertical planning navigation scrolls the stage rail instead of clipping a horizontal strip',()=>{
+test('horizontal planning selector keeps all academic terms and holidays reachable with a week entry',()=>{
  const wxml=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8')
  const css=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxss'),'utf8')
- assert.match(wxml,/class="stage-sidebar" scroll-y/)
- assert.match(css,/\.stage-strip\{[^}]*flex-direction:column/)
- assert.match(css,/\.timeline\{[^}]*flex-direction:column/)
+ assert.match(wxml,/class="stage-picker surface"/)
+ assert.match(wxml,/class="semester-rail" scroll-x/)
+ assert.match(wxml,/wx:for="\{\{stages\}\}"/)
+ assert.match(wxml,/档案当前阶段：\{\{actualStageLabel\}\}/)
+ assert.match(wxml,/查看本周完整课表/)
+ assert.match(css,/\.semester-rail-row\{[^}]*display:flex/)
+ const page=harness().page('pages/classroom/classroom')
+ assert.equal(page.data.stages.length,15)
+ assert.ok(page.data.stages.some(stage=>stage.code==='junior-winter'&&stage.mode==='holiday'))
+ page.onStageChange({currentTarget:{dataset:{code:'junior-winter'}}})
+ assert.equal(page.data.currentStageCode,'junior-winter')
+})
+
+test('setting the viewed stage requires confirmation and reloads only after server success',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
+ page.setData({currentStageCode:'junior-fall',currentStageLabel:'大三上',actualStageCode:'freshman-fall',actualStageKnown:true,stageModeKnown:true,stageMode:null})
+ let reloads=0;page.initializeClassroom=async()=>{reloads++}
+ page.onSetViewedStage();assert.equal(h.requests.length,0)
+ h.modals[0].success({confirm:false});assert.equal(h.requests.length,0)
+ page.onSetViewedStage();page.viewGeneration++;h.modals[1].success({confirm:true});assert.equal(h.requests.length,0)
+ page.onSetViewedStage();h.modals[2].success({confirm:true})
+ assert.equal(h.requests[0].method,'PUT');assert.match(h.requests[0].url,/\/me\/classroom\/current-stage$/)
+ assert.equal(h.requests[0].data.expectedCurrentStage,'freshman-fall')
+ h.respond(0,{ok:true,currentStage:'junior-fall'});await settle();await settle()
+ assert.equal(reloads,1)
+})
+
+test('manual calibration omits stale compare tokens when stage lookup failed', () => {
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
+ page.setData({actualStageKnown:false,stageModeKnown:false,actualStageCode:'',stageMode:null,stageCalibrationMode:true})
+ page.onStageChange({currentTarget:{dataset:{code:'junior-winter'}}})
+ assert.equal(h.requests.length,1);assert.equal(h.requests[0].method,'PUT')
+ assert.equal(h.requests[0].data.stageCode,'junior-winter')
+ assert.equal(Object.hasOwn(h.requests[0].data,'expectedCurrentStage'),false)
+ assert.equal(Object.hasOwn(h.requests[0].data,'expectedMode'),false)
+})
+
+test('stage resolution updates opted-in auto and unset stages, while preserving existing manual choices',async()=>{
+ for (const first of [
+  {currentStage:'freshman-fall',mode:'auto'},
+  {currentStage:null,mode:null},
+ ]) {
+  const h=harness();h.auth.saveAuthResult(authFixture());const pending=h.load('utils/current-stage').resolveCurrentStage()
+  h.respond(0,{ok:true,...first,suggestedStage:'sophomore-fall'});await settle()
+  assert.equal(h.requests[1].method,'PUT');assert.equal(h.requests[1].data.expectedCurrentStage,first.currentStage)
+  assert.equal(h.requests[1].data.expectedMode,first.mode);assert.equal(h.requests[1].data.mode,'auto')
+  h.respond(1,{ok:true,currentStage:'sophomore-fall',mode:'auto'});const result=await pending
+  assert.equal(result.stage,'sophomore-fall');assert.equal(result.scheduleSafe,true)
+ }
+ for (const mode of [null,'manual']) {
+  const h=harness();h.auth.saveAuthResult(authFixture());const pending=h.load('utils/current-stage').resolveCurrentStage()
+  h.respond(0,{ok:true,currentStage:'freshman-fall',mode,suggestedStage:'sophomore-fall'});const result=await pending
+  assert.equal(h.requests.length,1);assert.equal(result.stage,'freshman-fall');assert.ok(result.notice)
+  assert.equal(result.scheduleSafe,mode==='manual')
+ }
+})
+
+test('stage resolution adopts auto mode when a legacy saved stage already matches the enrollment-year suggestion',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const pending=h.load('utils/current-stage').resolveCurrentStage()
+ h.respond(0,{ok:true,currentStage:'freshman-fall',mode:null,suggestedStage:'freshman-fall'});await settle()
+ assert.equal(h.requests[1].method,'PUT')
+ assert.equal(h.requests[1].data.stageCode,'freshman-fall')
+ assert.equal(h.requests[1].data.mode,'auto')
+ assert.equal(h.requests[1].data.expectedCurrentStage,'freshman-fall')
+ h.respond(1,{ok:true,currentStage:'freshman-fall',mode:'auto'})
+ const result=await pending
+ assert.equal(result.mode,'auto');assert.equal(result.scheduleSafe,true)
+})
+
+test('stage resolution rejects stale identity and rechecks concurrent mode changes',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const pending=h.load('utils/current-stage').resolveCurrentStage()
+ h.respond(0,{ok:true,currentStage:'freshman-fall',mode:'auto',suggestedStage:'sophomore-fall'});await settle()
+ h.respond(1,{error:'current_stage_changed'},409);await settle()
+ h.respond(2,{ok:true,currentStage:'junior-fall',mode:'manual',suggestedStage:'sophomore-fall'})
+ const result=await pending;assert.equal(result.stage,'junior-fall');assert.equal(result.mode,'manual');assert.equal(h.requests.length,3)
+ const other=harness();other.auth.saveAuthResult(authFixture());const stale=other.load('utils/current-stage').resolveCurrentStage()
+ other.auth.saveAuthResult(authFixture('student',secondId,'different-token'))
+ other.respond(0,{ok:true,currentStage:null,mode:null,suggestedStage:'sophomore-fall'})
+ await assert.rejects(stale);assert.equal(other.requests.length,1)
+})
+
+test('stage resolution keeps missing enrollment and non-student identities safe',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const pending=h.load('utils/current-stage').resolveCurrentStage()
+ h.respond(0,{ok:true,currentStage:null,mode:null,suggestedStage:null});const result=await pending
+ assert.equal(result.stage,null);assert.equal(result.scheduleSafe,false);assert.match(result.notice,/入学年份/);assert.equal(h.requests.length,1)
+ const teacher=harness();teacher.auth.saveAuthResult(authFixture('teacher'))
+ await assert.rejects(teacher.load('utils/current-stage').resolveCurrentStage());assert.equal(teacher.requests.length,0)
+})
+
+test('home uses the resolved automatic stage for plans and its matching schedule',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/index/index');page.onShow()
+ h.respond(0,{ok:true,user:authFixture().user,businessIdentity:null});await settle()
+ const find=(part)=>h.requests.findIndex(r=>r.url.includes(part))
+ h.respond(find('/me/classroom/stage-suggestion'),{ok:true,currentStage:'freshman-fall',mode:'auto',suggestedStage:'sophomore-fall'});await settle()
+ h.respond(find('/me/classroom/current-stage'),{ok:true,currentStage:'sophomore-fall',mode:'auto'});await settle()
+ const classroom=find('/me/classroom?stage=sophomore-fall');assert.ok(classroom>=0)
+ h.respond(classroom,{ok:true,student:{currentStage:'sophomore-fall'},stage:{code:'sophomore-fall'},plans:[],mentors:[],records:[]});await settle()
+ assert.match(h.requests[find('/schedule-imports/latest')].url,/stageCode=sophomore-fall/)
+ assert.equal(page.data.planStageLabel,'大二上');page.onHide()
+})
+
+test('home does not show an old schedule when legacy stage and suggestion disagree',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/index/index');page.onShow()
+ h.respond(0,{ok:true,user:authFixture().user,businessIdentity:null});await settle()
+ const find=(part)=>h.requests.findIndex(r=>r.url.includes(part))
+ h.respond(find('/me/classroom/stage-suggestion'),{ok:true,currentStage:'freshman-fall',mode:null,suggestedStage:'sophomore-fall'});await settle()
+ h.respond(find('/me/classroom?stage=freshman-fall'),{ok:true,student:{currentStage:'freshman-fall'},stage:{code:'freshman-fall'},plans:[],mentors:[],records:[]});await settle()
+ assert.match(page.data.stageNotice,/建议不同/);assert.match(page.data.scheduleError,/尚未确认/)
+ assert.equal(h.requests.some(r=>r.url.includes('/schedule-imports/latest')),false);page.onHide()
+})
+
+test('planning reloads plans and weekly schedule from the same resolved stage',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
+ const pending=page.initializeClassroom();const find=(part)=>h.requests.findIndex(r=>r.url.includes(part))
+ h.respond(find('/classroom/stages'),{ok:true,stages:[{code:'sophomore-fall',label:'大二上',mode:'term',description:'正常学期',planTypes:['gpa']}]})
+ h.respond(find('/me/classroom/stage-suggestion'),{ok:true,currentStage:'freshman-fall',mode:'auto',suggestedStage:'sophomore-fall'});await settle()
+ h.respond(find('/me/classroom/current-stage'),{ok:true,currentStage:'sophomore-fall',mode:'auto'});await settle()
+ h.respond(find('/me/classroom?stage=sophomore-fall'),{ok:true,student:{name:'测试',currentStage:'sophomore-fall'},stage:{code:'sophomore-fall'},plans:[],mentors:[],records:[],showGuidance:true,guidanceRecordsReady:true});await settle()
+ const first=find('/schedule-imports/latest');assert.equal(first,-1,'initial plan load must not make a schedule request solely for card decoration');await pending
+ assert.equal(page.data.actualStageCode,'sophomore-fall');assert.equal(page.data.currentStageCode,'sophomore-fall')
+ page.onCurrentWeekSchedule();const latest=find('/schedule-imports/latest');assert.notEqual(latest,-1);assert.match(h.requests[latest].url,/stageCode=sophomore-fall/);h.respond(latest,{ok:true,import:null});await settle()
+})
+test('account settings stay reachable without exposing destructive actions on the main Mine surface',()=>{
+ const h=harness(),page=h.page('pages/profile/profile')
+ const wxml=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
+ assert.match(wxml,/wx:if="\{\{accountSettingsOpen\}\}" class="account-actions"/)
+ assert.equal(page.data.accountSettingsOpen,false)
+ page.onToggleAccountSettings();assert.equal(page.data.accountSettingsOpen,true)
+ page.onToggleAccountSettings();assert.equal(page.data.accountSettingsOpen,false)
+ assert.match(wxml,/bindtap="onLogout"/)
+ assert.match(wxml,/bindtap="onDeleteAccount"/)
 })
 test('Monday-only selector exposes exactly the Mondays of a selected month', () => {
   const h=harness()
@@ -816,6 +1088,186 @@ test('expired read token returns to the original session and target data never e
  assert.equal(h.auth.getSavedAuthResult().user.role,'admin')
 })
 
+test('growth record editor saves only confirmed facts and keeps a failed form for retry',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/growth-profile/growth-profile')
+ page.data.ownerKey=`${id}::`
+ page.data.recordFormOpen=true
+ page.data.recordForm={type:'language',title:'英语六级',organization:'学校',role:'',startDate:'2026-06',endDate:'',description:'参加真实考试',result:'成绩待确认'}
+ page.loadBootstrap=async()=>true
+ const first=page.onSaveRecord()
+ assert.equal(h.requests.length,1)
+ assert.equal(h.requests[0].method,'POST')
+ assert.ok(h.requests[0].url.endsWith('/me/growth-records'))
+ assert.equal(h.requests[0].data.title,'英语六级')
+ h.respond(0,{ok:false,error:'invalid_growth_record'},400)
+ await first
+ assert.equal(page.data.recordFormOpen,true)
+ assert.equal(page.data.recordForm.title,'英语六级')
+ assert.ok(page.data.recordError)
+
+ const retry=page.onSaveRecord()
+ assert.equal(h.requests.length,2)
+ h.respond(1,{ok:true,record:{id:'growth-1',type:'language',title:'英语六级'}},201)
+ await retry
+ assert.equal(page.data.recordFormOpen,false)
+ assert.equal(page.data.recordEditingId,'')
+
+ page.data.records=[{id:'growth-1',type:'language',title:'英语六级',source:{type:'manual'},description:'原始内容'}]
+ page.onEditRecord({currentTarget:{dataset:{id:'growth-1'}}})
+ assert.equal(page.data.recordEditingId,'growth-1')
+ page.data.recordForm.description='核对后的内容'
+ const update=page.onSaveRecord()
+ assert.equal(h.requests[2].method,'PUT')
+ assert.ok(h.requests[2].url.endsWith('/me/growth-records/growth-1'))
+ assert.equal(h.requests[2].data.description,'核对后的内容')
+ h.respond(2,{ok:true,record:{id:'growth-1',type:'language',title:'英语六级'}},200)
+ await update
+ assert.equal(page.data.recordFormOpen,false)
+
+ const view=h.load('utils/read-only-context')
+ view.setReadOnlyContext({kind:'student',id:secondId,role:'student',name:'合成学员',businessId:'JCS-SYNTHETIC',operatorUserId:id,readToken:'ro.synthetic',expiresAt:'2099-01-01'})
+ page.data.recordFormOpen=true
+ await page.onSaveRecord()
+ assert.equal(h.requests.length,3,'read-only view cannot submit a growth record')
+})
+
+test('growth profile discards an in-flight response after the account changes',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/growth-profile/growth-profile')
+ page.data.ownerKey=`${id}::`
+ const loading=page.loadBootstrap(true)
+ assert.equal(h.requests.length,1)
+ h.auth.saveAuthResult(authFixture('student',secondId,'other-session'))
+ h.respond(0,{ok:true,revision:'old-user-revision',growthSchemaReady:true,assessmentSchemaReady:true,
+   profile:{schemaVersion:'growth-profile-v1',identity:{displayName:'旧用户'},records:[]},
+   resumeProjections:{general:null,technical:null,academic:null},
+   applicationProjection:{fields:[]},pendingAssessmentImport:null})
+ assert.equal(await loading,false)
+ assert.equal(page.data.revision,'')
+ assert.equal(page.data.profile.identity.displayName,null)
+ page.data.profile.identity.displayName='旧缓存'
+ page.data.recordSaving=true
+ page.onShow()
+ assert.equal(page.data.profile.identity.displayName,null)
+ assert.equal(page.data.recordSaving,false)
+})
+
+test('growth profile retry clears an old error and ignores repeated taps while loading',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/growth-profile/growth-profile')
+ page.setData({ownerKey:`${id}::`,loading:false,error:'先前读取失败',records:[{id:'saved-record'}]})
+ page.onRetryLoad();page.onRetryLoad()
+ assert.equal(h.requests.length,1)
+ assert.equal(page.data.error,'')
+ assert.equal(page.data.loading,false,'existing records remain visible')
+ assert.equal(page.data.refreshing,true)
+ h.respond(0,{ok:false,error:'database_unavailable'},503)
+ await settle()
+ assert.equal(page.data.refreshing,false)
+
+ page.setData({records:[],error:'先前读取失败'})
+ page.onRetryLoad();page.onRetryLoad()
+ assert.equal(h.requests.length,2)
+ assert.equal(page.data.loading,true,'empty history shows a loading state')
+ h.respond(1,{ok:false,error:'database_unavailable'},503)
+ await settle()
+ assert.equal(page.data.loading,false)
+ assert.ok(page.data.error)
+})
+
+test('silent assessment history refresh keeps loaded rows visible on failure',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/assessment-history/assessment-history')
+ page.setData({loading:false,loadError:'',assessments:[{id:'running-assessment',status:'running'}]})
+ const refresh=page.loadAssessments(true)
+ h.respond(0,{ok:false,error:'database_unavailable'},503)
+ await refresh
+ assert.equal(page.data.assessments.length,1)
+ assert.equal(page.data.loadError,'')
+ assert.equal(page.data.loading,false)
+
+ page.setData({assessments:[]})
+ const first=page.loadAssessments(true)
+ h.respond(1,{ok:false,error:'database_unavailable'},503)
+ await first
+ assert.ok(page.data.loadError)
+ assert.match(fs.readFileSync(path.join(root,'pages/assessment-history/assessment-history.wxml'),'utf8'),/onRetryLoad/)
+})
+
+test('admin checkout copy follows live server state and JC000 platform restriction',()=>{
+ const admin=fs.readFileSync(path.join(root,'pages/admin/admin.wxml'),'utf8')
+ const source=fs.readFileSync(path.join(root,'pages/admin/admin.ts'),'utf8')
+ assert.match(admin,/checkoutStatusLabel/)
+ assert.match(source,/getCommercialMeta\(\)/)
+ assert.match(source,/微信虚拟支付配置已就绪/)
+ assert.match(source,/微信虚拟支付配置未就绪/)
+ assert.doesNotMatch(source,/真实微信支付已开放|真实微信支付仍关闭/)
+ assert.match(admin,/JC000 · \{\{planPriceLabels\.JC000\}\}（iOS 不可购买）/)
+ assert.doesNotMatch(admin,/JC000 内测道具|默认隐藏|购买是否开放请以当前商品页状态为准/)
+})
+
+test('growth cache never crosses accounts that reused the same business number',async()=>{
+ const h=harness(),cache=h.load('utils/growth-profile-cache')
+ const first=authFixture('student',id,'session-one')
+ first.businessIdentity={businessId:'JCS-REUSED',type:'student',status:'claimed'}
+ h.auth.saveAuthResult(first)
+ await cache.saveGrowthProfileBootstrap({revision:'first-account-only'})
+ const second=authFixture('student',secondId,'session-two')
+ second.businessIdentity={businessId:'JCS-REUSED',type:'student',status:'claimed'}
+ h.auth.saveAuthResult(second)
+ assert.equal(await cache.getCachedGrowthProfileBootstrap(),null)
+})
+
+test('position page shows profile read failure and offers a safe retry',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture('student'))
+ const page=h.page('pages/position/position')
+ page.initializePosition()
+ assert.equal(h.requests.length,1)
+ h.respond(0,{ok:false,error:'database_unavailable'},503)
+ await settle()
+ assert.ok(page.data.profileError)
+ assert.equal(page.data.profileLoading,false)
+ page.onRetryProfile()
+ assert.equal(h.requests.length,2)
+ h.respond(1,{ok:true,profile:{university:'合成大学',major:'数学'}})
+ await settle()
+ assert.equal(page.data.profileError,'')
+ assert.equal(page.data.profileForm.university,'合成大学')
+ assert.match(fs.readFileSync(path.join(root,'pages/position/position.wxml'),'utf8'),/view-slot="mine"/)
+})
+
+test('every registered native page keeps its files and WXML handlers',()=>{
+ const app=JSON.parse(fs.readFileSync(path.join(root,'app.json'),'utf8'))
+ const routes=[...app.pages,...app.subpackages.flatMap(pack=>pack.pages.map(page=>`${pack.root}/${page}`))]
+ for(const route of routes){
+   for(const ext of ['ts','wxml','wxss','json']) assert.ok(fs.existsSync(path.join(root,`${route}.${ext}`)),`${route}.${ext}`)
+   const wxml=fs.readFileSync(path.join(root,`${route}.wxml`),'utf8')
+   const handlers=[...wxml.matchAll(/(?:bind|catch)(?:tap|input|change|error|confirm|blur|focus|longpress)="([A-Za-z_]\w*)"/g)]
+   if(!handlers.length) continue
+   const h=harness();let page
+   try { page=h.page(route) } catch(error) { throw new Error(`${route}: ${error.message}`) }
+   for(const match of handlers){
+     assert.equal(typeof page[match[1]],'function',`${route}: ${match[1]}`)
+   }
+ }
+ for(const component of Object.values(app.usingComponents)){
+   assert.ok(fs.existsSync(path.join(root,`${component}.wxml`.replace(/^[/\\]/,''))),component)
+ }
+})
+
+test('redesigned pages keep every native WXML event bound to a page method',()=>{
+ const pages=['admin','assessment-form','assessment-history','assessment-result','classroom',
+   'growth-profile','index','library','login','news','news-detail','profile','profile-edit','teacher-students']
+ for(const name of pages){
+   const h=harness(),page=h.page(`pages/${name}/${name}`)
+   const wxml=fs.readFileSync(path.join(root,`pages/${name}/${name}.wxml`),'utf8')
+   for(const match of wxml.matchAll(/(?:bind|catch)(?:tap|input|change|error|confirm|blur|focus|longpress)="([A-Za-z_]\w*)"/g)){
+     assert.equal(typeof page[match[1]],'function',`${name}: ${match[1]}`)
+   }
+ }
+})
+
 test('admin identity roster uses protected canonical projection without unrelated news/analytics APIs',async()=>{
  const h=harness()
  h.auth.saveAuthResult(authFixture('admin'))
@@ -829,18 +1281,22 @@ test('admin identity roster uses protected canonical projection without unrelate
  assert.equal(h.navigations.length,0)
  assert.ok(h.requests.every(r=>!r.url.includes('/me/admin/news')))
 })
-test('student homepage prioritizes plan and renders a four-card action grid',()=>{
+test('student homepage preserves action routes and shows real daily states',()=>{
  const home=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  const ts=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
  assert.match(home,/进入我的规划/)
- for(const name of ['我的规划','保研资讯','AI 评估','联系顾问'])assert.ok(home.includes(name))
+ for(const name of ['我的规划','保研资讯','AI 评估','联系客服','院校库'])assert.ok(home.includes(name))
+ assert.match(home,/action-consult[^>]*bindtap="onCustomerService"/)
  assert.match(ts,/onPrimary\(\) \{[\s\S]*?openSlot\('plan'\)/)
- assert.match(home,/本周课表/)
- assert.match(ts,/getLatestScheduleImport\(\)/)
- assert.match(ts,/weeklyScheduleView\(latest\?\.schedule \|\| null\)/)
+ assert.match(home,/本周完整课表/)
+ assert.match(home,/当天没有匹配课程/)
+ assert.match(ts,/plan\.id \? '已保存'/)
+ assert.match(ts,/getLatestScheduleImport\(stageCode\)/)
+ assert.match(ts,/dailyScheduleView\(this\.homeSchedule, this\.data\.scheduleDay\)/)
+  assert.match(ts,/getMyClassroom\(resolution\?\.stage/)
  const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
- assert.match(css,/\.action-row\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)
- assert.match(css,/\.service-link\{[^}]*width:49%|\.action-row,\.service-link\{[^}]*width:49%/)
+ assert.match(css,/\.action-row,\.service-link\{[^}]*width:49%/)
+ assert.match(css,/\.home-card\{[^}]*background:#fffdf9/)
 })
 test('unbound school consultation copies the correct school and identifies missing binding',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('admin'))
@@ -930,10 +1386,81 @@ test('home keeps profile completion accessible without displacing the plan CTA',
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  const page=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
  assert.match(source,/wx:if="\{\{!assessmentReady && !readOnly\}\}".*bindtap="onCompleteProfile"/)
- assert.match(source,/只读查看 · 可查看已有报告，不能编辑资料或运行 AI 评估/)
+ assert.match(source,/只读模式 · 无编辑和评估权限/)
  assert.match(fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8'),/地点：\{\{item.location \|\| '暂无'\}\}/)
  assert.match(page,/onCompleteProfile\(\)/)
 })
+test('home shortcuts prioritize core actions and retain the countdown tile',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+ assert.match(source,/class="home-shortcuts home-card"/)
+ const names=['action-assessment','action-planning','action-schools','action-news','action-consult','action-countdown']
+ const positions=names.map(name=>source.indexOf('class="action-row '+name+'"'))
+ assert.ok(positions.every(position=>position>=0),'all expected home shortcuts must remain')
+ assert.ok(positions.every((position,index)=>index===0 || positions[index-1]<position),'home shortcut order must stay intentional')
+})
+
+test('today artwork references the compatible PNG assets',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+ const assets=['banners/today-campus-hero.png','icons/ai-assessment.png','icons/library.png','icons/news.png','icons/clock.png','icons/headset.png','icons/calendar.png']
+ for(const asset of assets){
+  const resource='/assets/jiuchen-visual-v1/'+asset
+  assert.ok(source.includes(`src="${resource}"`),`${asset} must be referenced from Today`)
+  const bytes=fs.readFileSync(path.join(root,resource.slice(1)))
+  assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a')
+  const width=bytes.readUInt32BE(16), height=bytes.readUInt32BE(20)
+  assert.deepEqual([width,height],asset.startsWith('banners/')?[1008,387]:[128,128])
+ }
+ assert.ok((source.match(/\/assets\/jiuchen-visual-v1\//g)||[]).length>=assets.length)
+})
+
+test('four primary views keep their supplied artwork and real-data entry order',()=>{
+ const pages={index:'today-campus-hero',classroom:'semester-books-banner',news:'school-library-hero',profile:'profile-calm-campus'}
+ for(const [page,banner] of Object.entries(pages)){
+  const source=fs.readFileSync(path.join(root,'pages',page,page+'.wxml'),'utf8')
+  const asset=`/assets/jiuchen-visual-v1/banners/${banner}.png`
+  assert.ok(source.includes(asset),`${page} must reference its banner`)
+  assert.equal(fs.readFileSync(path.join(root,asset.slice(1))).subarray(0,8).toString('hex'),'89504e470d0a1a0a')
+ }
+ const news=fs.readFileSync(path.join(root,'pages/news/news.wxml'),'utf8')
+ assert.ok(news.indexOf('class="article-list"')<news.indexOf('class="news-extra"'))
+ const mine=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
+ assert.ok(mine.indexOf('class="menu-list primary-menus"')<mine.indexOf('identities.length'))
+ const css=fs.readFileSync(path.join(root,'pages/profile/profile.wxss'),'utf8')
+ assert.match(css,/\.primary-menus\{[^}]*flex-direction:row[^}]*width:100%/)
+})
+
+test('news search filters real loaded articles together with category selection',()=>{
+ const h=harness(), page=h.page('pages/news/news')
+ const cards=[{id:'a',title:'科研项目',summary:'测试',sourceLabel:'来源',tags:['科研'],coverFailed:false},{id:'b',title:'竞赛通知',summary:'测试',sourceLabel:'来源',tags:['竞赛'],coverFailed:false}]
+ page.setData({allArticles:cards,categories:['全部','科研','竞赛'],currentCategory:0})
+ page.onSearchInput({detail:{value:'科研'}});assert.equal(page.data.featured.id,'a');assert.equal(page.data.articles.length,0)
+ page.onCategoryTap({currentTarget:{dataset:{index:2}}});assert.equal(page.data.featured.id,'')
+ page.onSearchInput({detail:{value:''}});assert.equal(page.data.featured.id,'b')
+})
+
+test('numeric news labels remain traceable without becoming bare category names',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/news/news')
+ const pending=page.loadNews()
+ h.respond(0,{ok:true,posts:[{id:'a',title:'真实文章',summary:'',source:'manual',publishedAt:null,tags:['3','竞赛'],coverUrl:null}]})
+ await pending
+ assert.ok(page.data.categories.includes('分类待核实'));assert.equal(page.data.categories.includes('3'),false)
+ assert.match(page.data.featured.rawTagNote,/原始标签 3/);assert.ok(page.data.sections.includes('学科竞赛'))
+ page.onSectionTap({currentTarget:{dataset:{section:'学科竞赛'}}});assert.equal(page.data.featured.id,'a')
+})
+
+test('planning plan cards open details directly without redundant category jump tabs',()=>{
+  const h=harness(), page=h.page('pages/classroom/classroom')
+  const html=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8')
+  page.setData({currentStageCode:'junior-fall'})
+  page.onPlanTap({currentTarget:{dataset:{type:'research'}}})
+  assert.equal(h.navigations.at(-1).url,'/pages/plan-editor/plan-editor?stage=junior-fall&type=research')
+  assert.doesNotMatch(html,/class="plan-tabs"/)
+  assert.match(html,/class="semester-rail" scroll-x/)
+  assert.match(html,/class="plan-action-label"/)
+  assert.doesNotMatch(html,/revision-chip|item\.note/)
+  assert.match(html,/'创建'\s*\+\s*item\.title/)
+})
+
 test('PKU media/map are real sourced assets and consultation uses the shared chat entry',()=>{
  const data=fs.readFileSync(path.join(root,'packages/schools/data.ts'),'utf8')
  const wxml=fs.readFileSync(path.join(root,'packages/schools/detail/detail.wxml'),'utf8')
@@ -989,13 +1516,17 @@ test('customer-service identity never claims server verification when revalidati
  assert.equal(opened,false)
  assert.match(h.modals[0].content,/本地缓存/)
 })
-test('administrator mine keeps two equally sized actions, and workbench uses full-width view rows',()=>{
+test('administrator identity actions stay accessible on demand, and workbench keeps full-width view rows',()=>{
  const p=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
  const w=fs.readFileSync(path.join(root,'components/role-shell/role-shell.wxml'),'utf8')
  const css=fs.readFileSync(path.join(root,'components/role-shell/role-shell.wxss'),'utf8')
- assert.match(p,/class="identity-buttons"/)
- assert.match(p,/class="identity-control identity-copy"/)
+ assert.match(p,/class="identity-person"/)
  assert.match(p,/class="identity-control identity-primary"/)
+ assert.match(p,/identity-settings-toggle/)
+ assert.match(p,/class="identity-copy-inline" bindtap="onCopyIdentity"/)
+ assert.match(p,/bindtap="onSwitchIdentity"/)
+ assert.match(p,/menu-teacher-service/)
+ assert.match(p,/bindtap="onMyTeacher"/)
  assert.doesNotMatch(p,/class="copy-code"/)
  assert.match(w,/class="admin-action.*" data-key/)
  assert.match(css,/\.admin-action\{[^}]*width:100%/)
@@ -1168,4 +1699,131 @@ test('the student can save their own name and refresh server identity',async()=>
  h.respond(1,{ok:true,user:{...authFixture('student').user,displayName:'李同学'},businessIdentity:null})
  await flow
  assert.equal(h.auth.getSavedAuthResult().user.displayName,'李同学')
+})
+
+test('home countdown is isolated by authenticated identity and saved only on device',()=>{
+ const index=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
+ const template=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+ assert.match(index,/COUNTDOWN_PREFIX \+ this\.countdownOwner/)
+ assert.match(index,/this\.loadCountdowns\(studentId\)/)
+ assert.match(index,/pageScrollTo\(\{selector:'\.countdown-panel',duration:220/)
+ assert.match(index,/wx\.setStorageSync\(this\.countdownKey\(\),entries\)/)
+ assert.match(template,/bindtap="onCountdownSave"/)
+ assert.match(template,/bindtap="onCountdownDelete"/)
+ assert.match(template,/仅保存在本机当前学员账号/)
+})
+test('countdown opens, saves and deletes locally without crossing identities',()=>{
+ const h=harness(), page=h.page('pages/index/index'); let scrolled=''
+ page.setData=function(data,done){Object.assign(this.data,data);if(done)done()}
+ h.wx.pageScrollTo=options=>{scrolled=options.selector}
+ page.loadCountdowns('student-a');page.onCountdownToggle()
+ assert.equal(scrolled,'.countdown-panel');assert.equal(page.data.countdownOpen,true)
+ page.onCountdownTitleInput({detail:{value:'考试'}})
+ page.onCountdownDateChange({detail:{value:'2099-12-30'}});page.onCountdownSave()
+ assert.equal(page.data.countdowns.length,1)
+ const entry=page.data.countdowns[0]
+ page.onCountdownDelete({currentTarget:{dataset:{id:entry.id}}})
+ page.loadCountdowns('student-b');h.modals[0].success({confirm:true})
+ assert.equal(page.data.countdowns.length,0)
+ page.loadCountdowns('student-a');assert.equal(page.data.countdowns.length,1)
+ page.onCountdownDelete({currentTarget:{dataset:{id:entry.id}}});h.modals[1].success({confirm:true})
+ assert.equal(page.data.countdowns.length,0);assert.equal(h.requests.length,0)
+})
+test('school photo provenance remains in data while favorites have separate full-width actions',()=>{
+ const detail=fs.readFileSync(path.join(root,'packages/schools/detail/detail.wxml'),'utf8')
+ const profile=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
+ const school=fs.readFileSync(path.join(root,'packages/schools/detail/detail.ts'),'utf8')
+ assert.doesNotMatch(detail,/class="photo-credit"/)
+ assert.match(detail,/bindtap="onPreviewPhoto"/)
+ assert.match(school,/photoLicense:/)
+ assert.match(profile,/class="favorite-row"/)
+ assert.match(profile,/class="favorite-actions"/)
+ assert.match(profile,/bindtap="onFavoriteOpen"/)
+ assert.match(profile,/bindtap="onFavoriteReader"/)
+})
+test('admin identity binding jumps to the visible editor and offers multi-role entry',()=>{
+ const admin=fs.readFileSync(path.join(root,'pages/admin/admin.ts'),'utf8')
+ const template=fs.readFileSync(path.join(root,'pages/admin/admin.wxml'),'utf8')
+ assert.match(admin,/pageScrollTo\(\{scrollTop:0,duration:240\}\)/)
+ assert.match(admin,/onOpenMyIdentity\(\)/)
+ assert.match(template,/bindtap="onOpenMyIdentity"/)
+})
+
+
+test('manual semester calibration is a visible save flow, separate from browsing history', () => {
+  const planTs = fs.readFileSync(path.join(root, 'pages/classroom/classroom.ts'), 'utf8')
+  const planWxml = fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxml'), 'utf8')
+  assert.match(planWxml, /手动校准当前学期/)
+  assert.match(planWxml, /选择当前阶段/)
+  assert.match(planWxml, /点选后立即保存/)
+  assert.match(planWxml, /正在查看：/)
+  assert.match(planWxml, /档案当前阶段：/)
+  assert.match(planWxml, /class="semester-rail" scroll-x/)
+  assert.match(planWxml, /bindtap="onToggleStageCalibration"/)
+  assert.doesNotMatch(planWxml, /将正在查看的阶段设为当前|固定当前学期/)
+  assert.match(fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxss'), 'utf8'), /\.semester-rail\{/)
+  assert.match(planTs, /stageCalibrationMode/)
+  assert.match(planTs, /saveCurrentStage\(stage\.code, expected, 'manual', expectedMode\)/)
+})
+
+test('today workbench keeps countdown titles visible and supports editing without losing local entries', () => {
+  const homeTs = fs.readFileSync(path.join(root, 'pages/index/index.ts'), 'utf8')
+  const homeWxml = fs.readFileSync(path.join(root, 'pages/index/index.wxml'), 'utf8')
+  assert.match(homeWxml, /class="[^"]*countdown-summary[^"]*"/)
+  assert.match(homeWxml, /我的倒数日/)
+  assert.match(homeWxml, /countdownPreview/)
+  assert.match(homeWxml, /onCountdownEdit/)
+  assert.match(homeWxml, /onCountdownDelete/)
+  assert.match(homeTs, /countdownPreview:active\.slice\(0,3\)/)
+  assert.match(homeTs, /已过期/)
+  assert.doesNotMatch(homeTs, /filter\(e=>e\.remainingDays>=0\)/)
+  assert.match(homeWxml, /start="\{\{countdownPickerStart\}\}"/)
+  assert.match(homeTs, /onCountdownEdit\(event:WechatMiniprogram\.BaseEvent\)/)
+  assert.match(homeTs, /onCountdownCancelEdit\(\)/)
+})
+
+test('countdown keeps expired events visible and edits/deletes without discarding other local records', () => {
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/index/index')
+ const key='jiuchen-countdowns-v1:'+id
+ h.storage.set(key,[{id:'expired',title:'旧考试',date:'2020-01-01'},{id:'future',title:'目标日期',date:'2099-12-31'},{legacyRecord:true}])
+ page.loadCountdowns(id)
+ assert.equal(page.data.countdowns.length,2)
+ assert.deepEqual(page.data.countdowns.map(entry=>entry.id),['future','expired'],'upcoming events sort before expired events while expired records remain accessible')
+ const expired=page.data.countdowns.find(entry=>entry.id==='expired')
+ assert.ok(expired)
+ assert.match(expired.remainingLabel,/已过期/)
+ page.onCountdownEdit({currentTarget:{dataset:{id:'expired'}}})
+ page.onCountdownTitleInput({detail:{value:'旧考试更新'}})
+ page.onCountdownSave()
+ const afterEdit=h.storage.get(key)
+ assert.equal(afterEdit.find(e=>e && e.id==='expired').title,'旧考试更新')
+ assert.ok(afterEdit.some(e=>e && e.legacyRecord===true),'unknown local records must survive an edit')
+ page.onCountdownDelete({currentTarget:{dataset:{id:'future'}}})
+ h.modals.at(-1).success({confirm:true})
+ const afterDelete=h.storage.get(key)
+ assert.equal(afterDelete.some(e=>e && e.id==='future'),false)
+ assert.ok(afterDelete.some(e=>e && e.legacyRecord===true),'unknown local records must survive a delete')
+})
+
+test('opportunity navigation keeps all six reference sections and profile identity details remain accessible', () => {
+  const newsTs = fs.readFileSync(path.join(root, 'pages/news/news.ts'), 'utf8')
+  const profileTs = fs.readFileSync(path.join(root, 'pages/profile/profile.ts'), 'utf8')
+  const profileWxml = fs.readFileSync(path.join(root, 'pages/profile/profile.wxml'), 'utf8')
+  assert.match(newsTs, /const NEWS_SECTIONS = \['最新', '招生通知', '经验分享', '学科竞赛', '就业', '其他'\]/)
+  assert.match(newsTs, /const sections = NEWS_SECTIONS/)
+  assert.match(profileTs, /onToggleIdentityDetails\(\)/)
+  assert.match(profileWxml, /identity-settings-toggle/)
+  assert.match(profileWxml, /onCopyIdentity/)
+  assert.match(profileWxml, /onSwitchIdentity/)
+})
+
+
+test('plan editor exposes the active read-only session state in its controls',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/plan-editor/plan-editor.ts'),'utf8')
+ const template=fs.readFileSync(path.join(root,'pages/plan-editor/plan-editor.wxml'),'utf8')
+ assert.match(source,/readOnly:\s*false/)
+ assert.match(source,/readOnly:\s*isReadOnly\(\)/)
+ assert.match(template,/disabled="\{\{readOnly\}\}"/)
+ assert.match(template,/disabled="\{\{readOnly \|\| saving\}\}"/)
+ assert.match(template,/wx:if="\{\{!readOnly\}\}"/)
 })

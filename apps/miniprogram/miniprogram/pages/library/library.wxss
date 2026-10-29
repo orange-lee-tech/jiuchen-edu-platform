@@ -3,7 +3,6 @@
 }
 
 .page-title,
-.page-desc,
 .eyebrow,
 .result-title,
 .result-desc,
@@ -14,13 +13,6 @@
 .page-title {
   font-size: 38rpx;
   font-weight: 800;
-}
-
-.page-desc {
-  margin-top: 12rpx;
-  color: #7a808b;
-  font-size: 23rpx;
-  line-height: 1.7;
 }
 
 .search-box {
@@ -50,6 +42,23 @@
 .state-card {
   padding: 26rpx;
 }
+
+.school-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 22rpx 26rpx;
+  border-left: 6rpx solid #896526;
+}
+
+.school-entry-pressed { background: #eaf2fa; }
+.school-entry-title, .school-entry-arrow { display: block; }
+.school-entry-title { color: #173e67; font-size: 29rpx; font-weight: 700; }
+.school-entry-arrow { color: #245681; font-size: 34rpx; }
+.error-state, .partial-state { color: #5f6b78; }
+.retry-button { margin: 18rpx 0 0; background: #eaf2fa; color: #173e67; font-size: 25rpx; }
+.retry-button::after { border: 0; }
 
 .eyebrow {
   color: #2f6fed;

@@ -2,14 +2,17 @@
 <view class="profile-edit-page">
   <view class="intro-card">
     <text class="intro-title">个人资料</text>
-    <text class="intro-desc">登录账号与九辰内部身份分开管理。首次登录默认为游客，填写正确内部ID后系统自动切换对应身份。</text>
+  </view>
+  <view wx:if="{{loadError}}" class="load-error">
+    <text>{{loadError}}。重新读取后请核对表单，再保存学业资料。</text>
+    <button bindtap="onRetryLoad" loading="{{loading}}" disabled="{{loading}}">重新读取资料</button>
   </view>
 
   <view class="form-card">
     <label class="field">
       <text class="field-label">{{role === 'student' ? '正式学员姓名' : '账号显示名'}}</text>
       <input class="field-input" value="{{nameInput}}" maxlength="80" placeholder="请填写本人真实姓名" bindinput="onNameInput" />
-      <text class="identity-desc">{{role === 'student' ? '学员身份保存后，同步账号显示名和正式学员档案姓名；管理员目录以正式档案为准。' : '此处只更新账号显示名。请切换至学员身份，再保存正式学员姓名；原有测试名称不会自动视为实名。'}}</text>
+      <text class="identity-desc">{{role === 'student' ? '保存后会同步更新账号显示名和学员档案姓名。' : '此处只更新账号显示名。学员档案姓名请切换至学员身份后修改。'}}</text>
     </label>
   </view>
   <button class="save-button" loading="{{savingName}}" disabled="{{savingName || loading || readOnly}}" bindtap="onSaveName">保存姓名</button>
@@ -78,12 +81,11 @@
       </label>
     </view>
 
-    <button class="save-button" loading="{{saving}}" disabled="{{saving || loading}}" bindtap="onSave">保存资料</button>
+    <button class="save-button" loading="{{saving}}" disabled="{{saving || loading || loadError}}" bindtap="onSave">保存资料</button>
   </block>
 
   <view wx:else class="role-note">
     当前身份的业务资料由九辰后台维护；本页只展示你的内部ID绑定状态。
   </view>
 
-  <text class="privacy-note">后续新增资料字段时继续遵循“业务需要再收集”的原则。</text>
 </view>

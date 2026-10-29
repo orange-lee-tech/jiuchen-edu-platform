@@ -2,12 +2,12 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 24rpx 24rpx 70rpx;
-  background: #f6f7fb;
+  background: #f4f2ed;
 }
 
 .hero {
   padding: 38rpx 30rpx;
-  border-radius: 28rpx;
+  border-radius: 8rpx;
   background: linear-gradient(145deg, #173b78 0%, #285cae 100%);
   color: #fff;
 }
@@ -74,7 +74,7 @@
   margin-top: 18rpx;
   padding: 26rpx;
   border: 1rpx solid #eceef3;
-  border-radius: 22rpx;
+  border-radius: 8rpx;
   background: #fff;
 }
 
@@ -131,7 +131,7 @@
 }
 
 .bullet {
-  color: #2f6fed;
+  color: #245681;
 }
 
 .bullet-text,
@@ -151,7 +151,7 @@
 .highlight {
   margin-top: 18rpx;
   padding: 18rpx;
-  border-radius: 16rpx;
+  border-radius: 8rpx;
   background: #f8faff;
 }
 
@@ -172,7 +172,7 @@
   height: 14rpx;
   margin-top: 10rpx;
   border-radius: 50%;
-  background: #2f6fed;
+  background: #245681;
 }
 
 .line {
@@ -204,13 +204,13 @@
 .service-item {
   margin-top: 14rpx;
   padding: 18rpx;
-  border-radius: 14rpx;
+  border-radius: 8rpx;
   background: #fafbfc;
 }
 
 .delivery {
   margin-top: 8rpx;
-  color: #2f6fed;
+  color: #245681;
   font-size: 20rpx;
 }
 
@@ -219,7 +219,7 @@
 }
 
 .metric-value {
-  color: #2f6fed;
+  color: #245681;
   font-size: 50rpx;
   font-weight: 800;
 }

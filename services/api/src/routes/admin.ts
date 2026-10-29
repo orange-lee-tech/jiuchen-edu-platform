@@ -269,6 +269,7 @@ export function registerAdminRoutes(
       university: parsed.data.university ?? null,
       major: parsed.data.major ?? null,
       currentStage: parsed.data.currentStage ?? null,
+      currentStageMode: parsed.data.currentStage ? 'manual' : null,
     })
 
     return {
@@ -1085,7 +1086,7 @@ export function registerAdminRoutes(
 
     await database.db
       .update(students)
-      .set(parsed.data)
+      .set({ ...parsed.data, ...(parsed.data.currentStage !== undefined ? { currentStageMode: parsed.data.currentStage === null ? null : 'manual' as const } : {}) })
       .where(eq(students.id, request.params.id))
 
     const [student] = await database.db

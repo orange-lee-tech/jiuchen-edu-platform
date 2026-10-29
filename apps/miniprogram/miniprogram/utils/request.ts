@@ -53,6 +53,7 @@ export type ClassroomPlan = {
     sortOrder: number
     name: string
     target: string | null
+    dueDate?: string | null
     status: 'pending' | 'in_progress' | 'done'
   }>
 }
@@ -169,14 +170,15 @@ export function friendlyRequestError(
         : ''
 
   const messages: Record<string, string> = {
-    backend_version_mismatch: '测试服务尚未更新到当前版本，请稍后重试',
+    backend_version_mismatch: '当前服务暂不支持此操作，请稍后重试或联系客服',
+    plan_direct_save_unavailable: '当前服务尚未支持规划直接保存，请稍后重试',
     network_unavailable: '暂时无法连接服务，请检查网络后重试',
     unauthorized: '登录已失效，请重新登录',
     session_changed: '登录账号已变化，请从“我的”重新打开页面',
     wechat_login_failed: '微信登录服务暂不可用，请稍后重试',
     phone_login_failed: '手机号登录暂不可用，请稍后重试',
-    database_not_configured: '测试数据库尚未配置完成',
-    schema_missing: '测试数据库正在升级，请稍后重试',
+    database_not_configured: '服务暂不可用，请稍后重试或联系客服',
+    schema_missing: '服务暂不可用，请稍后重试或联系客服',
     assessment_schema_not_ready: 'AI评估服务正在准备中，请稍后重试',
     assessment_academic_profile_outdated: '评估学业资料已变化，请前往“我的→编辑个人资料”核对，再重新打开草稿',
     assessment_credit_insufficient: '本次评估额度已用尽，请先购买评估次数',
@@ -235,7 +237,7 @@ export function friendlyRequestError(
     schedule_spreadsheet_empty: '课表文件为空或没有可读取内容',
     schedule_file_type_not_allowed: '暂不支持该文件类型，请使用 xlsx、xls 或 csv',
     schedule_first_monday_required: '请选择教务日历上本学期第一周的周一（不能选周日或其他日期）',
-    invalid_schedule_edit_payload: '课表数据未通过服务器校验，请不要重新上传；请记录错误码并联系管理员核对数据格式',
+    invalid_schedule_edit_payload: '课表暂未通过保存校验，请保留当前页面并联系客服核对数据',
     schedule_stage_selection_required: '请先确认课表的归属学期再保存',
     schedule_import_not_found: '当前课表记录已不存在或账号已变更，请重新进入课表页核对',
     schedule_not_parsed: '课表尚未完成解析，请重新进入课表页核对',
@@ -369,26 +371,49 @@ export function getMyClassroom(stageCode?: string): Promise<ClassroomView> {
   return request<ClassroomView>(`/me/classroom${query}`)
 }
 
+export type CurrentStageMode = 'auto' | 'manual' | null
+export type CurrentStageSuggestion = { ok: true; currentStage: string | null; suggestedStage: string | null; mode?: CurrentStageMode }
+export function getCurrentStageSuggestion(): Promise<CurrentStageSuggestion> {
+  return request('/me/classroom/stage-suggestion')
+}
+
+export function setCurrentClassroomStage(stageCode: string, expectedCurrentStage: string | null | undefined, options?: { mode: 'auto' | 'manual'; expectedMode?: CurrentStageMode; confirmAuto?: boolean }): Promise<{ ok: true; currentStage: string; mode?: CurrentStageMode }> {
+  return request('/me/classroom/current-stage', 'PUT', { stageCode, ...(expectedCurrentStage !== undefined ? { expectedCurrentStage } : {}), ...options })
+}
+
 export type PlanEditorItem = {
   name: string
   target?: string | null
+  dueDate?: string | null
   status: 'pending' | 'in_progress' | 'done'
+}
+
+export type UpcomingPlanTask = {
+  id: string; name: string; dueDate: string; status: 'pending' | 'in_progress'
+  planId: string; planTitle: string; stageCode: string; type: ClassroomPlanType
+}
+
+export function getUpcomingPlanTasks(): Promise<{ ok: true; from: string; to: string; tasks: UpcomingPlanTask[] }> {
+  return request('/me/classroom/upcoming-tasks')
 }
 
 export async function saveMyClassroomPlan(
   stageCode: string,
   type: ClassroomPlanType,
   payload: { title: string; items: PlanEditorItem[] },
-): Promise<{ id: string; status: 'pending' }> {
+): Promise<{ id: string; status: 'saved' }> {
   const result = await request<{
     ok: true
-    revision: { id: string; status: 'pending' }
+    plan: { id: string; status: 'saved' }
   }>(
     `/me/classroom/plans/${encodeURIComponent(stageCode)}/${encodeURIComponent(type)}`,
     'PUT',
     payload as unknown as WechatMiniprogram.IAnyObject,
   )
-  return result.revision
+  if (!result.plan?.id || result.plan.status !== 'saved') {
+    throw new ApiRequestError(409, 'plan_direct_save_unavailable')
+  }
+  return result.plan
 }
 
 export type PlanRevision = {
@@ -447,56 +472,19 @@ export async function saveTeacherStudentPlan(
   stageCode: string,
   type: ClassroomPlanType,
   payload: { title: string; items: PlanEditorItem[] },
-): Promise<{ id: string; status: 'approved' }> {
+): Promise<{ id: string; status: 'saved' }> {
   const result = await request<{
     ok: true
-    revision: { id: string; status: 'approved' }
+    plan: { id: string; status: 'saved' }
   }>(
     `/me/teacher/students/${encodeURIComponent(studentId)}/plans/${encodeURIComponent(stageCode)}/${encodeURIComponent(type)}`,
     'PUT',
     payload as unknown as WechatMiniprogram.IAnyObject,
   )
-  return result.revision
-}
-
-export type PendingPlanRevision = {
-  id: string
-  studentId: string
-  studentName: string
-  stageCode: string
-  type: ClassroomPlanType
-  title: string
-  itemsJson: PlanEditorItem[]
-  createdAt: string
-}
-
-export async function getPendingPlanRevisions(): Promise<PendingPlanRevision[]> {
-  const result = await request<{ ok: true; revisions: PendingPlanRevision[] }>(
-    '/me/teacher/pending-plan-revisions',
-  )
-  return result.revisions
-}
-
-export async function approvePlanRevision(
-  revisionId: string,
-  note: string | null = null,
-): Promise<void> {
-  await request<{ ok: true }>(
-    `/me/teacher/plan-revisions/${encodeURIComponent(revisionId)}/approve`,
-    'POST',
-    { note },
-  )
-}
-
-export async function rejectPlanRevision(
-  revisionId: string,
-  note: string | null = null,
-): Promise<void> {
-  await request<{ ok: true }>(
-    `/me/teacher/plan-revisions/${encodeURIComponent(revisionId)}/reject`,
-    'POST',
-    { note },
-  )
+  if (!result.plan?.id || result.plan.status !== 'saved') {
+    throw new ApiRequestError(409, 'plan_direct_save_unavailable')
+  }
+  return result.plan
 }
 
 export type ParsedScheduleCourse = {
@@ -1592,6 +1580,20 @@ export type CanonicalGrowthRecord = {
     admin: boolean
   }
   updatedAt: string
+}
+
+export type GrowthRecordInput = Pick<CanonicalGrowthRecord, 'type' | 'title' | 'organization' | 'role' | 'startDate' | 'endDate' | 'description' | 'result'>
+
+export async function createMyGrowthRecord(input: GrowthRecordInput): Promise<CanonicalGrowthRecord> {
+  const result = await request<{ ok: true; record: CanonicalGrowthRecord }>('/me/growth-records', 'POST', input)
+  return result.record
+}
+
+export async function updateMyGrowthRecord(id: string, input: GrowthRecordInput): Promise<CanonicalGrowthRecord> {
+  const result = await request<{ ok: true; record: CanonicalGrowthRecord }>(
+    '/me/growth-records/' + encodeURIComponent(id), 'PUT', input,
+  )
+  return result.record
 }
 
 export type CanonicalGrowthProfile = {

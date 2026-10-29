@@ -2,14 +2,14 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding: 28rpx 28rpx 72rpx;
-  background: #f6f7f9;
+  background: #f4f2ed;
   color: #242a32;
 }
 
 .state-card {
   padding: 28rpx;
   border: 1rpx solid #e2e6eb;
-  border-radius: 10rpx;
+  border-radius: 8rpx;
   background: #fff;
   color: #68727e;
   font-size: 22rpx;

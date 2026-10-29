@@ -29,7 +29,9 @@ const STATUS_OPTIONS = [
 Page({
   data: {
     loading: true,
+    loadError: '',
     saving: false,
+    readOnly: false,
     teacherMode: false,
     studentId: '',
     studentName: '',
@@ -51,6 +53,7 @@ Page({
     const type = decodeURIComponent(options.type || '') as ClassroomPlanType
     const studentId = decodeURIComponent(options.studentId || '')
     this.setData({
+      readOnly: isReadOnly(),
       stageCode,
       type,
       studentId,
@@ -62,7 +65,7 @@ Page({
 
   async loadPlan() {
     try {
-      this.setData({ loading: true })
+      this.setData({ loading: true, loadError: '', versions: [] })
       const classroom = this.data.teacherMode
         ? await getTeacherStudentClassroom(this.data.studentId, this.data.stageCode)
         : await getMyClassroom(this.data.stageCode)
@@ -73,6 +76,7 @@ Page({
       const items = plan.items.map((item) => ({
         name: item.name,
         target: item.target,
+        dueDate: item.dueDate ?? null,
         status: item.status,
       }))
       this.setData({
@@ -84,7 +88,7 @@ Page({
       })
 
       if (!isReadOnly() && !this.data.teacherMode && this.data.type === 'gpa' && items.length === 0 && revisionStatus === 'none') {
-        const latestSchedule = await getLatestScheduleImport().catch(() => null)
+        const latestSchedule = await getLatestScheduleImport(this.data.stageCode).catch(() => null)
         const courseNames = Array.from(new Set(
           (latestSchedule?.schedule?.courses ?? [])
             .map((course) => course.name.trim())
@@ -112,15 +116,13 @@ Page({
         })
       }
     } catch (error) {
-      wx.showToast({
-        title: friendlyRequestError(error, '计划加载失败，请稍后重试'),
-        icon: 'none',
-        duration: 2600,
-      })
+      this.setData({ loadError: friendlyRequestError(error, '计划加载失败，请稍后重试') })
     } finally {
       this.setData({ loading: false })
     }
   },
+
+  onRetryLoad() { void this.loadPlan() },
 
   onTitleInput(event: WechatMiniprogram.Input) {
     if(isReadOnly())return
@@ -158,6 +160,24 @@ Page({
     this.setData({ items })
   },
 
+  onDueDateChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (isReadOnly() || this.data.saving) return
+    const index = Number(event.currentTarget.dataset.index)
+    const items = [...this.data.items]
+    if (!items[index]) return
+    items[index] = { ...items[index], dueDate: event.detail.value }
+    this.setData({ items })
+  },
+
+  onClearDueDate(event: WechatMiniprogram.BaseEvent) {
+    if (isReadOnly() || this.data.saving) return
+    const index = Number(event.currentTarget.dataset.index)
+    const items = [...this.data.items]
+    if (!items[index]) return
+    items[index] = { ...items[index], dueDate: null }
+    this.setData({ items })
+  },
+
   onRemoveItem(event: WechatMiniprogram.BaseEvent) {
     if(isReadOnly())return
     const index = Number(event.currentTarget.dataset.index)
@@ -168,11 +188,17 @@ Page({
 
   async onSave() {
     if(isReadOnly())return
+    if (this.data.saving) return
+    if (this.data.loading || this.data.loadError) {
+      wx.showToast({ title: '请先重新读取规划', icon: 'none' })
+      return
+    }
     const title = this.data.title.trim()
     const items = this.data.items
       .map((item) => ({
         name: item.name.trim(),
         target: item.target?.trim() || null,
+        dueDate: item.dueDate || null,
         status: item.status,
       }))
       .filter((item) => item.name)
@@ -194,7 +220,7 @@ Page({
         wx.showToast({ title: '已保存为正式版', icon: 'success' })
       } else {
         await saveMyClassroomPlan(this.data.stageCode, this.data.type, { title, items })
-        wx.showToast({ title: '已提交老师审核', icon: 'success' })
+        wx.showToast({ title: '计划已保存', icon: 'success' })
       }
       await this.loadPlan()
     } catch (error) {

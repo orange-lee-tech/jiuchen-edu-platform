@@ -1,10 +1,8 @@
 <view wx:if="{{visible}}" class="website-mask" catchtouchmove="preventTouch">
   <view class="website-dialog" role="dialog" aria-label="九辰官网">
     <view class="heading">欢迎访问九辰官网</view>
-    <view class="lead">欢迎访问长沙九辰教育咨询有限公司官网。</view>
     <view class="description">点击下方网址即可复制链接，在手机默认浏览器粘贴打开。小程序内直接打开将在业务域名通过微信验证后开放。</view>
     <text class="url-link" bindtap="onLinkTap" selectable>jiuchenedu.com ›</text>
-    <view class="tip">更多产品和服务，欢迎咨询九辰客服。</view>
     <view class="actions">
       <button class="cancel" bindtap="close">稍后再说</button>
       <button class="copy" bindtap="onCopy">复制官网链接</button>

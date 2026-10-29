@@ -39,23 +39,22 @@ Do not default every surface to 20rpx+ radius.
 
 ## 3. Surface hierarchy
 
-Do not make all blocks pure white.
+The current UI redesign candidate uses a **restrained warm-neutral canvas, blue actions and sparse muted-gold warmth**. Keep information hierarchy and readable contrast ahead of decoration; do not turn every card gold or every surface pure white.
 
-Starting tokens:
+Starting tokens for the current candidate branch:
 
-- Canvas: `#F2F4F6`
-- Surface Primary: `#FAFBFC`
-- Surface Secondary: `#EDF2F7`
-- Surface Selected: `#E7EEF8`
-- Human Note Surface: `#F4F1EA` — sparse use for teacher/human guidance
+- Canvas: `#F4F2ED`
+- Surface Primary: `#FFFDF9`
+- Surface Secondary: `#F3F7FC`
+- Surface Selected: `#EAF2FA`
+- Human Note / gentle warm emphasis: `#FAF1DB` (sparse use)
 
 Lines:
 
-- Line Strong: `#D8DEE6`
-- Line Soft: `#E5E9EE`
+- Line Strong: `#E8E2D6`
+- Line Soft: `#CFDDEC`
 
-Use secondary tonal hierarchy to group content before introducing new hues.
-
+Use secondary tonal hierarchy to group content before introducing new hues. These tokens document the current UI candidate; device review may refine their balance.
 ## 4. Text
 
 - Text Primary: `#18202A`
@@ -75,18 +74,14 @@ Chinese-first UI. Avoid unexplained English labels.
 
 ## 5. Brand and semantic color
 
-Brand:
+Brand for the current UI candidate:
 
-- Action Blue: `#2F6FED`
-- Deep Blue: `#2459BE`
-- Soft Blue: `#E7EEF8`
+- Deep Blue / primary action: `#173E67`
+- Secondary Action Blue: `#245681`
+- Soft Blue Surface: `#EAF2FA`
+- Muted Gold Emphasis: `#896526` on a suitable warm surface such as `#FAF1DB`
 
-Use strong blue primarily for:
-
-- main action;
-- selected navigation;
-- current / active state;
-- meaningful link.
+Use strong blue primarily for the main action, selected navigation, active stage and meaningful links. Gold is a restrained accent for human guidance or a meaningful highlight, not a second primary-action color.
 
 Semantic colors should be muted and sparse:
 
@@ -94,10 +89,7 @@ Semantic colors should be muted and sparse:
 - warning / due soon / needs confirmation: amber;
 - error / destructive / overdue: red.
 
-Do not give GPA / English / research / competition four unrelated colors merely to distinguish categories.
-
-Do not use red to communicate normal academic weakness or competition pressure.
-
+Do not give GPA / English / research / competition four unrelated colors merely to distinguish categories. Do not use red to communicate normal academic weakness or competition pressure.
 ## 6. Color ratio and meaningful chroma
 
 **Suggested starting balance, not a mechanical cap:**

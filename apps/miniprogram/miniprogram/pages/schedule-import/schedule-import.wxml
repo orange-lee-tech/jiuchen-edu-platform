@@ -2,7 +2,6 @@
 <view class="page-shell">
   <view class="import-head">
     <text class="page-title">我的课表</text>
-    <text class="page-desc">Excel / CSV 先走确定性解析；复杂格式自动降级为手动校正。图片在多模态模型未配置时也不会卡死，可直接手动补录。</text>
   </view>
 
   <view class="mode-tabs">
@@ -16,7 +15,6 @@
     <text class="term-affiliation" bindtap="onReassignStage">归属：{{stageChoiceLabel || '待人工确认归属学期'}} · 点击修改 ›</text>
     <view>
       <text class="term-title">{{currentWeekLabel}}</text>
-      <text class="term-desc">本周筛选依据课程的“周次”字段；未写周次的课程默认每周显示。</text>
     </view>
     <view class="date-picker" bindtap="onOpenMondayPicker">{{termStartDate ? '第一周周一：' + termStartDate : '选择第一周周一'}} ›</view>
   </view>
@@ -25,12 +23,11 @@
     <button class="import-card surface" bindtap="onChooseSpreadsheet" loading="{{parsing}}" disabled="{{parsing}}">
       <text class="import-icon">表</text>
       <text class="import-title">微信文件 / Excel / CSV</text>
-      <text class="import-desc">支持 xlsx、xls、csv；会识别多工作表、常见合并星期表头与课程单元格。</text>
     </button>
     <button class="import-card surface" bindtap="onChooseImage" loading="{{parsing}}" disabled="{{parsing}}">
       <text class="import-icon">图</text>
       <text class="import-title">课表截图 / 拍照</text>
-      <text class="import-desc">已配置图片模型则自动识别；未配置时进入手动校正，不再直接失败。</text>
+      <text class="import-desc">识别失败时可手动校正。</text>
     </button>
   </view>
 
@@ -93,7 +90,7 @@
         <text>选择学期第一周周一</text>
         <text class="monday-close" bindtap="onCloseMondayPicker">×</text>
       </view>
-      <text class="monday-hint">只展示周一，杜绝误选周二至周日。请根据学校教务校历确认开学周次。</text>
+      <text class="monday-hint">请按学校校历确认第一周周一。</text>
       <view class="monday-month-nav">
         <button data-delta="-1" bindtap="onChangeMondayMonth">‹ 上个月</button>
         <text>{{mondayMonth}}</text>
@@ -150,7 +147,7 @@
         <button class="primary" loading="{{saving}}" disabled="{{saving}}" bindtap="onSaveCourse">保存课程</button>
       </view>
 
-      <text class="editor-note">这里是学员自己的临时课表，保存后立即生效，不进入老师审核流程。</text>
+      <text class="editor-note">这里是学员自己的临时课表，保存后立即生效。</text>
     </view>
   </view>
 </view>

@@ -113,10 +113,10 @@ test('analytics page retains successful assessments but removes error-backed pay
  requestAt(requests,'/me/admin/users').success({statusCode:503,data:{ok:false,error:'database_error'}})
  requestAt(requests,'/me/admin/assessment-ai-costs').fail({errMsg:'request:fail synthetic cost outage'})
  requestAt(requests,'/me/admin/assessment-ai-balance').fail({errMsg:'request:fail synthetic balance outage'})
- await flow;assert.equal(page.data.analytics.summary.assessmentCount,3);assert.match(page.data.analyticsWarning,/支付读取失败/)
+ await flow;assert.equal(page.data.analytics.summary.assessmentCount,3);assert.match(page.data.analyticsWarning,/支付暂不可用/)
  assert.equal(page.data.userCount,null);assert.ok(page.data.userCountError)
  assert.equal(page.data.aiCosts,null);assert.equal(page.data.aiBalance,null)
- assert.match(page.data.aiCostWarning,/成本表迁移/)
+ assert.match(page.data.aiCostWarning,/模型请求明细暂不可用/)
  assert.equal(page.data.analyticsPlots.some(p=>p.key==='rechargeCount'),false)
  assert.equal(page.data.analyticsPlots.find(p=>p.key==='createdCount').points[0].display,'4')
  assert.equal(page.data.analyticsPlots.find(p=>p.key==='failedCount').max,0)
@@ -145,7 +145,7 @@ test('Release A analytics without distinct-user field keeps real assessment data
  await flow
  assert.equal(page.data.analytics.summary.assessmentCount,3)
  assert.equal(page.data.aiCosts,null);assert.equal(page.data.aiBalance.status,'not_connected')
- assert.equal(page.data.assessmentUserCountLabel,'当前 API 未提供')
+ assert.equal(page.data.assessmentUserCountLabel,'暂未提供')
  assert.equal(page.data.analyticsPlots.find(p=>p.key==='createdCount').points[0].display,'4')
  assert.equal(page.data.analyticsPlots.some(p=>p.key==='rechargeAmountFen'),false)
 })
@@ -167,7 +167,7 @@ test('analytics endpoint failure still uses the existing unavailable-state fallb
 test('admin pages only request their own Release A sources',()=>{
  for(const [section,expected] of [
   ['admin-users',['/me/admin/internal-ids','/me/admin/users']],
-  ['admin-assignments',['/me/admin/students','/me/admin/teachers','/me/admin/assignments']],
+  ['admin-assignments',['/me/admin/students','/me/admin/teachers','/me/admin/assignments','/me/admin/internal-ids']],
   ['admin-news',['/me/admin/news']],
  ]){
   const storage=new Map(),requests=[],wx={getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),request:o=>requests.push(o)}

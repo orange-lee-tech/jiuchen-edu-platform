@@ -48,6 +48,7 @@ function normalizeInternalId(value: string) {
 Page({
   data: {
     loading: true,
+    loadError: '',
     saving: false,
     claiming: false,
     role: 'user' as UserRole,
@@ -112,6 +113,7 @@ Page({
   },
 
   async loadAll() {
+    this.setData({ loading: true, loadError: '' })
     try {
       const [identityResult, profile, refreshed] = await Promise.all([
         getMyInternalIdentity(),
@@ -141,10 +143,14 @@ Page({
         void saveCachedAcademicProfile(profile)
       }
     } catch (error) {
-      console.info('Profile data is not available yet.', error)
+      this.setData({ loadError: friendlyRequestError(error, '个人资料暂时无法读取，请重试') })
     } finally {
       this.setData({ loading: false })
     }
+  },
+
+  onRetryLoad() {
+    void this.loadAll()
   },
 
   onInternalIdInput(event: WechatMiniprogram.Input) {
@@ -225,7 +231,7 @@ Page({
     if (year) this.setData({ 'form.enrollmentYear': year })
   },
   async onSave() {
-    if (!this.data.canEditAcademic) return
+    if (!this.data.canEditAcademic || this.data.loading || this.data.loadError) return
 
     try {
       this.setData({ saving: true })
