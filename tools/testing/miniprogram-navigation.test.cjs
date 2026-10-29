@@ -668,9 +668,10 @@ test('role-shell uses an ordinary view-slot property instead of reserved WXML sl
   }
 })
 
-test('current-week plan badge follows the selected view', () => {
+test('planning header distinguishes saved current stage from the stage being viewed', () => {
   const html = fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxml'), 'utf8')
-  assert.match(html, /selectedView === 'week' \? '本周课表' : currentStageLabel/)
+  assert.match(html, /本周课表/)
+  assert.match(html, /当前档案：\{\{actualStageLabel\}\}/)
 })
 
 test('new user and each claimed business role receive a separate, dismissible 4-step guide', () => {
@@ -1764,8 +1765,10 @@ test('countdown keeps expired events visible and edits/deletes without discardin
  h.storage.set(key,[{id:'expired',title:'旧考试',date:'2020-01-01'},{id:'future',title:'目标日期',date:'2099-12-31'},{legacyRecord:true}])
  page.loadCountdowns(id)
  assert.equal(page.data.countdowns.length,2)
- assert.equal(page.data.countdowns[0].id,'expired')
- assert.match(page.data.countdowns[0].remainingLabel,/已过期/)
+ assert.deepEqual(page.data.countdowns.map(entry=>entry.id),['future','expired'],'upcoming events sort before expired events while expired records remain accessible')
+ const expired=page.data.countdowns.find(entry=>entry.id==='expired')
+ assert.ok(expired)
+ assert.match(expired.remainingLabel,/已过期/)
  page.onCountdownEdit({currentTarget:{dataset:{id:'expired'}}})
  page.onCountdownTitleInput({detail:{value:'旧考试更新'}})
  page.onCountdownSave()
