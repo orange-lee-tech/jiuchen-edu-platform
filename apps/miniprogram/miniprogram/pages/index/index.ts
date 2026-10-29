@@ -19,7 +19,7 @@ function courseStartMinutes(value: string | null) {
 
 
 type CountdownEntry = { id: string; title: string; date: string }
-type CountdownView = CountdownEntry & { remainingDays: number }
+type CountdownView = CountdownEntry & { remainingDays: number; dateValid: boolean; remainingLabel: string }
 const COUNTDOWN_PREFIX = 'jiuchen-countdowns-v1:'
 function dateText(value: Date) {
   const n = (v: number) => String(v).padStart(2, '0')
@@ -43,8 +43,8 @@ Page({
     stageConfirmed: false, stageNeedsEnrollmentYear: false,
     planPreview: [] as Array<{title:string;status:string}>,
     countdowns: [] as CountdownView[], countdownPreview: [] as CountdownView[], countdownOpen: false,
-    countdownTitle: '', countdownDate: dateText(new Date()), countdownEditingId: '',
-    countdownToday: dateText(new Date()), countdownSaving: false,
+    countdownTitle: '', countdownDate: dateText(new Date()), countdownEditingId: '', countdownPickerStart: dateText(new Date()),
+    countdownToday: dateText(new Date()), countdownSaving: false, countdownEntryCount: 0,
   },
   homeEpoch: 0,
   countdownOwner: '',
@@ -53,7 +53,7 @@ Page({
     const nextOwner = owner || ''
     if (!nextOwner) {
       this.countdownOwner = ''
-      this.setData({countdowns:[],countdownPreview:[],countdownOpen:false,countdownTitle:'',countdownEditingId:''})
+      this.setData({countdowns:[],countdownPreview:[],countdownOpen:false,countdownTitle:'',countdownEditingId:'',countdownEntryCount:0})
       return
     }
     if (nextOwner !== this.countdownOwner) this.setData({countdownOpen:false,countdownTitle:''})
@@ -65,16 +65,24 @@ Page({
         Boolean(e && typeof e === 'object' && typeof e.id === 'string' &&
           typeof e.title === 'string' && typeof e.date === 'string'))
     } catch { /* A storage error must not block the home workbench. */ }
-    const active: CountdownView[] = entries.slice(0,8).map(e=>({
-      ...e, remainingDays:daysUntil(e.date) ?? -1,
-    })).filter(e=>e.remainingDays>=0).sort((a,b)=>a.remainingDays-b.remainingDays)
-    this.setData({countdowns:active,countdownPreview:active.slice(0,3),countdownToday:dateText(new Date())})
+    const active: CountdownView[] = entries.map(e=>{
+      const days=daysUntil(e.date)
+      return {...e, dateValid:days!==null, remainingDays:days ?? 0,
+        remainingLabel:days===null?'日期需修正':days<0?`已过期 ${Math.abs(days)} 天`:days===0?'就是今天':`还剩 ${days} 天`}
+    }).sort((a,b)=>{
+      if(a.dateValid!==b.dateValid)return a.dateValid?-1:1
+      if(!a.dateValid)return a.title.localeCompare(b.title)
+      const aExpired=a.remainingDays<0,bExpired=b.remainingDays<0
+      if(aExpired!==bExpired)return aExpired?1:-1
+      return aExpired ? b.remainingDays-a.remainingDays : a.remainingDays-b.remainingDays
+    })
+    this.setData({countdowns:active,countdownPreview:active.slice(0,3),countdownToday:dateText(new Date()),countdownEntryCount:entries.length})
   },
   onCountdownToggle() {
     if (!this.countdownOwner) { wx.showToast({title:'登录学员身份后可设置',icon:'none'}); return }
     const opening = !this.data.countdownOpen
     this.setData({
-      countdownOpen: opening, countdownTitle: '', countdownDate: dateText(new Date()), countdownEditingId: '',
+      countdownOpen: opening, countdownTitle: '', countdownDate: dateText(new Date()), countdownPickerStart: dateText(new Date()), countdownEditingId: '',
     }, () => {
       // Editor is below the shortcut grid: without scrolling the tap looks unresponsive.
       if (opening) wx.pageScrollTo({selector:'.countdown-panel',duration:220,
@@ -91,42 +99,43 @@ Page({
     const id = String(event.currentTarget.dataset.id || '')
     const entry = this.data.countdowns.find(item => item.id === id)
     if (!entry || !this.countdownOwner) return
-    this.setData({ countdownOpen:true, countdownEditingId:id, countdownTitle:entry.title, countdownDate:entry.date }, () => {
+    this.setData({ countdownOpen:true, countdownEditingId:id, countdownTitle:entry.title, countdownDate:entry.dateValid ? entry.date : dateText(new Date()), countdownPickerStart:entry.dateValid && entry.remainingDays < 0 ? entry.date : dateText(new Date()) }, () => {
       wx.pageScrollTo({selector:'.countdown-panel',duration:220})
     })
   },
   onCountdownCancelEdit() {
-    this.setData({ countdownEditingId:'', countdownTitle:'', countdownDate:dateText(new Date()) })
+    this.setData({ countdownEditingId:'', countdownTitle:'', countdownDate:dateText(new Date()), countdownPickerStart:dateText(new Date()) })
   },
   onCountdownSave() {
     if (!this.countdownOwner || this.data.countdownSaving) return
     const title=this.data.countdownTitle.trim()
     const date=this.data.countdownDate
     const editingId=this.data.countdownEditingId
-    if (!title || title.length>24 || daysUntil(date)===null || (daysUntil(date)??-1)<0) {
+    const days=daysUntil(date)
+    const existing=this.data.countdowns.find(entry=>entry.id===editingId)
+    const existingDays=existing ? daysUntil(existing.date) : null
+    if (!title || title.length>24 || days===null || (days<0 && !(existing && existingDays!==null && existingDays<0))) {
       wx.showToast({title:'填写事件名称和有效日期',icon:'none'});return
     }
-    if (!editingId && this.data.countdowns.length>=8) {
+    if (!editingId && this.data.countdownEntryCount>=8) {
       wx.showToast({title:'最多设置8个倒数日',icon:'none'});return
     }
     this.setData({countdownSaving:true})
     try {
       const stored: unknown = wx.getStorageSync(this.countdownKey())
-      let entries: CountdownEntry[] = Array.isArray(stored) ? stored.filter((e):e is CountdownEntry =>
-        Boolean(e && typeof e === 'object' && typeof e.id === 'string' &&
-          typeof e.title === 'string' && typeof e.date === 'string')) : []
+      let entries: unknown[] = Array.isArray(stored) ? stored.slice() : []
       if (editingId) {
-        if (!entries.some(entry => entry.id === editingId)) {
+        if (!entries.some(entry => Boolean(entry && typeof entry === 'object' && (entry as {id?:unknown}).id === editingId))) {
           wx.showToast({title:'找不到这条倒数日，请刷新后重试',icon:'none'})
           return
         }
-        entries = entries.map(entry => entry.id === editingId ? {id:editingId,title,date} : entry)
+        entries = entries.map(entry => entry && typeof entry === 'object' && (entry as {id?:unknown}).id === editingId ? {id:editingId,title,date} : entry)
       } else {
         entries = [...entries, {id:String(Date.now())+'-'+Math.random().toString(36).slice(2,8),title,date}]
       }
       wx.setStorageSync(this.countdownKey(),entries)
       this.loadCountdowns(this.countdownOwner)
-      this.setData({countdownTitle:'',countdownOpen:false,countdownEditingId:'',countdownDate:dateText(new Date())})
+      this.setData({countdownTitle:'',countdownOpen:false,countdownEditingId:'',countdownDate:dateText(new Date()),countdownPickerStart:dateText(new Date())})
       wx.showToast({title:editingId?'倒数日已更新':'倒数日已保存到本机',icon:'success'})
     } catch { wx.showToast({title:'本机保存失败，请重试',icon:'none'}) }
     finally { this.setData({countdownSaving:false}) }
@@ -139,10 +148,15 @@ Page({
       success:result=>{
         if (!result.confirm || this.countdownOwner !== owner || !this.data.countdowns.some(e=>e.id===id)) return
         try {
-          const entries=this.data.countdowns.filter(e=>e.id!==id).map(({id,title,date})=>({id,title,date}))
+          const stored: unknown = wx.getStorageSync(this.countdownKey())
+          const entries = Array.isArray(stored) ? stored.filter(entry => {
+            if (!entry || typeof entry !== 'object') return true
+            return !('id' in entry) || (entry as {id?:unknown}).id !== id
+          }) : []
           wx.setStorageSync(this.countdownKey(),entries)
           this.loadCountdowns(this.countdownOwner)
-          if (this.data.countdownEditingId === id) this.setData({countdownEditingId:'',countdownTitle:'',countdownDate:dateText(new Date())})
+          wx.showToast({title:'倒数日已删除',icon:'success'})
+          if (this.data.countdownEditingId === id) this.setData({countdownEditingId:'',countdownTitle:'',countdownDate:dateText(new Date()),countdownPickerStart:dateText(new Date())})
         } catch { wx.showToast({title:'删除失败，请重试',icon:'none'}) }
       },
     })

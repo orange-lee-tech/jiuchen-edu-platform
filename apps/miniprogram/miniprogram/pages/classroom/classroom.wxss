@@ -200,3 +200,12 @@ button::after { border:0; }
 .stage-group-list{position:relative;z-index:2;}
 .stage-recovery-actions{display:flex;flex-wrap:wrap;gap:8rpx;}
 .stage-recovery-actions button{flex:1 1 220rpx;min-width:0;margin:0;padding:12rpx 14rpx;font-size:22rpx;line-height:1.4;}
+
+/* Keep the stage banner decorative; all actions flow vertically on narrow screens. */
+.stage-banner{height:128rpx;opacity:.2;}
+.stage-picker-top{display:flex;flex-direction:column;align-items:stretch;gap:10rpx;min-height:0;}
+.stage-picker-top>view{max-width:none;min-width:0;}
+.stage-picker-toggle{align-self:flex-start;box-sizing:border-box;max-width:100%;white-space:normal;padding:10rpx 14rpx;}
+.stage-actions-secondary{display:flex;flex-direction:column;align-items:flex-start;gap:0;}
+.stage-actions-secondary text{display:block;box-sizing:border-box;max-width:100%;padding:8rpx 0;line-height:1.5;}
+.stage-badge{max-width:60%;white-space:normal;text-align:right;line-height:1.4;}

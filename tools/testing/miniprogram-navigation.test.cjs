@@ -791,7 +791,7 @@ test('compact planning selector keeps all academic years, holiday stages and wee
  const css=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxss'),'utf8')
  assert.match(wxml,/class="stage-picker surface"/)
  assert.match(wxml,/wx:for="\{\{stageGroups\}\}"/)
- assert.match(wxml,/档案当前阶段：\{\{actualStageLabel\}\}/)
+ assert.match(wxml,/档案当前学期：\{\{actualStageLabel\}\}/)
  assert.match(wxml,/查看本周完整课表/)
  assert.match(css,/\.stage-options\{[^}]*flex-wrap:wrap/)
  const page=harness().page('pages/classroom/classroom')
@@ -815,6 +815,16 @@ test('setting the viewed stage requires confirmation and reloads only after serv
  assert.equal(h.requests[0].data.expectedCurrentStage,'freshman-fall')
  h.respond(0,{ok:true,currentStage:'junior-fall'});await settle();await settle()
  assert.equal(reloads,1)
+})
+
+test('manual calibration omits stale compare tokens when stage lookup failed', () => {
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
+ page.setData({actualStageKnown:false,stageModeKnown:false,actualStageCode:'',stageMode:null,stageCalibrationMode:true})
+ page.onStageChange({currentTarget:{dataset:{code:'junior-winter'}}})
+ assert.equal(h.requests.length,1);assert.equal(h.requests[0].method,'PUT')
+ assert.equal(h.requests[0].data.stageCode,'junior-winter')
+ assert.equal(Object.hasOwn(h.requests[0].data,'expectedCurrentStage'),false)
+ assert.equal(Object.hasOwn(h.requests[0].data,'expectedMode'),false)
 })
 
 test('stage resolution updates opted-in auto and unset stages, while preserving existing manual choices',async()=>{
@@ -875,7 +885,7 @@ test('home does not show an old schedule when legacy stage and suggestion disagr
  const find=(part)=>h.requests.findIndex(r=>r.url.includes(part))
  h.respond(find('/me/classroom/stage-suggestion'),{ok:true,currentStage:'freshman-fall',mode:null,suggestedStage:'sophomore-fall'});await settle()
  h.respond(find('/me/classroom?stage=freshman-fall'),{ok:true,student:{currentStage:'freshman-fall'},stage:{code:'freshman-fall'},plans:[],mentors:[],records:[]});await settle()
- assert.match(page.data.stageNotice,/建议不同/);assert.match(page.data.scheduleError,/待核对/)
+ assert.match(page.data.stageNotice,/建议不同/);assert.match(page.data.scheduleError,/尚未确认/)
  assert.equal(h.requests.some(r=>r.url.includes('/schedule-imports/latest')),false);page.onHide()
 })
 
@@ -1724,6 +1734,8 @@ test('manual semester calibration is a visible save flow, separate from browsing
   const planWxml = fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxml'), 'utf8')
   assert.match(planWxml, /手动校准当前学期/)
   assert.match(planWxml, /选择当前学期（选择后保存）/)
+  assert.match(planWxml, /正在查看：\{\{currentStageLabel\}\}/)
+  assert.match(fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxss'), 'utf8'), /\.stage-picker-top\{display:flex;flex-direction:column/)
   assert.match(planTs, /stageCalibrationMode/)
   assert.match(planTs, /saveCurrentStage\(stage\.code, expected, 'manual', expectedMode\)/)
 })
@@ -1731,14 +1743,38 @@ test('manual semester calibration is a visible save flow, separate from browsing
 test('today workbench keeps countdown titles visible and supports editing without losing local entries', () => {
   const homeTs = fs.readFileSync(path.join(root, 'pages/index/index.ts'), 'utf8')
   const homeWxml = fs.readFileSync(path.join(root, 'pages/index/index.wxml'), 'utf8')
-  assert.match(homeWxml, /class="countdown-summary"/)
+  assert.match(homeWxml, /class="[^"]*countdown-summary[^"]*"/)
   assert.match(homeWxml, /我的倒数日/)
   assert.match(homeWxml, /countdownPreview/)
   assert.match(homeWxml, /onCountdownEdit/)
   assert.match(homeWxml, /onCountdownDelete/)
   assert.match(homeTs, /countdownPreview:active\.slice\(0,3\)/)
+  assert.match(homeTs, /已过期/)
+  assert.doesNotMatch(homeTs, /filter\(e=>e\.remainingDays>=0\)/)
+  assert.match(homeWxml, /start="\{\{countdownPickerStart\}\}"/)
   assert.match(homeTs, /onCountdownEdit\(event:WechatMiniprogram\.BaseEvent\)/)
   assert.match(homeTs, /onCountdownCancelEdit\(\)/)
+})
+
+test('countdown keeps expired events visible and edits/deletes without discarding other local records', () => {
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/index/index')
+ const key='jiuchen-countdowns-v1:'+id
+ h.storage.set(key,[{id:'expired',title:'旧考试',date:'2020-01-01'},{id:'future',title:'目标日期',date:'2099-12-31'},{legacyRecord:true}])
+ page.loadCountdowns(id)
+ assert.equal(page.data.countdowns.length,2)
+ assert.equal(page.data.countdowns[0].id,'expired')
+ assert.match(page.data.countdowns[0].remainingLabel,/已过期/)
+ page.onCountdownEdit({currentTarget:{dataset:{id:'expired'}}})
+ page.onCountdownTitleInput({detail:{value:'旧考试更新'}})
+ page.onCountdownSave()
+ const afterEdit=h.storage.get(key)
+ assert.equal(afterEdit.find(e=>e && e.id==='expired').title,'旧考试更新')
+ assert.ok(afterEdit.some(e=>e && e.legacyRecord===true),'unknown local records must survive an edit')
+ page.onCountdownDelete({currentTarget:{dataset:{id:'future'}}})
+ h.modals.at(-1).success({confirm:true})
+ const afterDelete=h.storage.get(key)
+ assert.equal(afterDelete.some(e=>e && e.id==='future'),false)
+ assert.ok(afterDelete.some(e=>e && e.legacyRecord===true),'unknown local records must survive a delete')
 })
 
 test('opportunity navigation keeps all six reference sections and profile identity details remain accessible', () => {

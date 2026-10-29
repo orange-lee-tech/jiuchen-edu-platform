@@ -62,7 +62,7 @@
 <view class="action-row action-countdown" bindtap="onCountdownToggle" hover-class="action-pressed" aria-role="button" aria-label="更多功能：查看或设置倒数日">
         <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/clock.png" mode="aspectFit" /></view>
         <text class="action-title">倒数日</text>
-        <text class="action-countdown-days">{{countdowns.length ? countdowns[0].remainingDays + ' 天' : '添加目标'}}</text>
+        <text class="action-countdown-days">{{countdowns.length ? countdowns[0].remainingLabel : '添加目标'}}</text>
       </view>
       </view>
     </view>
@@ -71,7 +71,7 @@
       <view wx:if="{{countdownPreview.length}}" class="countdown-preview-list">
         <view wx:for="{{countdownPreview}}" wx:key="id" class="countdown-preview-item">
           <view class="countdown-main"><text class="countdown-name">{{item.title}}</text><text class="countdown-date">{{item.date}}</text></view>
-          <text class="countdown-remaining">{{item.remainingDays === 0 ? '就是今天' : '还剩 ' + item.remainingDays + ' 天'}}</text>
+          <text class="countdown-remaining {{!item.dateValid || item.remainingDays < 0 ? 'countdown-expired' : ''}}">{{item.remainingLabel}}</text>
         </view>
       </view>
       <text wx:else class="countdown-empty">{{loggedIn ? '记录考试、报名截止或个人目标日期。添加后会直接显示在这里。' : '登录学员身份后，可记录考试、报名截止和个人目标日期。'}}</text>
@@ -82,12 +82,12 @@
       <text class="countdown-local-note">仅保存在本机当前学员账号</text>
       <view wx:for="{{countdowns}}" wx:key="id" class="countdown-item">
         <view class="countdown-main"><text class="countdown-name">{{item.title}}</text><text class="countdown-date">{{item.date}}</text></view>
-        <text class="countdown-remaining">{{item.remainingDays === 0 ? '就是今天' : '还剩 ' + item.remainingDays + ' 天'}}</text>
+        <text class="countdown-remaining {{!item.dateValid || item.remainingDays < 0 ? 'countdown-expired' : ''}}">{{item.remainingLabel}}</text>
         <view class="countdown-row-actions"><text class="countdown-edit" data-id="{{item.id}}" bindtap="onCountdownEdit">编辑</text><text class="countdown-remove" data-id="{{item.id}}" bindtap="onCountdownDelete">删除</text></view>
       </view>
-      <view wx:if="{{countdowns.length < 8 || countdownEditingId}}" class="countdown-editor">
+      <view wx:if="{{countdownEntryCount < 8 || countdownEditingId}}" class="countdown-editor">
         <input class="countdown-input" maxlength="24" placeholder="事件名称，如：四六级考试" value="{{countdownTitle}}" bindinput="onCountdownTitleInput" />
-        <picker mode="date" start="{{countdownToday}}" end="2099-12-31" value="{{countdownDate}}" bindchange="onCountdownDateChange">
+        <picker mode="date" start="{{countdownPickerStart}}" end="2099-12-31" value="{{countdownDate}}" bindchange="onCountdownDateChange">
           <view class="countdown-date-picker">目标日期：{{countdownDate}} ›</view>
         </picker>
         <view class="countdown-editor-actions">

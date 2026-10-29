@@ -5,7 +5,7 @@
     <view>
       <text class="page-title">我的规划</text>
     </view>
-    <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge">{{selectedView === 'week' ? '本周课表' : currentStageLabel}}</view>
+    <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge"><text wx:if="{{selectedView === 'week'}}">本周课表</text><text wx:else>正在查看：{{currentStageLabel}}</text></view>
   </view>
 
   <view wx:if="{{mode === 'guest'}}" class="entry-state surface">

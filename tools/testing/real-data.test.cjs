@@ -167,7 +167,7 @@ test('analytics endpoint failure still uses the existing unavailable-state fallb
 test('admin pages only request their own Release A sources',()=>{
  for(const [section,expected] of [
   ['admin-users',['/me/admin/internal-ids','/me/admin/users']],
-  ['admin-assignments',['/me/admin/students','/me/admin/teachers','/me/admin/assignments']],
+  ['admin-assignments',['/me/admin/students','/me/admin/teachers','/me/admin/assignments','/me/admin/internal-ids']],
   ['admin-news',['/me/admin/news']],
  ]){
   const storage=new Map(),requests=[],wx={getStorageSync:k=>storage.get(k),setStorageSync:(k,v)=>storage.set(k,v),removeStorageSync:k=>storage.delete(k),request:o=>requests.push(o)}

@@ -337,15 +337,16 @@ export function registerClassroomWorkspaceRoutes(
     const session = await resolveSessionUser(request, database)
     if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
     if (session.role !== 'student' || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_stage_edit_forbidden' })
-    const parsed = z.object({ stageCode: z.string(), expectedCurrentStage: z.string().nullable(),
+    const parsed = z.object({ stageCode: z.string(), expectedCurrentStage: z.string().nullable().optional(),
       mode: z.enum(['auto', 'manual']).optional(), expectedMode: z.enum(['auto', 'manual']).nullable().optional(),
       confirmAuto: z.boolean().optional() }).strict().safeParse(request.body)
     if (!parsed.success || !getStageDefinition(parsed.data.stageCode)) return reply.code(400).send({ ok: false, error: 'invalid_stage' })
+    if ((parsed.data.mode ?? 'manual') === 'auto' && parsed.data.expectedCurrentStage === undefined) return reply.code(400).send({ ok: false, error: 'expected_stage_required' })
     const result = await database.db.transaction(async (tx) => {
       const rows = await tx.execute(sql`SELECT id, current_stage AS currentStage, current_stage_mode AS mode FROM students WHERE user_id = ${session.userId} FOR UPDATE`)
       const student = (rows[0] as unknown as Array<{ id: string; currentStage: string | null; mode: 'auto' | 'manual' | null }>)[0]
       if (!student) return 'missing' as const
-      if (student.currentStage !== parsed.data.expectedCurrentStage) return 'changed' as const
+      if (parsed.data.expectedCurrentStage !== undefined && student.currentStage !== parsed.data.expectedCurrentStage) return 'changed' as const
       if (parsed.data.expectedMode !== undefined && student.mode !== parsed.data.expectedMode) return 'changed' as const
       const mode = parsed.data.mode ?? 'manual'
       if (mode === 'auto') {

@@ -42,6 +42,16 @@ test('student confirms a current stage; stale changes fail without touching hist
   } finally { await app.close() }
 })
 
+test('manual calibration can proceed when the current-stage read was unavailable; auto mode still requires a compare token', async () => {
+  const { app, state, headers } = fixture(); state.mode = 'auto'
+  try {
+    const manual = await app.inject({ method: 'PUT', url: '/me/classroom/current-stage', headers, payload: { stageCode: 'junior-winter', mode: 'manual' } })
+    assert.equal(manual.statusCode, 200); assert.equal(state.stage, 'junior-winter'); assert.equal(state.mode, 'manual'); assert.equal(state.writes, 1)
+    const unsafeAuto = await app.inject({ method: 'PUT', url: '/me/classroom/current-stage', headers, payload: { stageCode: 'senior-fall', mode: 'auto', confirmAuto: true } })
+    assert.equal(unsafeAuto.statusCode, 400); assert.equal(state.stage, 'junior-winter'); assert.equal(state.writes, 1)
+  } finally { await app.close() }
+})
+
 test('automatic mode requires a server suggestion and explicit consent for an existing stage', async () => {
   const { app, state, headers } = fixture()
   try {

@@ -131,7 +131,7 @@ Page({
     weekCourses: [] as Array<{ name: string; day: string; slot: string; location: string | null; teacher: string | null }>,
     stages: stageLabels(FALLBACK_STAGES),
     stageGroups: stageGroups(FALLBACK_STAGES), stagePickerOpen: false, actualStageLabel: '待确认',
-    actualStageCode: '', stageMode: null as 'auto' | 'manual' | null, stageNotice: '', stageScheduleSafe: false,
+    actualStageCode: '', actualStageKnown: false, stageMode: null as 'auto' | 'manual' | null, stageModeKnown: false, stageNotice: '', stageScheduleSafe: false,
     stageChangeBusy: false, stageCalibrationMode: false,
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
@@ -156,17 +156,17 @@ Page({
     const auth = getSavedAuthResult()
     const role=getReadOnlyContext()?.role||auth?.user.role
     if (!auth) {
-      this.setData({ mode: 'guest', plans: [], mentors: [], records: [], actualStageCode: '' })
+      this.setData({ mode: 'guest', plans: [], mentors: [], records: [], actualStageCode: '', actualStageKnown: false, stageMode: null, stageModeKnown: false })
       return
     }
 
     if (role === 'teacher' || role === 'staff' || role === 'admin') {
-      this.setData({ mode: 'teacher', plans: [], mentors: [], records: [], actualStageCode: '' })
+      this.setData({ mode: 'teacher', plans: [], mentors: [], records: [], actualStageCode: '', actualStageKnown: false, stageMode: null, stageModeKnown: false })
       return
     }
 
     if (role !== 'student') {
-      this.setData({ mode: 'unbound', plans: [], mentors: [], records: [], actualStageCode: '' })
+      this.setData({ mode: 'unbound', plans: [], mentors: [], records: [], actualStageCode: '', actualStageKnown: false, stageMode: null, stageModeKnown: false })
       return
     }
     const owner=getReadOnlyContext()?.id||auth.user.id
@@ -174,7 +174,7 @@ Page({
     this.selectedOwner = owner
     if (!sameOwner) this.setData({ selectedView: 'stage' })
 
-    this.setData({ mode: 'student', loading: true, loadError: '', plans: [], mentors: [], records: [] })
+    this.setData({ mode: 'student', loading: true, loadError: '', studentName: '', actualStageKnown: false, stageModeKnown: false, plans: [], mentors: [], records: [] })
     try {
       const [stages, resolution] = await Promise.all([
         getClassroomStages().catch(() => FALLBACK_STAGES),
@@ -202,7 +202,9 @@ Page({
         stageGroups: stageGroups(stages),
         actualStageLabel: stages.find(item => item.code === initial.student.currentStage)?.label || '未设置',
         actualStageCode: initial.student.currentStage || '',
+        actualStageKnown: true,
         stageMode: resolution?.mode ?? null,
+        stageModeKnown: Boolean(resolution),
         stageNotice: isReadOnly() ? '只读查看档案中保存的阶段。' : stageChanged ? '档案阶段已变化，请刷新后核对。' : resolution?.notice || (resolution ? '' : '自动定位暂不可用，请核对当前学期。'),
         stageScheduleSafe: isReadOnly() || Boolean(resolution?.scheduleSafe && !stageChanged),
         ...emptyStageView(stage, index),
@@ -258,8 +260,8 @@ Page({
     const stage = stages[index]
     if (!stage) return
     if (this.data.stageCalibrationMode) {
-      const expected = this.data.actualStageCode || null
-      const expectedMode = this.data.stageMode
+      const expected = this.data.actualStageKnown ? (this.data.actualStageCode || null) : undefined
+      const expectedMode = this.data.stageModeKnown ? this.data.stageMode : undefined
       this.setData({ stagePickerOpen: false, stageCalibrationMode: false })
       void this.saveCurrentStage(stage.code, expected, 'manual', expectedMode)
       return
@@ -294,30 +296,33 @@ Page({
         wx.showToast({ title: '当前阶段与建议一致', icon: 'none' })
       } else {
         wx.showModal({ title: '启用自动定位', content: `按普通四年制及入学年份估算为${stage.label}。如有休学或其他学制，请手动选择实际阶段。`, confirmText: '启用自动',
-          success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(stage.code, result.currentStage, 'auto', result.mode ?? null) } })
+          success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(stage.code, result.currentStage, 'auto', result.mode) } })
       }
     } catch { wx.showToast({ title: '暂无法读取阶段建议，请稍后重试', icon: 'none' }) }
     finally { this.setData({ stageChangeBusy: false }) }
   },
   onSetViewedStage() {
     if (isReadOnly() || this.data.stageChangeBusy) return
-    const code = this.data.currentStageCode, expected = this.data.actualStageCode || null
+    const code = this.data.currentStageCode, expected = this.data.actualStageKnown ? (this.data.actualStageCode || null) : undefined
+    const expectedMode = this.data.stageModeKnown ? this.data.stageMode : undefined
     const generation = this.viewGeneration, owner = this.selectedOwner
     wx.showModal({ title: '设为当前阶段', content: `确认将${this.data.currentStageLabel}设为当前阶段？历史计划和课表会保留。`,
-      success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(code, expected, 'manual', this.data.stageMode) } })
+      success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(code, expected, 'manual', expectedMode) } })
   },
   onKeepCurrentStage() {
     if (isReadOnly() || this.data.stageChangeBusy || !this.data.actualStageCode) return
-    const code = this.data.actualStageCode, mode = this.data.stageMode, generation = this.viewGeneration, owner = this.selectedOwner
+    const code = this.data.actualStageCode, mode = this.data.stageModeKnown ? this.data.stageMode : undefined, generation = this.viewGeneration, owner = this.selectedOwner
     wx.showModal({ title: '保持手动阶段', content: '将已保存的阶段设为手动模式，之后可随时修改。',
       success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(code, code, 'manual', mode) } })
   },
-  async saveCurrentStage(code: string, expected: string | null, mode: 'auto' | 'manual' = 'manual', expectedMode?: 'auto' | 'manual' | null) {
+  async saveCurrentStage(code: string, expected: string | null | undefined, mode: 'auto' | 'manual' = 'manual', expectedMode?: 'auto' | 'manual' | null) {
     if (this.data.stageChangeBusy || isReadOnly()) return
     const generation = this.viewGeneration
     this.setData({ stageChangeBusy: true })
     try {
-      const result = await setCurrentClassroomStage(code, expected, { mode, expectedMode: expectedMode === undefined ? this.data.stageMode : expectedMode, ...(mode === 'auto' ? { confirmAuto: true } : {}) })
+      const modeToCheck = expectedMode === undefined ? (this.data.stageModeKnown ? this.data.stageMode : undefined) : expectedMode
+      const options = { mode, ...(modeToCheck !== undefined ? { expectedMode: modeToCheck } : {}), ...(mode === 'auto' ? { confirmAuto: true } : {}) }
+      const result = await setCurrentClassroomStage(code, expected, options)
       if (generation !== this.viewGeneration) return
       const index = (this.data.stages as ClassroomStage[]).findIndex(item => item.code === result.currentStage)
       if (index < 0) throw new Error('unknown_stage')

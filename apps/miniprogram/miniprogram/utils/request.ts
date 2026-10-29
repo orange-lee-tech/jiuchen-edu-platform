@@ -376,8 +376,8 @@ export function getCurrentStageSuggestion(): Promise<CurrentStageSuggestion> {
   return request('/me/classroom/stage-suggestion')
 }
 
-export function setCurrentClassroomStage(stageCode: string, expectedCurrentStage: string | null, options?: { mode: 'auto' | 'manual'; expectedMode: CurrentStageMode; confirmAuto?: boolean }): Promise<{ ok: true; currentStage: string; mode?: CurrentStageMode }> {
-  return request('/me/classroom/current-stage', 'PUT', { stageCode, expectedCurrentStage, ...options })
+export function setCurrentClassroomStage(stageCode: string, expectedCurrentStage: string | null | undefined, options?: { mode: 'auto' | 'manual'; expectedMode?: CurrentStageMode; confirmAuto?: boolean }): Promise<{ ok: true; currentStage: string; mode?: CurrentStageMode }> {
+  return request('/me/classroom/current-stage', 'PUT', { stageCode, ...(expectedCurrentStage !== undefined ? { expectedCurrentStage } : {}), ...options })
 }
 
 export type PlanEditorItem = {

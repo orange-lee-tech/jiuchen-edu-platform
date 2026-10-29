@@ -279,6 +279,7 @@ button::after{border:0;}
 .countdown-edit,.countdown-remove{display:inline-block;padding:9rpx 2rpx;font-size:20rpx;}
 .countdown-edit{color:#236383;}
 .countdown-remove{color:#a44740;}
+.countdown-expired{color:#8a7770;font-weight:600;}
 .countdown-editor-actions{display:flex;flex-direction:column;gap:8rpx;}
 .countdown-cancel-edit{display:block;text-align:center;padding:10rpx;color:#6c7c86;font-size:21rpx;}
 .action-countdown-days{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
