@@ -28,10 +28,10 @@ test('junior summer stays visible in the prototype timeline without invented pla
 })
 
 
-test('guidance remains available across configured stages, including senior internship stages', () => {
-  assert.equal(isGuidanceAllowed('senior-fall'), true)
-  assert.equal(isGuidanceAllowed('senior-winter'), true)
-  assert.equal(isGuidanceAllowed('senior-spring'), true)
+test('guidance is hidden for senior internship stages and unknown stages', () => {
+  assert.equal(isGuidanceAllowed('senior-fall'), false)
+  assert.equal(isGuidanceAllowed('senior-winter'), false)
+  assert.equal(isGuidanceAllowed('senior-spring'), false)
   assert.equal(isGuidanceAllowed('junior-spring'), true)
   assert.equal(isGuidanceAllowed('junior-summer'), true)
   assert.equal(isGuidanceAllowed('unknown-stage'), false)
