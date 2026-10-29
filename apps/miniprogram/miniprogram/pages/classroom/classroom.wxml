@@ -5,7 +5,7 @@
     <view>
       <text class="page-title">我的规划</text>
     </view>
-    <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge"><text wx:if="{{selectedView === 'week'}}">本周课表</text><text wx:else>正在查看：{{currentStageLabel}}</text></view>
+    <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge"><text wx:if="{{selectedView === 'week'}}">本周课表</text><text wx:else>当前档案：{{actualStageLabel}}</text></view>
   </view>
 
   <view wx:if="{{mode === 'guest'}}" class="entry-state surface">
@@ -62,8 +62,7 @@
         <view class="stage-actions-secondary">
           <text bindtap="onReviewCurrentStage">按入学年份自动定位 ›</text>
           <text wx:if="{{stageNotice && !stageScheduleSafe}}" bindtap="onAcademicProfile">补充入学年份 ›</text>
-          <text wx:if="{{!stageCalibrationMode && currentStageCode !== actualStageCode}}" bindtap="onSetViewedStage">将正在查看的阶段设为当前 ›</text>
-          <text wx:elif="{{!stageCalibrationMode && actualStageCode && stageMode !== 'manual'}}" bindtap="onKeepCurrentStage">固定当前学期 ›</text>
+          
         </view>
       </view>
       <text wx:if="{{stageCalibrationMode}}" class="stage-calibration-help">请选择真实的当前学期。保存后，今天页与对应课表会同步更新。</text>

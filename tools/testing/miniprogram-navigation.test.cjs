@@ -1735,6 +1735,8 @@ test('manual semester calibration is a visible save flow, separate from browsing
   assert.match(planWxml, /手动校准当前学期/)
   assert.match(planWxml, /选择当前学期（选择后保存）/)
   assert.match(planWxml, /正在查看：\{\{currentStageLabel\}\}/)
+  assert.match(planWxml, /当前档案：/)
+  assert.doesNotMatch(planWxml, /将正在查看的阶段设为当前|固定当前学期/)
   assert.match(fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxss'), 'utf8'), /\.stage-picker-top\{display:flex;flex-direction:column/)
   assert.match(planTs, /stageCalibrationMode/)
   assert.match(planTs, /saveCurrentStage\(stage\.code, expected, 'manual', expectedMode\)/)
