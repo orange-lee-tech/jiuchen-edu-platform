@@ -1485,13 +1485,15 @@ test('customer-service identity never claims server verification when revalidati
  assert.equal(opened,false)
  assert.match(h.modals[0].content,/本地缓存/)
 })
-test('administrator mine keeps two equally sized actions, and workbench uses full-width view rows',()=>{
+test('administrator identity actions stay accessible on demand, and workbench keeps full-width view rows',()=>{
  const p=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
  const w=fs.readFileSync(path.join(root,'components/role-shell/role-shell.wxml'),'utf8')
  const css=fs.readFileSync(path.join(root,'components/role-shell/role-shell.wxss'),'utf8')
- assert.match(p,/class="identity-buttons"/)
- assert.match(p,/class="identity-control identity-copy"/)
+ assert.match(p,/class="identity-person"/)
  assert.match(p,/class="identity-control identity-primary"/)
+ assert.match(p,/identity-settings-toggle/)
+ assert.match(p,/class="identity-copy-inline" bindtap="onCopyIdentity"/)
+ assert.match(p,/bindtap="onSwitchIdentity"/)
  assert.doesNotMatch(p,/class="copy-code"/)
  assert.match(w,/class="admin-action.*" data-key/)
  assert.match(css,/\.admin-action\{[^}]*width:100%/)
