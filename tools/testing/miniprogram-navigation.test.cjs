@@ -1713,3 +1713,38 @@ test('admin identity binding jumps to the visible editor and offers multi-role e
  assert.match(admin,/onOpenMyIdentity\(\)/)
  assert.match(template,/bindtap="onOpenMyIdentity"/)
 })
+
+
+test('manual semester calibration is a visible save flow, separate from browsing history', () => {
+  const planTs = fs.readFileSync(path.join(root, 'pages/classroom/classroom.ts'), 'utf8')
+  const planWxml = fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxml'), 'utf8')
+  assert.match(planWxml, /手动校准当前学期/)
+  assert.match(planWxml, /选择当前学期（选择后保存）/)
+  assert.match(planTs, /stageCalibrationMode/)
+  assert.match(planTs, /saveCurrentStage\(stage\.code, expected, 'manual', expectedMode\)/)
+})
+
+test('today workbench keeps countdown titles visible and supports editing without losing local entries', () => {
+  const homeTs = fs.readFileSync(path.join(root, 'pages/index/index.ts'), 'utf8')
+  const homeWxml = fs.readFileSync(path.join(root, 'pages/index/index.wxml'), 'utf8')
+  assert.match(homeWxml, /class="countdown-summary"/)
+  assert.match(homeWxml, /我的倒数日/)
+  assert.match(homeWxml, /countdownPreview/)
+  assert.match(homeWxml, /onCountdownEdit/)
+  assert.match(homeWxml, /onCountdownDelete/)
+  assert.match(homeTs, /countdownPreview:active\.slice\(0,3\)/)
+  assert.match(homeTs, /onCountdownEdit\(event:WechatMiniprogram\.BaseEvent\)/)
+  assert.match(homeTs, /onCountdownCancelEdit\(\)/)
+})
+
+test('opportunity navigation keeps all six reference sections and profile identity details remain accessible', () => {
+  const newsTs = fs.readFileSync(path.join(root, 'pages/news/news.ts'), 'utf8')
+  const profileTs = fs.readFileSync(path.join(root, 'pages/profile/profile.ts'), 'utf8')
+  const profileWxml = fs.readFileSync(path.join(root, 'pages/profile/profile.wxml'), 'utf8')
+  assert.match(newsTs, /const NEWS_SECTIONS = \['最新', '招生通知', '经验分享', '学科竞赛', '就业', '其他'\]/)
+  assert.match(newsTs, /const sections = NEWS_SECTIONS/)
+  assert.match(profileTs, /onToggleIdentityDetails\(\)/)
+  assert.match(profileWxml, /identity-settings-toggle/)
+  assert.match(profileWxml, /onCopyIdentity/)
+  assert.match(profileWxml, /onSwitchIdentity/)
+})
