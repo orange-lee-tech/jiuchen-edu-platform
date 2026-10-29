@@ -85,7 +85,7 @@ Page({
     this.setData({
       countdownOpen: opening, countdownTitle: '', countdownDate: dateText(new Date()), countdownPickerStart: dateText(new Date()), countdownEditingId: '',
     }, () => {
-      // Editor is below the shortcut grid: without scrolling the tap looks unresponsive.
+      // Scroll to the expanded editor so the management action has visible feedback.
       if (opening) wx.pageScrollTo({selector:'.countdown-panel',duration:220,
         fail:()=>wx.showToast({title:'请向下查看倒数日',icon:'none'})})
     })

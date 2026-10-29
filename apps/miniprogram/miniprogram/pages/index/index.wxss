@@ -91,8 +91,6 @@ button::after{border:0;}
 .service-title{margin-top:0;font-size:23rpx;}
 
 /* Compact self-service countdown; on-device, identity-scoped, no API writes. */
-.action-countdown{min-height:220rpx;}
-.action-countdown-days{display:block;margin-top:5rpx;color:#896526;font-size:21rpx;font-weight:750;}
 .countdown-panel{margin-top:18rpx;}
 .countdown-local-note{display:block;margin-top:8rpx;font-size:19rpx;color:#6b7c87;}
 .countdown-item{display:flex;align-items:center;gap:12rpx;padding:16rpx 0;border-bottom:1rpx solid #ebe7df;}
@@ -243,7 +241,6 @@ button::after{border:0;}
 .home-shortcuts .action-symbol{width:62rpx;height:62rpx;}
 .home-shortcuts .action-icon{width:60rpx;height:60rpx;}
 .home-shortcuts .action-more{top:50%;transform:translateY(-50%);}
-.home-shortcuts .action-countdown-days{margin:0 15rpx 0 auto;font-size:19rpx;}
 .home-shortcuts .action-consult{min-height:86rpx;}
 .countdown-panel{border-radius:16rpx;}
 
@@ -256,11 +253,11 @@ button::after{border:0;}
 .home-shortcuts.home-card{padding:14rpx;background:#fffefc;}
 .home-shortcuts .action-list{justify-content:flex-start;gap:0;}
 .home-shortcuts .action-row,.home-shortcuts .action-row:nth-child(even),.home-shortcuts .action-consult{box-sizing:border-box;flex:0 0 33.333%;width:33.333%;min-width:0;min-height:142rpx;flex-direction:column;justify-content:center;gap:5rpx;padding:12rpx 5rpx;border:1rpx solid #f0f1ed;border-radius:0;box-shadow:none;text-align:center;}
+.home-shortcuts .action-row:nth-last-child(-n+2){flex-basis:50%;width:50%;}
 .home-shortcuts .action-symbol,.home-shortcuts .action-consult .action-symbol{width:62rpx;height:62rpx;}
 .home-shortcuts .action-icon,.home-shortcuts .action-consult .action-icon{width:60rpx;height:60rpx;}
 .home-shortcuts .action-title,.home-shortcuts .action-consult .action-title{margin:0;text-align:center;font-size:22rpx;line-height:1.35;}
 .home-shortcuts .action-more{display:none;}
-.home-shortcuts .action-countdown-days{margin:0;font-size:18rpx;line-height:1.3;}
 .stage-notice{margin-top:12rpx;padding:12rpx 14rpx;border-radius:9rpx;background:#fff7e6;color:#805928;font-size:21rpx;line-height:1.5;}
 
 
@@ -282,7 +279,6 @@ button::after{border:0;}
 .countdown-expired{color:#8a7770;font-weight:600;}
 .countdown-editor-actions{display:flex;flex-direction:column;gap:8rpx;}
 .countdown-cancel-edit{display:block;text-align:center;padding:10rpx;color:#6c7c86;font-size:21rpx;}
-.action-countdown-days{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 .upcoming-tasks { background: #fffdf7; }
 .upcoming-hint, .upcoming-task-meta { font-size: 23rpx; color: #687b87; }

@@ -1468,13 +1468,48 @@ test('home keeps profile completion accessible without displacing the plan CTA',
  assert.match(fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8'),/地点：\{\{item.location \|\| '暂无'\}\}/)
  assert.match(page,/onCompleteProfile\(\)/)
 })
-test('home shortcuts prioritize core actions and retain the countdown tile',()=>{
+test('home shortcuts retain core actions without a duplicate countdown tile',()=>{
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  assert.match(source,/class="home-shortcuts home-card"/)
- const names=['action-assessment','action-planning','action-schools','action-news','action-consult','action-countdown']
+ const names=['action-assessment','action-planning','action-schools','action-news','action-consult']
  const positions=names.map(name=>source.indexOf('class="action-row '+name+'"'))
  assert.ok(positions.every(position=>position>=0),'all expected home shortcuts must remain')
  assert.ok(positions.every((position,index)=>index===0 || positions[index-1]<position),'home shortcut order must stay intentional')
+ assert.doesNotMatch(source,/class="action-row action-countdown"/)
+})
+
+test('Today places countdown display and management between schedule and stage plans',()=>{
+ const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
+ const modules=['home-schedule home-card','home-card countdown-summary','home-card countdown-panel','home-plan home-card','home-card upcoming-tasks','home-shortcuts home-card','service-section']
+ const positions=modules.map(name=>source.indexOf(`class="${name}"`))
+ assert.ok(positions.every(p=>p>=0))
+ assert.ok(positions.every((p,i)=>i===0||p>positions[i-1]),'module order must match the requested reading flow')
+ assert.equal((source.match(/class="home-card countdown-summary"/g)||[]).length,1)
+ const summary=source.slice(positions[1],positions[2]),panel=source.slice(positions[2],positions[3])
+ assert.match(summary,/bindtap="onCountdownToggle"/)
+ for(const handler of ['onCountdownToggle','onCountdownEdit','onCountdownDelete','onCountdownSave','onCountdownCancelEdit'])assert.ok(panel.includes(handler))
+ const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
+ assert.match(css,/\.home-shortcuts \.action-row:nth-last-child\(-n\+2\)\{flex-basis:50%;width:50%;\}/)
+})
+
+test('countdown management still scrolls, collapses and enforces eight valid dates after relocation',()=>{
+ const h=harness(),page=h.page('pages/index/index'),scrolls=[]
+ page.setData=function(data,done){Object.assign(this.data,data);done?.()}
+ h.wx.pageScrollTo=o=>scrolls.push(o.selector)
+ const key='jiuchen-countdowns-v1:'+id
+ h.storage.set(key,Array.from({length:8},(_,i)=>({id:String(i),title:'合成目标'+i,date:'2099-12-31'})))
+ page.loadCountdowns(id);page.onCountdownToggle()
+ assert.equal(page.data.countdownOpen,true);assert.equal(scrolls.at(-1),'.countdown-panel')
+ page.onCountdownTitleInput({detail:{value:'第九条'}});page.onCountdownDateChange({detail:{value:'2099-12-31'}});page.onCountdownSave()
+ assert.equal(h.storage.get(key).length,8)
+ page.onCountdownEdit({currentTarget:{dataset:{id:'0'}}});assert.equal(scrolls.at(-1),'.countdown-panel')
+ page.onCountdownDateChange({detail:{value:'2026-02-30'}});page.onCountdownSave()
+ assert.equal(h.storage.get(key)[0].date,'2099-12-31','invalid date cannot overwrite the persisted entry')
+ page.onCountdownDateChange({detail:{value:'2099-11-30'}});page.onCountdownSave()
+ assert.equal(h.storage.get(key)[0].date,'2099-11-30');assert.equal(h.storage.get(key).length,8)
+ page.onCountdownToggle();assert.equal(page.data.countdownOpen,true)
+ page.onCountdownToggle();assert.equal(page.data.countdownOpen,false)
+ assert.equal(h.requests.length,0,'countdown management remains entirely on device')
 })
 
 test('today artwork references the compatible PNG assets',()=>{
