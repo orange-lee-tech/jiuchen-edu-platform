@@ -2,10 +2,9 @@
   <role-shell view-slot="mine" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready'}}">
     <view class="identity-panel">
-      <image class="identity-art" src="/assets/jiuchen-visual-v1/banners/profile-calm-campus.webp" mode="aspectFill" aria-hidden="true" />
+      <image class="identity-art" src="/assets/jiuchen-visual-v1/banners/profile-calm-campus.png" mode="aspectFill" aria-hidden="true" />
       <view class="identity-content">
-      <view class="identity-person"><image class="identity-person-icon" src="/assets/jiuchen-visual-v1/icons/profile.webp" mode="aspectFit" /><view><text class="identity-role-label">{{roleLabel}}</text></view></view>
-      <text class="user-name">{{loggedIn ? userName : '把准备记录留在这里'}}</text>
+      <view class="identity-person"><image class="identity-person-icon" src="/assets/jiuchen-visual-v1/icons/profile.png" mode="aspectFit" /><view class="identity-person-text"><text class="user-name">{{loggedIn ? userName : '把准备记录留在这里'}}</text><text class="identity-role-label">{{roleLabel}}{{profileStageLabel ? ' · ' + profileStageLabel : ''}}</text></view></view>
       <view wx:if="{{businessId}}" class="identity-number">
         <text class="identity-number-label">我的九辰内部编号</text>
         <text class="identity-code" selectable>{{businessId}}</text>
@@ -19,17 +18,13 @@
     <text class="section-heading">{{shellKind === 'student' ? '成长与记录' : '工作与支持'}}</text>
     <view class="menu-list primary-menus">
       <block wx:for="{{menus}}" wx:key="key">
-        <view wx:if="{{item.key === 'service'}}" class="menu-row menu-service" bindtap="onCustomerServiceTap" hover-class="menu-pressed" aria-role="button">
-          <view class="menu-symbol"><image class="menu-icon" src="/assets/jiuchen-visual-v1/icons/headset.webp" mode="aspectFit" /></view>
+        <view wx:if="{{item.key !== 'service'}}" class="menu-row menu-{{item.key}}" data-key="{{item.key}}" bindtap="onMenuTap" hover-class="menu-pressed" aria-role="button">
+          <view class="menu-symbol"><image class="menu-icon" src="{{item.key === 'growth' ? '/assets/jiuchen-visual-v1/icons/profile.png' : item.key === 'assessment' ? '/assets/jiuchen-visual-v1/icons/history.png' : item.key === 'position' ? '/assets/jiuchen-visual-v1/icons/ai-assessment.png' : item.key === 'favorites' ? '/assets/jiuchen-visual-v1/icons/bookmark.png' : '/assets/jiuchen-visual-v1/icons/profile.png'}}" mode="aspectFit" /></view>
           <view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text>
         </view>
-        <view wx:else class="menu-row menu-{{item.key}}" data-key="{{item.key}}" bindtap="onMenuTap" hover-class="menu-pressed" aria-role="button">
-          <view class="menu-symbol"><image class="menu-icon" src="{{item.key === 'growth' ? '/assets/jiuchen-visual-v1/icons/profile.webp' : item.key === 'assessment' ? '/assets/jiuchen-visual-v1/icons/history.webp' : item.key === 'position' ? '/assets/jiuchen-visual-v1/icons/ai-assessment.webp' : item.key === 'favorites' ? '/assets/jiuchen-visual-v1/icons/bookmark.webp' : '/assets/jiuchen-visual-v1/icons/profile.webp'}}" mode="aspectFit" /></view>
-          <view class="menu-main"><text class="menu-title">{{item.title}}</text><text class="menu-description">{{item.desc}}</text></view><text class="arrow">›</text>
-        </view>
-        <view wx:if="{{readOnly && item.key === 'service'}}" class="menu-row" bindtap="onExitReadOnly"><text class="menu-title">退出只读查看</text><text class="arrow">›</text></view>
       </block>
     </view>
+    <view class="profile-services"><text class="section-heading">我的服务</text><view class="menu-row menu-service" bindtap="onCustomerServiceTap" hover-class="menu-pressed" aria-role="button"><image class="menu-icon" src="/assets/jiuchen-visual-v1/icons/headset.png" mode="aspectFit" /><view class="menu-main"><text class="menu-title">{{shellKind === 'student' ? '联系客服' : '联系运营'}}</text><text class="menu-description">账号与服务咨询</text></view><text class="arrow">›</text></view><view wx:if="{{readOnly}}" class="menu-row" bindtap="onExitReadOnly"><text class="menu-title">退出只读查看</text><text class="arrow">›</text></view></view>
     <view wx:if="{{favoritesVisible}}" class="menu-list">
       <text class="section-heading">我的收藏</text>
       <text wx:if="{{favoritesLoading}}">正在读取个人收藏…</text>
@@ -44,7 +39,7 @@
       </view>
     </view>
     <view class="website-row" bindtap="onWebsite" hover-class="menu-pressed" aria-role="button"><image class="menu-icon" src="/assets/icons/website-active.png" mode="aspectFit" /><text>九辰官网 · 复制地址</text><text class="arrow">›</text></view>
-    <view wx:if="{{loggedIn && !readOnly && identities.length}}" class="card">
+    <view id="identity-section" wx:if="{{loggedIn && !readOnly && identities.length}}" class="card">
       <text class="section-heading">我的身份</text>
       <text class="card-note">当前使用：{{roleLabel}}。切换后服务器按新身份验证权限。</text>
       <view wx:for="{{identities}}" wx:key="id" class="identity-role-row">

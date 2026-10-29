@@ -2,6 +2,7 @@ import { INITIAL_SHELL, loginFor, observeSlot, openPage, openSlot, shellView } f
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { getLatestScheduleImport, getMyAcademicProfile, getMyClassroom, type ParsedSchedule } from '../../utils/request'
 import { courseTimeLabel, dailyScheduleView } from '../../utils/schedule-view'
+import { resolveCurrentStage } from '../../utils/current-stage'
 
 const STAGE_NAMES: Record<string, string> = {
   'freshman-fall':'大一上','freshman-winter':'大一寒假','freshman-spring':'大一下','freshman-summer':'大一暑假',
@@ -35,10 +36,10 @@ function daysUntil(date: string) {
 
 Page({
   data: { ...INITIAL_SHELL, loggedIn: false, assessmentReady: false,
-    todayLabel: '', scheduleDay: 0 as 0 | 1, scheduleDateLabel: '',
+    todayLabel: '', greeting: '你好', userName: '同学', scheduleDay: 0 as 0 | 1, scheduleDateLabel: '',
     scheduleLoading: false, scheduleError: '', scheduleState: 'missing', scheduleLabel: '', scheduleStage: '',
     scheduleCourses: [] as Array<{time:string;name:string;location:string;next:boolean}>,
-    planLoading: false, planError: '', planState: 'unbound', planStageLabel: '',
+    planLoading: false, planError: '', planState: 'unbound', planStageLabel: '', stageNotice: '',
     planPreview: [] as Array<{title:string;status:string}>,
     countdowns: [] as CountdownView[], countdownOpen: false,
     countdownTitle: '', countdownDate: dateText(new Date()),
@@ -129,22 +130,37 @@ Page({
     const epoch = ++this.homeEpoch
     this.homeSchedule = null
     const today = dailyScheduleView(null, 0)
-    this.setData({ todayLabel: today.dateLabel, scheduleDay: 0, scheduleDateLabel: today.dateLabel })
+    const hour = (new Date().getUTCHours() + 8) % 24
+    this.setData({ todayLabel: today.dateLabel, greeting: hour < 11 ? '早上好' : hour < 18 ? '下午好' : '晚上好', scheduleDay: 0, scheduleDateLabel: today.dateLabel })
     this.stopShell = observeSlot('home', (state) => {
       const studentId = state.phase === 'ready' && state.auth?.user.role === 'student'
         ? state.auth.user.id : null
       this.currentHomeStudentId = studentId
       this.loadCountdowns(studentId)
-      this.setData({ ...shellView(state), loggedIn: Boolean(state.auth), assessmentReady: false })
-      if (!studentId) { this.homeSchedule = null; this.setData({ planLoading: false, planError: '', planState: 'unbound', planPreview: [], scheduleLoading: false, scheduleError: '', scheduleStage: '', scheduleCourses: [], scheduleState: 'missing' }); return }
-      this.setData({ scheduleLoading: true, scheduleError: '', scheduleStage: '', scheduleCourses: [], planLoading: true, planError: '', planPreview: [] })
-      void getMyClassroom().then(view => {
+      this.setData({ ...shellView(state), loggedIn: Boolean(state.auth), userName: state.auth?.user.displayName || '同学', assessmentReady: false })
+      if (!studentId) { this.homeSchedule = null; this.setData({ planLoading: false, planError: '', planState: 'unbound', planPreview: [], stageNotice: '', scheduleLoading: false, scheduleError: '', scheduleStage: '', scheduleCourses: [], scheduleState: 'missing' }); return }
+      this.setData({ scheduleLoading: true, scheduleError: '', scheduleStage: '', scheduleCourses: [], planLoading: true, planError: '', planPreview: [], stageNotice: '' })
+      void (async () => {
+        const resolution = await resolveCurrentStage().catch(() => null)
+        if (epoch !== this.homeEpoch || studentId !== this.currentHomeStudentId) return null
+        const view = await getMyClassroom(resolution?.stage || undefined)
+        return { view, resolution }
+      })().then(result => {
+        if (!result) return
         if (epoch !== this.homeEpoch || studentId !== this.currentHomeStudentId) return
+        const { view, resolution } = result
         const stageCode = view.stage.code
+        const stageChanged = Boolean(resolution && view.student.currentStage !== resolution.stage)
         this.setData({ planLoading: false, planState: 'ready',
+          stageNotice: stageChanged ? '档案阶段已变化，请重新进入规划页核对。' : resolution ? resolution.notice : '自动定位暂不可用，请核对当前学期。',
           planStageLabel: STAGE_NAMES[stageCode] || '档案当前阶段待确认',
           planPreview: view.plans.slice(0, 4).map(plan => ({ title: plan.title,
             status: plan.revisionStatus === 'pending' ? '旧版草稿未生效' : plan.id ? '已保存' : '未建立，查看规划' })) })
+        if (!resolution?.scheduleSafe || stageChanged) {
+          this.homeSchedule = null
+          this.setData({ scheduleLoading: false, scheduleError: '当前学期待核对，确认后再查看课表', scheduleStage: '', scheduleCourses: [] })
+          return
+        }
         if (!TERM_STAGE.test(stageCode)) {
           this.homeSchedule = null
           this.setData({ scheduleLoading: false, scheduleState: 'holiday',
@@ -166,7 +182,7 @@ Page({
         })
       }).catch(() => {
         if (epoch === this.homeEpoch && studentId === this.currentHomeStudentId)
-          this.setData({ planLoading: false, planError: '规划暂时无法读取，请进入规划页重试',
+          this.setData({ planLoading: false, planError: '请完善入学年份或进入规划页核对当前学期',
             scheduleLoading: false, scheduleError: '无法确认档案学期，请进入规划页重试' })
       })
       void getMyAcademicProfile().then(profile => {

@@ -323,9 +323,12 @@ export function registerClassroomWorkspaceRoutes(
     if (session.role !== 'student' || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_stage_edit_forbidden' })
     const student = await resolveStudentByUser(database, session.userId)
     if (!student) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
+    const [stageSettings] = await database.db.select({ mode: students.currentStageMode, currentStage: students.currentStage })
+      .from(students).where(eq(students.userId, session.userId)).limit(1)
+    if (!stageSettings) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
     const [profile] = await database.db.select({ enrollmentYear: userProfiles.enrollmentYear, currentGrade: userProfiles.currentGrade })
       .from(userProfiles).where(eq(userProfiles.userId, session.userId)).limit(1)
-    return { ok: true, currentStage: student.currentStage,
+    return { ok: true, currentStage: stageSettings?.currentStage ?? null, mode: stageSettings?.mode ?? null,
       suggestedStage: suggestAcademicStage(profile?.enrollmentYear ?? null, new Date(), profile?.currentGrade ?? null) }
   })
 
@@ -334,21 +337,34 @@ export function registerClassroomWorkspaceRoutes(
     const session = await resolveSessionUser(request, database)
     if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
     if (session.role !== 'student' || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_stage_edit_forbidden' })
-    const parsed = z.object({ stageCode: z.string(), expectedCurrentStage: z.string().nullable() }).strict().safeParse(request.body)
+    const parsed = z.object({ stageCode: z.string(), expectedCurrentStage: z.string().nullable(),
+      mode: z.enum(['auto', 'manual']).optional(), expectedMode: z.enum(['auto', 'manual']).nullable().optional(),
+      confirmAuto: z.boolean().optional() }).strict().safeParse(request.body)
     if (!parsed.success || !getStageDefinition(parsed.data.stageCode)) return reply.code(400).send({ ok: false, error: 'invalid_stage' })
     const result = await database.db.transaction(async (tx) => {
-      const rows = await tx.execute(sql`SELECT id, current_stage AS currentStage FROM students WHERE user_id = ${session.userId} FOR UPDATE`)
-      const student = (rows[0] as unknown as Array<{ id: string; currentStage: string | null }>)[0]
+      const rows = await tx.execute(sql`SELECT id, current_stage AS currentStage, current_stage_mode AS mode FROM students WHERE user_id = ${session.userId} FOR UPDATE`)
+      const student = (rows[0] as unknown as Array<{ id: string; currentStage: string | null; mode: 'auto' | 'manual' | null }>)[0]
       if (!student) return 'missing' as const
       if (student.currentStage !== parsed.data.expectedCurrentStage) return 'changed' as const
-      await tx.update(students).set({ currentStage: parsed.data.stageCode }).where(eq(students.id, student.id))
+      if (parsed.data.expectedMode !== undefined && student.mode !== parsed.data.expectedMode) return 'changed' as const
+      const mode = parsed.data.mode ?? 'manual'
+      if (mode === 'auto') {
+        if (student.mode !== 'auto' && student.currentStage !== null && !parsed.data.confirmAuto) return 'confirmation' as const
+        const profileRows = await tx.execute(sql`SELECT enrollment_year AS enrollmentYear, current_grade AS currentGrade FROM user_profiles WHERE user_id = ${session.userId} FOR UPDATE`)
+        const profile = (profileRows[0] as unknown as Array<{ enrollmentYear: number | null; currentGrade: string | null }>)[0]
+        if (suggestAcademicStage(profile?.enrollmentYear ?? null, new Date(), profile?.currentGrade ?? null) !== parsed.data.stageCode) return 'invalidSuggestion' as const
+      }
+      await tx.update(students).set({ currentStage: parsed.data.stageCode, currentStageMode: mode }).where(eq(students.id, student.id))
       return 'saved' as const
     })
     if (result === 'missing') return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
     if (result === 'changed') return reply.code(409).send({ ok: false, error: 'current_stage_changed' })
-    const student = await resolveStudentByUser(database, session.userId)
-    if (!student || student.currentStage !== parsed.data.stageCode) return reply.code(409).send({ ok: false, error: 'current_stage_changed' })
-    return { ok: true, currentStage: student.currentStage }
+    if (result === 'confirmation') return reply.code(409).send({ ok: false, error: 'stage_auto_confirmation_required' })
+    if (result === 'invalidSuggestion') return reply.code(409).send({ ok: false, error: 'stage_suggestion_changed' })
+    const [confirmed] = await database.db.select({ currentStage: students.currentStage, mode: students.currentStageMode })
+      .from(students).where(eq(students.userId, session.userId)).limit(1)
+    if (!confirmed || confirmed.currentStage !== parsed.data.stageCode || confirmed.mode !== (parsed.data.mode ?? 'manual')) return reply.code(409).send({ ok: false, error: 'current_stage_changed' })
+    return { ok: true, currentStage: confirmed.currentStage, mode: confirmed.mode }
   })
 
   app.get<{ Querystring: { stage?: string } }>('/me/classroom', async (request, reply) => {

@@ -181,3 +181,23 @@ button::after{border:0;}
 .primary-menus .menu-main{min-width:0;}
 .primary-menus .menu-title{font-size:23rpx;line-height:1.4;}
 .primary-menus .menu-description{font-size:19rpx;line-height:1.4;}
+
+.identity-panel{min-height:185rpx;padding:21rpx 23rpx;}
+.identity-person{gap:15rpx;}
+.identity-person-icon{width:72rpx;height:72rpx;border-radius:50%;}
+.identity-person-text{min-width:0;}
+.identity-panel .user-name{margin:0;font-size:31rpx;}
+.identity-role-label{margin-top:4rpx;}
+.identity-number{display:inline-flex;max-width:100%;margin-top:8rpx;padding:4rpx 8rpx;}
+.identity-number-label,.identity-code{font-size:19rpx;}
+.identity-buttons{gap:8rpx;margin-top:8rpx;}
+.identity-control{min-height:50rpx;padding:8rpx 12rpx;font-size:20rpx;line-height:1.4;}
+.primary-menus{display:flex;flex-direction:row;flex-wrap:wrap;width:100%;gap:0;margin-top:8rpx;background:#fffefc;border-radius:14rpx;overflow:hidden;}
+.primary-menus .menu-row{flex:0 0 25%;width:25%;min-height:132rpx;flex-direction:column;justify-content:center;gap:6rpx;padding:12rpx 4rpx;border:1rpx solid #f1f1ed;border-radius:0;text-align:center;}
+.primary-menus .menu-main{display:block;flex:none;width:100%;}
+.primary-menus .menu-title{font-size:21rpx;line-height:1.35;}
+.primary-menus .menu-description,.primary-menus .arrow{display:none;}
+.profile-services{margin-top:17rpx;padding:17rpx;background:#f5eee3;border-radius:14rpx;}
+.profile-services .menu-service{display:flex;align-items:center;gap:13rpx;margin:10rpx 0 0;padding:15rpx;background:#fffefc;border:0;border-radius:10rpx;}
+.profile-services .menu-icon{width:54rpx;height:54rpx;flex:none;}
+.profile-services .menu-main{flex:1;min-width:0;}

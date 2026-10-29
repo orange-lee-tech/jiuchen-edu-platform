@@ -24,7 +24,7 @@
   </view>
 
   <view wx:else class="student-layout">
-    <view wx:if="{{loadError && !studentName}}" class="plan-error"><text>{{loadError}}</text><button bindtap="onRetryPlan">重新加载规划</button><button wx:if="{{!readOnly}}" bindtap="onReviewCurrentStage">核对当前阶段</button><view class="stage-options"><view wx:for="{{stages}}" wx:key="code" class="stage-option" data-code="{{item.code}}" bindtap="onStageChange">{{item.label}}</view></view></view>
+    <view wx:if="{{loadError && !studentName}}" class="plan-error"><text>{{loadError}}</text><button bindtap="onRetryPlan">重新加载规划</button><button wx:if="{{!readOnly}}" bindtap="onAcademicProfile">完善入学年份</button><button wx:if="{{!readOnly}}" bindtap="onReviewCurrentStage">核对学期</button><view class="stage-options"><view wx:for="{{stages}}" wx:key="code" class="stage-option" data-code="{{item.code}}" bindtap="onStageChange">{{item.label}}</view></view></view>
     <view wx:elif="{{loading && !studentName}}" class="plan-loading">正在读取你的阶段规划…</view>
     <block wx:else>
     <view class="student-tools surface">
@@ -35,9 +35,10 @@
     </view>
 
     <view class="stage-picker surface">
-      <image class="stage-banner" src="/assets/jiuchen-visual-v1/banners/semester-books-banner.webp" mode="aspectFill" aria-hidden="true" />
+      <image class="stage-banner" src="/assets/jiuchen-visual-v1/banners/semester-books-banner.png" mode="aspectFill" aria-hidden="true" />
       <view class="stage-picker-top"><view><text class="stage-picker-caption">档案当前阶段：{{actualStageLabel}}</text><text class="stage-picker-current">正在查看：{{currentStageLabel}}</text></view><text class="stage-picker-toggle" bindtap="onToggleStagePicker">{{stagePickerOpen ? '收起' : '选择学期'}} ›</text></view>
-      <view wx:if="{{!readOnly}}" class="stage-correction"><text bindtap="onReviewCurrentStage">按入学年份核对 ›</text><text wx:if="{{currentStageCode !== actualStageCode}}" bindtap="onSetViewedStage">设为当前阶段 ›</text></view>
+      <text wx:if="{{stageNotice}}" class="stage-notice">{{stageNotice}}</text>
+      <view wx:if="{{!readOnly}}" class="stage-correction"><text bindtap="onReviewCurrentStage">按入学年份核对 ›</text><text wx:if="{{stageNotice}}" bindtap="onAcademicProfile">完善入学年份 ›</text><text wx:if="{{(stageNotice || stageMode === 'auto') && actualStageCode}}" bindtap="onKeepCurrentStage">手动固定已存阶段 ›</text><text wx:if="{{currentStageCode !== actualStageCode}}" bindtap="onSetViewedStage">设为当前阶段 ›</text></view>
       <view wx:if="{{stagePickerOpen}}" class="stage-group-list">
         <view wx:for="{{stageGroups}}" wx:for-item="group" wx:key="year" class="stage-group">
           <text class="stage-group-title">{{group.label}}</text>
@@ -77,16 +78,19 @@
           <text wx:if="{{loading || readOnly}}" class="section-note">{{loading ? '同步中…' : '只读查看'}}</text>
         </view>
 
+        <scroll-view wx:if="{{plans.length}}" class="plan-tabs" scroll-x enhanced show-scrollbar="{{false}}"><view class="plan-tabs-row"><text class="plan-tab plan-tab-active">阶段规划</text><text wx:for="{{plans}}" wx:key="type" class="plan-tab" data-type="{{item.type}}" bindtap="onPlanCategoryTap">{{item.title}}</text></view></scroll-view>
+
         <view wx:if="{{plans.length > 0}}" class="plan-list">
           <view
             wx:for="{{plans}}"
             wx:key="type"
             class="plan-card surface"
+            id="plan-{{item.type}}"
             data-type="{{item.type}}"
             bindtap="onPlanTap"
           >
             <view class="plan-card-head">
-              <image class="plan-icon plan-icon-image" src="{{item.type === 'gpa' ? '/assets/jiuchen-visual-v1/icons/courses.webp' : item.type === 'english' ? '/assets/jiuchen-visual-v1/icons/english.webp' : item.type === 'competition' ? '/assets/jiuchen-visual-v1/icons/trophy.webp' : item.type === 'research' ? '/assets/jiuchen-visual-v1/icons/flask.webp' : '/assets/jiuchen-visual-v1/icons/profile.webp'}}" mode="aspectFit" />
+              <image class="plan-icon plan-icon-image" src="{{item.type === 'gpa' ? '/assets/jiuchen-visual-v1/icons/courses.png' : item.type === 'english' ? '/assets/jiuchen-visual-v1/icons/english.png' : item.type === 'competition' ? '/assets/jiuchen-visual-v1/icons/trophy.png' : item.type === 'research' ? '/assets/jiuchen-visual-v1/icons/flask.png' : '/assets/jiuchen-visual-v1/icons/profile.png'}}" mode="aspectFit" />
               <view class="plan-heading">
                 <view class="plan-title-row">
                   <text class="plan-title">{{item.title}}</text>
@@ -110,6 +114,7 @@
         </view>
 
         <block wx:if="{{showGuidance}}">
+          <view class="guidance-grid"><view class="guidance-column">
           <view class="section-title-row">
             <text class="section-title">辅导老师</text>
           </view>
@@ -128,6 +133,8 @@
           <view wx:else class="pending-card surface">
             <text class="pending-title">辅导老师待分配</text>
           </view>
+
+          </view><view class="guidance-column">
 
           <view class="section-title-row">
             <text class="section-title">辅导记录</text>
@@ -148,6 +155,7 @@
             <text class="pending-title">{{guidanceRecordsReady ? '暂无辅导记录' : '暂时无法查看辅导记录'}}</text>
             <text class="pending-desc">{{guidanceRecordsReady ? '老师留下辅导记录后会显示在这里。' : '规划和课表仍可正常使用；请稍后再查看辅导记录。'}}</text>
           </view>
+          </view></view>
         </block>
         </block>
       </view>

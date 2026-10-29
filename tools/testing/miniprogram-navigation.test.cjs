@@ -229,7 +229,8 @@ test('today workbench shows the saved classroom plan state', async () => {
   const h = harness(); h.auth.saveAuthResult(authFixture('student'))
   const page = h.page('pages/index/index'); page.onShow()
   h.respond(0, { ok:true, user:authFixture('student').user, businessIdentity:null }); await settle()
-  const classroom = h.requests.findIndex(item => item.url.endsWith('/me/classroom'))
+  h.respond(h.requests.findIndex(item => item.url.endsWith('/me/classroom/stage-suggestion')), {ok:true,currentStage:'junior-fall',suggestedStage:'junior-fall',mode:'manual'}); await settle()
+  const classroom = h.requests.findIndex(item => item.url.includes('/me/classroom?stage=junior-fall'))
   const profile = h.requests.findIndex(item => item.url.endsWith('/me/profile'))
   assert.ok(classroom >= 0 && profile >= 0)
   assert.equal(h.requests.some(item => item.url.includes('/schedule-imports/latest')), false,
@@ -254,7 +255,8 @@ test('today workbench never displays a schedule from another semester or a holid
   const h = harness(); h.auth.saveAuthResult(authFixture('student'))
   const page = h.page('pages/index/index'); page.onShow()
   h.respond(0, { ok:true, user:authFixture('student').user, businessIdentity:null }); await settle()
-  const classroom = h.requests.findIndex(item => item.url.endsWith('/me/classroom'))
+  h.respond(h.requests.findIndex(item => item.url.endsWith('/me/classroom/stage-suggestion')), {ok:true,currentStage:'junior-winter',suggestedStage:'junior-winter',mode:'manual'}); await settle()
+  const classroom = h.requests.findIndex(item => item.url.includes('/me/classroom?stage=junior-winter'))
   const profile = h.requests.findIndex(item => item.url.endsWith('/me/profile'))
   h.respond(classroom, {ok:true, student:{currentStage:'junior-winter'}, stage:{code:'junior-winter'},
     plans:[], mentors:[],records:[]})
@@ -269,7 +271,8 @@ test('today workbench never displays a schedule from another semester or a holid
   const other = harness(); other.auth.saveAuthResult(authFixture('student'))
   const termPage = other.page('pages/index/index'); termPage.onShow()
   other.respond(0, { ok:true, user:authFixture('student').user, businessIdentity:null }); await settle()
-  const termClassroom = other.requests.findIndex(item => item.url.endsWith('/me/classroom'))
+  other.respond(other.requests.findIndex(item => item.url.endsWith('/me/classroom/stage-suggestion')), {ok:true,currentStage:'junior-fall',suggestedStage:'junior-fall',mode:'manual'}); await settle()
+  const termClassroom = other.requests.findIndex(item => item.url.includes('/me/classroom?stage=junior-fall'))
   other.respond(termClassroom, {ok:true, student:{currentStage:'junior-fall'}, stage:{code:'junior-fall'},
     plans:[], mentors:[], records:[]})
   await settle()
@@ -298,7 +301,7 @@ test('plan save requires a direct-save response and rejects an old pending-revie
 test('current week switches the right-hand view without any navigation and failures are retryable', async () => {
   const h = harness(); h.auth.saveAuthResult(authFixture())
   const p = h.page('pages/classroom/classroom')
-  p.setData({ actualStageCode: 'junior-fall' })
+  p.setData({ actualStageCode: 'junior-fall', stageScheduleSafe: true })
   p.onCurrentWeekSchedule()
   assert.equal(p.data.selectedView, 'week'); assert.equal(h.navigations.length, 0)
   assert.match(h.requests[0].url, /stageCode=junior-fall/)
@@ -608,11 +611,11 @@ test('hidden classroom cannot apply a late response from a previous identity', a
   const page = h.page('pages/classroom/classroom'); page.onShow()
   h.respond(0, { ok: true, user: authFixture('student').user, businessIdentity: null }); await settle()
   page.onHide()
-  const classroomRequest = h.requests.findIndex((item) => item.url.endsWith('/me/classroom'))
+  const suggestionRequest = h.requests.findIndex((item) => item.url.endsWith('/me/classroom/stage-suggestion'))
   const stagesRequest = h.requests.findIndex((item) => item.url.endsWith('/classroom/stages'))
   const scheduleRequest = h.requests.findIndex((item) => item.url.includes('/schedule-imports/latest'))
   h.respond(stagesRequest, { stages: [{ code: 'junior-fall', label: '大三上', planTypes: [] }] })
-  h.respond(classroomRequest, { student: { name: '旧账号测试数据' }, stage: { code: 'junior-fall' }, plans: [], mentors: [], records: [] })
+  h.respond(suggestionRequest, { ok:true, currentStage:'junior-fall', suggestedStage:'junior-fall', mode:'manual' })
   // Schedule fetch is now stage-scoped and deferred until the first requests
   // settle. A hidden page must not even issue it, nor apply stale results.
   if (scheduleRequest >= 0) h.respond(scheduleRequest, { scheduleImport: null })
@@ -812,6 +815,80 @@ test('setting the viewed stage requires confirmation and reloads only after serv
  assert.equal(h.requests[0].data.expectedCurrentStage,'freshman-fall')
  h.respond(0,{ok:true,currentStage:'junior-fall'});await settle();await settle()
  assert.equal(reloads,1)
+})
+
+test('stage resolution updates opted-in auto and unset stages, while preserving existing manual choices',async()=>{
+ for (const first of [
+  {currentStage:'freshman-fall',mode:'auto'},
+  {currentStage:null,mode:null},
+ ]) {
+  const h=harness();h.auth.saveAuthResult(authFixture());const pending=h.load('utils/current-stage').resolveCurrentStage()
+  h.respond(0,{ok:true,...first,suggestedStage:'sophomore-fall'});await settle()
+  assert.equal(h.requests[1].method,'PUT');assert.equal(h.requests[1].data.expectedCurrentStage,first.currentStage)
+  assert.equal(h.requests[1].data.expectedMode,first.mode);assert.equal(h.requests[1].data.mode,'auto')
+  h.respond(1,{ok:true,currentStage:'sophomore-fall',mode:'auto'});const result=await pending
+  assert.equal(result.stage,'sophomore-fall');assert.equal(result.scheduleSafe,true)
+ }
+ for (const mode of [null,'manual']) {
+  const h=harness();h.auth.saveAuthResult(authFixture());const pending=h.load('utils/current-stage').resolveCurrentStage()
+  h.respond(0,{ok:true,currentStage:'freshman-fall',mode,suggestedStage:'sophomore-fall'});const result=await pending
+  assert.equal(h.requests.length,1);assert.equal(result.stage,'freshman-fall');assert.ok(result.notice)
+  assert.equal(result.scheduleSafe,mode==='manual')
+ }
+})
+
+test('stage resolution rejects stale identity and rechecks concurrent mode changes',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const pending=h.load('utils/current-stage').resolveCurrentStage()
+ h.respond(0,{ok:true,currentStage:'freshman-fall',mode:'auto',suggestedStage:'sophomore-fall'});await settle()
+ h.respond(1,{error:'current_stage_changed'},409);await settle()
+ h.respond(2,{ok:true,currentStage:'junior-fall',mode:'manual',suggestedStage:'sophomore-fall'})
+ const result=await pending;assert.equal(result.stage,'junior-fall');assert.equal(result.mode,'manual');assert.equal(h.requests.length,3)
+ const other=harness();other.auth.saveAuthResult(authFixture());const stale=other.load('utils/current-stage').resolveCurrentStage()
+ other.auth.saveAuthResult(authFixture('student',secondId,'different-token'))
+ other.respond(0,{ok:true,currentStage:null,mode:null,suggestedStage:'sophomore-fall'})
+ await assert.rejects(stale);assert.equal(other.requests.length,1)
+})
+
+test('stage resolution keeps missing enrollment and non-student identities safe',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const pending=h.load('utils/current-stage').resolveCurrentStage()
+ h.respond(0,{ok:true,currentStage:null,mode:null,suggestedStage:null});const result=await pending
+ assert.equal(result.stage,null);assert.equal(result.scheduleSafe,false);assert.match(result.notice,/入学年份/);assert.equal(h.requests.length,1)
+ const teacher=harness();teacher.auth.saveAuthResult(authFixture('teacher'))
+ await assert.rejects(teacher.load('utils/current-stage').resolveCurrentStage());assert.equal(teacher.requests.length,0)
+})
+
+test('home uses the resolved automatic stage for plans and its matching schedule',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/index/index');page.onShow()
+ h.respond(0,{ok:true,user:authFixture().user,businessIdentity:null});await settle()
+ const find=(part)=>h.requests.findIndex(r=>r.url.includes(part))
+ h.respond(find('/me/classroom/stage-suggestion'),{ok:true,currentStage:'freshman-fall',mode:'auto',suggestedStage:'sophomore-fall'});await settle()
+ h.respond(find('/me/classroom/current-stage'),{ok:true,currentStage:'sophomore-fall',mode:'auto'});await settle()
+ const classroom=find('/me/classroom?stage=sophomore-fall');assert.ok(classroom>=0)
+ h.respond(classroom,{ok:true,student:{currentStage:'sophomore-fall'},stage:{code:'sophomore-fall'},plans:[],mentors:[],records:[]});await settle()
+ assert.match(h.requests[find('/schedule-imports/latest')].url,/stageCode=sophomore-fall/)
+ assert.equal(page.data.planStageLabel,'大二上');page.onHide()
+})
+
+test('home does not show an old schedule when legacy stage and suggestion disagree',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/index/index');page.onShow()
+ h.respond(0,{ok:true,user:authFixture().user,businessIdentity:null});await settle()
+ const find=(part)=>h.requests.findIndex(r=>r.url.includes(part))
+ h.respond(find('/me/classroom/stage-suggestion'),{ok:true,currentStage:'freshman-fall',mode:null,suggestedStage:'sophomore-fall'});await settle()
+ h.respond(find('/me/classroom?stage=freshman-fall'),{ok:true,student:{currentStage:'freshman-fall'},stage:{code:'freshman-fall'},plans:[],mentors:[],records:[]});await settle()
+ assert.match(page.data.stageNotice,/建议不同/);assert.match(page.data.scheduleError,/待核对/)
+ assert.equal(h.requests.some(r=>r.url.includes('/schedule-imports/latest')),false);page.onHide()
+})
+
+test('planning reloads plans and weekly schedule from the same resolved stage',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
+ const pending=page.initializeClassroom();const find=(part)=>h.requests.findIndex(r=>r.url.includes(part))
+ h.respond(find('/classroom/stages'),{ok:true,stages:[{code:'sophomore-fall',label:'大二上',mode:'term',description:'正常学期',planTypes:['gpa']}]})
+ h.respond(find('/me/classroom/stage-suggestion'),{ok:true,currentStage:'freshman-fall',mode:'auto',suggestedStage:'sophomore-fall'});await settle()
+ h.respond(find('/me/classroom/current-stage'),{ok:true,currentStage:'sophomore-fall',mode:'auto'});await settle()
+ h.respond(find('/me/classroom?stage=sophomore-fall'),{ok:true,student:{name:'测试',currentStage:'sophomore-fall'},stage:{code:'sophomore-fall'},plans:[],mentors:[],records:[],showGuidance:true,guidanceRecordsReady:true});await settle()
+ const first=find('/schedule-imports/latest');assert.match(h.requests[first].url,/stageCode=sophomore-fall/);h.respond(first,{ok:true,import:null});await pending
+ assert.equal(page.data.actualStageCode,'sophomore-fall');assert.equal(page.data.currentStageCode,'sophomore-fall')
+ page.onCurrentWeekSchedule();assert.match(h.requests.at(-1).url,/stageCode=sophomore-fall/);h.respond(h.requests.length-1,{ok:true,import:null});await settle()
 })
 test('account settings stay reachable without exposing destructive actions on the main Mine surface',()=>{
  const h=harness(),page=h.page('pages/profile/profile')
@@ -1190,7 +1267,7 @@ test('student homepage preserves action routes and shows real daily states',()=>
  assert.match(ts,/plan\.id \? '已保存'/)
  assert.match(ts,/getLatestScheduleImport\(stageCode\)/)
  assert.match(ts,/dailyScheduleView\(this\.homeSchedule, this\.data\.scheduleDay\)/)
- assert.match(ts,/getMyClassroom\(\)/)
+  assert.match(ts,/getMyClassroom\(resolution\?\.stage/)
  const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
  assert.match(css,/\.action-row,\.service-link\{[^}]*width:49%/)
  assert.match(css,/\.home-card\{[^}]*background:#fffdf9/)
@@ -1290,39 +1367,67 @@ test('home keeps profile completion accessible without displacing the plan CTA',
 test('home shortcuts prioritize core actions and retain the countdown tile',()=>{
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  assert.match(source,/class="home-shortcuts home-card"/)
- const names=['action-assessment','action-schools','action-news','action-countdown','action-consult']
+ const names=['action-assessment','action-planning','action-schools','action-news','action-consult','action-countdown']
  const positions=names.map(name=>source.indexOf('class="action-row '+name+'"'))
  assert.ok(positions.every(position=>position>=0),'all expected home shortcuts must remain')
  assert.ok(positions.every((position,index)=>index===0 || positions[index-1]<position),'home shortcut order must stay intentional')
 })
 
-test('today artwork references only its selected WebP assets',()=>{
+test('today artwork references the compatible PNG assets',()=>{
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
- const assets=['banners/today-campus-hero.webp','icons/ai-assessment.webp','icons/library.webp','icons/news.webp','icons/clock.webp','icons/headset.webp','icons/calendar.webp']
+ const assets=['banners/today-campus-hero.png','icons/ai-assessment.png','icons/library.png','icons/news.png','icons/clock.png','icons/headset.png','icons/calendar.png']
  for(const asset of assets){
   const resource='/assets/jiuchen-visual-v1/'+asset
   assert.ok(source.includes(`src="${resource}"`),`${asset} must be referenced from Today`)
   const bytes=fs.readFileSync(path.join(root,resource.slice(1)))
-  assert.equal(bytes.toString('ascii',0,4),'RIFF')
-  assert.equal(bytes.toString('ascii',8,16),'WEBPVP8X')
-  const width=bytes.readUIntLE(24,3)+1, height=bytes.readUIntLE(27,3)+1
-  assert.deepEqual([width,height],asset.startsWith('banners/')?[1344,516]:[256,256])
+  assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a')
+  const width=bytes.readUInt32BE(16), height=bytes.readUInt32BE(20)
+  assert.deepEqual([width,height],asset.startsWith('banners/')?[1008,387]:[128,128])
  }
- assert.equal((source.match(/\/assets\/jiuchen-visual-v1\//g)||[]).length,assets.length)
+ assert.ok((source.match(/\/assets\/jiuchen-visual-v1\//g)||[]).length>=assets.length)
 })
 
 test('four primary views keep their supplied artwork and real-data entry order',()=>{
  const pages={index:'today-campus-hero',classroom:'semester-books-banner',news:'school-library-hero',profile:'profile-calm-campus'}
  for(const [page,banner] of Object.entries(pages)){
   const source=fs.readFileSync(path.join(root,'pages',page,page+'.wxml'),'utf8')
-  const asset=`/assets/jiuchen-visual-v1/banners/${banner}.webp`
+  const asset=`/assets/jiuchen-visual-v1/banners/${banner}.png`
   assert.ok(source.includes(asset),`${page} must reference its banner`)
-  assert.equal(fs.readFileSync(path.join(root,asset.slice(1))).toString('ascii',8,12),'WEBP')
+  assert.equal(fs.readFileSync(path.join(root,asset.slice(1))).subarray(0,8).toString('hex'),'89504e470d0a1a0a')
  }
  const news=fs.readFileSync(path.join(root,'pages/news/news.wxml'),'utf8')
  assert.ok(news.indexOf('class="article-list"')<news.indexOf('class="news-extra"'))
  const mine=fs.readFileSync(path.join(root,'pages/profile/profile.wxml'),'utf8')
  assert.ok(mine.indexOf('class="menu-list primary-menus"')<mine.indexOf('identities.length'))
+ const css=fs.readFileSync(path.join(root,'pages/profile/profile.wxss'),'utf8')
+ assert.match(css,/\.primary-menus\{[^}]*flex-direction:row[^}]*width:100%/)
+})
+
+test('news search filters real loaded articles together with category selection',()=>{
+ const h=harness(), page=h.page('pages/news/news')
+ const cards=[{id:'a',title:'科研项目',summary:'测试',sourceLabel:'来源',tags:['科研'],coverFailed:false},{id:'b',title:'竞赛通知',summary:'测试',sourceLabel:'来源',tags:['竞赛'],coverFailed:false}]
+ page.setData({allArticles:cards,categories:['全部','科研','竞赛'],currentCategory:0})
+ page.onSearchInput({detail:{value:'科研'}});assert.equal(page.data.featured.id,'a');assert.equal(page.data.articles.length,0)
+ page.onCategoryTap({currentTarget:{dataset:{index:2}}});assert.equal(page.data.featured.id,'')
+ page.onSearchInput({detail:{value:''}});assert.equal(page.data.featured.id,'b')
+})
+
+test('numeric news labels remain traceable without becoming bare category names',async()=>{
+ const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/news/news')
+ const pending=page.loadNews()
+ h.respond(0,{ok:true,posts:[{id:'a',title:'真实文章',summary:'',source:'manual',publishedAt:null,tags:['3','竞赛'],coverUrl:null}]})
+ await pending
+ assert.ok(page.data.categories.includes('分类待核实'));assert.equal(page.data.categories.includes('3'),false)
+ assert.match(page.data.featured.rawTagNote,/原始标签 3/);assert.ok(page.data.sections.includes('学科竞赛'))
+ page.onSectionTap({currentTarget:{dataset:{section:'学科竞赛'}}});assert.equal(page.data.featured.id,'a')
+})
+
+test('planning category navigation only scrolls to a plan actually available in that stage',()=>{
+ const h=harness(), page=h.page('pages/classroom/classroom');let selector=''
+ h.wx.pageScrollTo=options=>{selector=options.selector}
+ page.setData({plans:[{type:'english'}]})
+ page.onPlanCategoryTap({currentTarget:{dataset:{type:'research'}}});assert.equal(selector,'')
+ page.onPlanCategoryTap({currentTarget:{dataset:{type:'english'}}});assert.equal(selector,'#plan-english')
 })
 
 test('PKU media/map are real sourced assets and consultation uses the shared chat entry',()=>{

@@ -2,17 +2,17 @@
   <role-shell view-slot="home" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready' && shellKind === 'student'}}">
     <view class="home-intro {{loggedIn ? 'home-intro-compact' : ''}}">
-      <image class="home-hero-art" src="/assets/jiuchen-visual-v1/banners/today-campus-hero.webp" mode="aspectFill" aria-hidden="true" />
+      <image class="home-hero-art" src="/assets/jiuchen-visual-v1/banners/today-campus-hero.png" mode="aspectFill" aria-hidden="true" />
       <view class="home-intro-content">
-        <text class="eyebrow">{{todayLabel}}</text>
-        <text class="home-title">今天</text>
+        <text class="home-title">{{loggedIn ? greeting + '，' + userName : '今天'}}</text>
+        <text class="eyebrow">{{todayLabel}}{{planState === 'ready' && planStageLabel ? ' · ' + planStageLabel : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
         <button wx:if="{{!loggedIn}}" class="home-primary" bindtap="onPrimary">进入我的规划 ›</button>
         <text wx:if="{{readOnly || !assessmentReady}}" class="home-caption">{{readOnly ? '只读模式 · 无编辑和评估权限' : loggedIn ? '学业资料待完善' : '登录后查看个人数据'}}</text>
         <text wx:if="{{!assessmentReady && !readOnly}}" class="home-minor-link" bindtap="onCompleteProfile">{{loggedIn ? '补全学业资料 ›' : '登录并建立档案 ›'}}</text>
       </view>
     </view>
     <view class="home-schedule home-card">
-      <view class="home-card-head"><view class="home-heading-with-icon"><image class="home-heading-icon" src="/assets/jiuchen-visual-v1/icons/calendar.webp" mode="aspectFit" /><text class="section-heading">今日课表</text></view><text class="home-card-link" bindtap="onPlanning">本周完整课表 ›</text></view>
+      <view class="home-card-head"><view class="home-heading-with-icon"><image class="home-heading-icon" src="/assets/jiuchen-visual-v1/icons/calendar.png" mode="aspectFit" /><text class="section-heading">今日课表</text></view><text class="home-card-link" bindtap="onPlanning">本周完整课表 ›</text></view>
       <view class="day-tabs"><view class="day-tab {{scheduleDay === 0 ? 'active' : ''}}" data-day="0" bindtap="onScheduleDay">今天</view><view class="day-tab {{scheduleDay === 1 ? 'active' : ''}}" data-day="1" bindtap="onScheduleDay">明天</view></view>
       <text class="home-schedule-meta">{{scheduleDateLabel}}{{scheduleStage ? ' · 档案阶段：' + scheduleStage : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
       <text wx:if="{{scheduleLoading}}" class="home-state">正在读取课表…</text>
@@ -26,6 +26,8 @@
     </view>
     <view class="home-plan home-card">
       <view class="home-card-head"><text class="section-heading">阶段规划</text><text class="home-card-link" bindtap="onPlanning">进入规划 ›</text></view>
+      <view wx:if="{{stageNotice}}" class="stage-notice" bindtap="onPlanning">{{stageNotice}} 核对 ›</view>
+      <text wx:if="{{(stageNotice || planError) && !readOnly}}" class="home-state-link" bindtap="onCompleteProfile">完善入学年份 ›</text>
       <text wx:if="{{planLoading}}" class="home-state">正在读取阶段规划…</text>
       <text wx:elif="{{planError}}" class="home-state">{{planError}}</text>
       <text wx:elif="{{planState === 'unbound'}}" class="home-state">绑定学员身份后，即可查看和编辑自己的阶段规划。</text>
@@ -35,29 +37,32 @@
       <view class="home-section-bar"><text class="section-heading">常用入口</text></view>
       <view class="action-list">
 <view class="action-row action-assessment" bindtap="onAssessment" hover-class="action-pressed" aria-role="button" aria-label="AI评估与历史结果">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/ai-assessment.webp" mode="aspectFit" /></view>
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/ai-assessment.png" mode="aspectFit" /></view>
         <text class="action-title">AI 评估</text>
         <text class="action-more">›</text>
       </view>
+<view class="action-row action-planning" bindtap="onPlanning" hover-class="action-pressed" aria-role="button" aria-label="打开我的规划">
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/calendar.png" mode="aspectFit" /></view>
+        <text class="action-title">我的规划</text>
+      </view>
 <view class="action-row action-schools" bindtap="onSchools" hover-class="action-pressed" aria-role="button" aria-label="筛选院校库">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/library.webp" mode="aspectFit" /></view>
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/library.png" mode="aspectFit" /></view>
         <text class="action-title">院校库</text><text class="action-more">›</text>
       </view>
 <view class="action-row action-news" bindtap="onNews" hover-class="action-pressed" aria-role="button" aria-label="阅读保研资讯">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/news.webp" mode="aspectFit" /></view>
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/news.png" mode="aspectFit" /></view>
         <text class="action-title">保研资讯</text>
         <text class="action-more">›</text>
       </view>
-<view class="action-row action-countdown" bindtap="onCountdownToggle" hover-class="action-pressed" aria-role="button" aria-label="查看或设置倒数日">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/clock.webp" mode="aspectFit" /></view>
-        <text class="action-title">倒数日</text>
-        <text wx:if="{{countdowns.length}}" class="action-countdown-days">{{countdowns[0].remainingDays}} 天</text>
-        <text class="action-more">›</text>
-      </view>
 <view class="action-row action-consult" bindtap="onCustomerService" hover-class="action-pressed" aria-role="button" aria-label="联系九辰客服">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/headset.webp" mode="aspectFit" /></view>
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/headset.png" mode="aspectFit" /></view>
         <text class="action-title">联系客服</text>
         <text class="action-more">›</text>
+      </view>
+<view class="action-row action-countdown" bindtap="onCountdownToggle" hover-class="action-pressed" aria-role="button" aria-label="更多功能：查看或设置倒数日">
+        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/clock.png" mode="aspectFit" /></view>
+        <text class="action-title">更多功能</text>
+        <text class="action-countdown-days">{{countdowns.length ? countdowns[0].remainingDays + ' 天' : '倒数日'}}</text>
       </view>
       </view>
     </view>

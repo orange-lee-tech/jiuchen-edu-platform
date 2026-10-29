@@ -137,6 +137,7 @@ button::after { border:0; }
 .stage-option.active{background:#1d5779;color:#fff;border-bottom:3rpx solid #d8ad64;}
 .current-week-link{margin-top:12rpx;padding:12rpx 0;border-top:1rpx solid #ede7db;color:#236383;font-size:23rpx;font-weight:750;}
 .stage-correction{display:flex;flex-wrap:wrap;gap:16rpx;margin-top:12rpx;color:#236383;font-size:21rpx;line-height:1.5;}
+.stage-notice{position:relative;display:block;margin-top:8rpx;color:#805928;font-size:21rpx;line-height:1.5;}
 .classroom-layout{display:block;}
 .classroom-main{width:100%;}
 .stage-summary{background:#e9f0f1;border-left-color:#d6ad69;border-radius: 8rpx;}
@@ -168,3 +169,13 @@ button::after { border:0; }
 .plan-note{margin-top:5rpx;font-size:21rpx;line-height:1.45;}
 .plan-arrow{font-size:21rpx;}
 .pending-card{border-radius:14rpx;background:#fffefc;}
+
+.plan-tabs{width:100%;margin:4rpx 0 10rpx;white-space:nowrap;}
+.plan-tabs-row{display:flex;width:max-content;gap:9rpx;align-items:center;}
+.plan-tab{padding:12rpx 17rpx;color:#5d7180;font-size:21rpx;line-height:1.4;}
+.plan-tab-active{color:#174e78;font-weight:800;border-bottom:3rpx solid #174e78;}
+.guidance-grid{display:flex;flex-wrap:wrap;gap:12rpx;align-items:stretch;}
+.guidance-column{box-sizing:border-box;flex:1 1 280rpx;min-width:0;}
+.guidance-column .section-title-row{margin:14rpx 0 8rpx;}
+.guidance-column .pending-card,.guidance-column .mentor-card,.guidance-column .record-list{padding:15rpx;}
+.guidance-column .mentor-desc,.guidance-column .pending-desc{font-size:20rpx;line-height:1.45;}

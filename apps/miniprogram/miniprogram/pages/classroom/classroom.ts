@@ -2,6 +2,7 @@ import { getSavedAuthResult } from '../../utils/auth'
 import {getReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 import { weeklyScheduleView, courseTimeLabel } from '../../utils/schedule-view'
+import { resolveCurrentStage } from '../../utils/current-stage'
 import {
   getClassroomStages,
   getLatestScheduleImport,
@@ -130,7 +131,7 @@ Page({
     weekCourses: [] as Array<{ name: string; day: string; slot: string; location: string | null; teacher: string | null }>,
     stages: stageLabels(FALLBACK_STAGES),
     stageGroups: stageGroups(FALLBACK_STAGES), stagePickerOpen: false, actualStageLabel: '待确认',
-    actualStageCode: '',
+    actualStageCode: '', stageMode: null as 'auto' | 'manual' | null, stageNotice: '', stageScheduleSafe: false,
     stageChangeBusy: false,
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
@@ -175,11 +176,15 @@ Page({
 
     this.setData({ mode: 'student', loading: true, loadError: '', plans: [], mentors: [], records: [] })
     try {
-      const [stages, initial] = await Promise.all([
+      const [stages, resolution] = await Promise.all([
         getClassroomStages().catch(() => FALLBACK_STAGES),
-        getMyClassroom(sameOwner ? this.data.currentStageCode : undefined),
+        isReadOnly() ? Promise.resolve(null) : resolveCurrentStage().catch(() => null),
       ])
       if (generation !== this.viewGeneration) return
+      const browsingAnotherStage = sameOwner && this.data.currentStageCode !== this.data.actualStageCode
+      const initial = await getMyClassroom(browsingAnotherStage ? this.data.currentStageCode : resolution?.stage || undefined)
+      if (generation !== this.viewGeneration) return
+      const stageChanged = Boolean(resolution && initial.student.currentStage !== resolution.stage)
       const matchingTerm = /^(freshman|sophomore|junior|senior)-(fall|spring)$/.test(initial.stage.code)
       const latestSchedule = matchingTerm
         ? await getLatestScheduleImport(initial.stage.code).catch(() => null)
@@ -197,6 +202,9 @@ Page({
         stageGroups: stageGroups(stages),
         actualStageLabel: stages.find(item => item.code === initial.student.currentStage)?.label || '未设置',
         actualStageCode: initial.student.currentStage || '',
+        stageMode: resolution?.mode ?? null,
+        stageNotice: isReadOnly() ? '只读查看档案中保存的阶段。' : stageChanged ? '档案阶段已变化，请刷新后核对。' : resolution?.notice || (resolution ? '' : '自动定位暂不可用，请核对当前学期。'),
+        stageScheduleSafe: isReadOnly() || Boolean(resolution?.scheduleSafe && !stageChanged),
         ...emptyStageView(stage, index),
         studentName: initial.student.name,
         scheduleCourseCount,
@@ -253,6 +261,11 @@ Page({
     void this.reloadStage(stage.code)
   },
   onToggleStagePicker() { this.setData({ stagePickerOpen: !this.data.stagePickerOpen }) },
+  onPlanCategoryTap(event: WechatMiniprogram.BaseEvent) {
+    const type = String(event.currentTarget.dataset.type || '')
+    if (this.data.plans.some(item => item.type === type)) wx.pageScrollTo({ selector: '#plan-' + type, duration: 200 })
+  },
+  onAcademicProfile() { if (!isReadOnly()) openPage('/pages/profile-edit/profile-edit') },
   async onReviewCurrentStage() {
     if (isReadOnly() || this.data.stageChangeBusy) return
     const generation = this.viewGeneration, owner = this.selectedOwner
@@ -263,11 +276,11 @@ Page({
       const stage = (this.data.stages as ClassroomStage[]).find(item => item.code === result.suggestedStage)
       if (!stage) {
         wx.showModal({ title: '当前阶段待确认', content: '无法根据入学年份确定阶段。请在学期选择器中选择实际阶段，再设为当前。', showCancel: false })
-      } else if (stage.code === result.currentStage) {
+      } else if (stage.code === result.currentStage && result.mode === 'auto') {
         wx.showToast({ title: '当前阶段与建议一致', icon: 'none' })
       } else {
-        wx.showModal({ title: '核对当前阶段', content: `按普通四年制及入学年份估算为${stage.label}。如有休学或其他学制，请手动选择实际阶段。`, confirmText: '设为当前',
-          success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(stage.code, result.currentStage) } })
+        wx.showModal({ title: '启用自动定位', content: `按普通四年制及入学年份估算为${stage.label}。如有休学或其他学制，请手动选择实际阶段。`, confirmText: '启用自动',
+          success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(stage.code, result.currentStage, 'auto', result.mode ?? null) } })
       }
     } catch { wx.showToast({ title: '暂无法读取阶段建议，请稍后重试', icon: 'none' }) }
     finally { this.setData({ stageChangeBusy: false }) }
@@ -277,14 +290,20 @@ Page({
     const code = this.data.currentStageCode, expected = this.data.actualStageCode || null
     const generation = this.viewGeneration, owner = this.selectedOwner
     wx.showModal({ title: '设为当前阶段', content: `确认将${this.data.currentStageLabel}设为当前阶段？历史计划和课表会保留。`,
-      success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(code, expected) } })
+      success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(code, expected, 'manual', this.data.stageMode) } })
   },
-  async saveCurrentStage(code: string, expected: string | null) {
+  onKeepCurrentStage() {
+    if (isReadOnly() || this.data.stageChangeBusy || !this.data.actualStageCode) return
+    const code = this.data.actualStageCode, mode = this.data.stageMode, generation = this.viewGeneration, owner = this.selectedOwner
+    wx.showModal({ title: '保持手动阶段', content: '将已保存的阶段设为手动模式，之后可随时修改。',
+      success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(code, code, 'manual', mode) } })
+  },
+  async saveCurrentStage(code: string, expected: string | null, mode: 'auto' | 'manual' = 'manual', expectedMode?: 'auto' | 'manual' | null) {
     if (this.data.stageChangeBusy || isReadOnly()) return
     const generation = this.viewGeneration
     this.setData({ stageChangeBusy: true })
     try {
-      const result = await setCurrentClassroomStage(code, expected)
+      const result = await setCurrentClassroomStage(code, expected, { mode, expectedMode: expectedMode === undefined ? this.data.stageMode : expectedMode, ...(mode === 'auto' ? { confirmAuto: true } : {}) })
       if (generation !== this.viewGeneration) return
       const index = (this.data.stages as ClassroomStage[]).findIndex(item => item.code === result.currentStage)
       if (index < 0) throw new Error('unknown_stage')
@@ -320,6 +339,10 @@ Page({
     try {
       // The current-week panel follows the student's actual stage, not the viewed stage.
       const stageCode = this.data.actualStageCode
+      if (!this.data.stageScheduleSafe) {
+        this.setData({ weekState: 'unknown', weekLabel: '当前学期待核对' })
+        return
+      }
       if (!stageCode) {
         this.setData({ weekState: 'unknown', weekLabel: '档案当前阶段待确认' })
         return
