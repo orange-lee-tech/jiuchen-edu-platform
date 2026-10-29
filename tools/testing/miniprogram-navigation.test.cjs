@@ -805,7 +805,7 @@ test('compact planning selector keeps all academic years, holiday stages and wee
 
 test('setting the viewed stage requires confirmation and reloads only after server success',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
- page.setData({currentStageCode:'junior-fall',currentStageLabel:'大三上',actualStageCode:'freshman-fall'})
+ page.setData({currentStageCode:'junior-fall',currentStageLabel:'大三上',actualStageCode:'freshman-fall',actualStageKnown:true,stageModeKnown:true,stageMode:null})
  let reloads=0;page.initializeClassroom=async()=>{reloads++}
  page.onSetViewedStage();assert.equal(h.requests.length,0)
  h.modals[0].success({confirm:false});assert.equal(h.requests.length,0)
