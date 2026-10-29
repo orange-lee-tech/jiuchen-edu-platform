@@ -262,3 +262,23 @@ button::after{border:0;}
 .home-shortcuts .action-more{display:none;}
 .home-shortcuts .action-countdown-days{margin:0;font-size:18rpx;line-height:1.3;}
 .stage-notice{margin-top:12rpx;padding:12rpx 14rpx;border-radius:9rpx;background:#fff7e6;color:#805928;font-size:21rpx;line-height:1.5;}
+
+
+/* A real countdown list stays visible on the Today workbench; management is optional. */
+.stage-notice{display:flex;flex-direction:column;gap:6rpx;padding:12rpx 14rpx;background:#fff8e8;border:1rpx solid #eadbc7;border-radius:8rpx;color:#805928;font-size:21rpx;line-height:1.5;}
+.stage-notice-action{display:block;color:#236383;font-size:22rpx;font-weight:800;}
+.countdown-summary{background:#fffdf9;border-color:#e5dfd3;}
+.countdown-preview-list{margin-top:7rpx;}
+.countdown-preview-item{display:flex;align-items:center;gap:12rpx;padding:13rpx 0;border-bottom:1rpx solid #ebe7df;}
+.countdown-preview-item:last-child{border-bottom:0;}
+.countdown-preview-item .countdown-main{flex:1;min-width:0;}
+.countdown-preview-item .countdown-name{font-size:24rpx;}
+.countdown-preview-item .countdown-date{font-size:19rpx;}
+.countdown-empty{display:block;margin-top:9rpx;padding:12rpx 14rpx;border-radius:7rpx;background:#f5f2eb;color:#627986;font-size:22rpx;line-height:1.55;}
+.countdown-row-actions{display:flex;flex:none;gap:12rpx;align-items:center;}
+.countdown-edit,.countdown-remove{display:inline-block;padding:9rpx 2rpx;font-size:20rpx;}
+.countdown-edit{color:#236383;}
+.countdown-remove{color:#a44740;}
+.countdown-editor-actions{display:flex;flex-direction:column;gap:8rpx;}
+.countdown-cancel-edit{display:block;text-align:center;padding:10rpx;color:#6c7c86;font-size:21rpx;}
+.action-countdown-days{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}

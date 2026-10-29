@@ -179,3 +179,24 @@ button::after { border:0; }
 .guidance-column .section-title-row{margin:14rpx 0 8rpx;}
 .guidance-column .pending-card,.guidance-column .mentor-card,.guidance-column .record-list{padding:15rpx;}
 .guidance-column .mentor-desc,.guidance-column .pending-desc{font-size:20rpx;line-height:1.45;}
+
+
+/* Manual stage calibration is a primary action, never a cramped inline hint. */
+.stage-picker{padding:18rpx 20rpx 14rpx;}
+.stage-banner{left:auto;right:0;width:48%;height:150rpx;opacity:.72;}
+.stage-picker-top{position:relative;z-index:2;align-items:flex-start;gap:10rpx;min-height:76rpx;}
+.stage-picker-top>view{max-width:62%;min-width:0;}
+.stage-picker-caption{display:block;line-height:1.5;word-break:break-word;}
+.stage-picker-current{line-height:1.35;word-break:break-word;}
+.stage-picker-toggle{white-space:nowrap;padding:10rpx 12rpx;font-size:20rpx;}
+.stage-notice{position:relative;z-index:2;margin-top:9rpx;padding:10rpx 12rpx;border-radius:8rpx;background:rgba(255,253,247,.88);line-height:1.5;}
+.stage-actions{position:relative;z-index:2;display:flex;flex-direction:column;gap:7rpx;margin-top:12rpx;}
+.stage-calibrate-button{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:100%;min-height:68rpx;margin:0;padding:13rpx 16rpx;border:0;border-radius:9rpx;background:#205b7d;color:#fff;font-size:24rpx;line-height:1.35;font-weight:800;}
+.stage-calibrate-button::after{border:0;}
+.stage-calibrate-button[disabled]{opacity:.6;}
+.stage-actions-secondary{display:flex;flex-wrap:wrap;gap:4rpx 15rpx;}
+.stage-actions-secondary text{display:inline-block;padding:5rpx 0;color:#236383;font-size:20rpx;line-height:1.45;}
+.stage-calibration-help{display:block;position:relative;z-index:2;margin-top:8rpx;padding:10rpx 12rpx;border-radius:7rpx;background:#fffaf0;color:#805928;font-size:21rpx;line-height:1.5;}
+.stage-group-list{position:relative;z-index:2;}
+.stage-recovery-actions{display:flex;flex-wrap:wrap;gap:8rpx;}
+.stage-recovery-actions button{flex:1 1 220rpx;min-width:0;margin:0;padding:12rpx 14rpx;font-size:22rpx;line-height:1.4;}

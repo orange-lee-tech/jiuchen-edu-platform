@@ -132,7 +132,7 @@ Page({
     stages: stageLabels(FALLBACK_STAGES),
     stageGroups: stageGroups(FALLBACK_STAGES), stagePickerOpen: false, actualStageLabel: '待确认',
     actualStageCode: '', stageMode: null as 'auto' | 'manual' | null, stageNotice: '', stageScheduleSafe: false,
-    stageChangeBusy: false,
+    stageChangeBusy: false, stageCalibrationMode: false,
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
 
@@ -148,7 +148,7 @@ Page({
       else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
     })
   },
-  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading' }) },
+  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stagePickerOpen: false, stageCalibrationMode: false }) },
   onUnload() { this.stopShell?.() },
 
   async initializeClassroom() {
@@ -257,10 +257,24 @@ Page({
     const index = code ? stages.findIndex(item => item.code === code) : Number(event.currentTarget.dataset.index)
     const stage = stages[index]
     if (!stage) return
-    this.setData({ ...emptyStageView(stage, index), selectedView: 'stage', stagePickerOpen: false, scheduleCourseCount: 0 })
+    if (this.data.stageCalibrationMode) {
+      const expected = this.data.actualStageCode || null
+      const expectedMode = this.data.stageMode
+      this.setData({ stagePickerOpen: false, stageCalibrationMode: false })
+      void this.saveCurrentStage(stage.code, expected, 'manual', expectedMode)
+      return
+    }
+    this.setData({ ...emptyStageView(stage, index), selectedView: 'stage', stagePickerOpen: false, stageCalibrationMode: false, scheduleCourseCount: 0 })
     void this.reloadStage(stage.code)
   },
-  onToggleStagePicker() { this.setData({ stagePickerOpen: !this.data.stagePickerOpen }) },
+  onToggleStagePicker() {
+    this.setData({ stagePickerOpen: !this.data.stagePickerOpen, stageCalibrationMode: false })
+  },
+  onToggleStageCalibration() {
+    if (isReadOnly() || this.data.stageChangeBusy) return
+    const opening = !this.data.stageCalibrationMode
+    this.setData({ stageCalibrationMode: opening, stagePickerOpen: opening })
+  },
   onPlanCategoryTap(event: WechatMiniprogram.BaseEvent) {
     const type = String(event.currentTarget.dataset.type || '')
     if (this.data.plans.some(item => item.type === type)) wx.pageScrollTo({ selector: '#plan-' + type, duration: 200 })
@@ -307,7 +321,7 @@ Page({
       if (generation !== this.viewGeneration) return
       const index = (this.data.stages as ClassroomStage[]).findIndex(item => item.code === result.currentStage)
       if (index < 0) throw new Error('unknown_stage')
-      this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage' })
+      this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage', stagePickerOpen: false, stageCalibrationMode: false })
       await this.initializeClassroom()
       wx.showToast({ title: '当前阶段已更新', icon: 'success' })
     } catch { if (generation === this.viewGeneration) wx.showToast({ title: '阶段未更新，请刷新后重试', icon: 'none' }) }

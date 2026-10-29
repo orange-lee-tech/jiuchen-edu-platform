@@ -40,9 +40,10 @@ Page({
     scheduleLoading: false, scheduleError: '', scheduleState: 'missing', scheduleLabel: '', scheduleStage: '',
     scheduleCourses: [] as Array<{time:string;name:string;location:string;next:boolean}>,
     planLoading: false, planError: '', planState: 'unbound', planStageLabel: '', stageNotice: '',
+    stageConfirmed: false, stageNeedsEnrollmentYear: false,
     planPreview: [] as Array<{title:string;status:string}>,
-    countdowns: [] as CountdownView[], countdownOpen: false,
-    countdownTitle: '', countdownDate: dateText(new Date()),
+    countdowns: [] as CountdownView[], countdownPreview: [] as CountdownView[], countdownOpen: false,
+    countdownTitle: '', countdownDate: dateText(new Date()), countdownEditingId: '',
     countdownToday: dateText(new Date()), countdownSaving: false,
   },
   homeEpoch: 0,
@@ -52,7 +53,7 @@ Page({
     const nextOwner = owner || ''
     if (!nextOwner) {
       this.countdownOwner = ''
-      this.setData({countdowns:[],countdownOpen:false,countdownTitle:''})
+      this.setData({countdowns:[],countdownPreview:[],countdownOpen:false,countdownTitle:'',countdownEditingId:''})
       return
     }
     if (nextOwner !== this.countdownOwner) this.setData({countdownOpen:false,countdownTitle:''})
@@ -67,13 +68,13 @@ Page({
     const active: CountdownView[] = entries.slice(0,8).map(e=>({
       ...e, remainingDays:daysUntil(e.date) ?? -1,
     })).filter(e=>e.remainingDays>=0).sort((a,b)=>a.remainingDays-b.remainingDays)
-    this.setData({countdowns:active,countdownToday:dateText(new Date())})
+    this.setData({countdowns:active,countdownPreview:active.slice(0,3),countdownToday:dateText(new Date())})
   },
   onCountdownToggle() {
     if (!this.countdownOwner) { wx.showToast({title:'登录学员身份后可设置',icon:'none'}); return }
     const opening = !this.data.countdownOpen
     this.setData({
-      countdownOpen: opening, countdownTitle: '', countdownDate: dateText(new Date()),
+      countdownOpen: opening, countdownTitle: '', countdownDate: dateText(new Date()), countdownEditingId: '',
     }, () => {
       // Editor is below the shortcut grid: without scrolling the tap looks unresponsive.
       if (opening) wx.pageScrollTo({selector:'.countdown-panel',duration:220,
@@ -86,24 +87,47 @@ Page({
   onCountdownDateChange(event:WechatMiniprogram.CustomEvent<{value:string}>) {
     this.setData({countdownDate:String(event.detail.value||'')})
   },
+  onCountdownEdit(event:WechatMiniprogram.BaseEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const entry = this.data.countdowns.find(item => item.id === id)
+    if (!entry || !this.countdownOwner) return
+    this.setData({ countdownOpen:true, countdownEditingId:id, countdownTitle:entry.title, countdownDate:entry.date }, () => {
+      wx.pageScrollTo({selector:'.countdown-panel',duration:220})
+    })
+  },
+  onCountdownCancelEdit() {
+    this.setData({ countdownEditingId:'', countdownTitle:'', countdownDate:dateText(new Date()) })
+  },
   onCountdownSave() {
     if (!this.countdownOwner || this.data.countdownSaving) return
     const title=this.data.countdownTitle.trim()
     const date=this.data.countdownDate
+    const editingId=this.data.countdownEditingId
     if (!title || title.length>24 || daysUntil(date)===null || (daysUntil(date)??-1)<0) {
       wx.showToast({title:'填写事件名称和有效日期',icon:'none'});return
     }
-    if (this.data.countdowns.length>=8) {
+    if (!editingId && this.data.countdowns.length>=8) {
       wx.showToast({title:'最多设置8个倒数日',icon:'none'});return
     }
     this.setData({countdownSaving:true})
     try {
-      const entries=[...this.data.countdowns.map(({id,title,date})=>({id,title,date})),
-        {id:String(Date.now())+'-'+Math.random().toString(36).slice(2,8),title,date}]
+      const stored: unknown = wx.getStorageSync(this.countdownKey())
+      let entries: CountdownEntry[] = Array.isArray(stored) ? stored.filter((e):e is CountdownEntry =>
+        Boolean(e && typeof e === 'object' && typeof e.id === 'string' &&
+          typeof e.title === 'string' && typeof e.date === 'string')) : []
+      if (editingId) {
+        if (!entries.some(entry => entry.id === editingId)) {
+          wx.showToast({title:'找不到这条倒数日，请刷新后重试',icon:'none'})
+          return
+        }
+        entries = entries.map(entry => entry.id === editingId ? {id:editingId,title,date} : entry)
+      } else {
+        entries = [...entries, {id:String(Date.now())+'-'+Math.random().toString(36).slice(2,8),title,date}]
+      }
       wx.setStorageSync(this.countdownKey(),entries)
       this.loadCountdowns(this.countdownOwner)
-      this.setData({countdownTitle:'',countdownOpen:false})
-      wx.showToast({title:'倒数日已保存到本机',icon:'success'})
+      this.setData({countdownTitle:'',countdownOpen:false,countdownEditingId:'',countdownDate:dateText(new Date())})
+      wx.showToast({title:editingId?'倒数日已更新':'倒数日已保存到本机',icon:'success'})
     } catch { wx.showToast({title:'本机保存失败，请重试',icon:'none'}) }
     finally { this.setData({countdownSaving:false}) }
   },
@@ -118,6 +142,7 @@ Page({
           const entries=this.data.countdowns.filter(e=>e.id!==id).map(({id,title,date})=>({id,title,date}))
           wx.setStorageSync(this.countdownKey(),entries)
           this.loadCountdowns(this.countdownOwner)
+          if (this.data.countdownEditingId === id) this.setData({countdownEditingId:'',countdownTitle:'',countdownDate:dateText(new Date())})
         } catch { wx.showToast({title:'删除失败，请重试',icon:'none'}) }
       },
     })
@@ -131,14 +156,14 @@ Page({
     this.homeSchedule = null
     const today = dailyScheduleView(null, 0)
     const hour = (new Date().getUTCHours() + 8) % 24
-    this.setData({ todayLabel: today.dateLabel, greeting: hour < 11 ? '早上好' : hour < 18 ? '下午好' : '晚上好', scheduleDay: 0, scheduleDateLabel: today.dateLabel })
+    this.setData({ todayLabel: today.dateLabel, greeting: hour < 11 ? '早上好' : hour < 18 ? '下午好' : '晚上好', scheduleDay: 0, scheduleDateLabel: today.dateLabel, stageConfirmed:false, stageNeedsEnrollmentYear:false })
     this.stopShell = observeSlot('home', (state) => {
       const studentId = state.phase === 'ready' && state.auth?.user.role === 'student'
         ? state.auth.user.id : null
       this.currentHomeStudentId = studentId
       this.loadCountdowns(studentId)
       this.setData({ ...shellView(state), loggedIn: Boolean(state.auth), userName: state.auth?.user.displayName || '同学', assessmentReady: false })
-      if (!studentId) { this.homeSchedule = null; this.setData({ planLoading: false, planError: '', planState: 'unbound', planPreview: [], stageNotice: '', scheduleLoading: false, scheduleError: '', scheduleStage: '', scheduleCourses: [], scheduleState: 'missing' }); return }
+      if (!studentId) { this.homeSchedule = null; this.setData({ planLoading: false, planError: '', planState: 'unbound', planPreview: [], stageNotice: '', stageConfirmed:false, stageNeedsEnrollmentYear:false, scheduleLoading: false, scheduleError: '', scheduleStage: '', scheduleCourses: [], scheduleState: 'missing' }); return }
       this.setData({ scheduleLoading: true, scheduleError: '', scheduleStage: '', scheduleCourses: [], planLoading: true, planError: '', planPreview: [], stageNotice: '' })
       void (async () => {
         const resolution = await resolveCurrentStage().catch(() => null)
@@ -151,14 +176,16 @@ Page({
         const { view, resolution } = result
         const stageCode = view.stage.code
         const stageChanged = Boolean(resolution && view.student.currentStage !== resolution.stage)
-        this.setData({ planLoading: false, planState: 'ready',
-          stageNotice: stageChanged ? '档案阶段已变化，请重新进入规划页核对。' : resolution ? resolution.notice : '自动定位暂不可用，请核对当前学期。',
+        const stageConfirmed = Boolean(resolution?.scheduleSafe && !stageChanged)
+        this.setData({ planLoading: false, planState: 'ready', stageConfirmed,
+          stageNeedsEnrollmentYear: Boolean(resolution && !resolution.suggested),
+          stageNotice: stageChanged ? '档案阶段刚刚变化，请重新确认。' : resolution ? resolution.notice : '自动定位暂不可用，可直接手动校准当前学期。',
           planStageLabel: STAGE_NAMES[stageCode] || '档案当前阶段待确认',
           planPreview: view.plans.slice(0, 4).map(plan => ({ title: plan.title,
             status: plan.revisionStatus === 'pending' ? '旧版草稿未生效' : plan.id ? '已保存' : '未建立，查看规划' })) })
         if (!resolution?.scheduleSafe || stageChanged) {
           this.homeSchedule = null
-          this.setData({ scheduleLoading: false, scheduleError: '当前学期待核对，确认后再查看课表', scheduleStage: '', scheduleCourses: [] })
+          this.setData({ scheduleLoading: false, scheduleError: '当前学期尚未确认；校准后即可查看课表', scheduleStage: '', scheduleCourses: [] })
           return
         }
         if (!TERM_STAGE.test(stageCode)) {
@@ -222,7 +249,7 @@ Page({
     }
     this.renderScheduleDay()
   },
-  onHide() { ++this.homeEpoch; this.currentHomeStudentId = null; this.countdownOwner = ''; this.homeSchedule = null; this.stopShell?.(); this.setData({ shellPhase: 'loading', assessmentReady: false, scheduleCourses: [], planPreview: [], countdowns: [], countdownOpen: false }) },
+  onHide() { ++this.homeEpoch; this.currentHomeStudentId = null; this.countdownOwner = ''; this.homeSchedule = null; this.stopShell?.(); this.setData({ shellPhase: 'loading', assessmentReady: false, scheduleCourses: [], planPreview: [], countdowns: [], countdownPreview: [], countdownOpen: false, countdownEditingId: '' }) },
   onUnload() { ++this.homeEpoch; this.stopShell?.() },
   onPrimary() {
     // The daily workflow starts with the plan, not another AI request.
