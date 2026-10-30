@@ -13,7 +13,7 @@ A local-only candidate was previously reported:
 
 This branch and commit are not present in the current remote branch list. They may exist only in the user's Windows workspace. Do not assume they are pushed or equivalent to `main`; preserve the original branch and inspect its ancestry and diff before integration.
 
-`docs/handoff/CURRENT.md` is the sole live status page. The 2026-10-30 product scope and execution rules are in `docs/handoff/product-workstream-authoritative-brief-2026-10-30.md`. Read both before code work. The manual backup and backend engineering guides are proposed in PR #12 and are not yet part of `main`.
+`docs/handoff/CURRENT.md` is the sole live status page. The 2026-10-30 product scope and execution rules are in `docs/handoff/product-workstream-authoritative-brief-2026-10-30.md`. Read both before code work. The manual backup and backend engineering guides are tracked in PR #12; check its current merge state before assuming those paths exist on `main`.
 
 ## Active entry and priority (2026-10-30)
 
