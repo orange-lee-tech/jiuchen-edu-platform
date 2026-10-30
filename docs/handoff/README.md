@@ -3,6 +3,8 @@
 ## 当前状态
 
 - **唯一当前状态：** [CURRENT.md](CURRENT.md)
+- **2026-10-30 产品收口施工基线与 Codex 执行书：** [product-workstream-authoritative-brief-2026-10-30.md](product-workstream-authoritative-brief-2026-10-30.md)
+- **备份与后端工程地图：** PR [#12](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/12)（待合并；文档路径和内容见 PR）
 - **GitHub 工作台规整回执：** [github-workbench-cleanup-2026-10-27.md](github-workbench-cleanup-2026-10-27.md)
 - **历史分支清理记录：** [github-branch-prune-2026-10-19.md](github-branch-prune-2026-10-19.md)（历史快照；不得直接照搬其中旧 SHA 或旧分支数量）
 - **项目规则：** 根目录 [CONSTITUTION.md](../../CONSTITUTION.md)、[AGENTS.md](../../AGENTS.md)
