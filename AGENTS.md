@@ -2,23 +2,32 @@
 
 This file applies to Codex and other coding agents working in this repository.
 
-## Current branch authority (2026-10-27)
+## Current branch authority (2026-10-30)
 
-`main` is the sole authoritative integrated source. PR #9 is merged at `8778fde63cfaa74170bfb50090fbac7c623278d9` from PR head `b6318c748e26c868374a7fdd92c345da8317ed44`; both the PR-head CI and the main-push CI passed. These checks establish repository validation only, not current production deployment, database migration, WeChat formal publication, or payment-switch state.
+`main` is the sole authoritative integrated remote source. Current GitHub `main` HEAD is `36aea4bab3e9bc1aa1c46403cc05e3b2208df1d4`; PR #10 has been merged. The latest user-provided ECS receipt reports production API at the same SHA with DEPLOY PASS and API SMOKE PASS, and the academic-stage-mode / plan-item-due-date migrations applied. Treat the ECS details as user-provided evidence; re-read the live host before any new production operation.
 
-`docs/handoff/CURRENT.md` is the sole live status page. Use `docs/handoff/README.md` for navigation. Historical handoff documents remain evidence; do not promote old SHA values or dated “pending” statements into current facts. `p1/foundation` and other candidate branches are historical and must not be treated as a competing source of truth.
+A local-only candidate was previously reported:
+- branch: `codex/product-closeout-20261030`
+- commit: `d3dcfe4eb1bed3cb511aebeaf6bc9f56837e34b1`
+- reported base: `102b5c8fb228e9db999c55ea47e469b867c29003`
 
-## Active entry and priority (2026-10-27)
+This branch and commit are not present in the current remote branch list. They may exist only in the user's Windows workspace. Do not assume they are pushed or equivalent to `main`; preserve the original branch and inspect its ancestry and diff before integration.
+
+`docs/handoff/CURRENT.md` is the sole live status page. The 2026-10-30 product scope and execution rules are in `docs/handoff/product-workstream-authoritative-brief-2026-10-30.md`. Read both before code work. The manual backup and backend engineering guides are proposed in PR #12 and are not yet part of `main`.
+
+## Active entry and priority (2026-10-30)
 
 Read in order:
-`CONSTITUTION.md` → `AGENTS.md` → `docs/handoff/CURRENT.md` → relevant module contract/source. Before ECS work also read `ops/ecs/AGENTS.md`.
+`CONSTITUTION.md` → `AGENTS.md` → `docs/handoff/CURRENT.md` → `docs/handoff/product-workstream-authoritative-brief-2026-10-30.md` → local candidate handoff (if present) → relevant source and tests. Before ECS work also read `ops/ecs/AGENTS.md`.
 
 Current priority:
-1. Complete GitHub branch and local worktree cleanup without deleting Git history or unreviewed local data.
-2. Synchronize the Windows UI workspace to the latest `origin/main`.
-3. Begin the approved blue-gold warm UI/UX revision, prioritizing the Today workbench, today/tomorrow timetable, planning summary and semester switcher.
+1. Run the product brief's read-only PowerShell preflight. Confirm repository path, branch, HEAD, staged/unstaged/untracked changes, stashes, local candidate commit, and remote main.
+2. Preserve all local-only assets. Compare the reported `d3dcfe4` candidate with `origin/main`; do not blindly reset, rebase, cherry-pick, clean, or overwrite. If state is ambiguous or dirty, stop and report before editing.
+3. Reconcile the local candidate against the screenshot-backed requirements. Reuse existing plans, revisions, credit ledger, PIN controls, teacher assignments, assessment usage records, and provider key objects.
+4. Implement and test the end-to-end gaps across staff profiles, teacher workspace/planning/templates/custom plans/todos, scoped news tags, admin credit grants, AI service/model/balance controls, draft saving, upcoming tasks, and timetable collapse.
+5. Prepare fixed-SHA production release and migration evidence only after code and isolated MySQL validation. New production migrations and API promotion require separate explicit approval for this workstream.
 
-Production DDL, ECS release promotion, service cutover, timer enabling, WeChat publishing, AI/payment configuration changes and broadening read-only role powers remain separate approved actions. Do not infer production state from a source SHA, historical handoff, CI green, or the existence of a migration script.
+Do not infer production state from source SHA, historical handoff, CI green, or a local candidate. Do not expand production permissions or modify the company website/shared entry.
 
 ## Authority and scope
 
