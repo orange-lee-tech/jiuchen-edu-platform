@@ -9,7 +9,7 @@
 - PR #10（学期校准、规划截止日期和 UI 收口）已合并至 `main`。
 - 生产 API：用户提供的最新 ECS 回执为 `36aea4bab3e9bc1aa1c46403cc05e3b2208df1d4`，DEPLOY PASS、API SMOKE PASS；服务 active/running、健康 200；两个学期接口未登录返回 401。
 - 生产数据库：`academic-stage-mode` 与 `plan-item-due-date` 两项迁移已执行；字段结构和既有记录核验通过。该状态来自用户提供的 ECS 回执，本文件未重新连接生产环境。
-- PR #12 [docs: add manual backup and backend engineering guides](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/12) 已打开，包含自主手动备份规范、后端工程地图及导航更新；尚未合并。
+- PR #12 [docs: add manual backup and backend engineering guides](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/12) 包含自主手动备份规范和后端工程地图；其合并状态以 GitHub 当前 PR 状态为准。
 - 当前产品收口需求和 Codex 执行基线见 [product-workstream-authoritative-brief-2026-10-30.md](product-workstream-authoritative-brief-2026-10-30.md)。
 
 ## 本地候选与工作区边界
