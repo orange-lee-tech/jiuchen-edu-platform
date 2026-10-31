@@ -5,9 +5,10 @@ import type { DatabaseContext } from '../db/client.js'
 import { canAccessAdminWorkspace } from '../domain/auth-policy.js'
 import { resolveSessionUser } from '../services/session.js'
 import { ControlError, sixDigitPin } from '../services/admin-control-boxes.js'
+import { changeAssessmentObjectModel, modelChangeInput } from '../services/assessment-model-change.js'
 import {
   archiveAssessmentKey, assessmentKeyInput, copyAssessmentKeyForModel, createAssessmentKey, disableAssessmentKey,
-  listAssessmentKeys, revealAssessmentKey, setLegacyAssessmentKeyPin, switchAssessmentKey,
+  listAssessmentKeys, setLegacyAssessmentKeyPin, switchAssessmentKey,
   testAssessmentKey,
 } from '../services/assessment-key-objects.js'
 
@@ -51,6 +52,20 @@ export function registerAssessmentKeyObjectRoutes(
     try { return { ok: true, ...await listAssessmentKeys(database.pool) } }
     catch (error) { return failure(reply, error) }
   })
+  app.post<{ Params: { id: string }; Body: unknown }>('/me/admin/assessment-keys/:id/change-model', async (request, reply) => {
+    const user = await admin(request, reply)
+    if (!user || !database.configured) return
+    if ('readOnly' in user && user.readOnly) return reply.code(403).send({ ok: false, error: 'read_only_forbidden' })
+    const parsed = modelChangeInput.safeParse(request.body)
+    if (!idSchema.safeParse(request.params.id).success || !parsed.success)
+      return reply.code(400).send({ ok: false, error: 'invalid_assessment_model_change' })
+    try {
+      const result = await changeAssessmentObjectModel({ pool: database.pool, env, actorId: user.userId,
+        id: request.params.id, data: parsed.data })
+      await onKeyChanged()
+      return { ok: true, ...result }
+    } catch (error) { return failure(reply, error) }
+  })
   app.post<{ Body: unknown }>('/me/admin/assessment-keys', async (request, reply) => {
     const user = await admin(request, reply)
     if (!user || !database.configured) return
@@ -66,14 +81,7 @@ export function registerAssessmentKeyObjectRoutes(
   app.post<{ Params: { id: string }; Body: unknown }>('/me/admin/assessment-keys/:id/reveal', async (request, reply) => {
     const user = await admin(request, reply)
     if (!user || !database.configured) return
-    const parsed = revealSchema.safeParse(request.body)
-    if (!idSchema.safeParse(request.params.id).success || !parsed.success) {
-      return reply.code(400).send({ ok: false, error: 'invalid_assessment_key_request' })
-    }
-    try { return { ok: true, ...await revealAssessmentKey({ pool: database.pool,
-      actorId: user.userId, id: request.params.id, pin: parsed.data.pin,
-      masterKey: env.ADMIN_AI_KEY_ENCRYPTION_KEY ?? '' }) } }
-    catch (error) { return failure(reply, error) }
+    return reply.code(403).send({ ok: false, error: 'key_reveal_not_supported' })
   })
   app.post<{ Params: { id: string }; Body: unknown }>('/me/admin/assessment-keys/:id/setup-pin', async (request, reply) => {
     const user = await admin(request, reply)

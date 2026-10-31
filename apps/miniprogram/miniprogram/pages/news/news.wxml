@@ -1,9 +1,13 @@
 <view class="page-shell">
   <role-shell view-slot="opportunity" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
-  <view wx:if="{{shellPhase === 'ready' && shellKind !== 'student'}}" class="reference-news-link" bindtap="onReferenceNews" hover-class="reference-news-pressed" aria-role="button">
+  <view wx:if="{{shellPhase === 'ready' && shellKind === 'teacher'}}" class="teacher-guidance">
+    <button bindtap="onSchools">院校库 ›</button><button bindtap="onTeacherNews">资讯 ›</button>
+  </view>
+  <view wx:if="{{shellPhase === 'ready' && shellKind !== 'student' && shellKind !== 'teacher'}}" class="reference-news-link" bindtap="onReferenceNews" hover-class="reference-news-pressed" aria-role="button">
     <text>{{showReferenceNews ? '收起保研参考文章' : '查看保研参考文章'}}</text>
     <text class="reference-news-arrow">{{showReferenceNews ? '⌃' : '›'}}</text>
   </view>
+
   <block wx:if="{{shellPhase === 'ready' && (shellKind === 'student' || showReferenceNews)}}">
   <view class="news-head">
     <view>
@@ -13,9 +17,11 @@
     <text class="source-chip">{{sourceLabel}}</text>
   </view>
 
+  <button wx:if="{{canManageTeacherTags}}" class="teacher-tags-entry" bindtap="onTeacherNewsTags">管理我的资讯标签</button>
+
   <view class="news-search"><input class="news-search-input" placeholder="搜索已加载的资讯" value="{{searchQuery}}" bindinput="onSearchInput" confirm-type="search" /><button class="news-filter-button" bindtap="onFilterTap">筛选 ▾</button></view>
 
-  <view class="school-entry" bindtap="onSchools" hover-class="school-entry-hover" aria-role="button">
+  <view wx:if="{{shellKind !== 'teacher'}}" class="school-entry" bindtap="onSchools" hover-class="school-entry-hover" aria-role="button">
     <image class="school-entry-art" src="/assets/jiuchen-visual-v1/banners/school-library-hero.png" mode="aspectFill" aria-hidden="true" />
     <view class="school-entry-icon"><image src="/assets/jiuchen-visual-v1/icons/library.png" mode="aspectFit" /></view>
     <view class="school-entry-copy"><text class="school-entry-title">院校库 · 双一流与特色高校</text></view>
@@ -69,6 +75,7 @@
       <text wx:if="{{featured.isVideo}}" class="article-meta">视频 · 在服务号原文观看</text>
       <text class="featured-summary">{{featured.summary}}</text>
       <text wx:if="{{featured.rawTagNote}}" class="article-meta">{{featured.rawTagNote}}</text>
+      <text wx:if="{{featured.scopeNote}}" class="article-meta">{{featured.scopeNote}}</text>
       <view class="news-card-footer">
         <view class="article-tags"><text wx:for="{{featured.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text></view>
         <text class="featured-meta">来源：{{featured.sourceLabel}}</text>
@@ -106,6 +113,7 @@
         <text wx:if="{{item.isVideo}}" class="article-meta">视频 · 在服务号原文观看</text>
         <text wx:if="{{item.summary}}" class="article-summary">{{item.summary}}</text>
         <text wx:if="{{item.rawTagNote}}" class="article-meta">{{item.rawTagNote}}</text>
+        <text wx:if="{{item.scopeNote}}" class="article-meta">{{item.scopeNote}}</text>
         <view class="news-card-footer">
           <view class="article-tags"><text wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" class="article-tag">{{tag}}</text><text wx:if="{{item.tags.length === 0}}" class="article-tag muted">未分类</text></view>
           <text class="article-meta">来源：{{item.sourceLabel}}</text>

@@ -1,0 +1,22 @@
+<view class="page">
+  <text class="title">本人员工资料</text>
+  <text class="note">正式姓名用于辅导业务，与账号昵称分别保存。手机号仅本人及获授权管理员可见。</text>
+  <view wx:if="{{loading}}">正在读取…</view>
+  <view wx:if="{{error}}" class="error"><text>{{error}}</text><button bindtap="load">重新读取</button></view>
+  <view wx:if="{{role}}" class="card">
+    <text>真实姓名</text><input value="{{realName}}" maxlength="80" data-field="realName" bindinput="onField" placeholder="填写正式姓名" />
+    <text>手机号码</text><input value="{{phone}}" maxlength="26" data-field="phone" bindinput="onField" placeholder="填写联系手机号" />
+    <text>工作部门</text><input value="{{department}}" maxlength="120" data-field="department" bindinput="onField" placeholder="填写工作部门" />
+    <text>直属领导</text><input value="{{supervisor}}" maxlength="80" data-field="supervisor" bindinput="onField" placeholder="填写直属领导" />
+    <button bindtap="save" loading="{{saving}}" disabled="{{saving || loading}}">保存员工资料</button>
+  </view>
+  <view wx:if="{{role === 'admin'}}" class="card">
+    <text class="title">教师正式资料目录</text><text class="note">仅管理员可查阅。未填写实名时保留既有业务名称，不将昵称视为实名。</text>
+    <view wx:for="{{teachers}}" wx:key="teacherId" class="person">
+      <text>{{item.realName || '实名待补充'}} · {{item.completedFields}}/4 项已填写</text>
+      <text>业务名称：{{item.businessName}}</text><text>手机：{{item.phone || '未填写'}}</text>
+      <text>{{item.department || '部门未填写'}} · 直属领导：{{item.supervisor || '未填写'}}</text>
+    </view>
+    <text wx:if="{{!teachers.length && !loading}}">暂无教师资料</text>
+  </view>
+</view>

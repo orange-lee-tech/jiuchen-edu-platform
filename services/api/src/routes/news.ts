@@ -11,6 +11,7 @@ import {
 import { getNewsV2PostPhase, listNewsV2 } from '../services/news-v2-store.js'
 
 import { resolveSessionUser } from '../services/session.js'
+import { withNewsTagScopes } from '../services/teacher-news-tags.js'
 
 export function registerNewsRoutes(
   app: FastifyInstance,
@@ -29,12 +30,12 @@ export function registerNewsRoutes(
     const reviewer=Boolean(user&&['admin','teacher','staff'].includes(user.role))
     if (env?.NEWS_V2_ENABLED) {
       const rows=await listNewsV2(database.pool,reviewer)
-      const mapped=rows.map(row=>({id:String(row.id),title:String(row.title),summary:row.summary,coverUrl:row.coverUrl,articleUrl:row.articleUrl,
+      const mapped=await withNewsTagScopes(database.pool,user,rows.map(row=>({id:String(row.id),title:String(row.title),summary:row.summary,coverUrl:row.coverUrl,articleUrl:row.articleUrl,
         tags:normalizeNewsTags(row.tagsJson),source:row.source,mediaType:normalizeNewsContent(row.contentJson).mediaType,...newsTimeView({source:row.source,publishedAt:row.publishedAt,contentJson:row.contentJson}),
-        retireAt:row.retireAtEpoch===null?null:new Date(Number(row.retireAtEpoch)*1000).toISOString(),phase:row.phase}))
+        retireAt:row.retireAtEpoch===null?null:new Date(Number(row.retireAtEpoch)*1000).toISOString(),phase:row.phase})))
       return {ok:true,v2:true,posts:mapped.filter(row=>row.source==='manual'||row.phase==='normal'),retiring:mapped.filter(row=>row.phase==='buffering')}
     }
-    const posts = await listActiveNewsPosts(database, 50, reviewer)
+    const posts = await withNewsTagScopes(database.pool,user,await listActiveNewsPosts(database, 50, reviewer))
 
     return {
       ok: true,
@@ -80,10 +81,12 @@ export function registerNewsRoutes(
       })
     }
 
+    const [scopedPost] = await withNewsTagScopes(database.pool,user,[post])
+
     return {
       ok: true,
       post: {
-        ...post,
+        ...scopedPost,
         publishedAt: post.publishedAt?.toISOString() ?? null,
         favoritesEnabled:Boolean(env?.NEWS_V2_ENABLED && post.source==='wechat_official' && post.articleUrl),
       },

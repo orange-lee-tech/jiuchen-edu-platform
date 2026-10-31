@@ -19,7 +19,7 @@ import {
   getAdminVirtualPurchaseOrders,getAdminVirtualPurchaseCases,
   getAdminVirtualReconciliation,
   recheckAdminVirtualPurchaseOrder,reviewAdminVirtualPurchaseCase,
-  checkDeepseekPriceSource, reviewDeepseekPrice, reviewAiExchangeRate,
+  reviewAiExchangeRate,
   getAdminInternalIds,
   getAdminNews,
   getAdminNewsData,
@@ -43,7 +43,6 @@ import {
   disableActiveAssessmentKey,
   archiveAssessmentKeyObject,
   testAssessmentKeyObject,
-  revealAssessmentKeyObject,
   setupLegacyAssessmentKeyPin,
   getCreditPlans, createCreditPlanObject, activateCreditPlanObject,
   disableCurrentCreditPlan, archiveCreditPlanObject, setupLegacyCreditPlanPin,
@@ -71,7 +70,10 @@ import {
 } from '../../utils/request'
 
 import {beijingNewsTime,newsPublicationLabel} from '../../utils/news-date'
-import { AI_SERVICE_PRESETS, rigorToTemperature } from '../../utils/ai-service-catalog'
+import { AI_SERVICE_PRESETS, rigorToTemperature, aiCatalogNote } from '../../utils/ai-service-catalog'
+import { changeAssessmentObjectModel, getOfficialObjectBalance, refreshOfficialObjectBalance,
+  saveOfficialBalanceThreshold, checkOfficialPriceDraft, reviewOfficialPrice,
+  type OfficialObjectBalance, type OfficialPriceDraft } from '../../utils/ai-operations'
 
 type Section = 'admin-users' | 'admin-assignments' | 'admin-news' | 'admin-analytics' | 'admin-readonly' | 'admin-controls'
 function controlLoadError(error: unknown) {
@@ -156,12 +158,14 @@ Page({
     paymentReconciliation:null as VirtualPurchaseReconciliation|null,
     paymentStatusFilter:'all',
     aiCosts:null as AdminAiCosts|null, aiBalance:null as AdminAiBalance|null,
-    balanceAccounts: [] as AssessmentKeyObject[], balanceAccountIndex: -1, balanceCurrencyIndex: 0,
+    balanceAccounts: [] as Array<AssessmentKeyObject & {displayLabel:string}>, balanceAccountIndex: -1, balanceCurrencyIndex: 0,
     balanceCurrencies: ['CNY', 'USD'], balanceAmount: '', balanceThreshold: '', balanceNote: '', balanceObservedDate: '', balanceObservedTime: '',
     balanceLedger: null as AiBalanceLedger | null, balanceLedgerError: '',
+    officialBalance:null as OfficialObjectBalance|null, officialBalanceError:'', showManualBalance:false,
+    officialPriceDrafts:[] as OfficialPriceDraft[], officialPriceDraftIndex:0, officialPriceParseError:'', officialPriceFetchedAt:'',
     aiCostWarning:'',
     aiPriceModel:'deepseek-v4-pro',aiPriceHit:'',aiPriceMiss:'',aiPriceOutput:'',
-    aiPricePeakMiss:'',aiPricePeakOutput:'',aiPricePeakWindow:'',
+    aiPricePeakHit:'',aiPricePeakMiss:'',aiPricePeakOutput:'',aiPricePeakWindow:'',
     aiPriceDate:'',aiPriceNote:'',aiFxRate:'',aiFxSource:'',aiFxDate:'',aiFxNote:'',
     assessmentUserCountLabel:'数据源不可用',
     userCount:null as number|null,
@@ -174,11 +178,13 @@ Page({
     aiServices: AI_SERVICE_PRESETS,
     keyProviderIndex: 0, keyModelIndex: 0,
     keyModelOptions: AI_SERVICE_PRESETS[0]!.models,
-    keyPresetNote: AI_SERVICE_PRESETS[0]!.note,
+    keyPresetNote: aiCatalogNote(AI_SERVICE_PRESETS[0]!),
     keyRigor: 7,
     activeKey: null as AssessmentKeyObject | null,
     keySourceLabel: '读取中', keyCurrentStatus: '读取中',
-    keyAction: '' as '' | 'activate' | 'disable' | 'archive' | 'test' | 'reveal' | 'setup' | 'copy',
+    keyAction: '' as '' | 'activate' | 'disable' | 'archive' | 'test' | 'setup' | 'copy' | 'model',
+    keyActionObjectVersion:0,
+    keyActionCatalogNote:'',
     keyActionId: '', keyActionLabel: '', keyActionPin: '', keyActionTargetPin: '',
     keyCopySourcePin: '', keyCopyModel: '', keyCopyLabel: '', keyCopyNote: '',
     keyCopyModels: [] as Array<{id:string; label:string}>, keyCopyModelIndex: 0,
@@ -244,6 +250,23 @@ Page({
 
   onLoad(options: Record<string, string>) {
     authorizePage('pages/admin/admin', options, () => this.initializeAdmin(options))
+  },
+  officialFreshTimer:0 as ReturnType<typeof setInterval>|0,
+  onShow(){
+    this.expireOfficialBalance()
+    if(this.officialFreshTimer)clearInterval(this.officialFreshTimer)
+    this.officialFreshTimer=setInterval(()=>this.expireOfficialBalance(),15000)
+  },
+  onUnload(){if(this.officialFreshTimer)clearInterval(this.officialFreshTimer)},
+  expireOfficialBalance(now=Date.now()){
+    const current=this.data.officialBalance
+    if(!current)return
+    const balances=current.balances.map(row=>{
+      const time=Date.parse(row.observedAt),fresh=row.fresh&&Number.isFinite(time)&&time<=now&&now-time<=300000
+      return {...row,fresh,lowBalance:fresh?row.lowBalance:null}
+    })
+    const status:OfficialObjectBalance['status']=current.status==='fresh'&&!balances.some(row=>row.fresh)?'stale':current.status
+    this.setData({officialBalance:{...current,status,balances}})
   },
   initializeAdmin(options: Record<string, string>) {
     const auth = getSavedAuthResult()
@@ -408,7 +431,7 @@ Page({
     this.setData({ keyProviderIndex: index, keyModelIndex: 0,
       keyModelOptions: preset.models, keyProvider: preset.id,
       keyApiBaseUrl: preset.baseUrl, keyModel: preset.models[0]!.id,
-      keyPresetNote: preset.note,
+      keyPresetNote: aiCatalogNote(preset),
       keyLabel: this.data.keyLabel.trim() || `${preset.name} 评估服务` })
   },
   onModelChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -551,11 +574,13 @@ Page({
     if (this.data.actionLoading) return
     const action = String(event.currentTarget.dataset.action || '')
     const id = String(event.currentTarget.dataset.id || '')
-    if (!['activate', 'disable', 'archive', 'test', 'reveal', 'setup', 'copy'].includes(action)) return
+    if (!['activate', 'disable', 'archive', 'test', 'setup', 'copy', 'model'].includes(action)) return
     const target = this.data.keyObjects.find(item => item.id === id)
-    const models = action==='copy' ? AI_SERVICE_PRESETS.find(item=>item.id===target?.provider)?.models??[] : []
+    const models = action==='copy'||action==='model' ? AI_SERVICE_PRESETS.find(item=>item.id===target?.provider)?.models??[] : []
     this.setData({ keyAction: action as typeof this.data.keyAction, keyActionId: id,
-      keyActionLabel: target?.label || this.data.activeKey?.label || '当前服务',
+      keyActionLabel: target ? `${target.label} · ${target.provider} · ${target.model} · v${target.version}` : '当前服务',
+      keyActionObjectVersion:target?.version??0,
+      keyActionCatalogNote:target&&AI_SERVICE_PRESETS.find(item=>item.id===target.provider)?aiCatalogNote(AI_SERVICE_PRESETS.find(item=>item.id===target.provider)!):'自定义供应商：请核对官方模型 ID 并执行格式测试。',
       keyActionPin: '', keyActionTargetPin: '', keyCopySourcePin:'',
       keyCopyModel:models.find(item=>item.id!==target?.model)?.id??'',
       keyCopyLabel:target ? `${target.label} · 新模型` : '', keyCopyNote:'',
@@ -619,9 +644,11 @@ Page({
           label:this.data.keyCopyLabel.trim(), model:this.data.keyCopyModel.trim(),
           note:this.data.keyCopyNote.trim() })
         wx.showToast({title:'新模型候选已保存',icon:'success'})
-      } else if (action === 'reveal') {
-        const result = await revealAssessmentKeyObject(id, pin)
-        wx.showModal({ title: '仅创建者查看密钥', content: result.apiKey, showCancel: false })
+      } else if (action === 'model') {
+        if (!this.data.keyCopyModel.trim()) { wx.showToast({title:'请填写精确模型 ID',icon:'none'});return }
+        await changeAssessmentObjectModel(id,{expectedVersion:this.data.keyHead.version,
+          expectedObjectVersion:this.data.keyActionObjectVersion,currentPin:pin,model:this.data.keyCopyModel.trim()})
+        wx.showToast({title:'格式验证通过，模型已更新',icon:'success'})
       } else {
         const result = await testAssessmentKeyObject(id, pin)
         const messages: Record<string, string> = {
@@ -767,27 +794,61 @@ Page({
   analyticsGeneration:0,
   balanceGeneration: 0,
   onHide() {
+    if(this.officialFreshTimer){clearInterval(this.officialFreshTimer);this.officialFreshTimer=0}
     ++this.balanceGeneration
-    this.setData({ balanceAccounts: [], balanceAccountIndex: -1, balanceLedger: null, balanceLedgerError: '', balanceAmount: '', balanceThreshold: '', balanceNote: '', balanceObservedDate: '', balanceObservedTime: '' })
+    this.setData({ balanceAccounts: [], balanceAccountIndex: -1, balanceLedger: null, balanceLedgerError: '', officialBalance:null,officialBalanceError:'',showManualBalance:false,balanceAmount: '', balanceThreshold: '', balanceNote: '', balanceObservedDate: '', balanceObservedTime: '' })
   },
   async loadBalanceAccounts() {
     const generation = ++this.balanceGeneration, owner = getSavedAuthResult()?.user.id
     try {
       const result = await getAssessmentKeyObjects()
       if (generation !== this.balanceGeneration || owner !== getSavedAuthResult()?.user.id) return
-      const accounts = result.objects.filter(item => Boolean(item.provider))
-      this.setData({ balanceAccounts: accounts, balanceAccountIndex: -1, balanceLedger: null, balanceLedgerError: '' })
+      const accounts = result.objects.filter(item => Boolean(item.provider)&&item.status!=='archived').map(item=>({...item,
+        displayLabel:`${item.label} · ${item.provider} · ${item.model} · v${item.version} · ${item.status}`}))
+      this.setData({ balanceAccounts: accounts, balanceAccountIndex: -1, balanceLedger: null, balanceLedgerError: '',officialBalance:null,officialBalanceError:'' })
     } catch (error) { if (generation === this.balanceGeneration && owner === getSavedAuthResult()?.user.id) this.setData({ balanceLedgerError: friendlyRequestError(error, '服务账户暂不可读取') }) }
   },
   async onBalanceAccount(event: WechatMiniprogram.PickerChange) {
     const index = Number(event.detail.value), account = this.data.balanceAccounts[index]
     if (!account) return
     const generation = ++this.balanceGeneration, owner = getSavedAuthResult()?.user.id
-    this.setData({ balanceAccountIndex: index, balanceLedger: null, balanceLedgerError: '' })
+    this.setData({ balanceAccountIndex: index, balanceLedger: null, balanceLedgerError: '',officialBalance:null,officialBalanceError:'',showManualBalance:false })
+    void this.loadOfficialBalance(false)
     try {
       const ledger = await getAiBalanceLedger(account.id)
       if (generation === this.balanceGeneration && owner === getSavedAuthResult()?.user.id && this.data.balanceAccounts[this.data.balanceAccountIndex]?.id === account.id) this.setData({ balanceLedger: ledger })
     } catch (error) { if (generation === this.balanceGeneration && owner === getSavedAuthResult()?.user.id) this.setData({ balanceLedgerError: friendlyRequestError(error, '余额快照暂不可读取') }) }
+  },
+  async loadOfficialBalance(refresh:boolean) {
+    const account=this.data.balanceAccounts[this.data.balanceAccountIndex]
+    if(!account)return
+    const generation=this.balanceGeneration,owner=getSavedAuthResult()?.user.id
+    if(refresh)this.setData({actionLoading:true})
+    try {
+      const balance=refresh?await refreshOfficialObjectBalance(account.id):await getOfficialObjectBalance(account.id)
+      if(generation!==this.balanceGeneration||owner!==getSavedAuthResult()?.user.id||account.id!==this.data.balanceAccounts[this.data.balanceAccountIndex]?.id)return
+      this.setData({officialBalance:balance,officialBalanceError:''})
+      this.expireOfficialBalance()
+    }catch(error){
+      if(generation===this.balanceGeneration&&owner===getSavedAuthResult()?.user.id)
+        this.setData({officialBalanceError:friendlyRequestError(error,'官方余额读取失败，请重试')})
+    }finally{if(refresh)this.setData({actionLoading:false})}
+  },
+  onRefreshOfficialBalance(){if(!this.data.actionLoading)void this.loadOfficialBalance(true)},
+  onToggleManualBalance(){this.setData({showManualBalance:!this.data.showManualBalance})},
+  async onSaveOfficialThreshold(){
+    const account=this.data.balanceAccounts[this.data.balanceAccountIndex]
+    if(!account||this.data.actionLoading)return
+    if(!/^(?:0|[1-9]\d{0,13})(?:\.\d{1,8})?$/.test(this.data.balanceThreshold)){
+      wx.showToast({title:'请输入有效预警阈值',icon:'none'});return
+    }
+    const generation=this.balanceGeneration,owner=getSavedAuthResult()?.user.id
+    this.setData({actionLoading:true})
+    try{
+      const balance=await saveOfficialBalanceThreshold(account.id,this.data.balanceCurrencyIndex===1?'USD':'CNY',this.data.balanceThreshold)
+      if(generation===this.balanceGeneration&&owner===getSavedAuthResult()?.user.id)this.setData({officialBalance:balance,officialBalanceError:''})
+    }catch(error){wx.showToast({title:friendlyRequestError(error,'阈值保存失败'),icon:'none'})}
+    finally{this.setData({actionLoading:false})}
   },
   onBalanceCurrency(event: WechatMiniprogram.PickerChange) { this.setData({ balanceCurrencyIndex: Number(event.detail.value) }) },
   onBalanceDate(event: WechatMiniprogram.PickerChange) { this.setData({ balanceObservedDate: String(event.detail.value) }) },
@@ -822,7 +883,7 @@ Page({
   },
   onAiCostInput(event:WechatMiniprogram.Input){
     const name=String(event.currentTarget.dataset.name)
-    if(['aiPriceModel','aiPriceHit','aiPriceMiss','aiPriceOutput','aiPricePeakMiss',
+    if(['aiPriceModel','aiPriceHit','aiPriceMiss','aiPriceOutput','aiPricePeakHit','aiPricePeakMiss',
       'aiPricePeakOutput','aiPricePeakWindow','aiPriceDate','aiPriceNote',
       'aiFxRate','aiFxSource','aiFxDate','aiFxNote'].includes(name))
       this.setData({[name]:event.detail.value})
@@ -831,22 +892,32 @@ Page({
     if(this.data.actionLoading)return
     this.setData({actionLoading:true})
     try{
-      const result=await checkDeepseekPriceSource()
-      wx.showModal({title:'官方价格来源检查',content:result.status==='unchanged'?
-        '官方文档内容与已审核快照一致。仍请核对具体价格。':
-        '官方文档内容有变化或尚无已审核快照。请人工核对价格后再审核新版本。',showCancel:false})
+      const result=await checkOfficialPriceDraft()
+      this.setData({officialPriceDrafts:result.drafts,officialPriceDraftIndex:0,officialPriceParseError:result.parseError||'',officialPriceFetchedAt:result.fetchedAt})
+      wx.showModal({title:'官方价格来源检查',content:result.parseError?
+        '官方页面暂无法解析。当前已审核价格保留；请按官方页面人工补录。':
+        `已取得 ${result.drafts.length} 个待审核价格草稿。请选择模型检查后保存；尚未更改生效价格。`,showCancel:false})
       await this.loadAnalytics()
     }catch(error){wx.showToast({title:friendlyRequestError(error,'价格来源检查失败'),icon:'none'})}
     finally{this.setData({actionLoading:false})}
+  },
+  onOfficialPriceDraft(event:WechatMiniprogram.PickerChange){
+    const index=Number(event.detail.value),draft=this.data.officialPriceDrafts[index]
+    if(!draft)return
+    this.setData({officialPriceDraftIndex:index,aiPriceModel:draft.model,
+      aiPriceHit:String(draft.inputCacheHitPerMillion),aiPriceMiss:String(draft.inputCacheMissPerMillion),aiPriceOutput:String(draft.outputPerMillion),
+      aiPricePeakHit:String(draft.peakInputCacheHitPerMillion),aiPricePeakMiss:String(draft.peakInputCacheMissPerMillion),
+      aiPricePeakOutput:String(draft.peakOutputPerMillion),aiPricePeakWindow:draft.peakWindowUtc})
   },
   async onReviewAiPrice(){
     if(this.data.actionLoading)return
     const d=this.data,number=(value:string)=>/^\d+(?:\.\d{1,6})?$/.test(value)?Number(value):NaN
     const hit=number(d.aiPriceHit),miss=number(d.aiPriceMiss),output=number(d.aiPriceOutput)
     const peakMiss=d.aiPricePeakMiss.trim()?number(d.aiPricePeakMiss):null
+    const peakHit=d.aiPricePeakHit.trim()?number(d.aiPricePeakHit):null
     const peakOutput=d.aiPricePeakOutput.trim()?number(d.aiPricePeakOutput):null
     if(!d.aiCosts||d.aiCosts.priceSource.status==='not_checked'||!d.aiPriceModel.trim()||
-      ![hit,miss,output,peakMiss,peakOutput].every(v=>v===null||Number.isFinite(v)&&v>=0)||
+      ![hit,miss,output,peakHit,peakMiss,peakOutput].every(v=>v===null||Number.isFinite(v)&&v>=0)||
       !/^\d{4}-\d{2}-\d{2}$/.test(d.aiPriceDate)||d.aiPriceNote.trim().length<8){
       wx.showToast({title:'请先检查官方来源并完整填写价格、日期及说明',icon:'none'});return
     }
@@ -857,9 +928,9 @@ Page({
     this.setData({actionLoading:true})
     try{
       const expected=d.aiCosts.latestPriceVersions.find(v=>v.provider==='deepseek'&&v.model===d.aiPriceModel.trim())?.version??null
-      await reviewDeepseekPrice({model:d.aiPriceModel.trim(),expectedLatestVersion:expected,
+      await reviewOfficialPrice({model:d.aiPriceModel.trim(),expectedLatestVersion:expected,
         inputCacheHitPerMillion:hit,inputCacheMissPerMillion:miss,outputPerMillion:output,
-        peakInputCacheMissPerMillion:peakMiss,peakOutputPerMillion:peakOutput,
+        peakInputCacheHitPerMillion:peakHit,peakInputCacheMissPerMillion:peakMiss,peakOutputPerMillion:peakOutput,
         peakWindowUtc:d.aiPricePeakWindow.trim()||null,
         effectiveAt:new Date(d.aiPriceDate+'T00:00:00Z').toISOString(),reviewNote:d.aiPriceNote.trim()})
       wx.showToast({title:'价格快照已审核',icon:'success'});await this.loadAnalytics()

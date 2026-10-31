@@ -11,6 +11,7 @@
         <text wx:for="{{post.tags}}" wx:key="*this" class="tag">{{item}}</text>
         <text wx:if="{{post.tags.length === 0}}" class="tag muted">未分类</text>
       </view>
+      <text wx:if="{{tagScopeNote}}" class="article-meta">{{tagScopeNote}}</text>
       <text class="article-title">{{post.title}}</text>
       <text class="article-meta">{{post.source === 'wechat_official' ? (post.publicationTimeSource === 'admin_verified_publish_record' ? '九辰教育服务号 · 管理员核实原文' : '九辰教育服务号') : '九辰编辑'}}{{dateLabel ? ' · ' + dateLabel : ''}}{{post.content.author ? ' · ' + post.content.author : ''}}</text>
       <text wx:if="{{post.summary}}" class="article-summary">{{post.summary}}</text>

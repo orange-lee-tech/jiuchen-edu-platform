@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto'
 import type mysql from 'mysql2/promise'
 import type { FastifyBaseLogger } from 'fastify'
 import type { DatabaseContext } from '../db/client.js'
+import type { AppEnv } from '../config/env.js'
+import { beginAssessmentBalanceWindow, finishAssessmentBalanceWindow } from './ai-operations.js'
 import { assessments } from '../db/schema.js'
 import { createAssessmentAccountContextLoader } from './assessment-account-context.js'
 import type { AssessmentEvidenceItem } from '../domain/assessment.js'
@@ -51,6 +53,8 @@ export interface AssessmentBackgroundStore {
   nextRunning(): Promise<AssessmentBackgroundJob | null>
   recordModelCall?(assessmentId: string, event: ModelCallEvent,
     identity: ModelCallIdentity): Promise<void>
+  beginBalanceWindow?(assessmentId: string, identity: ModelCallIdentity): Promise<void>
+  finishBalanceWindow?(assessmentId: string): Promise<void>
   persistSuccess(
     job: AssessmentBackgroundJob,
     result: Awaited<ReturnType<typeof executeAssessment>>,
@@ -213,6 +217,11 @@ export async function processAssessmentBackgroundJob(input: {
   let modelRequestCount = 0
   let repairRequestCount = 0
   let repairOutcome: 'not_attempted' | 'started' | 'completed' | 'failed' = 'not_attempted'
+  let pinnedIdentity:ModelCallIdentity|null=null
+  const finishBalanceObservation = async () => {
+    try { await store.finishBalanceWindow?.(job.id) }
+    catch { logger.warn({ assessmentId: job.id }, 'Assessment account balance end observation unavailable') }
+  }
   try {
     const accountEvidence = input.accountContextLoader ? await input.accountContextLoader({
       userId: job.userId,
@@ -222,6 +231,8 @@ export async function processAssessmentBackgroundJob(input: {
     }) : []
     result = await executeAssessment(runtime, normalizedInput, accountEvidence,
       stage => { failureStage = stage }, async event => {
+        // Freeze synchronously before any awaited balance/API observation.
+        pinnedIdentity??={...diagnostics()}
         modelRequestCount = event.requestCount
         if (event.phase === 'repair') {
           repairRequestCount = 1
@@ -229,9 +240,13 @@ export async function processAssessmentBackgroundJob(input: {
         }
         logger.info({ assessmentId: job.id, requestId, modelCallPhase: event.phase,
           modelRequestCount, repairRequestCount, modelCallOutcome: event.outcome,
-          ...diagnostics() }, 'Assessment model call stage')
+          ...pinnedIdentity }, 'Assessment model call stage')
         try {
-          await store.recordModelCall?.(job.id, event, diagnostics())
+          if (event.phase === 'initial' && event.outcome === 'started') {
+            try { await store.beginBalanceWindow?.(job.id, pinnedIdentity) }
+            catch { logger.warn({ assessmentId: job.id }, 'Assessment account balance start observation unavailable') }
+          }
+          await store.recordModelCall?.(job.id, event, pinnedIdentity)
         } catch (error) {
           // Telemetry never changes a paid model call into a business failure.
           const code = error && typeof error === 'object' && 'code' in error &&
@@ -241,6 +256,7 @@ export async function processAssessmentBackgroundJob(input: {
         }
       })
   } catch (error) {
+    await finishBalanceObservation()
     const completedAt = new Date()
     const classified = classifyAssessmentFailure(error)
     const category = error instanceof AssessmentEvidenceReferenceError
@@ -284,6 +300,7 @@ export async function processAssessmentBackgroundJob(input: {
     return 'failed'
   }
 
+  await finishBalanceObservation()
   const completedAt = new Date()
   logger.info({ assessmentId: job.id, requestId, ...diagnostics(),
     reportSchemaValid: true, reportPersisted: false, modelRequestCount,
@@ -322,10 +339,13 @@ export async function processAssessmentBackgroundJob(input: {
 export function createConfiguredStore(
   database: Extract<DatabaseContext, { configured: true }>,
   commercial: AssessmentCommercialOptions,
+  env?: AppEnv,
 ): AssessmentBackgroundStore {
   const batchSize = 32
   let scanOffset = 0
   return {
+    beginBalanceWindow: env ? (assessmentId, identity) => beginAssessmentBalanceWindow(database.pool, env, assessmentId, identity) : undefined,
+    finishBalanceWindow: env ? assessmentId => finishAssessmentBalanceWindow(database.pool, env, assessmentId) : undefined,
     recordModelCall: (assessmentId,event,identity) =>
       recordAssessmentModelCall(database.pool,assessmentId,event,identity),
     async nextRunning() {
@@ -420,6 +440,7 @@ export function createConfiguredStore(
 
 export function createAssessmentBackgroundWorker(input: {
   database: DatabaseContext
+  env?: AppEnv
   runtime: AssessmentRuntime
   commercial: AssessmentCommercialOptions
   notification: AssessmentNotificationAdapter
@@ -440,7 +461,7 @@ export function createAssessmentBackgroundWorker(input: {
     }
   }
 
-  const store = createConfiguredStore(input.database, input.commercial)
+  const store = createConfiguredStore(input.database, input.commercial, input.env)
   const accountContextLoader = createAssessmentAccountContextLoader(input.database)
   const pollIntervalMs = Math.max(input.pollIntervalMs ?? 3000, 500)
   let active = false

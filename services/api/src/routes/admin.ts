@@ -23,6 +23,7 @@ import {
   type PlanType,
 } from '../domain/classroom.js'
 import { productHandbookV1Schema } from '../domain/product-handbook.js'
+import { planDueDateSchema } from '../domain/plan-dates.js'
 import { bindInternalIdentity, unbindInternalIdentity } from '../services/internal-identities.js'
 
 const studentCreateSchema = z.object({
@@ -62,13 +63,28 @@ const assignmentSchema = z.object({
 const planItemSchema = z.object({
   name: z.string().trim().min(1).max(160),
   target: z.string().trim().max(255).nullable().optional(),
+  dueDate: planDueDateSchema.nullable().optional(),
   status: z.enum(['pending', 'in_progress', 'done']).default('pending'),
 })
 
-const planPayloadSchema = z.object({
+export const adminPlanPayloadSchema = z.object({
   title: z.string().trim().min(1).max(160),
   items: z.array(planItemSchema).max(100).default([]),
 })
+
+type AdminPlanItem = z.infer<typeof planItemSchema>
+
+export function toAdminPlanItemRow(planId: string, item: AdminPlanItem, sortOrder: number) {
+  return {
+    id: randomUUID(),
+    planId,
+    sortOrder,
+    name: item.name,
+    target: item.target ?? null,
+    dueDate: item.dueDate ?? null,
+    status: item.status,
+  }
+}
 
 const productKnowledgeStatusSchema = z.object({
   status: z.enum(['draft', 'active', 'archived']),
@@ -1150,7 +1166,7 @@ export function registerAdminRoutes(
         })
       }
 
-      const parsed = planPayloadSchema.safeParse(request.body)
+      const parsed = adminPlanPayloadSchema.safeParse(request.body)
       if (!parsed.success) {
         return reply.code(400).send({
           ok: false,
@@ -1208,14 +1224,7 @@ export function registerAdminRoutes(
 
         if (parsed.data.items.length > 0) {
           await tx.insert(planItems).values(
-            parsed.data.items.map((item, index) => ({
-              id: randomUUID(),
-              planId,
-              sortOrder: index,
-              name: item.name,
-              target: item.target ?? null,
-              status: item.status,
-            })),
+            parsed.data.items.map((item, index) => toAdminPlanItemRow(planId, item, index)),
           )
         }
       })
@@ -1226,6 +1235,7 @@ export function registerAdminRoutes(
           sortOrder: planItems.sortOrder,
           name: planItems.name,
           target: planItems.target,
+          dueDate: planItems.dueDate,
           status: planItems.status,
         })
         .from(planItems)

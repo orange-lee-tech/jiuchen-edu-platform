@@ -1,4 +1,4 @@
-export const PLAN_TYPES = ['gpa', 'english', 'competition', 'research', 'internship'] as const
+export const PLAN_TYPES = ['gpa', 'english', 'competition', 'research', 'internship', 'custom'] as const
 
 export type PlanType = (typeof PLAN_TYPES)[number]
 export type StageMode = 'term' | 'holiday' | 'internship'
@@ -39,6 +39,7 @@ export const DEFAULT_PLAN_TITLES: Record<PlanType, string> = {
   competition: '竞赛计划',
   research: '科研计划',
   internship: '实习规划',
+  custom: '自定义规划',
 }
 
 export function getStageDefinition(code: string | null | undefined): StageDefinition | undefined {
@@ -47,7 +48,8 @@ export function getStageDefinition(code: string | null | undefined): StageDefini
 }
 
 export function isPlanTypeAllowed(stageCode: string, planType: PlanType): boolean {
-  return getStageDefinition(stageCode)?.planTypes.includes(planType) ?? false
+  const stage = getStageDefinition(stageCode)
+  return Boolean(stage && (planType === 'custom' || stage.planTypes.includes(planType)))
 }
 
 

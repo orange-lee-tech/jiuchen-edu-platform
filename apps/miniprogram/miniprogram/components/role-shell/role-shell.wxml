@@ -3,6 +3,7 @@
   <text wx:if="{{phase === 'error'}}" class="state-description">{{message}}</text>
   <button wx:if="{{phase === 'error'}}" class="primary" bindtap="onRetry">重新确认身份</button>
 </view>
+<teacher-workbench wx:elif="{{kind === 'teacher' && (viewSlot === 'home' || viewSlot === 'plan')}}" mode="{{viewSlot === 'home' ? 'workbench' : 'students'}}" />
 <view wx:elif="{{kind === 'admin' && viewSlot === 'plan'}}" class="admin-browse">
   <view class="browse-hero">
     <text class="browse-title">身份查阅</text>

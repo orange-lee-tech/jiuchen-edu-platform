@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { isIP, type LookupFunction } from 'node:net'
 import { lookup } from 'node:dns/promises'
 import { request as httpsRequest } from 'node:https'
@@ -22,13 +22,20 @@ export const assessmentKeyInput = z.object({
 }).strict()
 
 export type AssessmentKeyInput = z.infer<typeof assessmentKeyInput>
+export function assessmentObjectConfigurationFingerprint(row: {
+  id?: unknown; version?: unknown; provider?: unknown; api_base_url?: unknown; model?: unknown;
+  encrypted_secret?: unknown; temperature?: unknown
+}) {
+  return createHash('sha256').update(JSON.stringify([row.id,Number(row.version),row.provider,row.api_base_url,
+    row.model,row.temperature==null?null:Number(row.temperature),row.encrypted_secret])).digest('hex')
+}
 type KeyRow = mysql.RowDataPacket & {
   id: string; label: string; provider: string | null; api_base_url: string | null
   model: string | null; temperature: string | number | null; encrypted_secret: string
   creator_user_id: string; note: string | null; pin_salt: string | null; pin_hash: string | null
   status: 'candidate' | 'active' | 'disabled' | 'archived'; version: number
   failed_attempts: number; pin_locked: number | null; last_test_result: string | null
-  last_test_at: Date | null; created_at: Date
+  last_test_at: Date | null; created_at: Date; updated_at?: Date
   source_object_id: string | null
 }
 type HeadRow = mysql.RowDataPacket & {
@@ -57,7 +64,7 @@ function publicKey(row: KeyRow) {
     creatorUserId: row.creator_user_id, note: row.note, status: row.status,
     version: Number(row.version), hasObjectPin: Boolean(row.pin_hash),
     lastTestResult: row.last_test_result, lastTestAt: row.last_test_at,
-    createdAt: row.created_at, sourceObjectId: row.source_object_id ?? null,
+    createdAt: row.created_at, updatedAt: row.updated_at ?? row.created_at, sourceObjectId: row.source_object_id ?? null,
   }
 }
 async function selectHead(connection: mysql.PoolConnection) {
@@ -425,7 +432,8 @@ export async function readActiveAssessmentKey(pool: mysql.Pool, env: AppEnv) {
   if (!row || !env.ADMIN_AI_KEY_ENCRYPTION_KEY) {
     throw new ControlError('assessment_key_vault_unavailable', 503)
   }
-  return { initialized: true as const, objectId: row.id, version: Number(head.version), config: {
+  return { initialized: true as const, objectId: row.id, version: Number(head.version),
+    objectVersion:Number(row.version),configurationFingerprint:assessmentObjectConfigurationFingerprint(row),config: {
     provider: row.provider ?? env.ASSESSMENT_AI_PROVIDER,
     apiBaseUrl: row.api_base_url ?? env.ASSESSMENT_AI_BASE_URL,
     model: row.model ?? env.ASSESSMENT_AI_MODEL,

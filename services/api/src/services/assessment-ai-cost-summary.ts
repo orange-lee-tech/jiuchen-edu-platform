@@ -2,6 +2,7 @@ import type mysql from 'mysql2/promise'
 import type { AppEnv } from '../config/env.js'
 import { readActiveAssessmentKey } from './assessment-key-objects.js'
 import { estimateAssessmentTokenRange } from './assessment-ai-cost.js'
+import { fetchOfficialDeepseekBalance } from './deepseek-balance.js'
 
 type CallTotals = mysql.RowDataPacket & {
   calls: number; initialCalls: number; repairCalls: number; usageReturned: number
@@ -41,53 +42,13 @@ export async function readTeacherAssessmentAiCosts(pool: mysql.Pool, teacherUser
        ${assessmentId ? 'AND a.id=?' : ''}`,
     assessmentId ? [teacherUserId, assessmentId] : [teacherUserId],
   )
-  const chars=Number(rows[0]?.avgPromptChars??0),budget=Number(rows[0]?.avgOutputBudget??0)
-  let costForecast:null|{status:'reviewed_price_estimate';minCny:number;
-    maxCnyWithOneRepair:number;priceReviewedAt:Date;fxObservedAt:Date|null}=null
-  if(chars>0&&budget>0){
-    const [prices]=await pool.query<mysql.RowDataPacket[]>(
-      `SELECT p.currency,p.input_cache_miss_per_million,p.output_per_million,
-        p.peak_input_cache_miss_per_million,p.peak_output_per_million,
-        p.source_sha256,p.reviewed_at
-       FROM assessment_key_head h
-       INNER JOIN assessment_key_objects o ON o.id=h.active_object_id
-       INNER JOIN assessment_ai_price_versions p ON p.provider=o.provider AND p.model=o.model
-       WHERE h.id=1 AND p.reviewed_at IS NOT NULL AND p.effective_at<=CURRENT_TIMESTAMP()
-       ORDER BY p.effective_at DESC LIMIT 1`)
-    const price=prices[0]
-    if(price){
-      const [checks]=await pool.query<mysql.RowDataPacket[]>(
-        `SELECT source_sha256 FROM assessment_ai_price_source_checks
-         WHERE fetched_at>=DATE_SUB(CURRENT_TIMESTAMP(),INTERVAL 7 DAY)
-         ORDER BY fetched_at DESC LIMIT 1`)
-      let conversion:number|null=price.currency==='CNY'?1:null
-      let fxObservedAt:Date|null=null
-      if(price.currency==='USD'){
-        const [rates]=await pool.query<mysql.RowDataPacket[]>(
-          `SELECT rate,observed_at FROM assessment_ai_fx_versions
-           WHERE from_currency='USD' AND to_currency='CNY' AND reviewed_at IS NOT NULL
-             AND observed_at>=DATE_SUB(CURRENT_TIMESTAMP(),INTERVAL 7 DAY)
-           ORDER BY observed_at DESC LIMIT 1`)
-        if(rates[0]){conversion=Number(rates[0].rate);fxObservedAt=rates[0].observed_at}
-      }
-      if(checks[0]?.source_sha256===price.source_sha256&&conversion!==null){
-        const input=Number(price.input_cache_miss_per_million)
-        const output=Number(price.output_per_million)
-        const peakInput=Math.max(input,Number(price.peak_input_cache_miss_per_million??input))
-        const peakOutput=Math.max(output,Number(price.peak_output_per_million??output))
-        costForecast={status:'reviewed_price_estimate',
-          minCny:Number(((Math.ceil(chars*.25)*input+Math.ceil(budget*.3)*output)*conversion/1_000_000).toFixed(4)),
-          maxCnyWithOneRepair:Number((((2*Math.ceil(chars)+Math.ceil(budget))*peakInput+
-            2*Math.ceil(budget)*peakOutput)*conversion/1_000_000).toFixed(4)),
-          priceReviewedAt:price.reviewed_at,fxObservedAt}
-      }
-    }
-  }
-  return { scope: 'assigned_students' as const, usage: publicCallTotals(rows[0]),
-    tokenForecast:chars>0&&budget>0?estimateAssessmentTokenRange(chars,budget):null,
-    costForecast,
+  const totals=publicCallTotals(rows[0])
+  return { scope: 'assigned_students' as const, usage: {
+    calls:totals.calls,initialCalls:totals.initialCalls,repairCalls:totals.repairCalls,
+    usageReturned:totals.usageReturned,awaitingReconciliation:totals.awaitingReconciliation },
+    tokenForecast:null,costForecast:null,
     providerBalance: 'forbidden' as const, providerPrices: 'forbidden' as const,
-    actualSupplierCharge: 'not_connected' as const }
+    actualSupplierCharge: 'forbidden' as const }
 }
 
 export async function readAdminAssessmentAiCosts(pool: mysql.Pool) {
@@ -179,22 +140,8 @@ export async function readAdminAssessmentAiCosts(pool: mysql.Pool) {
     actualSupplierCharge: 'not_connected' as const }
 }
 
-type BalanceResponse = { is_available?: unknown; balance_infos?: Array<{
-  currency?: unknown; total_balance?: unknown; granted_balance?: unknown; topped_up_balance?: unknown
-}> }
-let balanceCache: { key: string; at: number; value: ReturnType<typeof safeBalance> } | null = null
-function safeBalance(payload: BalanceResponse) {
-  const balanceInfos=Array.isArray(payload?.balance_infos)?payload.balance_infos:[]
-  const amount = (value: unknown) => typeof value === 'string' && /^\d{1,14}(?:\.\d{1,8})?$/.test(value) ? value : null
-  return { status: 'official_observation' as const, source: 'https://api.deepseek.com/user/balance',
-    observedAt: new Date().toISOString(), available: payload?.is_available === true,
-    balances: balanceInfos.slice(0, 4).map(info => {
-      const row=(info&&typeof info==='object'?info:{}) as Record<string,unknown>
-      return {currency: row.currency === 'CNY' || row.currency === 'USD' ? row.currency : 'unknown',
-        total: amount(row.total_balance), granted: amount(row.granted_balance),
-        toppedUp: amount(row.topped_up_balance)}
-    }) }
-}
+let balanceCache: { key: string; at: number;
+  value: Extract<Awaited<ReturnType<typeof fetchOfficialDeepseekBalance>>, {status:'official_observation'}> } | null = null
 
 export async function readAdminDeepseekBalance(pool: mysql.Pool, env: AppEnv,
   transport: typeof fetch = fetch, now = Date.now()) {
@@ -207,19 +154,7 @@ export async function readAdminDeepseekBalance(pool: mysql.Pool, env: AppEnv,
   }
   const key = `${active.objectId}:${active.version}`
   if (balanceCache?.key === key && now - balanceCache.at < 60_000) return balanceCache.value
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 5000)
-  try {
-    const response = await transport('https://api.deepseek.com/user/balance', {
-      method: 'GET', headers: { Authorization: `Bearer ${active.config.apiKey}` },
-      redirect: 'error', signal: controller.signal,
-    })
-    if (!response.ok) return { status: 'unavailable' as const, httpStatus: response.status }
-    const payload = await response.json() as BalanceResponse
-    const value = safeBalance(payload)
-    balanceCache = { key, at: now, value }
-    return value
-  } catch {
-    return { status: 'unavailable' as const, httpStatus: null }
-  } finally { clearTimeout(timeout) }
+  const value=await fetchOfficialDeepseekBalance(active.config.apiKey,transport)
+  if(value.status==='official_observation')balanceCache={key,at:now,value}
+  return value
 }

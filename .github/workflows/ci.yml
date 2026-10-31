@@ -152,6 +152,8 @@ jobs:
           DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_commercial_controls_ci
         run: |
           npm run db:upgrade:assessment
+          npm run db:upgrade:assessment-ai-cost
+          npm run db:upgrade:ai-operations
           node dist/db/verify-ai-cost-model-copy-mysql.js
       - name: Verify virtual payment exception migration twice on disposable MySQL 8
         working-directory: services/api

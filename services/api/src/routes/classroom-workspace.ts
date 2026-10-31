@@ -120,7 +120,7 @@ export async function teacherCanAccessStudent(
   const [teacher] = await database.db
     .select({ id: teachers.id })
     .from(teachers)
-    .where(eq(teachers.userId, userId))
+    .where(and(eq(teachers.userId, userId), eq(teachers.status, 'active')))
     .limit(1)
   if (!teacher) return false
 
@@ -145,10 +145,19 @@ export async function applyApprovedPlan(
   title: string,
   items: PlanItemPayload[],
   editorUserId: string,
+  teacherUserId?: string,
 ) {
   return database.db.transaction(async (tx) => {
     // Serialize edits to this student's plans without changing the existing schema.
     await tx.execute(sql`SELECT id FROM students WHERE id = ${studentId} FOR UPDATE`)
+    if (teacherUserId) {
+      // Check the live assignment inside the same transaction as the save. The
+      // row lock prevents concurrent relationship removal from authorizing a stale write.
+      const result = await tx.execute(sql`SELECT a.id FROM student_teacher_assignments a
+        INNER JOIN teachers t ON t.id=a.teacher_id
+        WHERE a.student_id=${studentId} AND t.user_id=${teacherUserId} AND t.status='active' FOR UPDATE`)
+      if (!(result[0] as unknown as unknown[])?.length) throw new Error('teacher_student_forbidden')
+    }
     const [existing] = await tx.select({ id: studentPlans.id }).from(studentPlans)
       .where(and(eq(studentPlans.studentId, studentId), eq(studentPlans.stageCode, stageCode), eq(studentPlans.type, type)))
       .limit(1)
@@ -203,8 +212,9 @@ export async function loadClassroom(
       ),
     )
 
+  const visibleTypes: PlanType[] = [...stage.planTypes, 'custom']
   const plans = await Promise.all(
-    stage.planTypes.map(async (type) => {
+    visibleTypes.map(async (type) => {
       const stored = storedPlans.find((plan) => plan.type === type)
       if (!stored) {
         return {
@@ -512,7 +522,8 @@ export function registerClassroomWorkspaceRoutes(
       const parsed = planSchema.safeParse(request.body)
       if (!parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_plan_payload', issues: parsed.error.issues })
 
-      const planId = await applyApprovedPlan(
+      let planId: string
+      try { planId = await applyApprovedPlan(
         database,
         request.params.studentId,
         request.params.stage,
@@ -520,7 +531,12 @@ export function registerClassroomWorkspaceRoutes(
         parsed.data.title,
         parsed.data.items,
         session.userId,
+        session.role === 'teacher' ? session.userId : undefined,
       )
+      } catch (error) {
+        if (error instanceof Error && error.message === 'teacher_student_forbidden') return reply.code(403).send({ ok: false, error: 'teacher_student_forbidden' })
+        throw error
+      }
       return { ok: true, plan: { id: planId, status: 'saved' } }
     },
   )

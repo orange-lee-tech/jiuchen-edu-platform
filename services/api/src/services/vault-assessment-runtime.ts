@@ -6,13 +6,17 @@ import { secureAssessmentModelFetch } from './assessment-key-objects.js'
 import { createAssessmentAIProvider } from './ai-provider.js'
 import { createAssessmentRuntimeFromEnv, type AssessmentRuntime } from './assessment-runtime.js'
 
-export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | null) {
+export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | null, dependencies: {
+  readActive?:typeof readActiveAssessmentKey;validateUrl?:typeof validateAssessmentApiUrl;
+  createProvider?:(env:AppEnv)=>AssessmentRuntime['provider']
+}={}) {
   const baseline = createAssessmentRuntimeFromEnv(env)
   let vaultPresent = false
   let vaultUsable = false
   let activeProviderName = baseline.provider.provider
   let activeModel = baseline.provider.model
   let selectedProvider: typeof baseline.provider | null = null
+  let preparing=false
   let selectedSource: ReturnType<NonNullable<AssessmentRuntime['diagnostics']>> = {
     source: 'environment', objectId: null, version: null,
     provider: activeProviderName, model: activeModel,
@@ -21,10 +25,10 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
     retriever: baseline.retriever,
     diagnostics: () => ({ ...selectedSource }),
     provider: {
-      get provider() { return activeProviderName },
-      get model() { return activeModel },
+      get provider() { return selectedProvider?.provider??activeProviderName },
+      get model() { return selectedProvider?.model??activeModel },
       isConfigured() { return vaultPresent ? vaultUsable : baseline.provider.isConfigured() },
-      async prepare() { selectedProvider = await activeProvider() },
+      async prepare() { preparing=true;try { selectedProvider = await activeProvider() }finally{preparing=false} },
       async analyze(input) {
         const provider = selectedProvider ?? await activeProvider()
         selectedProvider = provider
@@ -40,7 +44,7 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
   async function activeProvider() {
     if (!pool) return baseline.provider
     try {
-      const active = await readActiveAssessmentKey(pool, env)
+      const active = await (dependencies.readActive??readActiveAssessmentKey)(pool, env)
       if (active.initialized) {
         if (!active.config) {
           selectedSource = { source: 'disabled', objectId: null, version: active.version,
@@ -48,11 +52,11 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
           throw new Error('assessment_key_disabled')
         }
         selectedSource = { source: 'admin_vault', objectId: active.objectId,
-          version: active.version, provider: active.config.provider ?? null,
+          version: active.version,objectVersion:active.objectVersion,configurationFingerprint:active.configurationFingerprint,provider: active.config.provider ?? null,
           model: active.config.model ?? null }
         activeProviderName = active.config.provider ?? baseline.provider.provider
         activeModel = active.config.model ?? baseline.provider.model
-        await validateAssessmentApiUrl(active.config.apiBaseUrl ?? '')
+        await (dependencies.validateUrl??validateAssessmentApiUrl)(active.config.apiBaseUrl ?? '')
         const activeEnv = { ...env,
           ASSESSMENT_AI_PROVIDER: active.config.provider,
           ASSESSMENT_AI_BASE_URL: active.config.apiBaseUrl,
@@ -60,7 +64,7 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
           ASSESSMENT_AI_TEMPERATURE: active.config.temperature,
           ASSESSMENT_AI_API_KEY: active.config.apiKey,
         }
-        return createAssessmentRuntimeFromEnv(activeEnv,
+        return dependencies.createProvider?dependencies.createProvider(activeEnv):createAssessmentRuntimeFromEnv(activeEnv,
           createAssessmentAIProvider(activeEnv, secureAssessmentModelFetch)).provider
       }
     } catch (error) {
@@ -83,14 +87,15 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
   async function refresh() {
     if (!pool) return
     try {
-      const active = await readActiveAssessmentKey(pool, env)
+      const active = await (dependencies.readActive??readActiveAssessmentKey)(pool, env)
       if (active.initialized) {
         vaultPresent = true
         vaultUsable = Boolean(active.config)
         activeProviderName = active.config?.provider ?? baseline.provider.provider
         activeModel = active.config?.model ?? baseline.provider.model
-        selectedSource = active.config ? {
+        if(!selectedProvider&&!preparing)selectedSource = active.config ? {
           source: 'admin_vault', objectId: active.objectId, version: active.version,
+          objectVersion:active.objectVersion,configurationFingerprint:active.configurationFingerprint,
           provider: active.config.provider ?? null, model: active.config.model ?? null,
         } : { source: 'disabled', objectId: null, version: active.version,
           provider: null, model: null }
@@ -103,7 +108,7 @@ export function createVaultAssessmentRuntime(env: AppEnv, pool: mysql.Pool | nul
       const row = await readControlBox(pool, 'assessment_key')
       vaultPresent = Boolean(row)
       vaultUsable = Boolean(row?.encrypted_secret && env.ADMIN_AI_KEY_ENCRYPTION_KEY)
-      selectedSource = row ? { source: 'legacy_control', objectId: null, version: null,
+      if(!selectedProvider&&!preparing)selectedSource = row ? { source: 'legacy_control', objectId: null, version: null,
         provider: baseline.provider.provider, model: baseline.provider.model } :
         { source: 'environment', objectId: null, version: null,
           provider: baseline.provider.provider, model: baseline.provider.model }

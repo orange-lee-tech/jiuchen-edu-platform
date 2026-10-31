@@ -2,6 +2,7 @@ import type mysql from 'mysql2/promise'
 import { createHash, randomUUID } from 'node:crypto'
 import type { ModelTokenUsage } from './ai-provider.js'
 import { ControlError } from './admin-control-boxes.js'
+import { DEEPSEEK_PRICE_PARSER_VERSION, parseDeepseekPriceDraft, type DeepseekPriceDraft } from './deepseek-price-parser.js'
 
 export type ModelCallEvent = {
   callId: string; phase: 'initial' | 'repair'; requestCount: number
@@ -11,6 +12,7 @@ export type ModelCallEvent = {
 export type ModelCallIdentity = {
   provider: string | null; model: string | null
   objectId: string | null; version: number | null
+  objectVersion?:number|null; configurationFingerprint?:string|null
 }
 
 /** Provider currency and student credits are separate ledgers. This records
@@ -30,7 +32,7 @@ export async function recordAssessmentModelCall(pool: mysql.Pool, assessmentId: 
        VALUES (?,?,?,?,?,?,?,?,?)`,
       [event.callId, assessmentId, event.phase, event.requestCount,
         identity.provider ?? 'unknown', identity.model ?? 'unknown',
-        identity.objectId, identity.version, prices[0]?.id ?? null],
+        identity.objectId, identity.objectVersion ?? null, prices[0]?.id ?? null],
     )
     return
   }
@@ -41,7 +43,7 @@ export async function recordAssessmentModelCall(pool: mysql.Pool, assessmentId: 
      cache_miss_tokens=?,reasoning_tokens=?,usage_state=?,completed_at=CURRENT_TIMESTAMP()
      WHERE id=? AND assessment_id=?`,
     [event.outcome, identity.provider ?? 'unknown', identity.model ?? 'unknown',
-      identity.objectId, identity.version, event.promptChars ?? null,
+      identity.objectId, identity.objectVersion ?? null, event.promptChars ?? null,
       event.outputBudget ?? null, usage?.promptTokens ?? null,
       usage?.completionTokens ?? null, usage?.cacheHitTokens ?? null,
       usage?.cacheMissTokens ?? null, usage?.reasoningTokens ?? null,
@@ -76,36 +78,43 @@ export async function checkDeepseekPriceSource(pool:mysql.Pool,transport:typeof 
     if(!response.ok||!response.body)throw new Error('price_source_unavailable')
     const advertised=Number(response.headers.get('content-length')??0)
     if(advertised>600_000)throw new Error('price_source_too_large')
-    const digest=createHash('sha256'),reader=response.body.getReader()
+    const digest=createHash('sha256'),reader=response.body.getReader(),chunks:Uint8Array[]=[]
     let size=0
     try{
       while(true){const {done,value}=await reader.read();if(done)break
         size+=value.length
         if(size>600_000)throw new Error('price_source_too_large')
         digest.update(value)
+        chunks.push(value)
       }
     }finally{await reader.cancel().catch(()=>{});reader.releaseLock()}
     const hash=digest.digest('hex')
+    let drafts:DeepseekPriceDraft[]=[],parseError:string|null=null
+    try { drafts=parseDeepseekPriceDraft(Buffer.concat(chunks).toString('utf8')) }
+    catch(error) { parseError=error instanceof Error ? error.message.slice(0,120) : 'price_parse_failed' }
     await pool.query(`INSERT INTO assessment_ai_price_source_checks
-      (id,source_url,source_sha256) VALUES (?,?,?)`,
-      [randomUUID(),DEEPSEEK_PRICE_SOURCE,hash])
+      (id,source_url,source_sha256,parsed_draft_json,parser_version,parse_error) VALUES (?,?,?,?,?,?)`,
+      [randomUUID(),DEEPSEEK_PRICE_SOURCE,hash,JSON.stringify(drafts),DEEPSEEK_PRICE_PARSER_VERSION,parseError])
     const [reviewed]=await pool.query<mysql.RowDataPacket[]>(
       `SELECT source_sha256 FROM assessment_ai_price_versions
        WHERE provider='deepseek' AND reviewed_at IS NOT NULL
        ORDER BY reviewed_at DESC LIMIT 1`)
     return {status:reviewed[0]?.source_sha256===hash?'unchanged' as const:'review_required' as const,
-      fetchedAt:new Date().toISOString(),sourceUrl:DEEPSEEK_PRICE_SOURCE}
+      fetchedAt:new Date().toISOString(),sourceUrl:DEEPSEEK_PRICE_SOURCE,
+      parserVersion:DEEPSEEK_PRICE_PARSER_VERSION,drafts,parseError}
   }finally{clearTimeout(timeout)}
 }
 
 export async function reviewDeepseekPrice(input: {
   pool:mysql.Pool; actorId:string; model:string; expectedLatestVersion:string|null
   inputCacheHitPerMillion:number;inputCacheMissPerMillion:number;outputPerMillion:number
+  peakInputCacheHitPerMillion?:number|null
   peakInputCacheMissPerMillion:number|null;peakOutputPerMillion:number|null
   peakWindowUtc:string|null;effectiveAt:Date;reviewNote:string
 }) {
   const rates = [input.inputCacheHitPerMillion,input.inputCacheMissPerMillion,
-    input.outputPerMillion,input.peakInputCacheMissPerMillion,input.peakOutputPerMillion]
+    input.outputPerMillion,input.peakInputCacheMissPerMillion,input.peakOutputPerMillion,
+    input.peakInputCacheHitPerMillion??null]
   if (!rates.every(rate=>rate===null || Number.isFinite(rate) && rate>=0 && rate<10000) ||
       !Number.isFinite(input.effectiveAt.getTime()) || input.reviewNote.trim().length<8) {
     throw new ControlError('price_review_invalid',400)
@@ -128,12 +137,12 @@ export async function reviewDeepseekPrice(input: {
     const id=randomUUID()
     await connection.query(`INSERT INTO assessment_ai_price_versions
       (id,provider,model,currency,input_cache_hit_per_million,input_cache_miss_per_million,
-       output_per_million,peak_input_cache_miss_per_million,peak_output_per_million,
+       output_per_million,peak_input_cache_hit_per_million,peak_input_cache_miss_per_million,peak_output_per_million,
        peak_window_utc,source_url,source_sha256,effective_at,fetched_at,
        reviewed_at,reviewed_by,review_note)
-       VALUES (?,'deepseek',?,'USD',?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP(),?,?)`,
+       VALUES (?,'deepseek',?,'USD',?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP(),?,?)`,
       [id,input.model,input.inputCacheHitPerMillion,input.inputCacheMissPerMillion,
-        input.outputPerMillion,input.peakInputCacheMissPerMillion,
+        input.outputPerMillion,input.peakInputCacheHitPerMillion??null,input.peakInputCacheMissPerMillion,
         input.peakOutputPerMillion,input.peakWindowUtc,DEEPSEEK_PRICE_SOURCE,
         checks[0].source_sha256,input.effectiveAt,checks[0].fetched_at,
         input.actorId,input.reviewNote.trim()])

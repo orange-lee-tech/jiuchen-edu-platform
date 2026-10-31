@@ -83,7 +83,7 @@
           </view>
         </scroll-view>
       </view>
-      <view class="current-week-link" bindtap="onCurrentWeekSchedule">查看本周完整课表 ›</view>
+      <view class="current-week-link" bindtap="onCurrentWeekSchedule">{{selectedView === 'week' ? '收起本周完整课表 ‹' : '查看本周完整课表 ›'}}</view>
     </view>
 
     <view class="classroom-layout">

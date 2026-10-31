@@ -30,12 +30,14 @@ test('call observations retain unknown usage and mark failed calls for reconcili
   const pool={async query(sql:string,params:unknown[]=[]):Promise<[any,any]>{
     statements.push({sql,params});return [sql.startsWith('SELECT')?[]:[],null]
   }} as unknown as mysql.Pool
-  const identity={provider:'deepseek',model:'deepseek-v4-pro',objectId:'obj',version:3}
+  const identity={provider:'deepseek',model:'deepseek-v4-pro',objectId:'obj',version:3,objectVersion:2}
   const base={callId:'call',phase:'initial' as const,requestCount:1}
   await recordAssessmentModelCall(pool,'assessment',{...base,outcome:'started'},identity)
+  assert.equal(statements[1]?.params[7],2,'call row stores the object version, not head version')
   await recordAssessmentModelCall(pool,'assessment',{...base,outcome:'failed',usage:null,
     promptChars:4500,outputBudget:4096},identity)
   const update=statements.at(-1)!
+  assert.equal(update.params[4],2,'call completion preserves the same object version')
   assert.equal(update.params[12],'awaiting_reconciliation')
   assert.equal(update.params[13],'call')
   assert.equal(update.params[14],'assessment')
@@ -61,7 +63,8 @@ test('teacher cost query is scoped by active assignment and exposes no balance o
   assert.equal(result.scope,'assigned_students')
   assert.equal(result.providerBalance,'forbidden')
   assert.equal(result.providerPrices,'forbidden')
-  assert.ok(result.tokenForecast)
+  assert.equal(result.tokenForecast,null)
+  assert.equal('promptTokens' in result.usage,false)
 })
 
 test('admin forecast uses reviewed price and dated FX but never labels estimates as supplier billing',async()=>{
@@ -95,7 +98,7 @@ test('admin forecast uses reviewed price and dated FX but never labels estimates
   assert.equal(result.actualSupplierCharge,'not_connected')
 })
 
-test('teacher receives only scoped monetary range when reviewed snapshots exist',async()=>{
+test('teacher cannot receive company cost forecasts even when reviewed snapshots exist',async()=>{
   const now=new Date()
   const pool={async query(sql:string,args:unknown[]=[]):Promise<[any,any]>{
     if(sql.includes('AVG(c.prompt_chars)')){
@@ -113,7 +116,9 @@ test('teacher receives only scoped monetary range when reviewed snapshots exist'
     return [[],null]
   }} as unknown as mysql.Pool
   const result=await readTeacherAssessmentAiCosts(pool,'assigned-teacher')
-  assert.ok((result.costForecast?.maxCnyWithOneRepair??0)>0)
+  assert.equal(result.costForecast,null)
+  assert.equal(result.tokenForecast,null)
+  assert.equal('completionTokens' in result.usage,false)
   assert.equal(result.providerPrices,'forbidden')
   assert.equal(result.providerBalance,'forbidden')
   assert.equal(JSON.stringify(result).includes('input_cache_miss_per_million'),false)

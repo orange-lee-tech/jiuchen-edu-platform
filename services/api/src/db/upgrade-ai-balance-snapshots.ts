@@ -10,6 +10,7 @@ try {
     balance decimal(18,6) NOT NULL, warning_threshold decimal(18,6) NOT NULL,
     verified_at timestamp NOT NULL, actor_user_id varchar(36) NOT NULL,
     note varchar(500) NULL, created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    source varchar(20) NOT NULL DEFAULT 'manual',
     KEY ai_balance_snapshots_account (object_id,verified_at)
   ) ENGINE=InnoDB`)
   console.info('ai_balance_snapshots_schema_ready')

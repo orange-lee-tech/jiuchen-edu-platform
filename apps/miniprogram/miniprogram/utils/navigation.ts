@@ -70,6 +70,9 @@ const STUDENT_ROLES: UserRole[] = ['user', 'student']
 export function routeAllowed(route: string, role: UserRole | undefined, options: Record<string, string | undefined> = {}) {
   if(isReadOnly()&&['pages/admin/admin','pages/schedule-import/schedule-import','pages/assessment-form/assessment-form','pages/profile-edit/profile-edit'].includes(route))return false
   if (route === 'pages/admin/admin') return role === 'admin'
+  if (route === 'pages/admin-credits/admin-credits') return role === 'admin' && !isReadOnly()
+  if (route === 'pages/staff-profile/staff-profile') return (role === 'teacher' || role === 'admin') && !isReadOnly()
+  if (route === 'pages/teacher-news-tags/teacher-news-tags') return role === 'teacher' && !isReadOnly()
   if (route === 'pages/teacher-students/teacher-students') return role === 'teacher' || role === 'staff' || role === 'admin'
   if (route === 'pages/plan-editor/plan-editor') return options.studentId ? role === 'teacher' || role === 'staff' || role === 'admin' : role === 'student'
   if (route === 'pages/schedule-import/schedule-import') return role === 'student'
@@ -90,7 +93,10 @@ export function validateIntent(route: string, params: Record<string, string | un
     'pages/assessment-form/assessment-form': { id: (v) => UUID.test(v), section: (v) => ['english', 'research', 'competition'].includes(v) },
     'pages/assessment-result/assessment-result': { id: (v) => UUID.test(v) },
     'pages/teacher-students/teacher-students': {},
-    'pages/plan-editor/plan-editor': { stage: (v) => STAGE.test(v), type: (v) => ['gpa', 'english', 'competition', 'research', 'internship'].includes(v), studentId: (v) => UUID.test(v), taskId: (v) => UUID.test(v), studentName: (v) => v.length <= 80 && !/[\x00-\x1f]/.test(v) },
+    'pages/staff-profile/staff-profile': {},
+    'pages/admin-credits/admin-credits': {},
+    'pages/teacher-news-tags/teacher-news-tags': {},
+    'pages/plan-editor/plan-editor': { stage: (v) => STAGE.test(v), type: (v) => ['gpa', 'english', 'competition', 'research', 'internship', 'custom'].includes(v), studentId: (v) => UUID.test(v), taskId: (v) => UUID.test(v), studentName: (v) => v.length <= 80 && !/[\x00-\x1f]/.test(v) },
     'pages/admin/admin': { section: (v) => ['admin-users', 'admin-assignments', 'admin-news','admin-analytics','admin-readonly','admin-controls'].includes(v) },
     'pages/schedule-import/schedule-import': { view: (v) => ['current', 'manage', 'all'].includes(v) },
     'pages/product-detail/product-detail': { documentKey: (v) => v.length > 0 && v.length <= 160 && !/[/?#\x00-\x1f]/.test(v) },

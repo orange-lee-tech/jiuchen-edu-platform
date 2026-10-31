@@ -1,0 +1,17 @@
+<view class="page"><text class="title">向指定学员发放评估次数</text>
+  <text class="note">使用现有收费控制盒的六位PIN。每笔发放独立记入次数账本，不改变商品、订单或全局赠送方案。</text>
+  <view wx:if="{{loading}}">正在读取学员名单…</view>
+  <view wx:if="{{error}}" class="error"><text>{{error}}</text><button wx:if="{{!allowed}}" bindtap="load">重新读取</button></view>
+  <view wx:if="{{allowed}}" class="card">
+    <picker range="{{studentNames}}" value="{{selected}}" disabled="{{attempted || busy}}" bindchange="onStudent"><view class="picker">{{selected >= 0 ? studentNames[selected] : '选择已绑定账号的学员'}} ›</view></picker>
+    <text wx:if="{{balance !== null}}">当前可用次数：{{balance}}</text>
+    <input type="number" value="{{amount}}" disabled="{{attempted || busy}}" data-field="amount" bindinput="onField" placeholder="发放次数（正整数）" />
+    <textarea value="{{reason}}" maxlength="300" disabled="{{attempted || busy}}" data-field="reason" bindinput="onField" placeholder="必填：发放原因" />
+    <input type="number" password maxlength="6" value="{{pin}}" disabled="{{busy || receipt}}" data-field="pin" bindinput="onField" placeholder="收费控制盒六位PIN" />
+    <button bindtap="submit" loading="{{busy}}" disabled="{{busy || receipt}}">{{attempted ? '重试同一笔发放' : '确认发放'}}</button>
+    <view wx:if="{{receipt}}" class="receipt"><text>已入账 {{receipt.amount}} 次{{receipt.idempotent ? '（已核对重复请求）' : ''}}</text>
+      <text>账本余额：{{receipt.before}} → {{receipt.after}}</text><text>原因：{{receipt.reason}}</text>
+      <text selectable>事件：{{receipt.ledgerEntryId}}</text><text selectable>操作者：{{receipt.actorId}}</text></view>
+    <button wx:if="{{attempted}}" class="secondary" bindtap="newOperation">开始另一笔发放</button>
+  </view>
+</view>

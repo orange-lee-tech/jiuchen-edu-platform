@@ -20,11 +20,13 @@ const PERSONAL_MENUS = [
   { key: 'service', title: '联系客服', desc: '咨询院校信息与九辰服务' },
 ]
 const TEACHER_MENUS = [
+  { key: 'staff-profile', title: '本人员工资料', desc: '填写正式姓名、手机、部门与直属领导' },
   { key: 'students', title: '学员规划', desc: '查看已分配学员的辅导与规划' },
   { key: 'favorites', title: '我的收藏', desc: '重新打开已收藏的服务号原文' },
   { key: 'service', title: '联系运营', desc: '咨询账号、学员分配与业务支持' },
 ]
 const ADMIN_MENUS = [
+  { key: 'staff-profile', title: '员工资料与教师目录', desc: '编辑本人员工资料，查阅教师实名完整度' },
   { key: 'favorites', title: '我的收藏', desc: '重新打开已收藏的服务号原文' },
   { key: 'service', title: '联系运营', desc: '咨询账号与服务支持' },
 ]
@@ -140,6 +142,9 @@ Page({
   onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },
   onIdentityTap() {
     if(isReadOnly()){wx.showToast({title:'当前为只读查看，不能编辑资料',icon:'none'});return}
+    if (this.data.loggedIn && (this.data.role === 'teacher' || this.data.role === 'admin')) {
+      openPage('/pages/staff-profile/staff-profile'); return
+    }
     if (this.data.loggedIn && this.data.identities.some(item => item.type === 'admin')) {
       this.setData({ identityDetailsOpen: true }, () => wx.pageScrollTo({ selector: '#identity-section', duration: 200 }))
       return
@@ -155,6 +160,7 @@ Page({
     const key = String(event.currentTarget.dataset.key || '')
     if(key==='favorites'){void this.onFavorites();return}
     const destinations: Record<string, string> = {
+      'staff-profile': 'pages/staff-profile/staff-profile',
       profile: 'pages/profile-edit/profile-edit', growth: 'pages/growth-profile/growth-profile',
       assessment: 'pages/assessment-history/assessment-history', position: 'pages/position/position',
       students: 'pages/teacher-students/teacher-students',

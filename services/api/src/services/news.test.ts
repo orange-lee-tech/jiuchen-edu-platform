@@ -30,7 +30,8 @@ test('unclassified detail is blocked for anonymous/student but server-authentica
  for(const role of [null,'student','teacher','admin']){
   const app=Fastify()
   const db={select(){let table:unknown;const q={from(t:unknown){table=t;return q},innerJoin(){return q},leftJoin(){return q},where(){return q},async limit(){return table===userSessions?[{userId:'synthetic',role,status:'active',internalIdStatus:'claimed',expiresAt:new Date('2099-01-01')}]:[{id:'synthetic',source:'wechat_official',status:'active',tagsJson:[],publishedAt:null,contentJson:content}]}};return q}}
-  registerNewsRoutes(app,{configured:true,db} as unknown as DatabaseContext)
+  const pool={async query(sql:string,values:unknown[]){assert.match(sql,/FROM teacher_news_tags/);assert.deepEqual(values,[['synthetic'],'synthetic']);return [[]]}}
+  registerNewsRoutes(app,{configured:true,db,pool} as unknown as DatabaseContext)
   const reply=await app.inject({url:'/news/synthetic',headers:role?{authorization:'Bearer synthetic'}:{}})
   assert.equal(reply.statusCode,role==='teacher'||role==='admin'?200:404)
   await app.close()

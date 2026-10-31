@@ -60,9 +60,10 @@ function harness() {
   }
 }
 
-test('four native paths; all 21 registered legacy pages remain', () => {
+test('four native paths; legacy pages and new scoped operations pages remain registered', () => {
   const config = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
-  assert.equal(config.pages.length, 21)
+  assert.equal(config.pages.length, 24)
+  for(const route of ['pages/staff-profile/staff-profile','pages/admin-credits/admin-credits','pages/teacher-news-tags/teacher-news-tags'])assert.ok(config.pages.includes(route))
   assert.deepEqual(config.tabBar.list.map((item) => item.pagePath), ['pages/index/index', 'pages/classroom/classroom', 'pages/news/news', 'pages/profile/profile'])
   assert.ok(config.pages.includes('pages/position/position'))
   const h = harness()
@@ -111,6 +112,63 @@ test('saving an incomplete assessment draft retains partial targets without star
   p.data.targets=[{schoolName:'目标院校',programName:'',researchDirection:'',note:''},{schoolName:'',programName:'未完成',researchDirection:'',note:''}]
   assert.throws(()=>p.buildInput(),/未完成的目标院校/,'formal submission must not discard partial target rows')
   assert.equal(p.buildDraftInput().targets.length,2)
+})
+
+test('new employee and operation routes enforce their role scopes',()=>{
+  const h=harness()
+  for(const role of ['student','teacher','admin','staff']){
+    assert.equal(h.nav.routeAllowed('pages/staff-profile/staff-profile',role),['teacher','admin'].includes(role))
+    assert.equal(h.nav.routeAllowed('pages/admin-credits/admin-credits',role),role==='admin')
+    assert.equal(h.nav.routeAllowed('pages/teacher-news-tags/teacher-news-tags',role),role==='teacher')
+  }
+  assert.equal(h.nav.validateIntent('pages/plan-editor/plan-editor',{stage:'senior-fall',type:'custom'}).params.type,'custom')
+})
+
+test('entirely blank assessment form saves a draft without running a model or purchasing credits',async()=>{
+  const {h,p}=virtualPaymentPage()
+  p.data.profile={university:'',major:'',currentGrade:'',gpaText:'',rankText:'',backgroundNote:''}
+  p.data.targets=[{schoolName:'',programName:'',researchDirection:'',note:''}]
+  const saved=p.onSaveDraft();await settle()
+  assert.equal(h.requests.length,1);assert.equal(h.requests[0].method,'POST')
+  assert.match(h.requests[0].url,/\/me\/assessments$/)
+  assert.equal(h.requests[0].data.input.profile.university,'')
+  h.respond(0,{ok:true,assessment:{id:secondId,status:'draft'}});await saved
+  assert.equal(p.data.draftId,secondId);assert.equal(h.requests.length,1)
+  assert.throws(()=>p.buildInput())
+})
+
+test('staff profile never displays a late phone response after leaving the page',async()=>{
+  const h=harness();h.auth.saveAuthResult(authFixture('teacher'))
+  const p=h.page('pages/staff-profile/staff-profile'),load=p.load()
+  h.respond(0,{ok:true,user:authFixture('teacher').user,businessIdentity:null});await settle()
+  assert.match(h.requests[1].url,/\/me\/staff-profile$/)
+  p.onHide()
+  h.respond(1,{ok:true,profile:{realName:'合成老师',phone:'13800000000',department:'合成部门',supervisor:'合成主管'}})
+  await load
+  assert.equal(p.data.phone,'');assert.equal(p.data.realName,'');assert.equal(p.data.role,'')
+})
+
+test('admin credit pending operation survives departure, never stores PIN and rereads available credits',async()=>{
+  const h=harness();h.auth.saveAuthResult(authFixture('admin'))
+  const p=h.page('pages/admin-credits/admin-credits'),student={id:secondId,userId:secondId,name:'合成学员',university:null}
+  p.owner=id;p.setData({allowed:true,students:[student],selected:0,amount:'5',reason:'合成补偿',pin:'123456'})
+  const first=p.submit();await settle()
+  const key=h.requests[0].data.idempotencyKey
+  assert.equal(h.storage.get('jiuchen-admin-credit-pending:'+id).key,key)
+  assert.equal(h.storage.get('jiuchen-admin-credit-pending:'+id).pin,undefined)
+  p.onHide();assert.equal(p.data.busy,false);assert.equal(p.data.pin,'')
+  h.respond(0,{ledgerEntryId:'ledger-1',before:0,after:5,amount:5,reason:'合成补偿',actorId:id});await first
+  assert.equal(p.data.receipt,null)
+  const reload=p.load()
+  h.respond(1,{ok:true,user:authFixture('admin').user,businessIdentity:null});await settle()
+  h.respond(2,{ok:true,students:[student]});await reload
+  assert.equal(p.data.key,key);assert.equal(p.data.attempted,true)
+  p.data.pin='123456'
+  const retry=p.submit();await settle();assert.equal(h.requests[3].data.idempotencyKey,key)
+  h.respond(3,{ledgerEntryId:'ledger-1',before:0,after:5,amount:5,reason:'合成补偿',actorId:id,idempotent:true});await settle()
+  assert.match(h.requests[4].url,/\/me\/admin\/credit-adjustments\//)
+  h.respond(4,{balance:3,settledBalance:5,heldBalance:2});await retry
+  assert.equal(p.data.receipt.after,5);assert.equal(p.data.balance,3);assert.equal(p.data.busy,false)
 })
 
 test('cancelled or failed virtual payment retains the pending order and exposes only safe platform details', async () => {
@@ -432,7 +490,8 @@ test('native role icons exist, remain small, and admin Mine has no duplicate ope
   assert.ok(p.data.menus.every(m => !m.key.startsWith('admin-')))
   p.onHide()
   const c = h.component('role-shell', { kind:'admin', viewSlot:'home', phase:'ready' })
-  c.observers['viewSlot, kind'].call(c,'home','admin'); assert.equal(c.data.actions.length, 4)
+  c.observers['viewSlot, kind'].call(c,'home','admin')
+  assert.equal(Array.from(c.data.actions,a=>a.key).join('|'),'mirror|users|assignments|articles|keys|grants|analytics')
   assert.equal(c.data.actions[0].key,'mirror')
 })
 
@@ -522,9 +581,17 @@ test('professional slots expose existing matching actions and no staff admin des
     for (const slot of ['home', 'plan', 'opportunity']) {
       const h = harness(), component = h.component('role-shell', { phase: 'ready', kind, viewSlot: slot })
       component.observers['viewSlot, kind'].call(component, slot, kind)
+      if(kind==='teacher'&&slot==='opportunity'){
+        assert.equal(component.data.actions.length,0,'teacher guidance no longer repeats a growth-followup card')
+        continue
+      }
       assert.ok(component.data.actions.length > 0)
       for (const action of component.data.actions) {
-        assert.ok(kind === 'admin' ? action.url.startsWith('/pages/admin/admin?section=admin-') : action.url === '/pages/teacher-students/teacher-students')
+        if(kind==='admin'){
+          const route=action.url.split('?')[0].slice(1)
+          assert.equal(h.nav.routeAllowed(route,'admin'),true)
+          assert.equal(h.nav.routeAllowed(route,'teacher'),false)
+        }else assert.equal(action.url,'/pages/teacher-students/teacher-students')
       }
       component.onAction({ currentTarget: { dataset: { key: component.data.actions[0].key } } })
       assert.equal(h.navigations[0].url,
@@ -1586,7 +1653,7 @@ test('numeric news labels remain traceable without becoming bare category names'
  h.respond(0,{ok:true,posts:[{id:'a',title:'真实文章',summary:'',source:'manual',publishedAt:null,tags:['3','竞赛'],coverUrl:null}]})
  await pending
  assert.ok(page.data.categories.includes('分类待核实'));assert.equal(page.data.categories.includes('3'),false)
- assert.match(page.data.featured.rawTagNote,/原始标签 3/);assert.ok(page.data.sections.includes('学科竞赛'))
+ assert.match(page.data.featured.rawTagNote,/未核实分类 3/);assert.ok(page.data.sections.includes('学科竞赛'))
  page.onSectionTap({currentTarget:{dataset:{section:'学科竞赛'}}});assert.equal(page.data.featured.id,'a')
 })
 

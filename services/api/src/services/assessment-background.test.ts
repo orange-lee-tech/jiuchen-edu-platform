@@ -35,6 +35,49 @@ const silentLogger = {
   error() {},
 }
 
+test('one account balance window brackets the initial call plus repair before credit persistence',async()=>{
+  const runtime=createSuccessRuntime(),successfulAnalyze=runtime.provider.analyze.bind(runtime.provider)
+  runtime.provider.analyze=async()=>({})
+  runtime.provider.repair=async input=>successfulAnalyze(input)
+  const sequence:string[]=[]
+  const store:AssessmentBackgroundStore={async nextRunning(){return null},
+    async beginBalanceWindow(){sequence.push('before')},
+    async recordModelCall(_id,event){sequence.push(`${event.phase}:${event.outcome}`)},
+    async finishBalanceWindow(){sequence.push('after')},
+    async persistSuccess(){sequence.push('persist')},async persistFailure(){throw new Error('unexpected_failure')}}
+  const result=await processAssessmentBackgroundJob({job:{id:'synthetic',userId:'synthetic',inputJson:assessmentInput},
+    store,runtime,logger:silentLogger,notification:{channel:'none',isConfigured:()=>false,
+      async notify(){return {delivered:false,channel:'none',reason:'not_configured'}}} as AssessmentNotificationAdapter})
+  assert.equal(result,'succeeded')
+  assert.deepEqual(sequence,['before','initial:started','initial:completed','repair:started','repair:completed','after','persist'])
+})
+
+test('balance telemetry failure cannot turn a successful assessment into failed credit settlement',async()=>{
+  let succeeded=false,failed=false
+  const result=await processAssessmentBackgroundJob({job:{id:'synthetic',userId:'synthetic',inputJson:assessmentInput},
+    store:{async nextRunning(){return null},async beginBalanceWindow(){throw new Error('observation_unavailable')},
+      async finishBalanceWindow(){throw new Error('observation_unavailable')},
+      async persistSuccess(){succeeded=true},async persistFailure(){failed=true}},
+    runtime:createSuccessRuntime(),logger:silentLogger,notification:{channel:'none',isConfigured:()=>false,
+      async notify(){return {delivered:false,channel:'none',reason:'not_configured'}}} as AssessmentNotificationAdapter})
+  assert.equal(result,'succeeded');assert.equal(succeeded,true);assert.equal(failed,false)
+})
+test('an asynchronous configuration refresh during the initial balance read cannot relabel model calls',async()=>{
+  const runtime=createSuccessRuntime()
+  let current={source:'admin_vault' as const,objectId:'original',version:3,objectVersion:2,
+    configurationFingerprint:'original-fingerprint',provider:'mock-provider',model:'mock-model'}
+  runtime.diagnostics=()=>({...current})
+  const observed:string[]=[]
+  await processAssessmentBackgroundJob({job:{id:'synthetic',userId:'synthetic',inputJson:assessmentInput},
+    store:{async nextRunning(){return null},async beginBalanceWindow(_id,identity){
+      observed.push(identity.objectId!);await Promise.resolve();current={...current,objectId:'new-head',version:4}},
+      async recordModelCall(_id,_event,identity){observed.push(identity.objectId!)},
+      async persistSuccess(){},async persistFailure(){throw new Error('unexpected_failure')}},
+    runtime,logger:silentLogger,notification:{channel:'none',isConfigured:()=>false,
+      async notify(){return {delivered:false,channel:'none',reason:'not_configured'}}} as AssessmentNotificationAdapter})
+  assert.deepEqual(observed,['original','original','original'])
+})
+
 function createSuccessRuntime(): AssessmentRuntime {
   const retriever: AssessmentRetriever = {
     async retrieve() {

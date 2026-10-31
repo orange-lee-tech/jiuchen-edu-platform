@@ -86,30 +86,31 @@
           <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onCreateKeyObject">加密保存{{keyHead.initialized ? '候选服务' : '并启用首个服务'}}</button>
         </view>
         <view wx:if="{{keyAction}}" id="key-action-panel" class="control-pin-panel">
-          <text class="card-title">{{keyAction === 'activate' ? '启用服务' : keyAction === 'disable' ? '停用服务' : keyAction === 'test' ? '验证连接及报告格式' : keyAction === 'reveal' ? '创建者查看' : keyAction === 'archive' ? '归档服务' : keyAction === 'copy' ? '复制凭据新建模型候选' : '设置对象口令'}} · {{keyActionLabel}}</text>
-          <text class="card-note" wx:if="{{keyAction === 'reveal'}}">此操作仅限该服务对象的创建管理员，请输入该对象的六位口令。</text>
-          <text class="card-note" wx:elif="{{keyAction === 'test'}}">测试会调用供应商，可能产生费用；通过后仍需真实评估验证报告入库。</text>
+          <text class="card-title">{{keyAction === 'activate' ? '启用服务' : keyAction === 'disable' ? '停用服务' : keyAction === 'test' ? '验证连接及报告格式' : keyAction === 'archive' ? '归档服务' : keyAction === 'model' ? '在此对象内切换模型' : keyAction === 'copy' ? '复制凭据新建模型候选' : '设置对象口令'}} · {{keyActionLabel}}</text>
+          <text class="card-note" wx:if="{{keyAction === 'test'}}">测试会调用供应商，可能产生费用；通过后仍需真实评估验证报告入库。</text>
           <text class="card-note" wx:elif="{{keyAction === 'copy'}}">仅限来源对象创建者。将沿用同一服务商、HTTPS 地址及加密凭据；新候选不会自动启用，报告格式需单独验证。</text>
-          <text class="row-desc">{{keyAction === 'activate' || keyAction === 'disable' || keyAction === 'archive' || keyAction === 'setup' || keyAction === 'copy' ? '当前控制口令' : '该对象六位口令'}}</text>
+          <text class="card-note" wx:elif="{{keyAction === 'model'}}">保留对象、供应商、地址及加密密钥。先调用新模型检查连接和报告格式，成功后才更新配置；失败保留原模型。测试可能产生供应商费用。</text>
+          <text class="row-desc">{{keyAction === 'activate' || keyAction === 'disable' || keyAction === 'archive' || keyAction === 'setup' || keyAction === 'copy' || keyAction === 'model' ? '当前控制口令' : '该对象六位口令'}}</text>
           <input class="input" password type="number" maxlength="6" data-name="keyActionPin" value="{{keyActionPin}}" bindinput="onKeyActionPinInput" />
-          <block wx:if="{{keyAction === 'copy'}}">
-            <text class="row-desc">来源对象口令</text><input class="input" password type="number" maxlength="6" data-name="keyCopySourcePin" value="{{keyCopySourcePin}}" bindinput="onKeyActionPinInput" />
-            <text class="row-desc">新模型候选名称</text><input class="input" data-name="keyCopyLabel" value="{{keyCopyLabel}}" bindinput="onKeyActionPinInput" />
+          <block wx:if="{{keyAction === 'copy' || keyAction === 'model'}}">
+            <block wx:if="{{keyAction === 'copy'}}"><text class="row-desc">来源对象口令</text><input class="input" password type="number" maxlength="6" data-name="keyCopySourcePin" value="{{keyCopySourcePin}}" bindinput="onKeyActionPinInput" />
+            <text class="row-desc">新模型候选名称</text><input class="input" data-name="keyCopyLabel" value="{{keyCopyLabel}}" bindinput="onKeyActionPinInput" /></block>
             <text class="row-desc">同服务商文档预设型号</text><picker wx:if="{{keyCopyModels.length}}" range="{{keyCopyModels}}" range-key="label" value="{{keyCopyModelIndex}}" bindchange="onCopyModelChange"><view class="picker-field">{{keyCopyModels[keyCopyModelIndex].label}} ›</view></picker>
             <text class="row-desc">精确模型 ID · 可手工修改</text><input class="input" data-name="keyCopyModel" value="{{keyCopyModel}}" bindinput="onKeyActionPinInput" />
             <text class="card-note">{{keyCopyModels.length ? '文档预设仅表示已核对公开型号，仍需本账号连接测试；手工输入型号未验证。' : '当前服务商没有本地文档预设，手工输入型号需连接测试。'}}</text>
-            <text class="row-desc">备注 · 可选</text><input class="input" data-name="keyCopyNote" value="{{keyCopyNote}}" bindinput="onKeyActionPinInput" />
+            <text class="card-note">{{keyActionCatalogNote}}</text>
+            <block wx:if="{{keyAction === 'copy'}}"><text class="row-desc">备注 · 可选</text><input class="input" data-name="keyCopyNote" value="{{keyCopyNote}}" bindinput="onKeyActionPinInput" /></block>
           </block>
           <block wx:if="{{keyAction === 'activate' || keyAction === 'setup' || keyAction === 'copy'}}"><text class="row-desc">{{keyAction === 'activate' ? '目标对象口令' : '新候选对象口令'}}</text><input class="input" password type="number" maxlength="6" data-name="keyActionTargetPin" value="{{keyActionTargetPin}}" bindinput="onKeyActionPinInput" /></block>
           <button class="primary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onConfirmKeyAction">确认本次操作</button>
           <button class="secondary" disabled="{{actionLoading}}" bindtap="onCancelKeyAction">取消</button>
         </view>
         <view wx:for="{{keyObjects}}" wx:key="id" class="list-row">
-          <view class="row-main"><text class="row-title">{{item.label}} · {{item.status === 'active' ? '当前已启用' : item.status === 'candidate' ? '候选服务' : item.status === 'disabled' ? '已停用' : '已归档'}}</text><text class="row-desc">{{item.provider}} · {{item.model}} · 版本 {{item.version}}</text><text class="row-desc" wx:if="{{item.sourceObjectId}}">模型候选复制自对象 {{item.sourceObjectId}}</text><text class="row-desc">{{item.note || '无备注'}} · 最近测试 {{item.lastTestResult === 'passed' ? '通过' : item.lastTestResult === 'failed' ? '失败' : '未测试'}}</text></view>
+          <view class="row-main"><text class="row-title">{{item.label}} · {{item.status === 'active' ? '当前已启用' : item.status === 'candidate' ? '候选服务' : item.status === 'disabled' ? '已停用' : '已归档'}}</text><text class="row-desc">{{item.provider}} · {{item.model}} · 版本 {{item.version}} · 更新 {{item.updatedAt || item.createdAt}}</text><text class="row-desc" wx:if="{{item.sourceObjectId}}">模型候选复制自对象 {{item.sourceObjectId}}</text><text class="row-desc">{{item.note || '无备注'}} · 最近测试 {{item.lastTestResult === 'passed' ? '通过' : item.lastTestResult === 'failed' ? '失败' : '未测试'}}</text></view>
           <button wx:if="{{item.status !== 'active' && item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-action="activate" data-id="{{item.id}}" bindtap="onOpenKeyAction">启用此服务</button>
           <button wx:if="{{!item.hasObjectPin}}" class="mini" data-action="setup" data-id="{{item.id}}" bindtap="onOpenKeyAction">设置对象口令</button>
           <button wx:if="{{item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-action="test" data-id="{{item.id}}" bindtap="onOpenKeyAction">验证连接及报告格式</button>
-          <button wx:if="{{item.status !== 'archived' && item.hasObjectPin}}" class="mini" data-action="reveal" data-id="{{item.id}}" bindtap="onOpenKeyAction">创建者查看</button>
+          <button wx:if="{{item.status !== 'archived' && item.status !== 'disabled'}}" class="mini" data-action="model" data-id="{{item.id}}" bindtap="onOpenKeyAction">切换此对象模型</button>
           <button wx:if="{{item.status !== 'archived' && item.status !== 'disabled' && item.hasObjectPin}}" class="mini" data-action="copy" data-id="{{item.id}}" bindtap="onOpenKeyAction">复制凭据换模型</button>
           <button wx:if="{{item.status !== 'active' && item.status !== 'archived'}}" class="mini danger" data-action="archive" data-id="{{item.id}}" bindtap="onOpenKeyAction">归档</button>
         </view>
@@ -200,27 +201,47 @@
 
   <block wx:elif="{{section === 'admin-analytics'}}">
     <view class="card">
-      <text class="card-title">人工核验的 API 账户余额</text>
-      <text class="card-note">仅按所选服务对象的已记录调用估算；其他服务对象可能使用同一供应商账户，实际余额请以供应商账单为准。备注中请勿填写密钥。</text>
+      <text class="card-title">供应商账户余额</text>
+      <text class="card-note">DeepSeek 官方只读余额按所选服务对象的服务器密钥读取。账户余额、调用费用估算与学员评估次数分别记录。</text>
       <text wx:if="{{balanceLedgerError}}" class="card-note">{{balanceLedgerError}}</text>
-      <picker range="{{balanceAccounts}}" range-key="label" bindchange="onBalanceAccount"><view class="input">{{balanceAccountIndex === -1 ? '选择供应商服务对象' : balanceAccounts[balanceAccountIndex].label + ' · ' + balanceAccounts[balanceAccountIndex].provider}} ›</view></picker>
+      <picker range="{{balanceAccounts}}" range-key="displayLabel" bindchange="onBalanceAccount"><view class="input">{{balanceAccountIndex === -1 ? '选择供应商服务对象' : balanceAccounts[balanceAccountIndex].displayLabel}} ›</view></picker>
       <block wx:if="{{balanceAccountIndex >= 0}}">
+        <text wx:if="{{officialBalanceError}}" class="control-warning">{{officialBalanceError}}</text>
+        <text wx:if="{{officialBalance}}" class="card-note">{{officialBalance.status === 'fresh' ? '最近官方读取有效（5分钟内）' : officialBalance.status === 'stale' ? '余额读数已过期或对象版本改变，请重新读取' : officialBalance.status === 'unsupported' ? '该供应商暂不支持官方余额读取，可人工核验' : officialBalance.status === 'unavailable' ? '官方读取失败，保留最后成功读数供核对' : '尚无官方成功读数'}}</text>
+        <text wx:if="{{officialBalance && officialBalance.lastError}}" class="card-note">读取状态：{{officialBalance.lastError}}</text>
+        <button wx:if="{{!officialBalance || officialBalance.status !== 'unsupported'}}" class="secondary" disabled="{{actionLoading}}" loading="{{actionLoading}}" bindtap="onRefreshOfficialBalance">重新读取官方余额</button>
+        <view wx:for="{{officialBalance ? officialBalance.balances : []}}" wx:key="id" class="list-row">
+          <view class="row-main"><text class="row-title">{{item.currency}} {{item.balance}} · {{item.fresh ? '有效读数' : '历史读数'}}</text>
+          <text class="row-desc">读取于 {{item.observedAt}} · 预警阈值 {{item.warningThreshold}}</text>
+          <text class="row-desc">赠送 {{item.grantedBalance}} · 充值 {{item.toppedUpBalance}}</text>
+          <text wx:if="{{item.lowBalance}}" class="control-warning">余额低于预警阈值或账户已不可用，请核对并充值。</text></view>
+        </view>
         <picker range="{{balanceCurrencies}}" bindchange="onBalanceCurrency"><view class="input">币种 {{balanceCurrencies[balanceCurrencyIndex]}} ›</view></picker>
-        <input class="input" type="digit" data-name="balanceAmount" value="{{balanceAmount}}" bindinput="onBalanceInput" placeholder="人工核验余额" />
         <input class="input" type="digit" data-name="balanceThreshold" value="{{balanceThreshold}}" bindinput="onBalanceInput" placeholder="低余额预警阈值" />
+        <button class="secondary" bindtap="onSaveOfficialThreshold" disabled="{{actionLoading}}">保存预警阈值</button>
+        <text class="card-note">评估窗口包含初次及修复调用。账户可能共享、并发、充值或延迟结算，余额差额均保留为“账户差额，未分配”，不当作某次评估实际费用。</text>
+        <view wx:for="{{officialBalance ? officialBalance.windows : []}}" wx:key="assessmentId" class="list-row">
+          <view class="row-main"><text class="row-desc">评估 {{item.assessmentId}} · {{item.status === 'unallocated' ? '账户差额，未分配' : '读数不足，无法核对'}} · {{item.startedAt}}</text>
+          <text wx:for="{{item.differences}}" wx:for-item="difference" wx:key="currency" class="row-desc">{{difference.currency}} {{difference.difference}}（未分配）</text></view>
+        </view>
+        <button class="secondary" bindtap="onToggleManualBalance">{{showManualBalance ? '收起人工核验' : '人工核验备用入口'}}</button>
+      </block>
+      <block wx:if="{{balanceAccountIndex >= 0 && showManualBalance}}">
+        <text class="card-note">人工记录仅作备用核验，需填写真实观察时间；不会冒充官方自动读数。备注中请勿填写密钥。</text>
+        <input class="input" type="digit" data-name="balanceAmount" value="{{balanceAmount}}" bindinput="onBalanceInput" placeholder="人工核验余额" />
         <picker mode="date" value="{{balanceObservedDate}}" bindchange="onBalanceDate"><view class="input">核验日期：{{balanceObservedDate || '请选择'}} ›</view></picker>
         <picker mode="time" value="{{balanceObservedTime}}" bindchange="onBalanceTime"><view class="input">核验时间（北京时间）：{{balanceObservedTime || '请选择'}} ›</view></picker>
         <input class="input" data-name="balanceNote" value="{{balanceNote}}" bindinput="onBalanceInput" maxlength="500" placeholder="核验备注（可选）" />
         <button class="secondary" bindtap="onSaveBalance" disabled="{{actionLoading}}">保存本次核验</button>
       </block>
-      <block wx:if="{{balanceLedger && balanceLedger.history.length}}">
+      <block wx:if="{{showManualBalance && balanceLedger && balanceLedger.history.length}}">
         <text class="card-note">人工余额 {{balanceLedger.history[0].currency}} {{balanceLedger.history[0].balance}} · 核验于 {{balanceLedger.history[0].verifiedAt}} · 阈值 {{balanceLedger.history[0].warningThreshold}}</text>
         <text class="card-note">本服务对象快照后估算支出 {{balanceLedger.estimate.estimatedSpend === null ? '待核对' : balanceLedger.estimate.estimatedSpend}} · 仅按本对象估算剩余 {{balanceLedger.estimate.estimatedRemaining === null ? '待核对' : balanceLedger.estimate.estimatedRemaining}}</text>
         <text class="card-note">{{balanceLedger.estimate.unknownCalls ? '存在用量或价格缺失，请核对供应商账单' : balanceLedger.estimate.lowBalance ? '预计余额低于阈值，请核实并补充' : '按已记录调用估算'}}{{balanceLedger.estimate.stale ? ' · 人工余额已超过 24 小时，请重新核验' : ''}}</text>
         <text wx:for="{{balanceLedger.estimate.models}}" wx:key="model" wx:for-item="modelCost" class="card-note">{{modelCost.provider}} · {{modelCost.model}}：{{modelCost.calls}} 次，估算 {{modelCost.estimatedSpend === null ? '待核对' : modelCost.estimatedSpend}}，{{modelCost.unknownCalls}} 次待核对</text>
         <text wx:for="{{balanceLedger.history}}" wx:key="id" class="card-note">{{item.verifiedAt}} · {{item.currency}} {{item.balance}} · 操作人 {{item.actorUserId}}{{item.note ? ' · ' + item.note : ''}}</text>
       </block>
-      <text wx:elif="{{balanceAccountIndex >= 0 && !balanceLedgerError}}" class="card-note">暂无人工核验记录</text>
+      <text wx:elif="{{showManualBalance && balanceAccountIndex >= 0 && !balanceLedgerError}}" class="card-note">暂无人工核验记录</text>
     </view>
     <view class="card">
       <view class="analytics-switch">
@@ -255,13 +276,17 @@
           <text class="card-title">DeepSeek 价格来源与人工审核</text>
           <text class="card-note">官方文档：https://api-docs.deepseek.com/quick_start/pricing/ · 上次检查：{{aiCosts.priceSource.fetchedAt || '未检查'}} · {{aiCosts.priceSource.status === 'reviewed' ? '已匹配审核快照' : '需人工核对'}}</text>
           <button class="secondary" disabled="{{actionLoading}}" bindtap="onCheckDeepseekPriceSource">检查官方价格页变更</button>
+          <text wx:if="{{officialPriceFetchedAt}}" class="card-note">草稿抓取于 {{officialPriceFetchedAt}} · 解析器 deepseek-table-v1-20261030；审核前不会生效。</text>
+          <text wx:if="{{officialPriceParseError}}" class="control-warning">价格页面解析失败：{{officialPriceParseError}}。已审核价格保留，请从官方页面人工补录。</text>
+          <picker wx:if="{{officialPriceDrafts.length}}" range="{{officialPriceDrafts}}" range-key="model" value="{{officialPriceDraftIndex}}" bindchange="onOfficialPriceDraft"><view class="input">选择待审核模型草稿 · {{officialPriceDrafts[officialPriceDraftIndex].model}} ›</view></picker>
           <text class="row-desc">模型 ID</text><input class="input" data-name="aiPriceModel" value="{{aiPriceModel}}" bindinput="onAiCostInput" />
           <text class="row-desc">美元 / 百万 token：缓存命中输入、缓存未命中输入、输出</text>
           <input class="input" type="digit" placeholder="缓存命中输入" data-name="aiPriceHit" value="{{aiPriceHit}}" bindinput="onAiCostInput" />
           <input class="input" type="digit" placeholder="缓存未命中输入" data-name="aiPriceMiss" value="{{aiPriceMiss}}" bindinput="onAiCostInput" />
           <input class="input" type="digit" placeholder="输出" data-name="aiPriceOutput" value="{{aiPriceOutput}}" bindinput="onAiCostInput" />
           <text class="row-desc">峰段输入未命中 / 输出 · 无则留空</text>
-          <input class="input" type="digit" placeholder="峰段输入" data-name="aiPricePeakMiss" value="{{aiPricePeakMiss}}" bindinput="onAiCostInput" />
+          <input class="input" type="digit" placeholder="峰段缓存命中输入" data-name="aiPricePeakHit" value="{{aiPricePeakHit}}" bindinput="onAiCostInput" />
+          <input class="input" type="digit" placeholder="峰段缓存未命中输入" data-name="aiPricePeakMiss" value="{{aiPricePeakMiss}}" bindinput="onAiCostInput" />
           <input class="input" type="digit" placeholder="峰段输出" data-name="aiPricePeakOutput" value="{{aiPricePeakOutput}}" bindinput="onAiCostInput" />
           <input class="input" placeholder="峰段 UTC 规则说明" data-name="aiPricePeakWindow" value="{{aiPricePeakWindow}}" bindinput="onAiCostInput" />
           <input class="input" placeholder="生效日 YYYY-MM-DD" data-name="aiPriceDate" value="{{aiPriceDate}}" bindinput="onAiCostInput" />

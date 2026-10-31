@@ -253,7 +253,7 @@ Page({
       if (!result || !Array.isArray(result.tasks)) throw new ApiRequestError(0, 'invalid_task_response')
       if (epoch !== this.homeEpoch || studentId !== this.currentHomeStudentId) return
       this.setData({ upcomingTasks: result.tasks.map(task => ({ ...task, stageLabel: STAGE_NAMES[task.stageCode] || task.stageCode,
-        typeLabel: PLAN_TYPE_NAMES[task.type] || '规划' })) })
+        typeLabel: task.type === 'custom' ? '自定义规划' : PLAN_TYPE_NAMES[task.type] || '规划' })) })
     } catch (error) {
       if (epoch === this.homeEpoch && studentId === this.currentHomeStudentId) {
         const code = error instanceof ApiRequestError ? error.code : 'unknown'

@@ -345,3 +345,4 @@
 .news-sections-row{display:flex;justify-content:space-between;align-items:center;gap:8rpx;width:100%;}
 .news-section-tab{flex:0 0 auto;padding:10rpx 3rpx;font-size:20rpx;line-height:1.4;white-space:nowrap;}
 .news-section-tab.active{border-bottom-width:4rpx;}
+.teacher-guidance{display:flex;gap:20rpx;margin:24rpx 0}.teacher-guidance button{flex:1;background:#fff9e9;color:#203b58;border:1rpx solid #e5d8b3}.teacher-tags-entry{font-size:26rpx;color:#365d7e;background:#f0f4f6;margin:16rpx 0}

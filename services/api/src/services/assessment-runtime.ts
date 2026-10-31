@@ -66,6 +66,8 @@ export type AssessmentRuntime = {
     source: 'admin_vault' | 'legacy_control' | 'environment' | 'disabled' | 'unknown'
     objectId: string | null
     version: number | null
+    objectVersion?:number|null
+    configurationFingerprint?:string|null
     provider: string | null
     model: string | null
   }

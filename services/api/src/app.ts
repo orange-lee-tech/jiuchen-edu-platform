@@ -10,6 +10,10 @@ import { registerAdminRoutes } from './routes/admin.js'
 import { registerStudentRoutes } from './routes/students.js'
 import { registerProfileRoutes } from './routes/profile.js'
 import { registerTeacherRoutes } from './routes/teacher.js'
+import { registerStaffProfileRoutes } from './routes/staff-profiles.js'
+import { registerTeacherNewsTagRoutes } from './routes/teacher-news-tags.js'
+import { registerAiOperationsRoutes } from './routes/ai-operations.js'
+import { registerAdminCreditAdjustmentRoutes } from './routes/admin-credit-adjustments.js'
 import { registerIdentityRoutes } from './routes/identity.js'
 import { registerMobileAdminRoutes } from './routes/mobile-admin.js'
 import { registerNewsRoutes } from './routes/news.js'
@@ -61,6 +65,7 @@ export function buildApp(env: AppEnv) {
   }
   const assessmentNotification = createAssessmentNotificationAdapter()
   const assessmentWorker = createAssessmentBackgroundWorker({
+    env,
     database,
     runtime: assessmentRuntime,
     commercial: assessmentCommercial,
@@ -228,6 +233,10 @@ export function buildApp(env: AppEnv) {
   registerProfileRoutes(app, database)
   registerIdentityRoutes(app, database)
   registerTeacherRoutes(app, database)
+  registerStaffProfileRoutes(app, database)
+  registerTeacherNewsTagRoutes(app, database)
+  registerAiOperationsRoutes(app, database, env)
+  registerAdminCreditAdjustmentRoutes(app, database)
   registerMobileAdminRoutes(app, database, env)
   registerNewsRoutes(app, database, env)
   if (env.NEWS_V2_ENABLED) registerNewsV2Routes(app, database)

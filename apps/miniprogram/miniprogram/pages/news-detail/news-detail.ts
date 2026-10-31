@@ -5,6 +5,7 @@ import { validateIntent } from '../../utils/navigation'
 
 import {newsPublicationLabel} from '../../utils/news-date'
 import {getSavedAuthResult} from '../../utils/auth'
+import { newsTagScopeNote } from '../../utils/teacher-news-tags'
 
 Page({
   data: {
@@ -12,6 +13,7 @@ Page({
     error: '',
     post: null as NewsPostDetail | null,
     dateLabel: '',
+    tagScopeNote: '',
     readerNodes: [] as ArticleNode[],
     contentBlocks: [] as NonNullable<NewsPostDetail['content']['blocks']>,
     bodyImageFailed:false,
@@ -45,6 +47,7 @@ Page({
       if(!current())return
       this.setData({
         post,
+        tagScopeNote: newsTagScopeNote(post),
         readerNodes: articleReaderNodes(post.content.html || ''),
         contentBlocks: post.content.blocks || [],
         bodyImageFailed:false,

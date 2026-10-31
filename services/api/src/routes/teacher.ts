@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import type mysql from 'mysql2/promise'
@@ -14,14 +14,17 @@ import {
   type UserRole,
 } from '../domain/auth-policy.js'
 import { resolveSessionUser } from '../services/session.js'
+import { registerTeacherPlanningRoutes } from './teacher-planning.js'
+import { teacherRouteError } from './teacher-errors.js'
 
 export function registerTeacherRoutes(
   app: FastifyInstance,
   database: DatabaseContext,
 ) {
+  registerTeacherPlanningRoutes(app, database)
   const todoSchema = z.object({ title: z.string().trim().min(1).max(160),
     description: z.string().trim().max(1000).nullable().optional(),
-    dueDate: z.iso.date().nullable().optional(), status: z.enum(['pending', 'done']) }).strict()
+    dueDate: z.iso.date().nullable().optional(), status: z.enum(['pending', 'done']).default('pending') }).strict()
   async function todoOwner(request: FastifyRequest, reply: FastifyReply, write: boolean) {
     if (!database.configured) { reply.code(503).send({ ok: false, error: 'database_not_configured' }); return null }
     const user = await resolveSessionUser(request, database)
@@ -34,14 +37,14 @@ export function registerTeacherRoutes(
     if (!rows[0]) { reply.code(403).send({ ok: false, error: 'teacher_profile_not_bound' }); return null }
     return String(rows[0].id)
   }
-  app.get('/me/teacher/todos', async (request, reply) => {
+  app.get('/me/teacher/todos', { errorHandler: teacherRouteError }, async (request, reply) => {
     const owner = await todoOwner(request, reply, false)
     if (!owner || !database.configured) return
     const [rows] = await database.pool.query<mysql.RowDataPacket[]>(
       'SELECT id,title,description,DATE_FORMAT(due_date,\'%Y-%m-%d\') AS dueDate,status,created_at AS createdAt,updated_at AS updatedAt FROM teacher_todos WHERE teacher_id=? ORDER BY status,due_date IS NULL,due_date,created_at DESC LIMIT 200', [owner])
     return { ok: true, todos: rows }
   })
-  app.post<{ Body: unknown }>('/me/teacher/todos', async (request, reply) => {
+  app.post<{ Body: unknown }>('/me/teacher/todos', { errorHandler: teacherRouteError }, async (request, reply) => {
     const owner = await todoOwner(request, reply, true)
     if (!owner || !database.configured) return
     const data = todoSchema.safeParse(request.body)
@@ -51,7 +54,7 @@ export function registerTeacherRoutes(
       [id, owner, data.data.title, data.data.description || null, data.data.dueDate ?? null, data.data.status])
     return reply.code(201).send({ ok: true, id })
   })
-  app.put<{ Params: { id: string }; Body: unknown }>('/me/teacher/todos/:id', async (request, reply) => {
+  app.put<{ Params: { id: string }; Body: unknown }>('/me/teacher/todos/:id', { errorHandler: teacherRouteError }, async (request, reply) => {
     const owner = await todoOwner(request, reply, true)
     if (!owner || !database.configured) return
     const data = todoSchema.safeParse(request.body)
@@ -63,7 +66,7 @@ export function registerTeacherRoutes(
     if (!result.affectedRows) return reply.code(404).send({ ok: false, error: 'teacher_todo_not_found' })
     return { ok: true }
   })
-  app.delete<{ Params: { id: string } }>('/me/teacher/todos/:id', async (request, reply) => {
+  app.delete<{ Params: { id: string } }>('/me/teacher/todos/:id', { errorHandler: teacherRouteError }, async (request, reply) => {
     const owner = await todoOwner(request, reply, true)
     if (!owner || !database.configured) return
     if (!z.string().uuid().safeParse(request.params.id).success) return reply.code(400).send({ ok: false, error: 'invalid_teacher_todo' })
@@ -71,18 +74,20 @@ export function registerTeacherRoutes(
     if (!result.affectedRows) return reply.code(404).send({ ok: false, error: 'teacher_todo_not_found' })
     return { ok: true }
   })
-  app.get<{ Params: { id: string } }>('/me/teacher/students/:id/summary', async (request, reply) => {
+  app.get<{ Params: { id: string } }>('/me/teacher/students/:id/summary', { errorHandler: teacherRouteError }, async (request, reply) => {
     const owner = await todoOwner(request, reply, false)
     if (!owner || !database.configured) return
     const studentId = request.params.id
     if (!z.string().uuid().safeParse(studentId).success) return reply.code(400).send({ ok: false, error: 'invalid_student_id' })
     const [assigned] = await database.pool.query<mysql.RowDataPacket[]>(
-      'SELECT s.id,s.user_id AS userId FROM students s INNER JOIN student_teacher_assignments a ON a.student_id=s.id WHERE s.id=? AND a.teacher_id=? LIMIT 1', [studentId, owner])
+      "SELECT s.id,s.user_id AS userId FROM students s INNER JOIN student_teacher_assignments a ON a.student_id=s.id INNER JOIN teachers t ON t.id=a.teacher_id AND t.status='active' WHERE s.id=? AND a.teacher_id=? LIMIT 1", [studentId, owner])
     if (!assigned.length) return reply.code(403).send({ ok: false, error: 'student_not_assigned' })
-    const scope = 's.id=? AND EXISTS (SELECT 1 FROM student_teacher_assignments a WHERE a.student_id=s.id AND a.teacher_id=?)'
+    const scope = "s.id=? AND EXISTS (SELECT 1 FROM student_teacher_assignments a INNER JOIN teachers t ON t.id=a.teacher_id AND t.status='active' WHERE a.student_id=s.id AND a.teacher_id=?)"
     // Each query independently enforces the live teacher/student assignment.
-    const [assessmentRows] = await database.pool.query<mysql.RowDataPacket[]>(`SELECT COUNT(a.id) AS total,
-      SUM(a.status='succeeded') AS succeeded, SUM(a.status='failed') AS failed, MAX(a.started_at) AS lastUsed
+    const [assessmentRows] = await database.pool.query<mysql.RowDataPacket[]>(`SELECT
+      COUNT(CASE WHEN a.status IN ('running','succeeded','failed') THEN a.id END) AS total,
+      SUM(a.status='succeeded') AS succeeded, SUM(a.status='failed') AS failed,
+      MAX(CASE WHEN a.status IN ('running','succeeded','failed') THEN a.started_at END) AS lastUsed
       FROM students s LEFT JOIN assessments a ON a.user_id=s.user_id WHERE ${scope}`, [studentId, owner])
     const [orderRows] = await database.pool.query<mysql.RowDataPacket[]>(`SELECT COUNT(p.id) AS orders,
       SUM(p.status='paid') AS paidOrders, SUM(p.status='refunded') AS refundedOrders,
@@ -94,25 +99,34 @@ export function registerTeacherRoutes(
       SUM(c.state IN ('open','processing')) AS pending, SUM(c.state='succeeded') AS succeeded, SUM(c.state='failed') AS failed
       FROM students s LEFT JOIN payment_orders o ON o.user_id=s.user_id
       LEFT JOIN virtual_payment_cases c ON c.order_id=o.id AND c.kind='refund' WHERE ${scope}`, [studentId, owner])
-    const [planRows] = await database.pool.query<mysql.RowDataPacket[]>(`SELECT COUNT(i.id) AS tasks,
+    const [planRows] = await database.pool.query<mysql.RowDataPacket[]>(`SELECT COUNT(DISTINCT p.id) AS planCount, COUNT(i.id) AS tasks,
       SUM(i.status='done') AS done, SUM(i.status!='done' AND i.due_date<DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','+08:00'))) AS overdue,
       SUM(i.status!='done' AND i.due_date BETWEEN DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','+08:00')) AND DATE_ADD(DATE(CONVERT_TZ(UTC_TIMESTAMP(),'+00:00','+08:00')),INTERVAL 2 DAY)) AS upcoming
       FROM students s LEFT JOIN student_plans p ON p.student_id=s.id LEFT JOIN plan_items i ON i.plan_id=p.id WHERE ${scope}`, [studentId, owner])
-    const [scheduleRows] = await database.pool.query<mysql.RowDataPacket[]>(`SELECT MAX(si.created_at) AS latestImport
-      FROM students s LEFT JOIN schedule_imports si ON (si.student_id=s.id OR (s.user_id IS NOT NULL AND si.user_id=s.user_id)) AND si.status='parsed' WHERE ${scope}`, [studentId, owner])
+    const [scheduleRows] = await database.pool.query<mysql.RowDataPacket[]>(`SELECT si.created_at AS latestImport,si.parsed_json AS parsedJson,s.current_stage AS currentStage
+      FROM students s LEFT JOIN schedule_imports si ON (si.student_id=s.id OR (s.user_id IS NOT NULL AND si.user_id=s.user_id)) AND si.status='parsed'
+      AND JSON_UNQUOTE(JSON_EXTRACT(si.parsed_json,'$.stageCode'))=s.current_stage
+      WHERE ${scope} ORDER BY si.created_at DESC,si.id DESC LIMIT 1`, [studentId, owner])
     const [stillAssigned] = await database.pool.query<mysql.RowDataPacket[]>(
-      'SELECT s.id FROM students s INNER JOIN student_teacher_assignments a ON a.student_id=s.id WHERE s.id=? AND a.teacher_id=? LIMIT 1', [studentId, owner])
+      "SELECT s.id FROM students s INNER JOIN student_teacher_assignments a ON a.student_id=s.id INNER JOIN teachers t ON t.id=a.teacher_id AND t.status='active' WHERE s.id=? AND a.teacher_id=? LIMIT 1", [studentId, owner])
     if (!stillAssigned.length) return reply.code(403).send({ ok: false, error: 'student_not_assigned' })
     const a=assessmentRows[0], o=orderRows[0], c=creditRows[0], p=planRows[0]
+    const rawSchedule = scheduleRows[0]?.parsedJson
+    const parsedSchedule = typeof rawSchedule === 'string' ? JSON.parse(rawSchedule) : rawSchedule
+    const courses = Array.isArray(parsedSchedule?.courses) ? parsedSchedule.courses.slice(0,200)
+      .filter((course: unknown): course is Record<string,unknown> => Boolean(course && typeof course === 'object' && typeof (course as Record<string,unknown>).name === 'string'))
+      .map((course: Record<string,unknown>) => ({ name: String(course.name),
+        ...(typeof course.dayOfWeek === 'number' ? { dayOfWeek: course.dayOfWeek } : {}),
+        ...(typeof course.location === 'string' ? { location: course.location } : {}) })) : []
     const bound = Boolean(assigned[0]?.userId)
     return { ok: true, summary: { assessments: bound ? { total: Number(a.total || 0), succeeded: Number(a.succeeded || 0), failed: Number(a.failed || 0), lastUsed: a.lastUsed } : null,
       orders: bound ? { total: Number(o.orders || 0), paid: Number(o.paidOrders || 0), refunded: Number(o.refundedOrders || 0), paidFen: Number(o.paidFen || 0) } : null,
       credits: bound ? { purchased: Number(c.purchasedCredits || 0), balance: Number(c.balance || 0) } : null,
       refunds: bound ? { pending: Number(refundRows[0]?.pending || 0), succeeded: Number(refundRows[0]?.succeeded || 0), failed: Number(refundRows[0]?.failed || 0) } : null,
-      plans: { total: Number(p.tasks || 0), done: Number(p.done || 0), overdue: Number(p.overdue || 0), upcoming: Number(p.upcoming || 0) },
-      schedule: { latestImport: scheduleRows[0]?.latestImport ?? null } } }
+      plans: { planCount: Number(p.planCount || 0), total: Number(p.tasks || 0), done: Number(p.done || 0), overdue: Number(p.overdue || 0), upcoming: Number(p.upcoming || 0) },
+      schedule: { latestImport: scheduleRows[0]?.latestImport ?? null, currentStage: scheduleRows[0]?.currentStage ?? null, courses } } }
   })
-  app.get('/me/teacher/students', async (request, reply) => {
+  app.get('/me/teacher/students', { errorHandler: teacherRouteError }, async (request, reply) => {
     if (!database.configured) {
       return reply.code(503).send({
         ok: false,
@@ -143,7 +157,7 @@ export function registerTeacherRoutes(
         bio: teachers.bio,
       })
       .from(teachers)
-      .where(eq(teachers.userId, sessionUser.userId))
+      .where(and(eq(teachers.userId, sessionUser.userId), eq(teachers.status, 'active')))
       .limit(1)
 
     if (!teacher) {

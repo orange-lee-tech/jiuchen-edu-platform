@@ -64,6 +64,7 @@ const priceReviewSchema=z.object({
   inputCacheHitPerMillion:z.number().min(0).max(10000),
   inputCacheMissPerMillion:z.number().min(0).max(10000),
   outputPerMillion:z.number().min(0).max(10000),
+  peakInputCacheHitPerMillion:z.number().min(0).max(10000).nullable().optional(),
   peakInputCacheMissPerMillion:z.number().min(0).max(10000).nullable(),
   peakOutputPerMillion:z.number().min(0).max(10000).nullable(),
   peakWindowUtc:z.string().trim().max(120).nullable(),

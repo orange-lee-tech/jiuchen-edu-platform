@@ -8,6 +8,8 @@ import {
   json,
   mysqlEnum,
   mysqlTable,
+  primaryKey,
+  tinyint,
   timestamp,
   text,
   uniqueIndex,
@@ -106,18 +108,82 @@ export const teacherTodos = mysqlTable('teacher_todos', {
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
 }, table => [index('teacher_todos_owner').on(table.teacherId, table.status, table.dueDate)])
 
+export const staffProfiles = mysqlTable('staff_profiles', {
+  userId: varchar('user_id', { length: 36 }).primaryKey(),
+  realName: varchar('real_name', { length: 80 }).notNull(),
+  phone: varchar('phone', { length: 26 }),
+  department: varchar('department', { length: 120 }),
+  supervisor: varchar('supervisor', { length: 80 }),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+})
+
+export const adminCreditAdjustments = mysqlTable('admin_credit_adjustments', {
+  ledgerEntryId: varchar('ledger_entry_id', { length: 36 }).primaryKey(),
+  actorUserId: varchar('actor_user_id', { length: 36 }).notNull(),
+  targetUserId: varchar('target_user_id', { length: 36 }).notNull(),
+  amount: int('amount').notNull(),
+  reason: varchar('reason', { length: 300 }).notNull(),
+  balanceBefore: int('balance_before').notNull(),
+  balanceAfter: int('balance_after').notNull(),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+},table=>[index('admin_credit_adjustments_target').on(table.targetUserId,table.createdAt)])
+
 export const aiBalanceSnapshots = mysqlTable('ai_balance_snapshots', {
   id: varchar('id', { length: 36 }).primaryKey(),
   objectId: varchar('object_id', { length: 36 }).notNull(),
   provider: varchar('provider', { length: 120 }).notNull(),
   currency: varchar('currency', { length: 3 }).notNull(),
-  balance: decimal('balance', { precision: 18, scale: 6 }).notNull(),
-  warningThreshold: decimal('warning_threshold', { precision: 18, scale: 6 }).notNull(),
+  balance: decimal('balance', { precision: 24, scale: 8 }).notNull(),
+  warningThreshold: decimal('warning_threshold', { precision: 24, scale: 8 }).notNull(),
+  source: varchar('source', {length:20}).notNull().default('manual'),
+  sourceUrl: varchar('source_url', {length:500}),
+  objectVersion: int('object_version', {unsigned:true}),
+  grantedBalance: decimal('granted_balance', {precision:24,scale:8}),
+  toppedUpBalance: decimal('topped_up_balance', {precision:24,scale:8}),
+  isAvailable: tinyint('is_available'),
   verifiedAt: timestamp('verified_at').notNull(),
   actorUserId: varchar('actor_user_id', { length: 36 }).notNull(),
   note: varchar('note', { length: 500 }),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 }, table => [index('ai_balance_snapshots_account').on(table.objectId, table.verifiedAt)])
+
+export const teacherNewsTags = mysqlTable('teacher_news_tags', {
+  postId:varchar('post_id',{length:36}).notNull(),
+  teacherId:varchar('teacher_id',{length:36}).notNull(),
+  tagsJson:json('tags_json').notNull(),
+  updatedAt:timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+},table=>[primaryKey({columns:[table.postId,table.teacherId]}),
+  index('teacher_news_tags_owner').on(table.teacherId,table.updatedAt)])
+
+export const teacherPlanTemplates = mysqlTable('teacher_plan_templates', {
+  id:varchar('id',{length:36}).primaryKey(),
+  teacherId:varchar('teacher_id',{length:36}).notNull(),
+  name:varchar('name',{length:160}).notNull(),
+  stageCode:varchar('stage_code',{length:32}).notNull(),
+  type:mysqlEnum('type',['gpa','english','competition','research','internship','custom']).notNull(),
+  title:varchar('title',{length:160}).notNull(),
+  itemsJson:json('items_json').notNull(),
+  createdAt:timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt:timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+},table=>[index('teacher_plan_templates_owner').on(table.teacherId,table.updatedAt)])
+
+export const aiBalanceSettings = mysqlTable('ai_balance_settings', {
+  objectId:varchar('object_id',{length:36}).notNull(),currency:varchar('currency',{length:3}).notNull(),
+  warningThreshold:decimal('warning_threshold',{precision:24,scale:8}).notNull().default('0'),
+  updatedBy:varchar('updated_by',{length:36}).notNull(),
+  lastAttemptAt:timestamp('last_attempt_at'),lastError:varchar('last_error',{length:80}),
+  updatedAt:timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
+},table=>[primaryKey({columns:[table.objectId,table.currency]})])
+
+export const aiAssessmentBalanceWindows = mysqlTable('ai_assessment_balance_windows', {
+  assessmentId:varchar('assessment_id',{length:36}).primaryKey(),
+  objectId:varchar('object_id',{length:36}).notNull(),objectVersion:int('object_version',{unsigned:true}),
+  headVersion:int('head_version',{unsigned:true}),configurationFingerprint:varchar('configuration_fingerprint',{length:64}),
+  beforeJson:json('before_json'),afterJson:json('after_json'),
+  status:varchar('status',{length:20}).notNull().default('unavailable'),reason:varchar('reason',{length:120}).notNull(),
+  startedAt:timestamp('started_at').notNull().default(sql`CURRENT_TIMESTAMP`),completedAt:timestamp('completed_at'),
+},table=>[index('ai_balance_windows_object').on(table.objectId,table.startedAt)])
 
 export const userAgreements = mysqlTable('user_agreements', {
   id: varchar('id', { length: 36 }).primaryKey(),
@@ -401,7 +467,7 @@ export const studentPlans = mysqlTable('student_plans', {
     .notNull()
     .references(() => students.id),
   stageCode: varchar('stage_code', { length: 32 }).notNull(),
-  type: mysqlEnum('type', ['gpa', 'english', 'competition', 'research', 'internship']).notNull(),
+  type: mysqlEnum('type', ['gpa', 'english', 'competition', 'research', 'internship', 'custom']).notNull(),
   title: varchar('title', { length: 160 }).notNull(),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: timestamp('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`).onUpdateNow(),
@@ -428,7 +494,7 @@ export const planRevisions = mysqlTable('plan_revisions', {
     .notNull()
     .references(() => students.id),
   stageCode: varchar('stage_code', { length: 32 }).notNull(),
-  type: mysqlEnum('type', ['gpa', 'english', 'competition', 'research', 'internship']).notNull(),
+  type: mysqlEnum('type', ['gpa', 'english', 'competition', 'research', 'internship', 'custom']).notNull(),
   title: varchar('title', { length: 160 }).notNull(),
   itemsJson: json('items_json').notNull(),
   editorUserId: varchar('editor_user_id', { length: 36 })

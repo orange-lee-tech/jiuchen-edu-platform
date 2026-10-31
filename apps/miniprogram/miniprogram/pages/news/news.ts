@@ -3,6 +3,8 @@ import { INITIAL_SHELL, observeSlot, openPage, shellView } from '../../utils/nav
 import { getNewsListing, getMyNewsFavorites, type NewsFavorite, type NewsPost } from '../../utils/request'
 
 import {newsPublicationLabel} from '../../utils/news-date'
+import { newsTagScopeNote } from '../../utils/teacher-news-tags'
+import { getReadOnlyContext } from '../../utils/read-only-context'
 
 type NewsCard = {
   isVideo:boolean
@@ -14,6 +16,7 @@ type NewsCard = {
   tags: string[]
   rawTags: string[]
   rawTagNote: string
+  scopeNote: string
   primaryTag: string
   coverUrl: string
   coverFailed: boolean
@@ -29,6 +32,7 @@ const FALLBACK_FEATURED: NewsCard = {
   tags: [],
   rawTags: [],
   rawTagNote: '',
+  scopeNote: '',
   primaryTag: '近期关注',
   coverUrl: '',
   coverFailed: false,
@@ -49,7 +53,8 @@ function toCard(post: NewsPost): NewsCard {
     dateLabel: newsPublicationLabel(post),
     tags: [...new Set(post.tags.map(tag => /^\d+$/.test(tag.trim()) ? '分类待核实' : tag))],
     rawTags: post.tags,
-    rawTagNote: post.tags.some(tag => /^\d+$/.test(tag.trim())) ? `原始标签 ${post.tags.filter(tag => /^\d+$/.test(tag.trim())).join('、')}，待核实` : '',
+    rawTagNote: post.tags.some(tag => /^\d+$/.test(tag.trim())) ? `未核实分类 ${post.tags.filter(tag => /^\d+$/.test(tag.trim())).join('、')}` : '',
+    scopeNote: newsTagScopeNote(post),
     primaryTag: post.tags[0] || '未分类',
     coverUrl: normalizeRemoteUrl(post.coverUrl),
     coverFailed: false,
@@ -97,6 +102,7 @@ Page({
     sections: ['最新'], currentSection: '最新',
     loadError: '',
     showReferenceNews: false,
+    canManageTeacherTags: false,
     currentCategory: 0,
     searchQuery: '',
     loading: false,
@@ -130,6 +136,7 @@ Page({
         this.selectedCategoryName = '全部'
       }
       this.setData({ ...view, showReferenceNews: state.phase === 'ready' && view.shellKind !== 'student',
+        canManageTeacherTags: state.phase === 'ready' && state.auth?.user.role === 'teacher' && !getReadOnlyContext(),
         allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0, sections: ['最新'], currentSection: '最新',
         favorites: [], favoritesError: '', retiring: [], newsV2Enabled: false })
       if (state.phase === 'ready') void this.loadNews()
@@ -139,6 +146,10 @@ Page({
     favorites: [], retiring: [], articles: [], allArticles: [], searchQuery: '' }) },
   onUnload() { this.stopShell?.() },
   onSchools() { openPage('/packages/schools/directory/directory') },
+  onTeacherNews() { this.setData({ showReferenceNews: true }); void this.loadNews() },
+  onTeacherNewsTags() {
+    if (this.data.canManageTeacherTags) openPage('/pages/teacher-news-tags/teacher-news-tags')
+  },
   onReferenceNews() {
     this.setData({ showReferenceNews: !this.data.showReferenceNews })
     if (this.data.showReferenceNews) void this.loadNews()
@@ -184,7 +195,7 @@ Page({
       }
 
       const pendingClassificationCount = canSeeUnclassified
-        ? posts.filter((post) => post.tags.length === 0).length
+        ? posts.filter((post) => (post.globalTags ?? post.tags).length === 0).length
         : 0
       const pendingClassificationRole = role === 'admin'
         ? 'admin'

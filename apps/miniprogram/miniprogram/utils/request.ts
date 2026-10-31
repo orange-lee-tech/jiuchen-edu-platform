@@ -33,6 +33,7 @@ export type ClassroomPlanType =
   | 'competition'
   | 'research'
   | 'internship'
+  | 'custom'
 
 export type ClassroomStage = {
   code: string
@@ -131,6 +132,7 @@ function responseError(statusCode: number, payload: unknown) {
   const record = asErrorRecord(payload)
   const message = typeof record.message === 'string' ? record.message : ''
   const apiError = typeof record.error === 'string' ? record.error : ''
+  const serviceCode = typeof record.code === 'string' ? record.code : ''
 
   if (
     statusCode === 404 &&
@@ -139,8 +141,8 @@ function responseError(statusCode: number, payload: unknown) {
     return new ApiRequestError(statusCode, 'backend_version_mismatch', message)
   }
 
-  const applicationError =
-    /^[a-z][a-z0-9_]+$/.test(apiError) ? apiError : ''
+  const applicationError = /^[a-z][a-z0-9_]{0,99}$/.test(apiError) ? apiError
+    : /^[a-z][a-z0-9_]{0,99}$/.test(serviceCode) ? serviceCode : ''
 
   const code =
     applicationError
@@ -172,7 +174,25 @@ export function friendlyRequestError(
   const messages: Record<string, string> = {
     invalid_assessment_draft: '草稿内容格式或长度有误，请检查后保存',
     assessment_input_invalid: '评估资料不完整，请补齐必填项后提交',
-    backend_version_mismatch: '当前服务暂不支持此操作，请稍后重试或联系客服',
+    backend_version_mismatch: '服务端尚未提供此接口（HTTP 404），请联系管理员核对 API 版本',
+    staff_profile_schema_not_ready: '员工资料数据库迁移尚未完成（HTTP 503），请联系管理员',
+    credit_adjustment_schema_not_ready: '次数发放数据库迁移尚未完成（HTTP 503），请联系管理员',
+    teacher_workspace_schema_not_ready: '教师工作区数据库迁移尚未完成（HTTP 503），请联系管理员',
+    teacher_schema_not_ready: '教师数据库结构尚未准备（HTTP 503），请联系管理员更新服务',
+    teacher_news_schema_not_ready: '资讯标签数据库迁移尚未完成（HTTP 503），请联系管理员',
+    teacher_news_tags_schema_missing: '资讯标签数据库迁移尚未完成（HTTP 503），请联系管理员',
+    ai_operations_schema_not_ready: 'AI 管理数据库迁移尚未完成（HTTP 503），请联系管理员',
+    provider_balance_unsupported: '该供应商暂不支持自动余额读取，可到供应商后台核验',
+    provider_balance_authentication: '供应商余额认证失败，请在 AI 服务管理中核对密钥',
+    provider_balance_unavailable: '供应商余额暂时读取失败，请重试并留意最后成功读取时间',
+    assessment_model_probe_failed: '新模型连接或报告格式验证失败，现行模型保持原配置',
+    assessment_object_version_conflict: '服务对象已被更新，请重新读取后操作',
+    assessment_balance_configuration_changed: '评估期间 AI 配置发生变化，账户差额暂不可核对',
+    key_reveal_not_supported: '密钥仅在服务器加密保管，不提供明文查看',
+    invalid_staff_profile: '资料格式不正确，请检查姓名、手机号和字段长度',
+    settings_control_not_configured: '请先在评估收费设置中初始化六位 PIN',
+    credit_adjustment_idempotency_conflict: '该笔发放编号已被使用，请核对原发放结果',
+    student_account_not_found: '学员尚未绑定有效账号，暂时无法发放次数',
     plan_direct_save_unavailable: '当前服务尚未支持规划直接保存，请稍后重试',
     network_unavailable: '暂时无法连接服务，请检查网络后重试',
     unauthorized: '登录已失效，请重新登录',
@@ -414,7 +434,8 @@ export function deleteTeacherTodo(id: string) { return request(`/me/teacher/todo
 export type TeacherStudentSummary = { assessments: { total: number; succeeded: number; failed: number; lastUsed: string | null } | null;
   orders: { total: number; paid: number; refunded: number; paidFen: number } | null; credits: { purchased: number; balance: number } | null;
   refunds: { pending: number; succeeded: number; failed: number } | null;
-  plans: { total: number; done: number; overdue: number; upcoming: number }; schedule: { latestImport: string | null } }
+  plans: { planCount:number; total: number; done: number; overdue: number; upcoming: number };
+  schedule: { latestImport: string | null; currentStage:string|null; courses:Array<{name:string;dayOfWeek?:number;location?:string}> } }
 export async function getTeacherStudentSummary(id: string) {
   return (await request<{ ok: true; summary: TeacherStudentSummary }>(`/me/teacher/students/${encodeURIComponent(id)}/summary`)).summary
 }
@@ -1178,6 +1199,8 @@ export async function bindAdminInternalId(
 
 
 export type NewsPost = {
+  globalTags?: string[]
+  teacherTags?: Array<{teacherId:string;teacherName:string;tags:string[]}>
   mediaType?: 'article' | 'image' | 'video'
   id: string
   title: string

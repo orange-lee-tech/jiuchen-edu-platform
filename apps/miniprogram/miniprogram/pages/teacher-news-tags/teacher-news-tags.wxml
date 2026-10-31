@@ -1,0 +1,20 @@
+<view class="tag-page">
+  <text class="title">我的资讯标签</text>
+  <text class="note">本人标签仅对当前分配给你的学员可见；平台分类与其他老师的标签各自保留。文章展示仍遵循原有规则。</text>
+  <view wx:if="{{error}}" class="message error"><text>{{error}}</text><button wx:if="{{allowed}}" bindtap="loadPosts">重新读取</button></view>
+  <text wx:if="{{notice}}" class="message">{{notice}}</text>
+  <view wx:if="{{selectedId}}" class="editor">
+    <text class="post-title">{{selectedTitle}}</text>
+    <text class="note">填写本人标签，用顿号或逗号分隔；清空后保存可移除本人标签。</text>
+    <textarea value="{{draftTags}}" bindinput="onTagsInput" maxlength="327" placeholder="如：夏令营、英语" disabled="{{busy}}" />
+    <view class="actions"><button bindtap="onCancel" disabled="{{busy}}">取消</button><button type="primary" bindtap="onSave" loading="{{busy}}" disabled="{{busy}}">保存本人标签</button></view>
+  </view>
+  <text wx:if="{{loading}}" class="message">正在读取资讯…</text>
+  <text wx:elif="{{allowed && !error && !posts.length}}" class="message">暂无可管理的资讯。</text>
+  <view wx:for="{{posts}}" wx:key="id" class="post">
+    <text class="post-title">{{item.title}}</text>
+    <text class="note">平台分类：{{item.globalNote}}</text>
+    <text class="own">本人分类：{{item.teacherNote}}</text>
+    <button data-id="{{item.id}}" bindtap="onSelect" disabled="{{busy}}">编辑本人标签</button>
+  </view>
+</view>

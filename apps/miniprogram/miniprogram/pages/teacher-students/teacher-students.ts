@@ -12,11 +12,11 @@ import {
 } from '../../utils/request'
 
 function planTypesForStage(stage: string | null): ClassroomPlanType[] {
-  if (!stage) return ['gpa', 'english', 'competition', 'research']
-  if (stage.startsWith('senior-')) return ['internship']
-  if (stage === 'junior-summer') return []
-  if (stage.includes('winter') || stage.includes('summer')) return ['english', 'competition']
-  return ['gpa', 'english', 'competition', 'research']
+  if (!stage) return ['gpa', 'english', 'competition', 'research', 'custom']
+  if (stage.startsWith('senior-')) return ['internship', 'custom']
+  if (stage === 'junior-summer') return ['custom']
+  if (stage.includes('winter') || stage.includes('summer')) return ['english', 'competition', 'custom']
+  return ['gpa', 'english', 'competition', 'research', 'custom']
 }
 
 const LABELS: Record<ClassroomPlanType, string> = {
@@ -25,6 +25,7 @@ const LABELS: Record<ClassroomPlanType, string> = {
   competition: '竞赛',
   research: '科研',
   internship: '实习',
+  custom: '自定义规划',
 }
 const STAGES = [
   ['freshman-fall','大一上'],['freshman-winter','大一寒假'],['freshman-spring','大一下'],['freshman-summer','大一暑假'],

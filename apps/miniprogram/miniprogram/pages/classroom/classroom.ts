@@ -54,6 +54,7 @@ const PLAN_CARDS: Record<ClassroomPlanType, Pick<PlanCard, 'type' | 'title'>> = 
   competition: { type: 'competition', title: '竞赛计划' },
   research: { type: 'research', title: '科研计划' },
   internship: { type: 'internship', title: '实习规划' },
+  custom: { type: 'custom', title: '自定义规划' },
 }
 
 const FALLBACK_STAGES: ClassroomStage[] = [
@@ -342,8 +343,9 @@ Page({
   },
 
   onCurrentWeekSchedule() {
-    this.setData({ selectedView: 'week' })
-    void this.loadCurrentWeek()
+    const selectedView = this.data.selectedView === 'week' ? 'stage' : 'week'
+    this.setData({ selectedView })
+    if (selectedView === 'week') void this.loadCurrentWeek()
   },
   async loadCurrentWeek() {
     const generation = this.viewGeneration, request = ++this.weekRequest

@@ -23,6 +23,7 @@ test('retired detail is available only to its saved owner; public list stays clo
       return query
     }},
     pool:{async query(sql:string,values:unknown[]=[]){
+      if(sql.includes('FROM teacher_news_tags'))return [[]]
       if(sql.includes('FROM news_display_states'))return [[{phase:'retired'}]]
       if(sql.includes('FROM news_favorites')){observed.push(values);return [values[0]==='owner'?[{post_id:id}]:[]]}
       throw Error('unexpected SQL')

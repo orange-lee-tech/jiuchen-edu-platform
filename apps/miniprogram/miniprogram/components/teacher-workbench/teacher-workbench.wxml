@@ -1,0 +1,71 @@
+<view class="teacher-workbench">
+  <view wx:if="{{loading}}" class="notice">正在读取已分配学员…</view>
+  <view wx:elif="{{error}}" class="notice error"><text>{{error}}</text><button bindtap="reload">重新读取</button></view>
+  <block wx:else>
+    <view wx:if="{{!students.length}}" class="card notice">目前没有有效分配的学员。分配完成后，名单与规划会显示在这里。</view>
+    <block wx:else>
+      <view wx:if="{{mode === 'students'}}" class="card">
+        <text class="heading">我的学员 · {{students.length}}</text>
+        <view wx:for="{{students}}" wx:key="studentId" class="student-row {{studentIndex === index ? 'selected' : ''}}" data-index="{{index}}" bindtap="onStudentCard">
+          <text>{{item.name}}</text><text class="muted">{{item.university || '院校未填写'}} · {{item.stageLabel}} ›</text>
+        </view>
+      </view>
+      <view class="card">
+        <text class="heading">学员服务总览</text>
+        <picker range="{{students}}" range-key="name" value="{{studentIndex}}" bindchange="onStudent"><view class="picker">当前学员：{{students[studentIndex].name}} ▾</view></picker>
+        <text class="muted">档案当前阶段：{{actualStage}}</text>
+        <view wx:if="{{summaryError}}" class="notice error"><text>{{summaryError}}</text><button bindtap="reload">重新读取</button></view>
+        <view wx:elif="{{summary}}" class="summary">
+          <text>规划 {{summary.plans.planCount}} 份 · 任务 {{summary.plans.done}} / {{summary.plans.total}} 已完成</text>
+          <text>未来三天 {{summary.plans.upcoming}} 项 · 已逾期 {{summary.plans.overdue}} 项</text>
+          <text>当前学期课表：{{summary.schedule.latestImport ? '已建立' : '尚未建立'}} · {{summary.schedule.courses.length}} 条课程安排</text>
+          <text wx:for="{{summary.schedule.courses}}" wx:key="index" class="muted">{{item.name}}{{item.location ? ' · ' + item.location : ''}}</text>
+          <block wx:if="{{summary.assessments}}"><text>评估 {{summary.assessments.total}} 次 · 成功 {{summary.assessments.succeeded}} · 失败 {{summary.assessments.failed}}</text><text class="muted">最近使用：{{summary.assessments.lastUsed || '暂无'}}</text></block>
+          <text wx:else class="muted">未绑定账号，评估与购买信息暂不可读取</text>
+          <text wx:if="{{summary.orders}}">订单 {{summary.orders.total}} 笔 · 已支付 {{summary.orders.paid}} · 已退款 {{summary.orders.refunded}}</text>
+          <text wx:if="{{summary.credits}}">购买到账 {{summary.credits.purchased}} 次 · 账本余额 {{summary.credits.balance}} 次</text>
+        </view>
+        <button class="secondary" bindtap="onDetail">查看学员详情</button>
+      </view>
+      <view class="card">
+        <text class="heading">直接制定规划</text>
+        <text class="muted">当前学员或勾选多位学员，分别生成独立规划。修改模板不会改变已生成的规划。</text>
+        <checkbox-group bindchange="onSelection"><label wx:for="{{students}}" wx:key="studentId" class="selection"><checkbox value="{{item.studentId}}" checked="{{item.checked}}" color="#244b72"/><text>{{item.name}}</text></label></checkbox-group>
+        <picker range="{{stageLabels}}" value="{{stageIndex}}" bindchange="onStage"><view class="picker">规划阶段：{{stageLabels[stageIndex]}} ▾</view></picker>
+        <view wx:if="{{planError}}" class="notice error"><text>{{planError}}</text><button bindtap="loadPlans">重新读取规划</button><button bindtap="loadTemplates">重新读取模板</button></view>
+        <block wx:if="{{plans.length}}">
+          <picker range="{{planLabels}}" value="{{planIndex}}" bindchange="onPlan"><view class="picker">规划类型：{{planLabels[planIndex]}} ▾</view></picker>
+          <input value="{{title}}" data-field="title" bindinput="onText" maxlength="160" placeholder="规划名称（自定义规划可自由命名）" disabled="{{busy}}"/>
+          <view wx:for="{{items}}" wx:key="index" class="task">
+            <input value="{{item.name}}" data-index="{{index}}" data-field="name" bindinput="onItemText" maxlength="160" placeholder="任务名称" disabled="{{busy}}"/>
+            <input value="{{item.target}}" data-index="{{index}}" data-field="target" bindinput="onItemText" maxlength="255" placeholder="目标（选填）" disabled="{{busy}}"/>
+            <view class="row"><picker mode="date" value="{{item.dueDate}}" data-index="{{index}}" bindchange="onItemDate"><view class="picker small">{{item.dueDate || '截止日期（选填）'}}</view></picker><text wx:if="{{item.dueDate}}" class="link" data-index="{{index}}" bindtap="onClearDate">清除日期</text></view>
+            <view class="row"><picker range="{{statuses}}" range-key="label" data-index="{{index}}" bindchange="onItemStatus"><view class="picker small">{{item.status === 'done' ? '已完成' : item.status === 'in_progress' ? '进行中' : '未开始'}} ▾</view></picker><text class="link" data-index="{{index}}" bindtap="onRemoveItem">移除任务</text></view>
+          </view>
+          <button class="secondary" disabled="{{busy || items.length >= 50}}" bindtap="onAddItem">添加任务</button>
+          <button class="primary" loading="{{busy}}" disabled="{{busy}}" bindtap="onApply">{{selectedIds.length ? '应用到已选 ' + selectedIds.length + ' 位学员' : '保存到当前学员'}}</button>
+        </block>
+        <view wx:for="{{results}}" wx:key="studentId" class="result {{item.ok ? '' : 'error'}}">{{item.name}}：{{item.message}}</view>
+      </view>
+      <view class="card">
+        <text class="heading">我的规划模板</text>
+        <view wx:if="{{templateError}}" class="notice error"><text>{{templateError}}</text><button bindtap="loadTemplates">重新读取模板</button></view>
+        <picker wx:if="{{templates.length}}" range="{{templateLabels}}" value="{{templateIndex}}" bindchange="onTemplate"><view class="picker">{{templateIndex >= 0 ? templateLabels[templateIndex] : '选择已保存模板'}} ▾</view></picker>
+        <text wx:elif="{{!templateError}}" class="muted">暂无个人模板。填写上方方案后，可命名保存并反复使用。</text>
+        <input value="{{templateName}}" data-field="templateName" bindinput="onText" maxlength="160" placeholder="模板名称" disabled="{{busy}}"/>
+        <button class="secondary" disabled="{{busy || !plans.length}}" bindtap="onSaveTemplate">{{templateIndex >= 0 ? '保存模板修改' : '保存为新模板'}}</button>
+        <view class="row" wx:if="{{templateIndex >= 0}}"><button size="mini" disabled="{{busy}}" bindtap="onNewTemplate">另存为新模板</button><button size="mini" disabled="{{busy}}" bindtap="onCopyTemplate">复制模板</button><button size="mini" disabled="{{busy}}" bindtap="onDeleteTemplate">删除模板</button></view>
+      </view>
+    </block>
+    <view wx:if="{{mode === 'workbench'}}" class="card">
+      <text class="heading">个人待办</text>
+      <view wx:if="{{todoError}}" class="notice error"><text>{{todoError}}</text><button bindtap="loadTodos">重新读取</button></view>
+      <text wx:elif="{{!todos.length}}" class="muted">暂无个人待办</text>
+      <view wx:for="{{todos}}" wx:key="id" class="todo"><text>{{item.status === 'done' ? '✓ ' : ''}}{{item.title}}</text><text class="muted">{{item.description}}{{item.dueDate ? ' · ' + item.dueDate : ''}}</text><view class="row"><text class="link" data-id="{{item.id}}" bindtap="onTodoToggle">{{item.status === 'done' ? '恢复未完成' : '完成'}}</text><text class="link" data-id="{{item.id}}" bindtap="onTodoEdit">编辑</text><text class="link" data-id="{{item.id}}" bindtap="onTodoDelete">删除</text></view></view>
+      <input value="{{todoTitle}}" data-field="todoTitle" bindinput="onText" maxlength="160" placeholder="待办标题" disabled="{{busy}}"/>
+      <textarea value="{{todoDescription}}" data-field="todoDescription" bindinput="onText" maxlength="1000" placeholder="内容（选填）" disabled="{{busy}}"/>
+      <view class="row"><picker mode="date" value="{{todoDate}}" bindchange="onTodoDate"><view class="picker small">{{todoDate || '截止日期（选填）'}}</view></picker><text wx:if="{{todoDate}}" class="link" bindtap="onTodoClearDate">清除日期</text></view>
+      <button class="secondary" loading="{{busy}}" disabled="{{busy}}" bindtap="onTodoSave">{{todoId ? '保存待办修改' : '新增个人待办'}}</button><text wx:if="{{todoId}}" class="link" bindtap="onTodoCancel">取消编辑</text>
+    </view>
+  </block>
+</view>

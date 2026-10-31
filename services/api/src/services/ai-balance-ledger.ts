@@ -18,7 +18,7 @@ export async function recordAiBalance(pool: mysql.Pool, actor: string, input: Ma
 /** Unknown usage/prices stay unknown. Amount arithmetic is performed as MySQL DECIMAL. */
 export async function readAiBalanceSnapshots(pool: mysql.Pool, objectId: string) {
   const [history] = await pool.query<mysql.RowDataPacket[]>(
-    'SELECT id,object_id AS objectId,provider,currency,balance,warning_threshold AS warningThreshold,verified_at AS verifiedAt,actor_user_id AS actorUserId,note,created_at AS createdAt FROM ai_balance_snapshots WHERE object_id=? ORDER BY verified_at DESC,created_at DESC,id DESC LIMIT 50', [objectId])
+    "SELECT id,object_id AS objectId,provider,currency,balance,warning_threshold AS warningThreshold,verified_at AS verifiedAt,actor_user_id AS actorUserId,note,created_at AS createdAt FROM ai_balance_snapshots WHERE object_id=? AND source='manual' ORDER BY verified_at DESC,created_at DESC,id DESC LIMIT 50", [objectId])
   const latest = history[0]
   if (!latest) return { history: [], estimate: null }
   const [rows] = await pool.query<mysql.RowDataPacket[]>(`SELECT COUNT(*) AS calls,
