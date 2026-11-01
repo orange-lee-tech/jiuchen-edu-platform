@@ -2,7 +2,8 @@
 
 ## 当前状态
 
-- **唯一当前状态：** [CURRENT.md](CURRENT.md)
+- **最新状态（2026-11-01）：** [生产发布与 GitHub 台面收尾](STATUS-2026-11-01-release-and-github.md)（优先阅读）
+- **历史长交接：** [CURRENT.md](CURRENT.md)（2026-10-29 等历史记录；新状态以最新状态页及现场回执为准）
 - **GitHub 工作台规整回执：** [github-workbench-cleanup-2026-10-27.md](github-workbench-cleanup-2026-10-27.md)
 - **历史分支清理记录：** [github-branch-prune-2026-10-19.md](github-branch-prune-2026-10-19.md)（历史快照；不得直接照搬其中旧 SHA 或旧分支数量）
 - **项目规则：** 根目录 [CONSTITUTION.md](../../CONSTITUTION.md)、[AGENTS.md](../../AGENTS.md)
@@ -26,7 +27,7 @@
 
 ## 阅读规则
 
-1. 开始任何工作先读 `CURRENT.md`；它的顶部状态优先于历史章节。
+1. 开始任何工作先读 `STATUS-2026-11-01-release-and-github.md`，再按需查阅历史长交接 `CURRENT.md`。
 2. 日期化故障、验收和交接文件用于追溯当时事实，不自动代表当前代码、生产 release 或发布状态。
 3. CI 通过只证明对应 SHA 的仓库检查通过，不等于生产部署、DDL、真实支付或微信发布完成。
 4. 生产状态以最新 ECS 只读回执、生产数据库证据与用户明确授权为准。
