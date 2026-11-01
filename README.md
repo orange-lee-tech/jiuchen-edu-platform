@@ -1,5 +1,15 @@
 # 九辰教育平台
 
+## 共同开发者：下载最新版并导入微信开发者工具
+
+**[下载 `main` 最新完整源码 ZIP](https://github.com/orange-lee-tech/jiuchen-edu-platform/archive/refs/heads/main.zip)** · [导入说明与协作须知](docs/handoff/co-developer-download.md)
+
+登录有权限的 GitHub 账号，下载 ZIP、解压，在**微信开发者工具 → 导入项目**选择解压目录里的 `apps/miniprogram`（该目录含 `project.config.json`，已经配置 `miniprogramRoot`）。不要选择仓库根目录或下一层 `miniprogram` 源码目录。
+
+此链接始终对应 GitHub 最新 `main`；下载的是前端 + API + 工程文档的**源代码**，不是生产数据库、服务器密钥或运行中的 ECS。可打开、修改、预览小程序；微信 AppID 需要相应开发者权限。如涉及 npm 依赖，按导入说明安装后在开发者工具构建 npm。**GitHub 下载不会自动合并协作者的本地修改，也不会自动上传体验版或发布正式版。**
+
+**当前交接：** [2026-11-01 生产状态与 GitHub 收口](docs/handoff/STATUS-2026-11-01-release-and-github.md)。历史章节注明历史日期，不作为生产现况。
+
 微信原生小程序、Fastify API 与 Vue 管理后台的单仓库。线上业务数据以 MySQL 为准；官网与小程序 API 在同一台 ECS 上独立运行。
 
 ## 当前工程状态（2026-10-27）
