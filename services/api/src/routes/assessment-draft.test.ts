@@ -11,7 +11,7 @@ test('draft create, update and read preserve partial input; incomplete run never
   const db={
     select(){let table:unknown;const q={from(t:unknown){table=t;return q},innerJoin(){return q},leftJoin(){return q},where(){return q},orderBy(){return q},
       async limit(){return table===userSessions?[{userId:'u1',role:'student',status:'active',internalIdStatus:'claimed',expiresAt:new Date('2099-01-01')}]:
-        table===userProfiles?[{university:'某校',major:'物理',currentGrade:'大三',gpaText:null,rankText:null}]:table===assessments&&row?[row]:[]} };return q},
+        table===userProfiles?[{university:'某校',major:'物理',currentGrade:'大三',gpaText:null,rankText:null}]:table===assessments&&row?[{...row,createdEpoch:Math.floor((row.createdAt as Date).getTime()/1000),updatedEpoch:Math.floor((row.updatedAt as Date).getTime()/1000),startedEpoch:row.startedAt instanceof Date?Math.floor(row.startedAt.getTime()/1000):null,completedEpoch:null}]:[]} };return q},
     insert(){return {async values(value:Record<string,unknown>){row={...value,createdAt:new Date(),updatedAt:new Date()}}}},
     update(){return {set(value:Record<string,unknown>){return {async where(){row={...row,...value}}}}}},
   }

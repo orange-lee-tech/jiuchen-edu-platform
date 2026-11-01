@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, sql } from 'drizzle-orm'
 import type { FastifyInstance, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import type { DatabaseContext } from '../db/client.js'
@@ -200,7 +200,28 @@ export function isMissingTable(error: unknown) {
   return false
 }
 
-function serializeAssessment(row: {
+// UNIX_TIMESTAMP() returns the real instant of MySQL TIMESTAMP columns.
+// Drizzle's date mapper incorrectly treats MySQL's +08:00 session values as UTC.
+// Keep writes untouched and normalize only assessment API output timestamps.
+const assessmentWithEpoch = {
+  ...getTableColumns(assessments),
+  createdEpoch: sql<number>`UNIX_TIMESTAMP(${assessments.createdAt})`,
+  updatedEpoch: sql<number>`UNIX_TIMESTAMP(${assessments.updatedAt})`,
+  startedEpoch: sql<number | null>`UNIX_TIMESTAMP(${assessments.startedAt})`,
+  completedEpoch: sql<number | null>`UNIX_TIMESTAMP(${assessments.completedAt})`,
+}
+
+function epochIso(epoch: number | string | null | undefined, nullable = false): string | null {
+  if (epoch == null) {
+    if (nullable) return null
+    throw new Error('assessment_timestamp_missing')
+  }
+  const timestamp = new Date(Number(epoch) * 1000)
+  if (Number.isNaN(timestamp.getTime())) throw new Error('assessment_timestamp_invalid')
+  return timestamp.toISOString()
+}
+
+export function serializeAssessment(row: {
   id: string
   status: 'draft' | 'running' | 'succeeded' | 'failed'
   inputSchemaVersion: string
@@ -218,6 +239,10 @@ function serializeAssessment(row: {
   completedAt: Date | null
   createdAt: Date
   updatedAt: Date
+  createdEpoch: number | string
+  updatedEpoch: number | string
+  startedEpoch: number | string | null
+  completedEpoch: number | string | null
 }) {
   return {
     id: row.id,
@@ -237,10 +262,10 @@ function serializeAssessment(row: {
     output: row.outputJson,
     failureCode: row.failureCode,
     creditConsumed: row.creditConsumed,
-    startedAt: row.startedAt?.toISOString() ?? null,
-    completedAt: row.completedAt?.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    startedAt: epochIso(row.startedEpoch, true),
+    completedAt: epochIso(row.completedEpoch, true),
+    createdAt: epochIso(row.createdEpoch),
+    updatedAt: epochIso(row.updatedEpoch),
   }
 }
 
@@ -422,7 +447,7 @@ export function registerAssessmentRoutes(
       })
 
       const [created] = await database.db
-        .select()
+        .select(assessmentWithEpoch)
         .from(assessments)
         .where(
           and(
@@ -497,7 +522,7 @@ export function registerAssessmentRoutes(
 
     try {
       const [existing] = await database.db
-        .select()
+        .select(assessmentWithEpoch)
         .from(assessments)
         .where(
           and(
@@ -541,7 +566,7 @@ export function registerAssessmentRoutes(
         .where(eq(assessments.id, existing.id))
 
       const [updated] = await database.db
-        .select()
+        .select(assessmentWithEpoch)
         .from(assessments)
         .where(eq(assessments.id, existing.id))
         .limit(1)
@@ -590,7 +615,7 @@ export function registerAssessmentRoutes(
 
     try {
       const rows = await database.db
-        .select()
+        .select(assessmentWithEpoch)
         .from(assessments)
         .where(eq(assessments.userId, user.userId))
         .orderBy(desc(assessments.createdAt))
@@ -638,7 +663,7 @@ export function registerAssessmentRoutes(
 
       try {
         const [row] = await database.db
-          .select()
+          .select(assessmentWithEpoch)
           .from(assessments)
           .where(
             and(
@@ -700,7 +725,7 @@ export function registerAssessmentRoutes(
 
       try {
         ;[row] = await database.db
-          .select()
+          .select(assessmentWithEpoch)
           .from(assessments)
           .where(
             and(
@@ -790,7 +815,7 @@ export function registerAssessmentRoutes(
       }
 
       const [queued] = await database.db
-        .select()
+        .select(assessmentWithEpoch)
         .from(assessments)
         .where(and(
           eq(assessments.id, row.id),
