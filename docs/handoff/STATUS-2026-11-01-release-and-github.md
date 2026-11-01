@@ -2,6 +2,15 @@
 
 > 本页是截至 2026-11-01 的最新状态快照；之前 docs/handoff/CURRENT.md 中的 2026-10-29 与更早记录仅作历史参考。任何新部署须独立授权、核对现场。
 
+## 2026-11-01 最新补充：时区修复 API 已实际切流成功
+
+- 用户提供的 PowerShell 实际执行回执：固定 API 源码 `4250785eb709d198742453762fa52f5d0524b62e` 的隔离构建完成，`npm run typecheck` PASS、针对性 8/8 测试 PASS、`npm run build` PASS；候选 tar SHA256=`67376aa23ca08b348cccf29f29d998b5561ebd84852f5c4c213270f555172b99`。
+- ECS `jiuchen-promote` 返回 `PROMOTE_OK active=4250785eb709d198742453762fa52f5d0524b62e previous=03bc43b7ebe648b310a2499a1d77fba86e5e6623`，`API_PATCH_DEPLOY_FLOW=PASS`。重启健康轮询初期有三次 connection refused，但最终健康检查通过，没有回滚回执。**本文件下文的 03bc43b 生产 SHA 仅是切流前历史快照，不再是最新生产版本。**
+- 故障直接证据：生产 MySQL `+08:00` 会话中同一条 assessments 记录 raw mysql2 UTC 为 `2026-11-01T02:39:26Z`，Drizzle mapped Date 则为 `2026-11-01T10:39:26Z`（偏差 +28800 秒）；本次 API 路由只在评估查询/序列化路径使用 `UNIX_TIMESTAMP()` 返回真实 UTC；不改数据库、全局时区、支付逻辑或小程序前端。
+- 前端无修改，因此本次 API-only 部署**无需重新上传微信体验版**。仍需通过既有评估历史条目进行最后一次真机/开发者工具确认：此前显示 `18:40` 的记录预计恢复为北京时间 `10:40`。在收到前端回执前，此项显示验收保持 **PENDING**。
+- GitHub 的 `main` 主页已加 [最新完整源码 ZIP](https://github.com/orange-lee-tech/jiuchen-edu-platform/archive/refs/heads/main.zip) 与 [微信开发者工具导入指引](co-developer-download.md)。该 ZIP 下载源码，不代表 ECS 已同步所有 `main` 文档提交，也不包含生产密码和数据库。
+- 本次切流未运行全套业务回归；只将上述 8 项针对性测试、编译及发布健康状态记 PASS，不扩大表述为支付、AI 成本与所有小程序业务的完整验收。
+
 ## 一、对协作开发者最重要的状态
 
 - 仓库：`orange-lee-tech/jiuchen-edu-platform`；**唯一日常开发基线是默认分支 `main`**。
