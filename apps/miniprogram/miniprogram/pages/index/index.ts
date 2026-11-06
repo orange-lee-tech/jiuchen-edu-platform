@@ -40,7 +40,7 @@ Page({
     todayLabel: '', greeting: '你好', userName: '同学', scheduleDay: chinaWeekDayTabs().find(tab => tab.isToday)?.dayIndex || 1, scheduleTabs: chinaWeekDayTabs(), scheduleDateLabel: '',
     scheduleLoading: false, scheduleError: '', scheduleState: 'missing', scheduleLabel: '', scheduleStage: '',
     scheduleCourses: [] as Array<{time:string;name:string;location:string;next:boolean}>,
-    planLoading: false, planError: '', planState: 'unbound', planStageLabel: '', stageNotice: '',
+    planLoading: false, planError: '', planState: 'unbound', planStageLabel: '', stageNotice: '', moreHomeOpen: false,
     stageConfirmed: false, stageNeedsEnrollmentYear: false,
     planPreview: [] as Array<{title:string;status:string}>,
     upcomingTasks: [] as Array<UpcomingPlanTask & { stageLabel: string; typeLabel: string }>, upcomingError: '', upcomingLoading: false,
@@ -317,6 +317,7 @@ Page({
     else loginFor('pages/profile-edit/profile-edit')
   },
   onAssessment() { openPage('/pages/position/position') },
+  onToggleMoreHome() { this.setData({ moreHomeOpen: !this.data.moreHomeOpen }) },
   onPlanning() { openSlot('plan') },
   onOpenFullWeekSchedule() {
     try { wx.setStorageSync('jiuchen-navigation-intent:plan', { intent: 'week', owner: this.currentHomeStudentId || '', createdAt: Date.now() }) } catch { /* navigation remains usable */ }

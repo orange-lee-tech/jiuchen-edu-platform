@@ -6,6 +6,7 @@
       <view class="home-intro-content">
         <text class="home-title">{{loggedIn ? greeting + '，' + userName : '今天'}}</text>
         <text class="eyebrow">{{todayLabel}}{{planState === 'ready' ? ' · ' + (stageConfirmed ? planStageLabel : '学期待校准') : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
+        <button wx:if="{{loggedIn && assessmentReady && !readOnly}}" class="home-primary" bindtap="onAssessment">继续 AI 评估 ›</button>
         <button wx:if="{{!loggedIn}}" class="home-primary" bindtap="onPrimary">进入我的规划 ›</button>
         <text wx:if="{{readOnly || !assessmentReady}}" class="home-caption">{{readOnly ? '只读模式 · 无编辑和评估权限' : loggedIn ? '学业资料待完善' : '登录后查看个人数据'}}</text>
         <text wx:if="{{!assessmentReady && !readOnly}}" class="home-minor-link" bindtap="onCompleteProfile">{{loggedIn ? '补全学业资料 ›' : '登录并建立档案 ›'}}</text>
@@ -77,32 +78,27 @@
     <view class="home-shortcuts home-card">
       <view class="home-section-bar"><text class="section-heading">常用入口</text></view>
       <view class="action-list">
-<view class="action-row action-assessment" bindtap="onAssessment" hover-class="action-pressed" aria-role="button" aria-label="AI评估与历史结果">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/ai-assessment.png" mode="aspectFit" /></view>
-        <text class="action-title">AI 评估</text>
-        <text class="action-more">›</text>
-      </view>
 <view class="action-row action-planning" bindtap="onPlanning" hover-class="action-pressed" aria-role="button" aria-label="打开我的规划">
         <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/calendar.png" mode="aspectFit" /></view>
         <text class="action-title">我的规划</text>
       </view>
-<view class="action-row action-schools" bindtap="onSchools" hover-class="action-pressed" aria-role="button" aria-label="筛选院校库">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/library.png" mode="aspectFit" /></view>
-        <text class="action-title">院校库</text><text class="action-more">›</text>
       </view>
-<view class="action-row action-news" bindtap="onNews" hover-class="action-pressed" aria-role="button" aria-label="阅读保研资讯">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/news.png" mode="aspectFit" /></view>
-        <text class="action-title">保研资讯</text>
-        <text class="action-more">›</text>
-      </view>
-<view class="action-row action-consult" bindtap="onCustomerService" hover-class="action-pressed" aria-role="button" aria-label="联系九辰客服">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/headset.png" mode="aspectFit" /></view>
-        <text class="action-title">联系客服</text>
-        <text class="action-more">›</text>
-      </view>
+      <view class="home-more-toggle" bindtap="onToggleMoreHome">{{moreHomeOpen ? '收起更多服务' : '院校、资讯与服务 ›'}}</view>
+    </view>
+    <view wx:if="{{moreHomeOpen}}" class="home-card home-more-actions">
+      <view class="action-list">
+        <view class="action-row action-schools" bindtap="onSchools" hover-class="action-pressed" aria-role="button" aria-label="筛选院校库">
+          <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/library.png" mode="aspectFit" /></view><text class="action-title">院校库</text><text class="action-more">›</text>
+        </view>
+        <view class="action-row action-news" bindtap="onNews" hover-class="action-pressed" aria-role="button" aria-label="阅读保研资讯">
+          <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/news.png" mode="aspectFit" /></view><text class="action-title">保研资讯</text><text class="action-more">›</text>
+        </view>
+        <view class="action-row action-consult" bindtap="onCustomerService" hover-class="action-pressed" aria-role="button" aria-label="联系九辰客服">
+          <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/headset.png" mode="aspectFit" /></view><text class="action-title">联系客服</text><text class="action-more">›</text>
+        </view>
       </view>
     </view>
-    <view class="service-section">
+    <view wx:if="{{moreHomeOpen}}" class="service-section">
       <text class="section-heading">认识九辰</text>
       <view class="service-links">
         <view class="service-link service-products" bindtap="onProducts" hover-class="service-pressed" aria-role="button" aria-label="查看九辰服务介绍">

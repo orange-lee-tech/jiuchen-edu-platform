@@ -20,7 +20,11 @@
 
   <view wx:elif="{{mode === 'unbound'}}" class="entry-state surface">
     <text class="entry-title">绑定学员身份，查看阶段规划</text>
-    <button class="entry-button" bindtap="onBindIdentity">填写九辰学员编号</button>
+    <text class="binding-help-toggle" bindtap="onToggleBindingHelp">{{bindingHelpOpen ? '收起绑定说明' : '我有九辰学员编号 ›'}}</text>
+    <view wx:if="{{bindingHelpOpen}}" class="binding-help">
+      <text>在个人资料中填写老师提供的九辰学员编号，验证后即可关联本人的规划档案。</text>
+      <button class="entry-button" bindtap="onBindIdentity">前往填写编号</button>
+    </view>
   </view>
 
   <view wx:elif="{{mode === 'teacher'}}" class="entry-state surface">
@@ -60,6 +64,11 @@
         </view>
       </view>
       <text wx:if="{{stageNotice}}" class="stage-notice">{{stageNotice}}</text>
+      <view wx:if="{{stageSuggestion}}" class="stage-suggestion">
+        <text class="stage-suggestion-copy">{{stageSuggestion.label}}</text>
+        <view wx:if="{{stageSuggestion.code}}" class="stage-suggestion-actions"><text bindtap="onApplyStageSuggestion">启用自动建议</text><text bindtap="onDismissStageSuggestion">暂不更改</text></view>
+        <text wx:else class="stage-suggestion-dismiss" bindtap="onDismissStageSuggestion">知道了</text>
+      </view>
       <view wx:if="{{!readOnly}}" class="stage-actions">
         <button class="stage-calibrate-button" disabled="{{stageChangeBusy}}" bindtap="onToggleStageCalibration">{{stageCalibrationMode ? '取消手动校准' : '手动校准当前学期'}}</button>
         <view class="stage-actions-secondary">
@@ -130,6 +139,13 @@
                 <text wx:if="{{item.progress}}" class="plan-progress-inline">已完成 {{item.progress}} 项</text>
               </view>
               <text class="plan-arrow">›</text>
+            </view>
+            <view wx:if="{{expandedPlanType === item.type}}" class="plan-inline-details">
+              <view wx:for="{{item.items}}" wx:for-item="task" wx:key="index" class="plan-inline-row">
+                <text>{{task.title}}</text><text>{{task.status === 'done' ? '已完成' : task.status === 'in_progress' ? '进行中' : '未开始'}}</text>
+              </view>
+              <text wx:if="{{!item.items.length}}" class="plan-inline-empty">暂无具体任务</text>
+              <button class="plan-inline-action" data-type="{{item.type}}" catchtap="onPlanEdit">{{readOnly ? '查看详情' : '编辑计划'}}</button>
             </view>
           </view>
         </view>

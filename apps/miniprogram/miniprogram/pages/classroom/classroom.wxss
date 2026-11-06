@@ -163,6 +163,16 @@ button::after { border:0; }
 .plan-list,.mentor-list,.week-list{gap:10rpx;}
 .plan-card{padding:17rpx 18rpx;border:1rpx solid #e8e3d9;border-left:0;border-radius:14rpx;box-shadow:none;}
 .plan-card:nth-child(2n){border-left:0;}
+.plan-inline-details{margin-top:15rpx;padding-top:13rpx;border-top:1rpx solid #ebe5da;}
+.plan-inline-row{display:flex;justify-content:space-between;gap:14rpx;padding:9rpx 0;color:#36566c;font-size:22rpx;}
+.plan-inline-empty{display:block;padding:8rpx 0;color:#788892;font-size:22rpx;}
+.plan-inline-action{margin-top:10rpx;padding:9rpx 18rpx;border-radius:9rpx;background:#ecca80;color:#173951;font-size:22rpx;font-weight:750;}
+.stage-suggestion{margin-top:12rpx;padding:14rpx 16rpx;border:1rpx solid #ead9b8;border-radius:10rpx;background:#fff8e8;}
+.stage-suggestion-copy{display:block;color:#624d2d;font-size:22rpx;line-height:1.5;}
+.stage-suggestion-actions{display:flex;gap:24rpx;margin-top:10rpx;color:#236383;font-size:22rpx;font-weight:750;}
+.stage-suggestion-dismiss{display:inline-block;margin-top:9rpx;color:#236383;font-size:21rpx;font-weight:700;}
+.binding-help-toggle{display:inline-block;margin-top:12rpx;color:#236383;font-size:23rpx;font-weight:750;}
+.binding-help{margin-top:12rpx;padding:14rpx;border-radius:10rpx;background:#f5f3ed;color:#566b77;font-size:22rpx;line-height:1.55;}
 .plan-card-head{align-items:center;gap:13rpx;}
 .plan-icon-image{display:block;flex:none;width:60rpx;height:60rpx;background:transparent;}
 .plan-title{font-size:26rpx;line-height:1.35;}

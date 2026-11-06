@@ -47,6 +47,7 @@ type PlanCard = {
   title: string
   progress: string
   revisionStatus: 'none' | 'pending' | 'approved'
+  items: Array<{ title: string; status: string }>
 }
 
 const PLAN_CARDS: Record<ClassroomPlanType, Pick<PlanCard, 'type' | 'title'>> = {
@@ -100,6 +101,7 @@ function toPlanCard(plan: ClassroomPlan): PlanCard {
     title: plan.title,
     progress: plan.items.length ? `${completed} / ${plan.items.length}` : '',
     revisionStatus: plan.revisionStatus || (plan.id ? 'approved' : 'none'),
+    items: plan.items.map(item => ({ title: item.name, status: item.status })),
   }
 }
 
@@ -117,6 +119,9 @@ Page({
     stageScrollTarget: 'semester-freshman-fall', actualStageLabel: '待确认',
     actualStageCode: '', actualStageKnown: false, stageMode: null as 'auto' | 'manual' | null, stageModeKnown: false, stageNotice: '', stageScheduleSafe: false,
     stageChangeBusy: false, stageCalibrationMode: false, stageSaveError: '',
+    expandedPlanType: '',
+    bindingHelpOpen: false,
+    stageSuggestion: null as { code: string; label: string; expectedStage: string | null; expectedMode: 'auto' | 'manual' | null } | null,
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
 
@@ -269,12 +274,11 @@ Page({
       if (generation !== this.viewGeneration || owner !== this.selectedOwner) return
       const stage = (this.data.stages as ClassroomStage[]).find(item => item.code === result.suggestedStage)
       if (!stage) {
-        wx.showModal({ title: '当前阶段待确认', content: '无法根据入学年份确定阶段。请在学期选择器中选择实际阶段，再设为当前。', showCancel: false })
+        this.setData({ stageSuggestion: { code: '', label: '无法根据入学年份确定建议阶段，请补充资料或手动选择。', expectedStage: result.currentStage, expectedMode: result.mode === 'auto' || result.mode === 'manual' ? result.mode : null } })
       } else if (stage.code === result.currentStage && result.mode === 'auto') {
         wx.showToast({ title: '当前阶段与建议一致', icon: 'none' })
       } else {
-        wx.showModal({ title: '启用自动定位', content: `按普通四年制及入学年份估算为${stage.label}。如有休学或其他学制，请手动选择实际阶段。`, confirmText: '启用自动',
-          success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(stage.code, result.currentStage, 'auto', result.mode) } })
+        this.setData({ stageSuggestion: { code: stage.code, label: `按入学年份建议为${stage.label}。如有休学或其他学制，请手动选择实际阶段。`, expectedStage: result.currentStage, expectedMode: result.mode === 'auto' || result.mode === 'manual' ? result.mode : null } })
       }
     } catch (error) {
       if (generation === this.viewGeneration && owner === this.selectedOwner) {
@@ -285,6 +289,13 @@ Page({
     }
     finally { this.setData({ stageChangeBusy: false }) }
   },
+  onApplyStageSuggestion() {
+    const suggestion = this.data.stageSuggestion
+    if (!suggestion?.code || isReadOnly() || this.data.stageChangeBusy) return
+    this.setData({ stageSuggestion: null })
+    void this.saveCurrentStage(suggestion.code, suggestion.expectedStage, 'auto', suggestion.expectedMode)
+  },
+  onDismissStageSuggestion() { this.setData({ stageSuggestion: null }) },
   onSetViewedStage() {
     if (isReadOnly() || this.data.stageChangeBusy) return
     const code = this.data.currentStageCode, expected = this.data.actualStageKnown ? (this.data.actualStageCode || null) : undefined
@@ -347,6 +358,11 @@ Page({
   onPlanTap(event: WechatMiniprogram.BaseEvent) {
     const type = String(event.currentTarget.dataset.type || '')
     if (!type) return
+    this.setData({ expandedPlanType: this.data.expandedPlanType === type ? '' : type })
+  },
+  onPlanEdit(event: WechatMiniprogram.BaseEvent) {
+    const type = String(event.currentTarget.dataset.type || '')
+    if (!type) return
     wx.navigateTo({
       url: `/pages/plan-editor/plan-editor?stage=${encodeURIComponent(this.data.currentStageCode)}&type=${encodeURIComponent(type)}`,
     })
@@ -406,6 +422,7 @@ Page({
   onBindIdentity() {
     openPage('/pages/profile-edit/profile-edit')
   },
+  onToggleBindingHelp() { this.setData({ bindingHelpOpen: !this.data.bindingHelpOpen }) },
   onRetryPlan() {
     if (this.data.studentName) void this.reloadStage(this.data.currentStageCode)
     else void this.initializeClassroom()
