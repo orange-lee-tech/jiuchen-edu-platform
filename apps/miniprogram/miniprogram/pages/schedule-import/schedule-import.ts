@@ -105,6 +105,7 @@ Page({
     courseDraft: emptyDraft(),
   },
 
+  entryAutoViewPending: false,
   onLoad(options: Record<string, string | undefined>) {
     authorizePage('pages/schedule-import/schedule-import', options, () => this.initializeSchedule(options))
   },
@@ -114,8 +115,9 @@ Page({
     if (this.data.importId && !this.data.parsing && !this.data.saving && !this.data.editing) void this.loadLatestSchedule()
   },
   initializeSchedule(options: Record<string, string | undefined>) {
-    const requested = options.view === 'manage' ? 'manage' : 'current'
-    this.setData({ viewMode: requested })
+    this.entryAutoViewPending = options.view === 'auto'
+    const requested = options.view === 'manage' ? 'manage' : options.view === 'all' ? 'all' : 'current'
+    this.setData({ viewMode: this.entryAutoViewPending ? 'all' : requested })
     void this.loadLatestSchedule()
     void getMyAcademicProfile()
       .then(profile => this.setData({ stageHint: hintTerm(profile.enrollmentYear) }))
@@ -127,13 +129,18 @@ Page({
       const latest = await getLatestScheduleImport()
       if (this.data.parsing || this.data.saving || this.data.editing) return
       if (!latest?.schedule) {
-        this.setData({ importId: '', fileName: '', schedule: null, termStartDate: '', stageChoice: '', stageChoiceLabel: '' })
+        const autoView = this.entryAutoViewPending
+        this.entryAutoViewPending = false
+        this.setData({ importId: '', fileName: '', schedule: null, termStartDate: '', stageChoice: '', stageChoiceLabel: '', ...(autoView ? { viewMode: 'manage' as const } : {}) })
         this.refreshVisibleCourses()
         return
       }
 
       const schedule = latest.schedule
+      const autoView = this.entryAutoViewPending
+      this.entryAutoViewPending = false
       this.setData({
+        ...(autoView ? { viewMode: 'all' as const } : {}),
         importId: latest.id,
         fileName: latest.fileName,
         schedule,
