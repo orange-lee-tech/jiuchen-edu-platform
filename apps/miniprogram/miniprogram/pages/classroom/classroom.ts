@@ -137,11 +137,13 @@ Page({
       else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
     })
   },
-  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stageCalibrationMode: false }) },
+  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stageCalibrationMode: false, stageSuggestion: null }) }
   onUnload() { this.stopShell?.() },
 
   async initializeClassroom() {
     const generation = ++this.viewGeneration
+    // Suggestions are tied to the active student and must not survive role/account changes.
+    this.setData({ stageSuggestion: null })
     const auth = getSavedAuthResult()
     const role=getReadOnlyContext()?.role||auth?.user.role
     if (!auth) {
