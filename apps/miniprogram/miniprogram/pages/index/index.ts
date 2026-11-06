@@ -315,7 +315,21 @@ Page({
     if(this.data.loggedIn)openPage('/pages/profile-edit/profile-edit')
     else loginFor('pages/profile-edit/profile-edit')
   },
-  onAssessment() { openPage('/pages/assessment-form/assessment-form') },
+  onAssessmentEntry() {
+    if (this.data.readOnly) {
+      wx.showToast({ title: '只读查看不能进行 AI 评估', icon: 'none' })
+      return
+    }
+    if (!this.data.loggedIn) {
+      loginFor('pages/profile-edit/profile-edit')
+      return
+    }
+    if (!this.data.assessmentReady) {
+      openPage('/pages/profile-edit/profile-edit')
+      return
+    }
+    openPage('/pages/assessment-form/assessment-form')
+  },
   onPlanning() { openSlot('plan') },
   onOpenFullWeekSchedule() {
     try { wx.setStorageSync('jiuchen-navigation-intent:plan', { intent: 'week', owner: this.currentHomeStudentId || '', createdAt: Date.now() }) } catch { /* navigation remains usable */ }
