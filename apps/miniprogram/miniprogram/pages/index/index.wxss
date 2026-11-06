@@ -74,6 +74,11 @@ button::after{border:0;}
 .next-label{display:block;margin-top:5rpx;color:#94682c;font-size:18rpx;font-weight:800;}
 .home-plan-stage{display:block;margin-top:17rpx;color:#526b7b;font-size:23rpx;}
 .home-plan-row{display:flex;justify-content:space-between;gap:12rpx;padding:15rpx 0;border-bottom:1rpx solid #edf0ee;font-size:23rpx;}
+.home-plan.home-card{padding:17rpx 20rpx;}
+.home-plan-stage{margin-top:9rpx;}
+.home-plan-row{padding:11rpx 0;}
+.home-more-toggle{display:block;margin-top:14rpx;padding:13rpx 8rpx;text-align:center;color:#276384;font-size:23rpx;font-weight:750;border-top:1rpx solid #e7ded0;}
+.home-more-actions{margin-top:10rpx;padding:14rpx;background:#fffdf9;}
 .home-plan-name{color:#1b3f58;font-weight:700;flex:1;min-width:0;}
 .home-plan-status{color:#8a6434;flex:none;}
 .action-row,.service-link,.action-row:nth-child(even),.service-link:nth-child(even){background:#fffdf9;border:1rpx solid #e3ddd0;border-top:4rpx solid #d9b368;border-radius: 8rpx;box-shadow:0 4rpx 12rpx rgba(25,57,75,.06);}

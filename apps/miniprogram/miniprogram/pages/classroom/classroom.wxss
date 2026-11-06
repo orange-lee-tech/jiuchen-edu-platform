@@ -250,3 +250,5 @@ button::after { border:0; }
 .plan-progress-inline{font-size:19rpx;line-height:1.3;color:#78858a;}
 .plan-arrow{flex:none;margin-left:auto;color:#a37a3d;font-size:28rpx;white-space:nowrap;}
 .plan-card-foot,.plan-title-row,.revision-chip,.plan-note{display:none;}
+.stage-picker-caption{line-height:1.35;}
+.stage-picker-current{margin-top:2rpx;}
