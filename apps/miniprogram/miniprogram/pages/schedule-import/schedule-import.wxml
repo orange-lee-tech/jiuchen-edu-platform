@@ -5,8 +5,8 @@
   </view>
 
   <view class="mode-tabs">
-    <view class="mode-tab {{viewMode === 'current' ? 'active' : ''}}" data-mode="current" bindtap="onViewModeTap">本周课表</view>
     <view class="mode-tab {{viewMode === 'all' ? 'active' : ''}}" data-mode="all" bindtap="onViewModeTap">全部课表</view>
+    <view class="mode-tab {{viewMode === 'current' ? 'active' : ''}}" data-mode="current" bindtap="onViewModeTap">本周课表</view>
     <view class="mode-tab {{viewMode === 'manage' ? 'active' : ''}}" data-mode="manage" bindtap="onViewModeTap">导入 / 编辑</view>
   </view>
 
