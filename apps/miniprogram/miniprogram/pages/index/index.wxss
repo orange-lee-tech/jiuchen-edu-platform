@@ -288,3 +288,12 @@ button::after{border:0;}
 .upcoming-task-name { display: block; color: #173f58; font-size: 28rpx; font-weight: 600; overflow-wrap: break-word; }
 .upcoming-task-meta { display: block; margin-top: 6rpx; }
 .upcoming-task-date { flex-shrink: 0; color: #8b6b2d; font-size: 24rpx; text-align: right; }
+
+/* Primary assessment entry: always visible, full row above the timetable. */
+.home-assessment{display:flex;align-items:center;gap:17rpx;min-height:125rpx;padding:20rpx 23rpx;background:linear-gradient(125deg,#174b76,#245f7d);border:1rpx solid #2b6483;border-radius:10rpx;color:#fff;}
+.home-assessment-pressed{opacity:.85;}
+.home-assessment-icon{width:64rpx;height:64rpx;flex:none;}
+.home-assessment-content{flex:1;min-width:0;}
+.home-assessment-title{display:block;font-size:28rpx;line-height:1.35;font-weight:850;color:#fff;}
+.home-assessment-desc{display:block;margin-top:6rpx;font-size:22rpx;line-height:1.45;color:#e3eef4;word-break:break-word;}
+.home-assessment-arrow{flex:none;font-size:39rpx;font-weight:800;color:#f1c87f;}
