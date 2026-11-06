@@ -40,7 +40,20 @@
 
   <view class="news-search">
     <input class="news-search-input" placeholder="搜索资讯" value="{{searchQuery}}" bindinput="onSearchInput" confirm-type="search" />
-    <button class="news-filter-button" bindtap="onFilterTap">{{filtersOpen ? '收起筛选' : selectedTags.length ? '筛选 · ' + selectedTags.length : '复选筛选'}} ▾</button>
+    <view class="news-filter-anchor">
+      <button class="news-filter-button" bindtap="onFilterTap">{{selectedTags.length ? '复选 · ' + selectedTags.length : '复选筛选'}} {{filtersOpen ? '⌃' : '▾'}}</button>
+      <view wx:if="{{filtersOpen}}" class="news-filter-dropdown">
+        <view class="news-filter-dropdown-head"><text>选择标签</text><text class="news-filter-clear" bindtap="onClearTags">清空</text></view>
+        <scroll-view class="news-filter-options" scroll-y>
+          <checkbox-group bindchange="onFilterCheckboxChange">
+            <label wx:for="{{tagChoices}}" wx:key="name" class="news-filter-option">
+              <checkbox value="{{item.name}}" checked="{{item.selected}}" color="#1b5678" />
+              <text>{{item.name}}</text>
+            </label>
+          </checkbox-group>
+        </scroll-view>
+      </view>
+    </view>
   </view>
 
   <view wx:if="{{pendingClassificationCount > 0}}" class="pending-news-note">
@@ -58,19 +71,8 @@
   <scroll-view class="news-sections" scroll-x enhanced show-scrollbar="{{false}}">
     <view class="news-sections-row">
       <text wx:for="{{sections}}" wx:key="*this" class="news-section-tab {{currentSection === item ? 'active' : ''}}" data-section="{{item}}" bindtap="onSectionTap">{{item}}</text>
-      <text class="news-section-tab news-other-tab {{filtersOpen || selectedTags.length ? 'active' : ''}}" bindtap="onOtherTap">{{filtersOpen ? '其他 ⌃' : '其他 ▾'}}</text>
     </view>
   </scroll-view>
-  <view wx:if="{{filtersOpen}}" class="news-tag-panel">
-    <view class="news-tag-panel-head">
-      <text>标签复选 · {{selectedTags.length}} 项已选</text>
-      <text wx:if="{{selectedTags.length}}" class="news-tag-clear" bindtap="onClearTags">清空</text>
-    </view>
-    <view class="news-tag-choices">
-      <view wx:for="{{tagChoices}}" wx:key="name" class="category news-multi-tag {{item.selected ? 'active' : ''}}" data-tag="{{item.name}}" bindtap="onTagTap">{{item.selected ? '✓ ' : ''}}{{item.name}}</view>
-      <text wx:if="{{!tagChoices.length}}" class="news-extra-meta">暂无分类标签</text>
-    </view>
-  </view>
 
   <view
     wx:if="{{featured.id}}"

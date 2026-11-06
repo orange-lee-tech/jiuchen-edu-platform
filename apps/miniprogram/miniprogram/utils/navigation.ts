@@ -98,7 +98,7 @@ export function validateIntent(route: string, params: Record<string, string | un
     'pages/teacher-news-tags/teacher-news-tags': {},
     'pages/plan-editor/plan-editor': { stage: (v) => STAGE.test(v), type: (v) => ['gpa', 'english', 'competition', 'research', 'internship', 'custom'].includes(v), studentId: (v) => UUID.test(v), taskId: (v) => UUID.test(v), studentName: (v) => v.length <= 80 && !/[\x00-\x1f]/.test(v) },
     'pages/admin/admin': { section: (v) => ['admin-users', 'admin-assignments', 'admin-news','admin-analytics','admin-readonly','admin-controls'].includes(v) },
-    'pages/schedule-import/schedule-import': { view: (v) => ['current', 'manage', 'all'].includes(v) },
+    'pages/schedule-import/schedule-import': { view: (v) => ['current', 'manage', 'all', 'auto'].includes(v) },
     'pages/product-detail/product-detail': { documentKey: (v) => v.length > 0 && v.length <= 160 && !/[/?#\x00-\x1f]/.test(v) },
     'pages/news-detail/news-detail': { id: (v) => UUID.test(v) },
   }

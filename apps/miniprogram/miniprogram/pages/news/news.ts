@@ -62,18 +62,10 @@ function toCard(post: NewsPost): NewsCard {
   }
 }
 
-const NEWS_SECTIONS = ['最新', '全部', '招生通知', '经验分享', '学科竞赛', '就业']
-function newsSection(tag: string) {
-  if (['招生通知', '招生', '推免通知', '夏令营通知'].includes(tag)) return '招生通知'
-  if (['经验分享', '经验', '案例分享'].includes(tag)) return '经验分享'
-  if (['学科竞赛', '竞赛', '比赛'].includes(tag)) return '学科竞赛'
-  if (['就业', '招聘', '秋招', '实习'].includes(tag)) return '就业'
-  return '其他'
-}
+const NEWS_SECTIONS = ['最新', '全部']
 function matchesNewsSection(card: NewsCard, section: string) {
   if (section === '最新' || section === '全部') return true
-  const tags = card.rawTags || card.tags
-  return tags.length ? tags.some(tag => newsSection(tag) === section) : section === '其他'
+  return section === '未分类' ? card.tags.length === 0 : card.tags.includes(section)
 }
 
 function uniqueTags(cards: NewsCard[]) {
@@ -215,9 +207,9 @@ Page({
         return
       }
 
-      const sections = NEWS_SECTIONS
+      const sections = [...NEWS_SECTIONS, ...uniqueTags(cards).filter(tag => tag !== '其他' && !NEWS_SECTIONS.includes(tag))]
       const currentSection = sections.includes(this.data.currentSection) ? this.data.currentSection : '最新'
-      const categories = uniqueTags(cards)
+      const categories = uniqueTags(cards).filter(tag => tag !== '其他' && !NEWS_SECTIONS.includes(tag))
       const selectedTags = this.data.selectedTags.filter(tag => categories.includes(tag))
       const filtered = this.filterArticles(cards, this.data.searchQuery, currentSection, selectedTags)
 
@@ -281,28 +273,27 @@ Page({
     if (!this.data.allArticles.length) { wx.showToast({ title: '暂无可筛选资讯', icon: 'none' }); return }
     this.setData({ filtersOpen: !this.data.filtersOpen })
   },
-  onOtherTap() { this.onFilterTap() },
   onSectionTap(event: WechatMiniprogram.BaseEvent) {
     const section = String(event.currentTarget.dataset.section || '')
     if (!this.data.sections.includes(section)) return
-    const reset = section === '全部' || section === '最新'
-    const selectedTags = reset ? [] : this.data.selectedTags
+    // 横向导航是单选；切换时清除下拉复选状态，避免两组标签交叉筛选。
     const searchQuery = section === '全部' ? '' : this.data.searchQuery
-    this.setData({ currentSection: section, selectedTags, searchQuery, tagChoices: this.data.categories.map(name => ({ name, selected: selectedTags.includes(name) })), ...(reset ? { filtersOpen: false } : {}) })
-    this.refreshFilteredArticles(searchQuery, section, selectedTags)
+    this.setData({ currentSection: section, selectedTags: [], searchQuery, filtersOpen: false,
+      tagChoices: this.data.categories.map(name => ({ name, selected: false })) })
+    this.refreshFilteredArticles(searchQuery, section, [])
   },
-  onTagTap(event: WechatMiniprogram.BaseEvent) {
-    const tag = String(event.currentTarget.dataset.tag || '')
-    if (!this.data.categories.includes(tag)) return
-    const selectedTags = this.data.selectedTags.includes(tag)
-      ? this.data.selectedTags.filter(item => item !== tag)
-      : [...this.data.selectedTags, tag]
-    this.setData({ selectedTags, tagChoices: this.data.categories.map(name => ({ name, selected: selectedTags.includes(name) })) })
-    this.refreshFilteredArticles(this.data.searchQuery, this.data.currentSection, selectedTags)
+  onFilterCheckboxChange(event: WechatMiniprogram.CustomEvent<{ value: string[] }>) {
+    const selected = Array.isArray(event.detail.value) ? event.detail.value : []
+    const selectedTags = this.data.categories.filter(tag => tag !== '其他' && selected.includes(tag))
+    // 使用下拉复选时，主导航切到「全部」，所选标签按 OR 组合。
+    this.setData({ currentSection: '全部', selectedTags,
+      tagChoices: this.data.categories.map(name => ({ name, selected: selectedTags.includes(name) })) })
+    this.refreshFilteredArticles(this.data.searchQuery, '全部', selectedTags)
   },
   onClearTags() {
-    this.setData({ selectedTags: [], tagChoices: this.data.categories.map(name => ({ name, selected: false })) })
-    this.refreshFilteredArticles(this.data.searchQuery, this.data.currentSection, [])
+    this.setData({ currentSection: '全部', selectedTags: [],
+      tagChoices: this.data.categories.map(name => ({ name, selected: false })) })
+    this.refreshFilteredArticles(this.data.searchQuery, '全部', [])
   },
   onManageNewsTags() {
     if (this.data.pendingClassificationRole !== 'admin') return
