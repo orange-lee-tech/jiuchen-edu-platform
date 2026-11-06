@@ -152,6 +152,15 @@ Page({
       return
     }
     const owner=getReadOnlyContext()?.id||auth.user.id
+    let weekIntent = false
+    try {
+      const intent = wx.getStorageSync('jiuchen-navigation-intent:plan') as {intent?:string;owner?:string;createdAt?:number} | undefined
+      if (intent?.intent === 'week') {
+        weekIntent = Boolean(intent.owner === owner && Date.now() - Number(intent.createdAt || 0) < 120000)
+        wx.removeStorageSync('jiuchen-navigation-intent:plan')
+      }
+    } catch { /* Ignore stale or unavailable navigation state. */ }
+    if (weekIntent) this.setData({ selectedView: 'week' })
     const sameOwner = this.selectedOwner === owner
     this.selectedOwner = owner
     if (!sameOwner) this.setData({ selectedView: 'stage' })
@@ -199,7 +208,10 @@ Page({
         })),
         stageSaveError: '',
       })
-      if (this.data.selectedView === 'week') void this.loadCurrentWeek()
+      if (this.data.selectedView === 'week') {
+        void this.loadCurrentWeek()
+        wx.pageScrollTo({ selector: '.current-week-link', duration: 0 })
+      }
     } catch (error) {
       if (generation !== this.viewGeneration) return
       logStageFailure('load', error)
