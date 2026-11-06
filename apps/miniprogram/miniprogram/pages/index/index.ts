@@ -316,7 +316,7 @@ Page({
     if(this.data.loggedIn)openPage('/pages/profile-edit/profile-edit')
     else loginFor('pages/profile-edit/profile-edit')
   },
-  onAssessment() { openPage('/pages/position/position') },
+  onAssessment() { openPage('/pages/assessment-form/assessment-form') },
   onToggleMoreHome() { this.setData({ moreHomeOpen: !this.data.moreHomeOpen }) },
   onPlanning() { openSlot('plan') },
   onOpenFullWeekSchedule() {
