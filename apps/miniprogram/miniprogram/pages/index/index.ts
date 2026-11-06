@@ -1,7 +1,7 @@
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, openSlot, shellView } from '../../utils/navigation'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 import { ApiRequestError, getLatestScheduleImport, getMyAcademicProfile, getMyClassroom, getUpcomingPlanTasks, type UpcomingPlanTask, type ParsedSchedule } from '../../utils/request'
-import { chinaWeekDayTabs, courseTimeLabel, dailyScheduleView } from '../../utils/schedule-view'
+import { chinaWeekDayTabs, courseTimeLabel, dailyScheduleView, weekdayScheduleView } from '../../utils/schedule-view'
 import { resolveCurrentStage } from '../../utils/current-stage'
 
 const STAGE_NAMES: Record<string, string> = {
@@ -37,7 +37,7 @@ function daysUntil(date: string) {
 
 Page({
   data: { ...INITIAL_SHELL, loggedIn: false, assessmentReady: false,
-    todayLabel: '', greeting: '你好', userName: '同学', scheduleDay: 0, scheduleTabs: chinaWeekDayTabs(), scheduleDateLabel: '',
+    todayLabel: '', greeting: '你好', userName: '同学', scheduleDay: chinaWeekDayTabs().find(tab => tab.isToday)?.dayIndex || 1, scheduleTabs: chinaWeekDayTabs(), scheduleDateLabel: '',
     scheduleLoading: false, scheduleError: '', scheduleState: 'missing', scheduleLabel: '', scheduleStage: '',
     scheduleCourses: [] as Array<{time:string;name:string;location:string;next:boolean}>,
     planLoading: false, planError: '', planState: 'unbound', planStageLabel: '', stageNotice: '',
@@ -172,7 +172,9 @@ Page({
     this.homeSchedule = null
     const today = dailyScheduleView(null, 0)
     const hour = (new Date().getUTCHours() + 8) % 24
-    this.setData({ todayLabel: today.dateLabel, greeting: hour < 11 ? '早上好' : hour < 18 ? '下午好' : '晚上好', scheduleDay: 0, scheduleTabs: chinaWeekDayTabs(), scheduleDateLabel: today.dateLabel, stageConfirmed:false, stageNeedsEnrollmentYear:false })
+    const scheduleTabs = chinaWeekDayTabs()
+    const todayDay = scheduleTabs.find(tab => tab.isToday)?.dayIndex || 1
+    this.setData({ todayLabel: today.dateLabel, greeting: hour < 11 ? '早上好' : hour < 18 ? '下午好' : '晚上好', scheduleDay: todayDay, scheduleTabs, scheduleDateLabel: today.dateLabel, stageConfirmed:false, stageNeedsEnrollmentYear:false })
     this.stopShell = observeSlot('home', (state) => {
       const studentId = state.phase === 'ready' && state.auth?.user.role === 'student'
         ? state.auth.user.id : null
@@ -279,12 +281,13 @@ Page({
   },
 
   renderScheduleDay() {
-    const view = dailyScheduleView(this.homeSchedule, this.data.scheduleDay)
+    const view = weekdayScheduleView(this.homeSchedule, this.data.scheduleDay)
     const now = new Date()
     const chinaMinutes = ((now.getUTCHours() + 8) % 24) * 60 + now.getUTCMinutes()
+    const isToday = chinaWeekDayTabs(now).some(tab => tab.dayIndex === this.data.scheduleDay && tab.isToday)
     const nextIndex = view.courses.findIndex(course => {
       const start = courseStartMinutes(course.time || course.slot)
-      return this.data.scheduleDay !== 0 || (start !== null && start >= chinaMinutes)
+      return isToday && start !== null && start >= chinaMinutes
     })
     this.setData({ scheduleState: view.state, scheduleDateLabel: view.dateLabel,
       scheduleLabel: view.week ? `第 ${view.week} 周` : '',
@@ -297,7 +300,7 @@ Page({
     if (day < 1 || day > 7) return
     this.setData({ scheduleDay: day })
     if (this.data.scheduleState === 'holiday') {
-      this.setData({ scheduleDateLabel: dailyScheduleView(null, day).dateLabel })
+      this.setData({ scheduleDateLabel: weekdayScheduleView(null, day).dateLabel })
       return
     }
     this.renderScheduleDay()

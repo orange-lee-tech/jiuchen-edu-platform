@@ -2,6 +2,7 @@ import { getSavedAuthResult } from '../../utils/auth'
 import {getReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 import { weeklyScheduleView, courseTimeLabel } from '../../utils/schedule-view'
+import { initialPlanView, type PlanNavigationIntent } from '../../utils/plan-navigation-intent'
 import { resolveCurrentStage } from '../../utils/current-stage'
 import {
   ApiRequestError,
@@ -153,18 +154,15 @@ Page({
       return
     }
     const owner=getReadOnlyContext()?.id||auth.user.id
-    let weekIntent = false
+    let navigationIntent: PlanNavigationIntent | undefined
     try {
-      const intent = wx.getStorageSync('jiuchen-navigation-intent:plan') as {intent?:string;owner?:string;createdAt?:number} | undefined
-      if (intent?.intent === 'week') {
-        weekIntent = Boolean(intent.owner === owner && Date.now() - Number(intent.createdAt || 0) < 120000)
-        wx.removeStorageSync('jiuchen-navigation-intent:plan')
-      }
+      navigationIntent = wx.getStorageSync('jiuchen-navigation-intent:plan') as PlanNavigationIntent | undefined
+      if (navigationIntent) wx.removeStorageSync('jiuchen-navigation-intent:plan')
     } catch { /* Ignore stale or unavailable navigation state. */ }
-    if (weekIntent) this.setData({ selectedView: 'week' })
     const sameOwner = this.selectedOwner === owner
     this.selectedOwner = owner
-    if (!sameOwner) this.setData({ selectedView: 'stage' })
+    const initialView = initialPlanView(owner, navigationIntent)
+    if (initialView === 'week' || !sameOwner) this.setData({ selectedView: initialView })
 
     this.setData({ mode: 'student', loading: true, loadError: '', studentName: '', actualStageKnown: false, stageModeKnown: false, plans: [], mentors: [], records: [] })
     let stageSuggestionError = ''
