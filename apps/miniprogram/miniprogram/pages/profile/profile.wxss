@@ -232,3 +232,9 @@ button::after{border:0;}
 .profile-service-links .menu-description{font-size:19rpx;line-height:1.4;word-break:break-word;}
 .profile-service-links .arrow{flex:none;}
 @media screen and (max-width: 360px){.profile-service-links{gap:8rpx;}.profile-service-links .menu-service,.profile-service-links .menu-teacher-service{padding:11rpx 8rpx;}}
+
+/* Brand links moved out of Today. Three compact, equal-width entries in Mine. */
+.profile-about{margin-top:17rpx;}
+.profile-about-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11rpx;}
+.profile-about-item{display:flex;box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:8rpx;min-height:112rpx;padding:14rpx 6rpx;background:#fffdf9;border:1rpx solid #e4ded2;border-radius:11rpx;color:#214d68;font-size:23rpx;font-weight:750;text-align:center;}
+.profile-about-icon{width:46rpx;height:46rpx;flex:none;}
