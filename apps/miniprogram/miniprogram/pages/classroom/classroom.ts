@@ -137,7 +137,7 @@ Page({
       else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
     })
   },
-  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stageCalibrationMode: false, stageSuggestion: null }) }
+  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stageCalibrationMode: false, stageSuggestion: null }) },
   onUnload() { this.stopShell?.() },
 
   async initializeClassroom() {
