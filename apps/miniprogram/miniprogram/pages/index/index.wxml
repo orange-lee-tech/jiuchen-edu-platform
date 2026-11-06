@@ -6,11 +6,18 @@
       <view class="home-intro-content">
         <text class="home-title">{{loggedIn ? greeting + '，' + userName : '今天'}}</text>
         <text class="eyebrow">{{todayLabel}}{{planState === 'ready' ? ' · ' + (stageConfirmed ? planStageLabel : '学期待校准') : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
-        <button wx:if="{{loggedIn && assessmentReady && !readOnly}}" class="home-primary" bindtap="onAssessment">继续 AI 评估 ›</button>
         <button wx:if="{{!loggedIn}}" class="home-primary" bindtap="onPrimary">进入我的规划 ›</button>
         <text wx:if="{{readOnly || !assessmentReady}}" class="home-caption">{{readOnly ? '只读模式 · 无编辑和评估权限' : loggedIn ? '学业资料待完善' : '登录后查看个人数据'}}</text>
         <text wx:if="{{!assessmentReady && !readOnly}}" class="home-minor-link" bindtap="onCompleteProfile">{{loggedIn ? '补全学业资料 ›' : '登录并建立档案 ›'}}</text>
       </view>
+    </view>
+    <view class="home-assessment home-card" bindtap="onAssessmentEntry" hover-class="home-assessment-pressed" aria-role="button" aria-label="AI 保研评估">
+      <image class="home-assessment-icon" src="/assets/jiuchen-visual-v1/icons/ai-assessment.png" mode="aspectFit" />
+      <view class="home-assessment-content">
+        <text class="home-assessment-title">AI 保研评估</text>
+        <text class="home-assessment-desc">{{!loggedIn ? '登录后建立档案并开始评估' : readOnly ? '当前为只读查看' : assessmentReady ? '结合学业资料与规划，开始或继续评估' : '完善学业资料后开始评估'}}</text>
+      </view>
+      <text class="home-assessment-arrow">›</text>
     </view>
     <view class="home-schedule home-card">
       <view class="home-card-head"><view class="home-heading-with-icon"><image class="home-heading-icon" src="/assets/jiuchen-visual-v1/icons/calendar.png" mode="aspectFit" /><text class="section-heading">今日课表</text></view><text class="home-card-link" bindtap="onOpenFullWeekSchedule">本周完整课表 ›</text></view>
