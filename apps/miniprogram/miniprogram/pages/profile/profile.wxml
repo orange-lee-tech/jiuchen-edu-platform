@@ -52,7 +52,23 @@
         </view>
       </view>
     </view>
-    <view class="website-row" bindtap="onWebsite" hover-class="menu-pressed" aria-role="button"><image class="menu-icon" src="/assets/icons/website-active.png" mode="aspectFit" /><text>九辰官网 · 复制地址</text><text class="arrow">›</text></view>
+    <view class="profile-about">
+      <text class="section-heading">认识九辰</text>
+      <view class="profile-about-grid">
+        <view class="profile-about-item" bindtap="onProducts" hover-class="menu-pressed" aria-role="button" aria-label="查看九辰服务介绍">
+          <image class="profile-about-icon" src="/assets/icons/business-active.png" mode="aspectFit" />
+          <text>服务介绍</text>
+        </view>
+        <view class="profile-about-item" bindtap="onBrand" hover-class="menu-pressed" aria-role="button" aria-label="了解九辰品牌">
+          <image class="profile-about-icon" src="/assets/icons/users-active.png" mode="aspectFit" />
+          <text>关于九辰</text>
+        </view>
+        <view class="profile-about-item" bindtap="onWebsite" hover-class="menu-pressed" aria-role="button" aria-label="访问九辰官网">
+          <image class="profile-about-icon" src="/assets/icons/website-active.png" mode="aspectFit" />
+          <text>九辰官网</text>
+        </view>
+      </view>
+    </view>
     <view id="identity-section" wx:if="{{loggedIn && !readOnly && (identities.length || businessId)}}" class="identity-settings-card">
       <view class="identity-settings-toggle" bindtap="onToggleIdentityDetails" aria-role="button">
         <text>我的身份与编号</text><text>{{identityDetailsOpen ? '收起 ⌃' : '查看编号与绑定 ›'}}</text>
