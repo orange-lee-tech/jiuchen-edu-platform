@@ -107,7 +107,6 @@ Page({
     canManageTeacherTags: false,
     searchQuery: '',
     loading: false,
-    sourceLabel: '真实资讯',
     featured: FALLBACK_FEATURED,
     articles: [] as NewsCard[],
     allArticles: [] as NewsCard[],
@@ -223,7 +222,6 @@ Page({
       const filtered = this.filterArticles(cards, this.data.searchQuery, currentSection, selectedTags)
 
       this.setData({
-        sourceLabel: '真实资讯 · 人工分类',
         categories,
         tagChoices: categories.map(name => ({ name, selected: selectedTags.includes(name) })),
         sections, currentSection, selectedTags,
@@ -253,22 +251,24 @@ Page({
   /** Search and tag selection only affect news, never favorites. */
   filterArticles(
     articles: NewsCard[],
-    query = this.data.searchQuery,
-    section = this.data.currentSection,
-    tags: string[] = this.data.selectedTags,
+    query?: string,
+    section?: string,
+    tags?: string[],
   ) {
-    const keyword = query.trim().toLocaleLowerCase()
+    const keyword = (query ?? this.data.searchQuery).trim().toLocaleLowerCase()
+    const activeSection = section ?? this.data.currentSection
+    const activeTags = tags ?? this.data.selectedTags
     const filtered = articles.filter(article => {
-      const tagMatches = !tags.length || tags.some(tag =>
+      const tagMatches = !activeTags.length || activeTags.some(tag =>
         tag === '未分类' ? article.tags.length === 0 : article.tags.includes(tag))
       const queryMatches = !keyword || [article.title, article.summary, article.sourceLabel, ...article.tags, ...article.rawTags]
         .some(value => value.toLocaleLowerCase().includes(keyword))
-      return matchesNewsSection(article, section) && tagMatches && queryMatches
+      return matchesNewsSection(article, activeSection) && tagMatches && queryMatches
     })
     // Latest is a concise view of the first ten items in the server-provided feed order.
-    return section === '最新' ? filtered.slice(0, 10) : filtered
+    return activeSection === '最新' ? filtered.slice(0, 10) : filtered
   },
-  refreshFilteredArticles(query = this.data.searchQuery, section = this.data.currentSection, tags: string[] = this.data.selectedTags) {
+  refreshFilteredArticles(query?: string, section?: string, tags?: string[]) {
     const filtered = this.filterArticles(this.data.allArticles, query, section, tags)
     this.setData({ featured: filtered[0] || FALLBACK_FEATURED, articles: filtered.slice(1) })
   },
