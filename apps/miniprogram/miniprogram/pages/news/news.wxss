@@ -346,3 +346,22 @@
 .news-section-tab{flex:0 0 auto;padding:10rpx 3rpx;font-size:20rpx;line-height:1.4;white-space:nowrap;}
 .news-section-tab.active{border-bottom-width:4rpx;}
 .teacher-guidance{display:flex;gap:20rpx;margin:24rpx 0}.teacher-guidance button{flex:1;background:#fff9e9;color:#203b58;border:1rpx solid #e5d8b3}.teacher-tags-entry{font-size:26rpx;color:#365d7e;background:#f0f4f6;margin:16rpx 0}
+
+/* One horizontal primary navigation row; detailed tags are folded into Other. */
+.news-sections{width:100%;overflow:hidden;margin:10rpx 0 13rpx;white-space:nowrap;}
+.news-sections-row{display:flex;justify-content:flex-start;align-items:center;gap:13rpx;width:max-content;min-width:100%;}
+.news-section-tab{flex:none;padding:12rpx 6rpx;font-size:23rpx;line-height:1.45;white-space:nowrap;}
+.news-other-tab.active{color:#174e78;font-weight:800;}
+.news-tag-panel{margin:0 0 17rpx;padding:16rpx;background:#fffdf9;border:1rpx solid #e6dfd3;border-radius:11rpx;}
+.news-tag-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12rpx;color:#536b7b;font-size:22rpx;font-weight:750;}
+.news-tag-clear{color:#205b7d;}
+.news-tag-choices{display:flex;flex-wrap:wrap;gap:9rpx;margin-top:12rpx;}
+.news-multi-tag{flex:none;box-sizing:border-box;margin:0;padding:9rpx 13rpx;min-height:52rpx;background:#edf2f1;color:#31576c;border-radius:8rpx;font-size:22rpx;line-height:1.4;}
+.news-multi-tag.active{background:#1b5678;color:#fff;}
+/* Favorites are an independent, collapsible area, not part of feed filters. */
+.news-favorites{margin:0 0 13rpx;padding:0 19rpx;}
+.news-favorites-head{display:flex;align-items:center;justify-content:space-between;gap:12rpx;min-height:77rpx;}
+.news-favorites-title{color:#193f5c;font-size:26rpx;font-weight:800;}
+.news-favorites-arrow{color:#346681;font-size:22rpx;font-weight:750;}
+.news-favorites-body{border-top:1rpx solid #e6dfd3;padding:3rpx 0 13rpx;}
+.news-favorites-body .news-extra-meta{display:block;margin-top:6rpx;}
