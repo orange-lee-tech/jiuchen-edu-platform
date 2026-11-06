@@ -149,13 +149,24 @@
 }
 
 .locked-id {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   margin-top: 22rpx;
   padding: 20rpx;
   border-radius: 16rpx;
   background: #f3f7fc;
+}
+.locked-id-toggle {
+  display: block;
+  color: #245681;
+  font-size: 23rpx;
+  font-weight: 700;
+}
+.locked-id-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 16rpx;
 }
 
 .locked-code {
