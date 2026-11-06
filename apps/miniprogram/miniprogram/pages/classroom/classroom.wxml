@@ -72,7 +72,6 @@
         <view class="semester-navigation-head">
           <text class="semester-navigation-title">{{stageCalibrationMode ? '选择当前阶段' : '切换查看阶段'}}</text>
           <text wx:if="{{stageCalibrationMode}}" class="semester-navigation-note">点选后立即保存</text>
-          <text wx:else class="semester-navigation-note">左右滑动切换</text>
         </view>
         <scroll-view class="semester-rail" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="{{stageScrollTarget}}">
           <view class="semester-rail-row">
