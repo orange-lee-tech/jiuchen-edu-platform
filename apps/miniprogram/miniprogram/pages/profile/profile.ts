@@ -137,7 +137,7 @@ Page({
   onUnload() { this.profileViewEpoch += 1; this.stopShell?.() },
   onScheduleImport() {
     if (!this.data.loggedIn || this.data.role !== 'student' || isReadOnly()) return
-    openPage('/pages/schedule-import/schedule-import?view=manage')
+    openPage('/pages/schedule-import/schedule-import?view=auto')
   },
   onCustomerServiceTap() { void openVerifiedWechatCustomerService('账号及运营支持') },
   onMyTeacher() { openSlot('plan') },
