@@ -109,6 +109,12 @@
     <view wx:if="{{loggedIn && !readOnly}}" class="account-settings">
       <view class="account-settings-toggle" bindtap="onToggleAccountSettings" aria-role="button">账号与设置 <text>{{accountSettingsOpen ? '收起 ⌃' : '查看 ›'}}</text></view>
       <view wx:if="{{accountSettingsOpen}}" class="account-actions">
+      <view wx:if="{{role === 'student' && identities.length > 1}}" class="account-role-switch">
+        <text class="account-role-heading">切换兼任身份</text>
+        <block wx:for="{{identities}}" wx:for-item="roleIdentity" wx:key="id">
+          <button wx:if="{{roleIdentity.type !== role}}" class="account-role-button" disabled="{{identityBusy}}" data-role="{{roleIdentity.type}}" bindtap="onSwitchIdentity">切换至{{roleIdentity.type === 'admin' ? '管理员' : roleIdentity.type === 'teacher' ? '老师' : '学员'}}身份</button>
+        </block>
+      </view>
       <button class="logout-button" loading="{{loggingOut}}" disabled="{{loggingOut || deleting}}" bindtap="onLogout">退出当前登录</button>
       <button class="delete-button" loading="{{deleting}}" disabled="{{loggingOut || deleting}}" bindtap="onDeleteAccount">注销账号</button>
       <text class="account-note">退出保留账号资料。注销会清理自填资料并解除登录绑定，操作前会再次确认。</text>
