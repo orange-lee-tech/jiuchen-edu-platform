@@ -101,7 +101,7 @@ Page({
     ...INITIAL_SHELL,
     categories: [] as string[],
     sections: NEWS_SECTIONS, currentSection: '最新',
-    selectedTags: [] as string[], filtersOpen: false, favoritesOpen: false,
+    selectedTags: [] as string[], tagChoices: [] as Array<{ name: string; selected: boolean }>, filtersOpen: false, favoritesOpen: false,
     loadError: '',
     showReferenceNews: false,
     canManageTeacherTags: false,
@@ -136,7 +136,7 @@ Page({
       this.setData({ ...view, showReferenceNews: state.phase === 'ready' && view.shellKind !== 'student',
         canManageTeacherTags: state.phase === 'ready' && state.auth?.user.role === 'teacher' && !getReadOnlyContext(),
         allArticles: [], articles: [], featured: FALLBACK_FEATURED, pendingClassificationCount: 0,
-        sections: NEWS_SECTIONS, currentSection: '最新', categories: [], selectedTags: [], filtersOpen: false, favoritesOpen: false, searchQuery: '',
+        sections: NEWS_SECTIONS, currentSection: '最新', categories: [], tagChoices: [], selectedTags: [], filtersOpen: false, favoritesOpen: false, searchQuery: '',
         favorites: [], favoritesError: '', retiring: [], newsV2Enabled: false })
       if (state.phase === 'ready') void this.loadNews()
     })
@@ -181,8 +181,8 @@ Page({
       }
       if (posts.length === 0) {
         this.setData({
-          categories: [],
-                sections: NEWS_SECTIONS, currentSection: '最新',
+          categories: [], tagChoices: [], selectedTags: [],
+          sections: NEWS_SECTIONS, currentSection: '最新',
           featured: FALLBACK_FEATURED,
           allArticles: [],
           articles: [],
@@ -205,8 +205,8 @@ Page({
       const cards = visiblePosts.map(toCard)
       if (cards.length === 0) {
         this.setData({
-          categories: [],
-                sections: NEWS_SECTIONS, currentSection: '最新',
+          categories: [], tagChoices: [], selectedTags: [],
+          sections: NEWS_SECTIONS, currentSection: '最新',
           featured: FALLBACK_FEATURED,
           allArticles: [],
           articles: [],
@@ -225,6 +225,7 @@ Page({
       this.setData({
         sourceLabel: '真实资讯 · 人工分类',
         categories,
+        tagChoices: categories.map(name => ({ name, selected: selectedTags.includes(name) })),
         sections, currentSection, selectedTags,
         featured: filtered[0] || FALLBACK_FEATURED,
         allArticles: cards,
@@ -287,7 +288,7 @@ Page({
     const reset = section === '全部' || section === '最新'
     const selectedTags = reset ? [] : this.data.selectedTags
     const searchQuery = section === '全部' ? '' : this.data.searchQuery
-    this.setData({ currentSection: section, selectedTags, searchQuery, ...(reset ? { filtersOpen: false } : {}) })
+    this.setData({ currentSection: section, selectedTags, searchQuery, tagChoices: this.data.categories.map(name => ({ name, selected: selectedTags.includes(name) })), ...(reset ? { filtersOpen: false } : {}) })
     this.refreshFilteredArticles(searchQuery, section, selectedTags)
   },
   onTagTap(event: WechatMiniprogram.BaseEvent) {
@@ -296,11 +297,11 @@ Page({
     const selectedTags = this.data.selectedTags.includes(tag)
       ? this.data.selectedTags.filter(item => item !== tag)
       : [...this.data.selectedTags, tag]
-    this.setData({ selectedTags })
+    this.setData({ selectedTags, tagChoices: this.data.categories.map(name => ({ name, selected: selectedTags.includes(name) })) })
     this.refreshFilteredArticles(this.data.searchQuery, this.data.currentSection, selectedTags)
   },
   onClearTags() {
-    this.setData({ selectedTags: [] })
+    this.setData({ selectedTags: [], tagChoices: this.data.categories.map(name => ({ name, selected: false })) })
     this.refreshFilteredArticles(this.data.searchQuery, this.data.currentSection, [])
   },
   onManageNewsTags() {
