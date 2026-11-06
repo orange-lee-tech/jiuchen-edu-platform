@@ -126,6 +126,7 @@ Page({
     semesterSettingsOpen: false,
     expandedPlanType: '',
     inlinePlanDraft: null as InlinePlanDraft | null,
+    detachedPlanDrafts: [] as InlinePlanDraft[],
     inlinePlanSaving: false,
     inlinePlanError: '',
     bindingHelpOpen: false,
@@ -154,6 +155,8 @@ Page({
     this.setData({ stageSuggestion: null })
     const auth = getSavedAuthResult()
     const role=getReadOnlyContext()?.role||auth?.user.role
+    const currentOwner = getReadOnlyContext()?.id || auth?.user.id || ''
+    this.separateInlineDraftForIdentity(currentOwner, !auth || role !== 'student' || isReadOnly())
     if (!auth) {
       this.setData({ mode: 'guest', plans: [], mentors: [], records: [], actualStageCode: '', actualStageKnown: false, stageMode: null, stageModeKnown: false })
       return
@@ -169,7 +172,6 @@ Page({
       return
     }
     const owner=getReadOnlyContext()?.id||auth.user.id
-    if (this.data.inlinePlanDraft && (this.data.inlinePlanDraft.owner !== owner || isReadOnly())) this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' })
     let navigationIntent: PlanNavigationIntent | undefined
     try {
       navigationIntent = wx.getStorageSync('jiuchen-navigation-intent:plan') as PlanNavigationIntent | undefined
@@ -223,6 +225,9 @@ Page({
         })),
         stageSaveError: '',
       })
+      const detachedDraft = !isReadOnly() ? this.data.detachedPlanDrafts.find(item => item.owner === owner && item.stageCode === stage.code) : undefined
+      if (detachedDraft) this.setData({ inlinePlanDraft: detachedDraft, expandedPlanType: detachedDraft.type,
+        detachedPlanDrafts: this.data.detachedPlanDrafts.filter(item => item !== detachedDraft) })
       if (this.data.selectedView === 'week') {
         void this.loadCurrentWeek()
         wx.pageScrollTo({ selector: '.current-week-link', duration: 0 })
@@ -413,6 +418,16 @@ Page({
     if (!original) return true
     const simplify = (items: PlanEditorItem[]) => items.map(item => ({ name: item.name, target: item.target || null, dueDate: item.dueDate || null, status: item.status }))
     return draft.title !== original.title || JSON.stringify(simplify(draft.items)) !== JSON.stringify(simplify(original.items))
+  },
+  separateInlineDraftForIdentity(owner: string, forceSeparate = false) {
+    const activeDraft = this.data.inlinePlanDraft
+    if (!activeDraft || (!forceSeparate && activeDraft.owner === owner)) return
+    const dirty = this.inlinePlanDirty()
+    const detachedPlanDrafts = dirty && !this.data.detachedPlanDrafts.some(item => item.owner === activeDraft.owner && item.stageCode === activeDraft.stageCode && item.type === activeDraft.type)
+      ? [...this.data.detachedPlanDrafts, activeDraft] : this.data.detachedPlanDrafts
+    this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '', detachedPlanDrafts })
+    if (dirty) wx.showModal({ title: '身份已切换', content: '上一个身份有未保存的计划修改。该草稿已隔离，不会提交到当前身份。是否确认丢弃？', confirmText: '丢弃草稿', cancelText: '暂时保留',
+      success: result => { if (result.confirm) this.setData({ detachedPlanDrafts: this.data.detachedPlanDrafts.filter(item => item !== activeDraft) }) } })
   },
   confirmDiscardInlinePlan(continueAction: () => void) {
     const draft = this.data.inlinePlanDraft
