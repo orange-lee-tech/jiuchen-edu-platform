@@ -3,6 +3,7 @@ import {getReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 import { weeklyScheduleView, courseTimeLabel } from '../../utils/schedule-view'
 import { initialPlanView, type PlanNavigationIntent } from '../../utils/plan-navigation-intent'
+import { normalizePlanDraft } from '../../utils/plan-editor-form'
 import { resolveCurrentStage } from '../../utils/current-stage'
 import {
   ApiRequestError,
@@ -12,11 +13,13 @@ import {
   getMyClassroom,
   getCurrentStageSuggestion,
   setCurrentClassroomStage,
+  saveMyClassroomPlan,
   type ClassroomCoachingRecord,
   type ClassroomMentor,
   type ClassroomPlan,
   type ClassroomPlanType,
   type ClassroomStage,
+  type PlanEditorItem,
 } from '../../utils/request'
 
 function stageErrorMessage(error: unknown) {
@@ -47,8 +50,9 @@ type PlanCard = {
   title: string
   progress: string
   revisionStatus: 'none' | 'pending' | 'approved'
-  items: Array<{ title: string; status: string }>
+  items: Array<{ id: string; name: string; target: string | null; dueDate: string | null; status: PlanEditorItem['status'] }>
 }
+type InlinePlanDraft = { owner: string; stageCode: string; type: ClassroomPlanType; title: string; items: PlanEditorItem[]; revisionStatus: PlanCard['revisionStatus'] }
 
 const PLAN_CARDS: Record<ClassroomPlanType, Pick<PlanCard, 'type' | 'title'>> = {
   gpa: { type: 'gpa', title: '课程成绩计划' },
@@ -101,7 +105,7 @@ function toPlanCard(plan: ClassroomPlan): PlanCard {
     title: plan.title,
     progress: plan.items.length ? `${completed} / ${plan.items.length}` : '',
     revisionStatus: plan.revisionStatus || (plan.id ? 'approved' : 'none'),
-    items: plan.items.map(item => ({ title: item.name, status: item.status })),
+    items: plan.items.map(item => ({ id: item.id, name: item.name, target: item.target, dueDate: item.dueDate ?? null, status: item.status })),
   }
 }
 
@@ -121,6 +125,9 @@ Page({
     stageChangeBusy: false, stageCalibrationMode: false, stageSaveError: '',
     semesterSettingsOpen: false,
     expandedPlanType: '',
+    inlinePlanDraft: null as InlinePlanDraft | null,
+    inlinePlanSaving: false,
+    inlinePlanError: '',
     bindingHelpOpen: false,
     stageSuggestion: null as { code: string; label: string; expectedStage: string | null; expectedMode: 'auto' | 'manual' | null } | null,
     ...emptyStageView(FALLBACK_STAGES[0], 0),
@@ -162,6 +169,7 @@ Page({
       return
     }
     const owner=getReadOnlyContext()?.id||auth.user.id
+    if (this.data.inlinePlanDraft && (this.data.inlinePlanDraft.owner !== owner || isReadOnly())) this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' })
     let navigationIntent: PlanNavigationIntent | undefined
     try {
       navigationIntent = wx.getStorageSync('jiuchen-navigation-intent:plan') as PlanNavigationIntent | undefined
@@ -246,12 +254,20 @@ Page({
   },
 
   onStageChange(event: WechatMiniprogram.BaseEvent) {
-    if (this.data.stageChangeBusy) return
+    if (this.data.stageChangeBusy || this.data.inlinePlanSaving) return
     const code = String(event.currentTarget.dataset.code || '')
     const stages = this.data.stages as ClassroomStage[]
     const index = code ? stages.findIndex(item => item.code === code) : Number(event.currentTarget.dataset.index)
     const stage = stages[index]
     if (!stage) return
+    if (this.data.inlinePlanDraft && this.inlinePlanDirty()) {
+      this.confirmDiscardInlinePlan(() => this.applyStageChange(stage, index))
+      return
+    }
+    this.applyStageChange(stage, index)
+  },
+  applyStageChange(stage: ClassroomStage, index: number) {
+    if (this.data.inlinePlanDraft) this.setData({ inlinePlanDraft: null, inlinePlanError: '', expandedPlanType: '' })
     if (this.data.stageCalibrationMode) {
       const expected = this.data.actualStageKnown ? (this.data.actualStageCode || null) : undefined
       const expectedMode = this.data.stageModeKnown ? this.data.stageMode : undefined
@@ -263,7 +279,7 @@ Page({
     void this.reloadStage(stage.code)
   },
   onToggleStageCalibration() {
-    if (isReadOnly() || this.data.stageChangeBusy) return
+    if (isReadOnly() || this.data.stageChangeBusy || this.data.inlinePlanSaving) return
     const opening = !this.data.stageCalibrationMode
     this.setData({ stageCalibrationMode: opening, semesterSettingsOpen: opening })
   },
@@ -315,7 +331,11 @@ Page({
       success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(code, code, 'manual', mode) } })
   },
   async saveCurrentStage(code: string, expected: string | null | undefined, mode: 'auto' | 'manual' = 'manual', expectedMode?: 'auto' | 'manual' | null) {
-    if (this.data.stageChangeBusy || isReadOnly()) return
+    if (this.data.stageChangeBusy || this.data.inlinePlanSaving || isReadOnly()) return
+    if (this.data.inlinePlanDraft && this.inlinePlanDirty()) {
+      this.confirmDiscardInlinePlan(() => void this.saveCurrentStage(code, expected, mode, expectedMode))
+      return
+    }
     const generation = this.viewGeneration, owner = this.selectedOwner
     let operation: 'save' | 'verify' = 'save'
     this.setData({ stageChangeBusy: true, stageSaveError: '' })
@@ -360,16 +380,123 @@ Page({
   },
 
   onPlanTap(event: WechatMiniprogram.BaseEvent) {
+    if (this.data.inlinePlanSaving) return
     const type = String(event.currentTarget.dataset.type || '')
     if (!type) return
-    this.setData({ expandedPlanType: this.data.expandedPlanType === type ? '' : type })
+    if (isReadOnly()) {
+      this.setData({ expandedPlanType: this.data.expandedPlanType === type ? '' : type })
+      return
+    }
+    if (this.data.inlinePlanDraft?.type === type) {
+      const dirty = this.inlinePlanDirty()
+      if (dirty) this.confirmDiscardInlinePlan(() => this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' }))
+      else this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' })
+      return
+    }
+    const open = () => this.openInlinePlan(type)
+    if (this.data.inlinePlanDraft && this.inlinePlanDirty()) this.confirmDiscardInlinePlan(open)
+    else open()
   },
-  onPlanEdit(event: WechatMiniprogram.BaseEvent) {
-    const type = String(event.currentTarget.dataset.type || '')
-    if (!type) return
-    wx.navigateTo({
-      url: `/pages/plan-editor/plan-editor?stage=${encodeURIComponent(this.data.currentStageCode)}&type=${encodeURIComponent(type)}`,
-    })
+  openInlinePlan(type: string) {
+    const plan = (this.data.plans as PlanCard[]).find(item => item.type === type)
+    if (!plan || isReadOnly()) return
+    this.setData({ inlinePlanDraft: {
+      owner: this.selectedOwner, stageCode: this.data.currentStageCode, type: plan.type, title: plan.title,
+      revisionStatus: plan.revisionStatus,
+      items: plan.items.map(item => ({ name: item.name, target: item.target, dueDate: item.dueDate, status: item.status })),
+    }, expandedPlanType: type, inlinePlanError: '' })
+  },
+  inlinePlanDirty() {
+    const draft = this.data.inlinePlanDraft
+    if (!draft) return false
+    const original = (this.data.plans as PlanCard[]).find(item => item.type === draft.type)
+    if (!original) return true
+    const simplify = (items: PlanEditorItem[]) => items.map(item => ({ name: item.name, target: item.target || null, dueDate: item.dueDate || null, status: item.status }))
+    return draft.title !== original.title || JSON.stringify(simplify(draft.items)) !== JSON.stringify(simplify(original.items))
+  },
+  confirmDiscardInlinePlan(continueAction: () => void) {
+    const draft = this.data.inlinePlanDraft
+    if (!draft) { continueAction(); return }
+    const owner = this.selectedOwner, stage = this.data.currentStageCode
+    wx.showModal({ title: '放弃未保存修改？', content: '当前计划有尚未保存的修改。继续操作会丢弃这些内容。', confirmText: '放弃修改', cancelText: '继续编辑',
+      success: result => {
+        if (result.confirm && this.selectedOwner === owner && this.data.currentStageCode === stage && this.data.inlinePlanDraft?.owner === owner) {
+          this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' })
+          continueAction()
+        }
+      } })
+  },
+  onCancelInlinePlan() {
+    if (!this.data.inlinePlanDraft) return
+    if (this.inlinePlanDirty()) this.confirmDiscardInlinePlan(() => undefined)
+    else this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' })
+  },
+  updateInlinePlan(change: Partial<Pick<InlinePlanDraft, 'title' | 'items'>>) {
+    const draft = this.data.inlinePlanDraft
+    if (!draft || isReadOnly()) return
+    this.setData({ inlinePlanDraft: { ...draft, ...change }, inlinePlanError: '' })
+  },
+  onInlineTitleInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.updateInlinePlan({ title: event.detail.value }) },
+  onInlineAddItem() {
+    const draft = this.data.inlinePlanDraft
+    if (!draft || isReadOnly()) return
+    if (draft.items.length >= 50) { this.setData({ inlinePlanError: '计划最多添加 50 条任务' }); return }
+    this.updateInlinePlan({ items: [...draft.items, { name: '', target: '', status: 'pending' }] })
+  },
+  onInlineItemInput(event: WechatMiniprogram.CustomEvent<{ index: number; field: string; value: string }>) {
+    const draft = this.data.inlinePlanDraft, index = Number(event.detail.index)
+    if (!draft || !draft.items[index] || !['name', 'target'].includes(event.detail.field)) return
+    const items = [...draft.items]
+    items[index] = { ...items[index], [event.detail.field]: event.detail.value }
+    this.updateInlinePlan({ items })
+  },
+  onInlineStatusChange(event: WechatMiniprogram.CustomEvent<{ index: number; value: string }>) {
+    const draft = this.data.inlinePlanDraft, index = Number(event.detail.index)
+    const status = ['pending', 'in_progress', 'done'][Number(event.detail.value)] as PlanEditorItem['status'] | undefined
+    if (!draft || !draft.items[index] || !status) return
+    const items = [...draft.items]; items[index] = { ...items[index], status }; this.updateInlinePlan({ items })
+  },
+  onInlineDueDateChange(event: WechatMiniprogram.CustomEvent<{ index: number; value: string }>) {
+    const draft = this.data.inlinePlanDraft, index = Number(event.detail.index)
+    if (!draft || !draft.items[index]) return
+    const items = [...draft.items]; items[index] = { ...items[index], dueDate: event.detail.value }; this.updateInlinePlan({ items })
+  },
+  onInlineClearDueDate(event: WechatMiniprogram.CustomEvent<{ index: number }>) {
+    const draft = this.data.inlinePlanDraft, index = Number(event.detail.index)
+    if (!draft || !draft.items[index]) return
+    const items = [...draft.items]; items[index] = { ...items[index], dueDate: null }; this.updateInlinePlan({ items })
+  },
+  onInlineRemoveItem(event: WechatMiniprogram.CustomEvent<{ index: number }>) {
+    const draft = this.data.inlinePlanDraft, index = Number(event.detail.index)
+    if (!draft || !draft.items[index]) return
+    const items = [...draft.items]; items.splice(index, 1); this.updateInlinePlan({ items })
+  },
+  async onSaveInlinePlan() {
+    const draft = this.data.inlinePlanDraft
+    if (!draft || isReadOnly() || this.data.inlinePlanSaving) return
+    if (draft.owner !== this.selectedOwner || draft.stageCode !== this.data.currentStageCode) {
+      this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '身份或学期已变化，请重新打开计划。' }); return
+    }
+    const normalized = normalizePlanDraft(draft.title, draft.items)
+    if (!normalized.ok) { this.setData({ inlinePlanError: normalized.message }); return }
+    const generation = this.viewGeneration, owner = draft.owner, stage = draft.stageCode
+    let saved = false
+    this.setData({ inlinePlanSaving: true, inlinePlanError: '' })
+    try {
+      await saveMyClassroomPlan(stage, draft.type, normalized.value)
+      saved = true
+      if (generation !== this.viewGeneration || owner !== this.selectedOwner || stage !== this.data.currentStageCode || isReadOnly()) return
+      await this.hydratePlanData(stage)
+      if (generation !== this.viewGeneration || owner !== this.selectedOwner || stage !== this.data.currentStageCode) return
+      this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' })
+      wx.showToast({ title: '计划已保存', icon: 'success' })
+    } catch (error) {
+      if (generation === this.viewGeneration && owner === this.selectedOwner && stage === this.data.currentStageCode) {
+        this.setData({ inlinePlanError: saved ? '计划已保存，但最新内容暂时未能重新读取。草稿仍保留，请重试读取。' : friendlyRequestError(error, '保存失败，草稿已保留，请重试') })
+      }
+    } finally {
+      if (generation === this.viewGeneration && owner === this.selectedOwner) this.setData({ inlinePlanSaving: false })
+    }
   },
 
   onCurrentWeekSchedule() {

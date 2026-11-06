@@ -124,9 +124,8 @@
             wx:key="type"
             class="plan-card surface"
             data-type="{{item.type}}"
-            bindtap="onPlanTap"
           >
-            <view class="plan-card-head">
+            <view class="plan-card-head" data-type="{{item.type}}" bindtap="onPlanTap">
               <image class="plan-icon plan-icon-image" src="{{item.type === 'gpa' ? '/assets/jiuchen-visual-v1/icons/courses.png' : item.type === 'english' ? '/assets/jiuchen-visual-v1/icons/english.png' : item.type === 'competition' ? '/assets/jiuchen-visual-v1/icons/trophy.png' : item.type === 'research' ? '/assets/jiuchen-visual-v1/icons/flask.png' : '/assets/jiuchen-visual-v1/icons/profile.png'}}" mode="aspectFit" />
               <view class="plan-heading">
                 <text class="plan-action-label">{{readOnly ? '查看' + item.title : item.revisionStatus === 'none' ? '创建' + item.title : '编辑' + item.title}}</text>
@@ -134,12 +133,19 @@
               </view>
               <text class="plan-arrow">›</text>
             </view>
-            <view wx:if="{{expandedPlanType === item.type}}" class="plan-inline-details">
+            <view wx:if="{{expandedPlanType === item.type && readOnly}}" class="plan-inline-details">
               <view wx:for="{{item.items}}" wx:for-item="task" wx:key="index" class="plan-inline-row">
-                <text>{{task.title}}</text><text>{{task.status === 'done' ? '已完成' : task.status === 'in_progress' ? '进行中' : '未开始'}}</text>
+                <view class="plan-inline-main"><text>{{task.name}}</text><text wx:if="{{task.target}}" class="plan-inline-target">{{task.target}}</text><text wx:if="{{task.dueDate}}" class="plan-inline-target">截止：{{task.dueDate}}</text></view><text>{{task.status === 'done' ? '已完成' : task.status === 'in_progress' ? '进行中' : '未开始'}}</text>
               </view>
               <text wx:if="{{!item.items.length}}" class="plan-inline-empty">暂无具体任务</text>
-              <button class="plan-inline-action" data-type="{{item.type}}" catchtap="onPlanEdit">{{readOnly ? '查看详情' : '编辑计划'}}</button>
+            </view>
+            <view wx:if="{{inlinePlanDraft && inlinePlanDraft.type === item.type && !readOnly}}" class="plan-inline-details">
+              <text class="plan-inline-state">{{inlinePlanDraft.revisionStatus === 'pending' ? '当前草稿尚未生效，保存将按现有审核流程处理。' : inlinePlanDraft.revisionStatus === 'approved' ? '编辑后保存会按现有计划规则提交。' : '新计划保存后将进入当前服务支持的流程。'}}</text>
+              <text wx:if="{{inlinePlanError}}" class="inline-plan-error">{{inlinePlanError}}</text>
+              <plan-task-editor title="{{inlinePlanDraft.title}}" items="{{inlinePlanDraft.items}}" read-only="{{readOnly}}" saving="{{inlinePlanSaving}}"
+                bind:titleinput="onInlineTitleInput" bind:additem="onInlineAddItem" bind:iteminput="onInlineItemInput" bind:statuschange="onInlineStatusChange"
+                bind:duedatechange="onInlineDueDateChange" bind:clearduedate="onInlineClearDueDate" bind:removeitem="onInlineRemoveItem" />
+              <view class="plan-inline-controls"><button disabled="{{inlinePlanSaving}}" bindtap="onCancelInlinePlan">取消</button><button class="plan-inline-action" loading="{{inlinePlanSaving}}" disabled="{{inlinePlanSaving || readOnly}}" bindtap="onSaveInlinePlan">保存计划</button></view>
             </view>
           </view>
         </view>

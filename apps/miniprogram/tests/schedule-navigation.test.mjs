@@ -22,6 +22,7 @@ function loadTypeScript(relativePath) {
 
 const { dailyScheduleView, weekdayScheduleView, weekMatches } = loadTypeScript('utils/schedule-view.ts')
 const { initialPlanView } = loadTypeScript('utils/plan-navigation-intent.ts')
+const { normalizePlanDraft } = loadTypeScript('utils/plan-editor-form.ts')
 const schedule = { termStartDate: '2021-12-27', courses: [] }
 const atChinaNoon = (date) => new Date(`${date}T04:00:00.000Z`)
 
@@ -59,4 +60,16 @@ test('first entry honors a fresh owner-matched week intent; account changes and 
   assert.equal(initialPlanView('student-b', intent, now), 'stage')
   assert.equal(initialPlanView('student-a', { ...intent, createdAt: now - 120000 }, now), 'stage')
   assert.equal(initialPlanView('student-a', { ...intent, createdAt: now + 1 }, now), 'stage')
+})
+
+test('shared plan normalization requires a title, caps tasks, trims fields, and drops blank task names', () => {
+  assert.equal(normalizePlanDraft('   ', []).ok, false)
+  const normalized = normalizePlanDraft('  英语计划  ', [
+    { name: '  单词复习 ', target: ' 每天  ', dueDate: '2026-11-12', status: 'in_progress' },
+    { name: '   ', target: '', status: 'pending' },
+  ])
+  assert.equal(normalized.ok, true)
+  assert.deepEqual(normalized.value, { title: '英语计划', items: [{ name: '单词复习', target: '每天', dueDate: '2026-11-12', status: 'in_progress' }] })
+  const overLimit = normalizePlanDraft('计划', Array.from({ length: 51 }, (_, i) => ({ name: `任务${i}`, status: 'pending' })))
+  assert.equal(overLimit.ok, false)
 })
