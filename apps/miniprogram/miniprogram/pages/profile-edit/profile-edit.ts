@@ -56,6 +56,7 @@ Page({
     internalIdInput: '',
     identity: null as InternalIdentity | null,
     identityLocked: false,
+    identityDetailsOpen: false,
     nameInput: '',
     nameTouched: false,
     savingName: false,
@@ -127,6 +128,7 @@ Page({
       this.setData({
         identity: identityResult.identity,
         identityLocked: identityResult.locked,
+        identityDetailsOpen: false,
       })
 
       if (profile) {
@@ -147,6 +149,11 @@ Page({
     } finally {
       this.setData({ loading: false })
     }
+  },
+
+  onToggleIdentityDetails() {
+    if (!this.data.identityLocked || !this.data.identity) return
+    this.setData({ identityDetailsOpen: !this.data.identityDetailsOpen })
   },
 
   onRetryLoad() {
@@ -174,6 +181,7 @@ Page({
         canEditAcademic: result.role === 'student',
         identity: result.identity,
         identityLocked: true,
+        identityDetailsOpen: false,
         internalIdInput: '',
       })
       wx.showModal({
