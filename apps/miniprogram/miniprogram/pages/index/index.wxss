@@ -288,5 +288,3 @@ button::after{border:0;}
 .upcoming-task-name { display: block; color: #173f58; font-size: 28rpx; font-weight: 600; overflow-wrap: break-word; }
 .upcoming-task-meta { display: block; margin-top: 6rpx; }
 .upcoming-task-date { flex-shrink: 0; color: #8b6b2d; font-size: 24rpx; text-align: right; }
-.home-more-toggle{display:block;margin-top:18rpx;padding:13rpx 8rpx;text-align:center;color:#276384;font-size:23rpx;font-weight:750;border-top:1rpx solid #e7ded0;}
-.home-more-actions{margin-top:10rpx;padding:14rpx;background:#fffdf9;}
