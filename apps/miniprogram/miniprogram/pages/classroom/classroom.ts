@@ -408,11 +408,6 @@ Page({
     } finally { if (generation === this.viewGeneration && request === this.weekRequest) this.setData({ weekLoading: false }) }
   },
 
-  onScheduleImport() {
-    if(isReadOnly())return
-    wx.navigateTo({ url: '/pages/schedule-import/schedule-import?view=manage' })
-  },
-
   onTeacherWorkspace() {
     openPage('/pages/teacher-students/teacher-students')
   },
