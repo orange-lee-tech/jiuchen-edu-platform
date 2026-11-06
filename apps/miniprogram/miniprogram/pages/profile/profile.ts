@@ -135,6 +135,10 @@ Page({
   onHide() { this.profileViewEpoch += 1; this.stopShell?.(); this.setData({ shellPhase: 'loading', identities: [], profileStageLabel: '',
     favorites: [], favoritesVisible: false, identityInput: '', identityDetailsOpen: false, mentorName: '' }) },
   onUnload() { this.profileViewEpoch += 1; this.stopShell?.() },
+  onScheduleImport() {
+    if (!this.data.loggedIn || this.data.role !== 'student' || isReadOnly()) return
+    openPage('/pages/schedule-import/schedule-import?view=manage')
+  },
   onCustomerServiceTap() { void openVerifiedWechatCustomerService('账号及运营支持') },
   onMyTeacher() { openSlot('plan') },
   onToggleAccountSettings() { this.setData({ accountSettingsOpen: !this.data.accountSettingsOpen }) },
@@ -147,7 +151,7 @@ Page({
     if (this.data.loggedIn && (this.data.role === 'teacher' || this.data.role === 'admin')) {
       openPage('/pages/staff-profile/staff-profile'); return
     }
-    if (this.data.loggedIn && this.data.identities.some(item => item.type === 'admin')) {
+    if (this.data.loggedIn && this.data.role !== 'student' && this.data.identities.some(item => item.type === 'admin')) {
       this.setData({ identityDetailsOpen: true }, () => wx.pageScrollTo({ selector: '#identity-section', duration: 200 }))
       return
     }
