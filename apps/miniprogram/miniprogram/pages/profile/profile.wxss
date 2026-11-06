@@ -238,3 +238,9 @@ button::after{border:0;}
 .profile-about-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11rpx;}
 .profile-about-item{display:flex;box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:8rpx;min-height:112rpx;padding:14rpx 6rpx;background:#fffdf9;border:1rpx solid #e4ded2;border-radius:11rpx;color:#214d68;font-size:23rpx;font-weight:750;text-align:center;}
 .profile-about-icon{width:46rpx;height:46rpx;flex:none;}
+
+/* Low-frequency timetable import moved from Plan into the student's Mine tools. */
+.profile-schedule-import{display:flex;align-items:center;box-sizing:border-box;gap:14rpx;margin-top:13rpx;padding:16rpx 18rpx;min-height:96rpx;background:#fffdf9;border:1rpx solid #e4ded2;border-radius:11rpx;}
+.profile-schedule-icon{width:45rpx;height:45rpx;flex:none;}
+.profile-schedule-import .menu-title{font-size:25rpx;}
+.profile-schedule-import .menu-description{font-size:20rpx;}
