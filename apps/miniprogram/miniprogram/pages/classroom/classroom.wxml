@@ -62,18 +62,19 @@
         <view wx:if="{{stageSuggestion.code}}" class="stage-suggestion-actions"><text bindtap="onApplyStageSuggestion">启用自动建议</text><text bindtap="onDismissStageSuggestion">暂不更改</text></view>
         <text wx:else class="stage-suggestion-dismiss" bindtap="onDismissStageSuggestion">知道了</text>
       </view>
-      <view wx:if="{{!readOnly}}" class="stage-actions">
-        <button class="stage-calibrate-button" disabled="{{stageChangeBusy}}" bindtap="onToggleStageCalibration">{{stageCalibrationMode ? '取消手动校准' : '手动校准当前学期'}}</button>
-        <view class="stage-actions-secondary">
-          <text bindtap="onReviewCurrentStage">按入学年份自动定位 ›</text>
-          <text wx:if="{{stageNotice && !stageScheduleSafe}}" bindtap="onAcademicProfile">补充入学年份 ›</text>
-          
+      <view wx:if="{{!readOnly}}" class="semester-settings">
+        <view class="semester-settings-toggle" bindtap="onToggleSemesterSettings" aria-role="button">
+          <text>学期设置</text><text>{{semesterSettingsOpen ? '收起 ⌃' : '自动定位 · 手动校准 ›'}}</text>
+        </view>
+        <view wx:if="{{semesterSettingsOpen}}" class="semester-settings-menu">
+          <text class="semester-settings-action" bindtap="onReviewCurrentStage">按入学年份定位</text>
+          <text class="semester-settings-action" bindtap="onToggleStageCalibration">{{stageCalibrationMode ? '退出手动校准' : '手动校准当前学期'}}</text>
+          <text wx:if="{{stageNotice && !stageScheduleSafe}}" class="semester-settings-action" bindtap="onAcademicProfile">补充入学年份</text>
         </view>
       </view>
       <view class="semester-navigation">
         <view class="semester-navigation-head">
           <text class="semester-navigation-title">{{stageCalibrationMode ? '选择当前阶段' : '切换查看阶段'}}</text>
-          <text wx:if="{{stageCalibrationMode}}" class="semester-navigation-note">点选后立即保存</text>
         </view>
         <scroll-view class="semester-rail" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="{{stageScrollTarget}}">
           <view class="semester-rail-row">

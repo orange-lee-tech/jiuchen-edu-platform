@@ -119,6 +119,7 @@ Page({
     stageScrollTarget: 'semester-freshman-fall', actualStageLabel: '待确认',
     actualStageCode: '', actualStageKnown: false, stageMode: null as 'auto' | 'manual' | null, stageModeKnown: false, stageNotice: '', stageScheduleSafe: false,
     stageChangeBusy: false, stageCalibrationMode: false, stageSaveError: '',
+    semesterSettingsOpen: false,
     expandedPlanType: '',
     bindingHelpOpen: false,
     stageSuggestion: null as { code: string; label: string; expectedStage: string | null; expectedMode: 'auto' | 'manual' | null } | null,
@@ -137,7 +138,7 @@ Page({
       else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
     })
   },
-  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stageCalibrationMode: false, stageSuggestion: null }) },
+  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stageCalibrationMode: false, semesterSettingsOpen: false, stageSuggestion: null }) },
   onUnload() { this.stopShell?.() },
 
   async initializeClassroom() {
@@ -264,8 +265,9 @@ Page({
   onToggleStageCalibration() {
     if (isReadOnly() || this.data.stageChangeBusy) return
     const opening = !this.data.stageCalibrationMode
-    this.setData({ stageCalibrationMode: opening })
+    this.setData({ stageCalibrationMode: opening, semesterSettingsOpen: opening })
   },
+  onToggleSemesterSettings() { this.setData({ semesterSettingsOpen: !this.data.semesterSettingsOpen }) },
   onAcademicProfile() { if (!isReadOnly()) openPage('/pages/profile-edit/profile-edit') },
   async onReviewCurrentStage() {
     if (isReadOnly() || this.data.stageChangeBusy) return
@@ -329,7 +331,7 @@ Page({
       if (!confirmed.ok || confirmed.currentStage !== code || confirmed.mode !== mode) throw new ApiRequestError(409, 'current_stage_changed')
       const index = (this.data.stages as ClassroomStage[]).findIndex(item => item.code === confirmed.currentStage)
       if (index < 0) throw new ApiRequestError(409, 'stage_save_response_invalid')
-      this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage', stageScrollTarget: `semester-${this.data.stages[index].code}`, stageCalibrationMode: false })
+      this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage', stageScrollTarget: `semester-${this.data.stages[index].code}`, stageCalibrationMode: false, semesterSettingsOpen: false })
       const refreshedGeneration = this.viewGeneration + 1
       await this.initializeClassroom()
       if (owner !== this.selectedOwner || refreshedGeneration !== this.viewGeneration) return
