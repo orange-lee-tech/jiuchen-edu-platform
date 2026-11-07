@@ -1,0 +1,32 @@
+<view class="wallet">
+  <view class="wallet-head"><text class="wallet-title">{{mode === 'compact' ? 'AI 评估次数' : 'AI 评估服务'}}</text><text class="wallet-link" bindtap="refresh">刷新次数 ›</text></view>
+  <text wx:if="{{billingEnabled && creditAvailable !== null}}" class="wallet-balance">剩余 {{creditAvailable}} 次</text>
+  <text wx:elif="{{creditLoading}}" class="wallet-status">正在核实额度…</text>
+  <text wx:elif="{{creditError}}" class="wallet-status">{{creditError}}</text>
+  <text wx:else class="wallet-status">当前评估额度服务不可用</text>
+  <text wx:if="{{billingEnabled}}" class="wallet-note">成功完成一次评估扣 1 次；已保存的历史报告可免费查看。</text>
+  <view wx:if="{{billingEnabled}}">
+    <button class="wallet-toggle" bindtap="onToggleOffers">{{offersOpen ? '收起购买次数 ⌃' : '购买次数 ›'}}</button>
+    <view wx:if="{{offersOpen}}">
+      <view wx:if="{{checkoutEnabled}}" class="wallet-offers">
+        <button wx:for="{{skuChoices}}" wx:key="key" data-key="{{item.key}}" disabled="{{purchasing || verifyingPayment || creditLoading}}" loading="{{purchasing}}" bindtap="onBuyCredit">{{item.count}} 次 · ¥{{item.price}}</button>
+      </view>
+      <text wx:else class="wallet-status">微信购买暂未开放；可咨询客服。</text>
+    </view>
+    <button wx:if="{{pendingPaymentOrderId}}" class="wallet-action" loading="{{verifyingPayment}}" disabled="{{verifyingPayment || purchasing}}" bindtap="onVerifyCreditPayment">核实上一笔购买订单</button>
+    <button wx:if="{{pendingPaymentOrderId && canEndPendingOrder}}" class="wallet-action" loading="{{endingPayment}}" bindtap="onEndUnpaidPayment">结束未完成购买</button>
+    <text wx:if="{{pendingPaymentOrderId}}" class="wallet-status">上一笔订单待微信核实，请先查单；状态不明时勿重复付款。</text>
+    <button wx:if="{{mode === 'full'}}" class="wallet-toggle" bindtap="onToggleOrders">{{ordersOpen ? '收起我的订单 ⌃' : '我的订单 ›'}}</button>
+    <view wx:if="{{ordersOpen && mode === 'full'}}">
+      <text wx:if="{{purchaseOrderError}}" class="wallet-status">{{purchaseOrderError}}</text>
+      <text wx:elif="{{!purchaseOrders.length}}" class="wallet-status">暂无购买订单</text>
+      <view wx:for="{{purchaseOrders}}" wx:key="id" class="wallet-order">
+        <text>{{item.skuKey}} · ¥{{item.amountYuan}} · {{item.statusLabel}}</text>
+        <text>购买 {{item.purchasedCredits}} 次，已到账 {{item.credited}} 次{{item.deliveredAt ? ' · 发货已确认' : ''}}</text>
+        <text wx:if="{{item.reviewState}}">售后核对：{{item.reviewState === 'resolved' ? '已处理' : '处理中'}}</text>
+        <button wx:if="{{item.status === 'paid'}}" data-id="{{item.id}}" bindtap="onRequestAfterSales">申请售后核对</button>
+      </view>
+      <text class="wallet-note">安卓退款由九辰客服核对；iOS 请从 App Store 购买记录申请。已使用次数需人工核算。</text>
+    </view>
+  </view>
+</view>

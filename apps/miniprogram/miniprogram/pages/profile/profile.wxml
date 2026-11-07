@@ -30,6 +30,7 @@
       </view>
       <text class="arrow">›</text>
     </view>
+    <credit-wallet wx:if="{{loggedIn && (role === 'user' || role === 'student') && !readOnly}}" id="profile-wallet" mode="full" account-id="{{walletOwner}}" />
     <view class="profile-services">
       <text class="section-heading">我的服务</text>
       <view class="profile-service-links">
