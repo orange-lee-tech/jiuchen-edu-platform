@@ -36,14 +36,13 @@ Page({
     businessId: '', userName: '', profileStageLabel: '', mentorName: '', menus: PERSONAL_MENUS, loggingOut: false, deleting: false,
     favoritesVisible:false,favoritesLoading:false,favoritesError:'',favorites:[] as NewsFavorite[],
     identities: [] as MyIdentity[], identityInput: '', identityBusy: false, identityError: '', identityDetailsOpen: false, accountSettingsOpen: false,
-    profileAboutOpen: false,
   },
   stopShell: undefined as (() => void) | undefined,
   profileViewEpoch: 0,
   onShow() {
     this.stopShell?.()
     const epoch = ++this.profileViewEpoch
-    this.setData({favoritesVisible:false,favorites:[],favoritesError:'',identityDetailsOpen:false,profileAboutOpen:false})
+    this.setData({favoritesVisible:false,favorites:[],favoritesError:'',identityDetailsOpen:false})
     this.stopShell = observeSlot('mine', (state) => {
       const auth = state.auth
       const role = auth?.user.role || ''
@@ -144,7 +143,6 @@ Page({
   onMyTeacher() { openSlot('plan') },
   onToggleAccountSettings() { this.setData({ accountSettingsOpen: !this.data.accountSettingsOpen }) },
   onToggleIdentityDetails() { this.setData({ identityDetailsOpen: !this.data.identityDetailsOpen }) },
-  onToggleProfileAbout() { this.setData({ profileAboutOpen: !this.data.profileAboutOpen }) },
   onProducts() { openPage('/pages/products/products') },
   onBrand() { openPage('/pages/brand/brand') },
   onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },

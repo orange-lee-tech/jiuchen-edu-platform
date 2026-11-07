@@ -60,8 +60,8 @@
       </view>
     </view>
     <view class="profile-about">
-      <view class="profile-about-toggle" bindtap="onToggleProfileAbout" aria-role="button"><text class="section-heading">认识九辰</text><text>{{profileAboutOpen ? '收起 ⌃' : '展开服务介绍 ›'}}</text></view>
-      <view wx:if="{{profileAboutOpen}}" class="profile-about-grid">
+      <text class="section-heading">认识九辰</text>
+      <view class="profile-about-grid">
         <view class="profile-about-item" bindtap="onProducts" hover-class="menu-pressed" aria-role="button" aria-label="查看九辰服务介绍">
           <image class="profile-about-icon" src="/assets/icons/business-active.png" mode="aspectFit" />
           <text>服务介绍</text>
