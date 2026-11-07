@@ -126,6 +126,7 @@ Page({
     semesterSettingsOpen: false,
     expandedPlanType: '',
     inlinePlanDraft: null as InlinePlanDraft | null,
+    inlinePlanNeedsResume: false,
     detachedPlanDrafts: [] as InlinePlanDraft[],
     inlinePlanSaving: false,
     inlinePlanError: '',
@@ -146,7 +147,11 @@ Page({
       else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
     })
   },
-  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stageCalibrationMode: false, semesterSettingsOpen: false, stageSuggestion: null }) },
+  onHide() {
+    const inlinePlanNeedsResume = this.data.inlinePlanNeedsResume || Boolean(this.data.inlinePlanDraft && !this.data.inlinePlanSaving && this.inlinePlanDirty())
+    this.stopShell?.(); this.viewGeneration += 1
+    this.setData({ shellPhase: 'loading', stageCalibrationMode: false, semesterSettingsOpen: false, stageSuggestion: null, inlinePlanNeedsResume })
+  },
   onUnload() { this.stopShell?.() },
 
   async initializeClassroom() {
@@ -226,7 +231,7 @@ Page({
         stageSaveError: '',
       })
       const detachedDraft = !isReadOnly() ? this.data.detachedPlanDrafts.find(item => item.owner === owner && item.stageCode === stage.code) : undefined
-      if (detachedDraft) this.setData({ inlinePlanDraft: detachedDraft, expandedPlanType: detachedDraft.type,
+      if (detachedDraft) this.setData({ inlinePlanDraft: detachedDraft, inlinePlanNeedsResume: true, expandedPlanType: detachedDraft.type,
         detachedPlanDrafts: this.data.detachedPlanDrafts.filter(item => item !== detachedDraft) })
       if (this.data.selectedView === 'week') {
         void this.loadCurrentWeek()
@@ -272,7 +277,7 @@ Page({
     this.applyStageChange(stage, index)
   },
   applyStageChange(stage: ClassroomStage, index: number) {
-    if (this.data.inlinePlanDraft) this.setData({ inlinePlanDraft: null, inlinePlanError: '', expandedPlanType: '' })
+    if (this.data.inlinePlanDraft) this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, inlinePlanError: '', expandedPlanType: '' })
     if (this.data.stageCalibrationMode) {
       const expected = this.data.actualStageKnown ? (this.data.actualStageCode || null) : undefined
       const expectedMode = this.data.stageModeKnown ? this.data.stageMode : undefined
@@ -393,9 +398,10 @@ Page({
       return
     }
     if (this.data.inlinePlanDraft?.type === type) {
+      if (this.data.inlinePlanNeedsResume) { this.setData({ inlinePlanNeedsResume: false }); return }
       const dirty = this.inlinePlanDirty()
-      if (dirty) this.confirmDiscardInlinePlan(() => this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' }))
-      else this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' })
+      if (dirty) this.confirmDiscardInlinePlan(() => this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '' }))
+      else this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '' })
       return
     }
     const open = () => this.openInlinePlan(type)
@@ -409,7 +415,7 @@ Page({
       owner: this.selectedOwner, stageCode: this.data.currentStageCode, type: plan.type, title: plan.title,
       revisionStatus: plan.revisionStatus,
       items: plan.items.map(item => ({ name: item.name, target: item.target, dueDate: item.dueDate, status: item.status })),
-    }, expandedPlanType: type, inlinePlanError: '' })
+    }, inlinePlanNeedsResume: false, expandedPlanType: type, inlinePlanError: '' })
   },
   inlinePlanDirty() {
     const draft = this.data.inlinePlanDraft
@@ -425,7 +431,7 @@ Page({
     const dirty = this.inlinePlanDirty()
     const detachedPlanDrafts = dirty && !this.data.detachedPlanDrafts.some(item => item.owner === activeDraft.owner && item.stageCode === activeDraft.stageCode && item.type === activeDraft.type)
       ? [...this.data.detachedPlanDrafts, activeDraft] : this.data.detachedPlanDrafts
-    this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '', detachedPlanDrafts })
+    this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '', detachedPlanDrafts })
     if (dirty) wx.showModal({ title: '身份已切换', content: '上一个身份有未保存的计划修改。该草稿已隔离，不会提交到当前身份。是否确认丢弃？', confirmText: '丢弃草稿', cancelText: '暂时保留',
       success: result => { if (result.confirm) this.setData({ detachedPlanDrafts: this.data.detachedPlanDrafts.filter(item => item !== activeDraft) }) } })
   },
@@ -436,7 +442,7 @@ Page({
     wx.showModal({ title: '放弃未保存修改？', content: '当前计划有尚未保存的修改。继续操作会丢弃这些内容。', confirmText: '放弃修改', cancelText: '继续编辑',
       success: result => {
         if (result.confirm && this.selectedOwner === owner && this.data.currentStageCode === stage && this.data.inlinePlanDraft?.owner === owner) {
-          this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' })
+          this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '' })
           continueAction()
         }
       } })
@@ -444,8 +450,9 @@ Page({
   onCancelInlinePlan() {
     if (!this.data.inlinePlanDraft) return
     if (this.inlinePlanDirty()) this.confirmDiscardInlinePlan(() => undefined)
-    else this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' })
+    else this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '' })
   },
+  onContinueInlinePlan() { if (this.data.inlinePlanDraft) this.setData({ inlinePlanNeedsResume: false }) },
   updateInlinePlan(change: Partial<Pick<InlinePlanDraft, 'title' | 'items'>>) {
     const draft = this.data.inlinePlanDraft
     if (!draft || isReadOnly()) return
@@ -490,7 +497,7 @@ Page({
     const draft = this.data.inlinePlanDraft
     if (!draft || isReadOnly() || this.data.inlinePlanSaving) return
     if (draft.owner !== this.selectedOwner || draft.stageCode !== this.data.currentStageCode) {
-      this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '身份或学期已变化，请重新打开计划。' }); return
+      this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '身份或学期已变化，请重新打开计划。' }); return
     }
     const normalized = normalizePlanDraft(draft.title, draft.items)
     if (!normalized.ok) { this.setData({ inlinePlanError: normalized.message }); return }
@@ -503,7 +510,7 @@ Page({
       if (generation !== this.viewGeneration || owner !== this.selectedOwner || stage !== this.data.currentStageCode || isReadOnly()) return
       await this.hydratePlanData(stage)
       if (generation !== this.viewGeneration || owner !== this.selectedOwner || stage !== this.data.currentStageCode) return
-      this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanError: '' })
+      this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '' })
       wx.showToast({ title: '计划已保存', icon: 'success' })
     } catch (error) {
       if (generation === this.viewGeneration && owner === this.selectedOwner && stage === this.data.currentStageCode) {

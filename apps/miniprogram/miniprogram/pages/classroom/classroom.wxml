@@ -140,12 +140,22 @@
               <text wx:if="{{!item.items.length}}" class="plan-inline-empty">暂无具体任务</text>
             </view>
             <view wx:if="{{inlinePlanDraft && inlinePlanDraft.type === item.type && !readOnly}}" class="plan-inline-details">
+              <view wx:if="{{inlinePlanNeedsResume}}" class="inline-plan-resume">
+                <text class="inline-plan-resume-title">有未保存的计划修改</text>
+                <text class="inline-plan-resume-note">离开规划页时草稿已保留在当前账号，可继续编辑或主动放弃。</text>
+                <view class="inline-plan-resume-actions">
+                  <button class="plan-inline-action" bindtap="onContinueInlinePlan">继续编辑</button>
+                  <button bindtap="onCancelInlinePlan">放弃修改</button>
+                </view>
+              </view>
+              <view wx:else>
               <text class="plan-inline-state">{{inlinePlanDraft.revisionStatus === 'pending' ? '当前草稿尚未生效，保存将按现有审核流程处理。' : inlinePlanDraft.revisionStatus === 'approved' ? '编辑后保存会按现有计划规则提交。' : '新计划保存后将进入当前服务支持的流程。'}}</text>
               <text wx:if="{{inlinePlanError}}" class="inline-plan-error">{{inlinePlanError}}</text>
               <plan-task-editor title="{{inlinePlanDraft.title}}" items="{{inlinePlanDraft.items}}" read-only="{{readOnly}}" saving="{{inlinePlanSaving}}"
                 bind:titleinput="onInlineTitleInput" bind:additem="onInlineAddItem" bind:iteminput="onInlineItemInput" bind:statuschange="onInlineStatusChange"
                 bind:duedatechange="onInlineDueDateChange" bind:clearduedate="onInlineClearDueDate" bind:removeitem="onInlineRemoveItem" />
               <view class="plan-inline-controls"><button disabled="{{inlinePlanSaving}}" bindtap="onCancelInlinePlan">取消</button><button class="plan-inline-action" loading="{{inlinePlanSaving}}" disabled="{{inlinePlanSaving || readOnly}}" bindtap="onSaveInlinePlan">保存计划</button></view>
+              </view>
             </view>
           </view>
         </view>

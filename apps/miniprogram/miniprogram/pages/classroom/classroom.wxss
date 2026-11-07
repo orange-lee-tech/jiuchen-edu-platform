@@ -164,6 +164,12 @@ button::after { border:0; }
 .plan-card{padding:17rpx 18rpx;border:1rpx solid #e8e3d9;border-left:0;border-radius:14rpx;box-shadow:none;}
 .plan-card:nth-child(2n){border-left:0;}
 .plan-inline-details{margin-top:15rpx;padding-top:13rpx;border-top:1rpx solid #ebe5da;}
+.inline-plan-resume{padding:14rpx 15rpx;border:1rpx solid #ead9b8;border-radius:10rpx;background:#fff8e8;}
+.inline-plan-resume-title,.inline-plan-resume-note{display:block;}
+.inline-plan-resume-title{color:#624d2d;font-size:23rpx;font-weight:800;}
+.inline-plan-resume-note{margin-top:5rpx;color:#6d6250;font-size:20rpx;line-height:1.45;}
+.inline-plan-resume-actions{display:flex;gap:12rpx;margin-top:8rpx;}
+.inline-plan-resume-actions button{flex:1;margin:0;padding:8rpx 12rpx;border-radius:8rpx;font-size:21rpx;}
 .plan-inline-row{display:flex;justify-content:space-between;gap:14rpx;padding:9rpx 0;color:#36566c;font-size:22rpx;}
 .plan-inline-empty{display:block;padding:8rpx 0;color:#788892;font-size:22rpx;}
 .plan-inline-action{margin-top:10rpx;padding:9rpx 18rpx;border-radius:9rpx;background:#ecca80;color:#173951;font-size:22rpx;font-weight:750;}
