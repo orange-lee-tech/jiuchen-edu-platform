@@ -83,6 +83,8 @@ test('pending order blocks another purchase and verified payment clears its owne
   owner = 'student-d'; view.data.accountId = owner
   view.restorePending()
   assert.equal(view.data.pendingPaymentOrderId, '')
+  assert.equal(view.data.checkoutEnabled, false)
+  assert.deepEqual(view.data.skuChoices, [])
 })
 
 test('network failure reports an error without exposing stale balance', async () => {

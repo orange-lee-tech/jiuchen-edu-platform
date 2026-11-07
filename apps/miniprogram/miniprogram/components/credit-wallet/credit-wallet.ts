@@ -56,9 +56,10 @@ Component({
   pageLifetimes: { show() { this.restorePending(); if (Date.now() - this.data.lastLoadedAt > 30000) void this.loadCredits() } },
   methods: {
     syncOwner() {
-      const owner = this.data.accountId || getSavedAuthResult()?.user.id || ''
+      const owner = getSavedAuthResult()?.user.id || ''
       if (owner !== this.data.activeOwner) this.setData({ activeOwner: owner, pendingPaymentOrderId: '', canEndPendingOrder: false,
-        purchaseOrders: [], purchaseOrderError: '', creditAvailable: null, creditLoading: false, lastLoadedAt: 0, ordersOpen: false, offersOpen: false })
+        purchaseOrders: [], purchaseOrderError: '', creditAvailable: null, creditError: '', creditLoading: false, billingEnabled: false,
+        checkoutEnabled: false, skuChoices: [], lastLoadedAt: 0, ordersOpen: false, offersOpen: false })
       return owner
     },
     restorePending() {
