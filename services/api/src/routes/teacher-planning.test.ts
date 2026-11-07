@@ -97,6 +97,8 @@ test('batch apply authorizes every learner and generated tasks remain independen
     assert.equal(applied.statusCode,200)
     assert.deepEqual(applied.json().results.map((r:Row)=>[r.studentId,r.ok]),[[first,true],[second,false]])
     assert.equal(applied.json().results[1].error,'student_not_assigned');assert.equal(plans.length,1);assert.equal(items.length,1)
+    const strictFailure=await app.inject({method:'POST',url:'/me/teacher/plans/apply',headers,payload:{studentIds:[first],plan:{...plan,items:[{...plan.items[0],id:'server-owned-id',sortOrder:0}]}}})
+    assert.equal(strictFailure.statusCode,400);assert.equal(strictFailure.json().error,'invalid_teacher_plan_batch')
     const itemId=items[0]?.id
     await app.inject({method:'PUT',url:'/me/teacher/plan-templates/'+id,headers,payload:{name:'新模板',plan:{...plan,items:[{name:'新任务',status:'pending'}]}}})
     assert.equal(items[0]?.name,'整理申请材料');assert.equal(items[0]?.id,itemId)
@@ -118,6 +120,7 @@ test('student, inactive teacher, readonly context and invalid stage cannot use t
     state.active=true
     assert.equal((await app.inject({method:'POST',url:'/me/teacher/plans/apply',headers,payload:{studentIds:[first],plan:{...plan,stageCode:'invalid'}}})).statusCode,400)
     assert.equal((await app.inject({method:'POST',url:'/me/teacher/plan-templates',headers:{...headers,'x-jiuchen-read-only-target':'teacher:'+first},payload:{name:'模板',plan}})).statusCode,403)
+    assert.equal((await app.inject({method:'POST',url:'/me/teacher/plans/apply',headers:{...headers,'x-jiuchen-read-only-target':'teacher:'+first},payload:{studentIds:[first],plan}})).statusCode,403)
   }finally{await app.close()}
 })
 

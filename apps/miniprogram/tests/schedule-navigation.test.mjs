@@ -8,6 +8,11 @@ import path from 'node:path'
 const require = createRequire(import.meta.url)
 const ts = require('typescript')
 const root = path.resolve(import.meta.dirname, '../miniprogram')
+Module._extensions['.ts'] = (loaded, filename) => {
+  const source = readFileSync(filename, 'utf8')
+  const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
+  loaded._compile(output, filename)
+}
 
 function loadTypeScript(relativePath) {
   const filename = path.join(root, relativePath)
@@ -23,6 +28,7 @@ function loadTypeScript(relativePath) {
 const { dailyScheduleView, weekdayScheduleView, weekMatches } = loadTypeScript('utils/schedule-view.ts')
 const { initialPlanView } = loadTypeScript('utils/plan-navigation-intent.ts')
 const { normalizePlanDraft } = loadTypeScript('utils/plan-editor-form.ts')
+const { buildTeacherPlanPayload, presentTeacherApplyResults, remainingTeacherApplyTargets } = loadTypeScript('utils/teacher-plan-apply.ts')
 const schedule = { termStartDate: '2021-12-27', courses: [] }
 const atChinaNoon = (date) => new Date(`${date}T04:00:00.000Z`)
 
@@ -72,4 +78,33 @@ test('shared plan normalization requires a title, caps tasks, trims fields, and 
   assert.deepEqual(normalized.value, { title: '英语计划', items: [{ name: '单词复习', target: '每天', dueDate: '2026-11-12', status: 'in_progress' }] })
   const overLimit = normalizePlanDraft('计划', Array.from({ length: 51 }, (_, i) => ({ name: `任务${i}`, status: 'pending' })))
   assert.equal(overLimit.ok, false)
+})
+
+test('teacher apply strips server-owned item fields rejected by the strict batch schema', () => {
+  const payload = buildTeacherPlanPayload('junior-fall', 'gpa', '  课程计划 ', [
+    { id: 'server-plan-item-id', sortOrder: 8, name: '  高数 ', target: ' 完成复习 ', dueDate: '2026-11-20', status: 'in_progress' },
+  ])
+  assert.equal(payload.ok, true)
+  assert.deepEqual(payload.value, {
+    stageCode: 'junior-fall', type: 'gpa', title: '课程计划',
+    items: [{ name: '高数', target: '完成复习', dueDate: '2026-11-20', status: 'in_progress' }],
+  })
+  assert.deepEqual(Object.keys(payload.value.items[0]).sort(), ['dueDate', 'name', 'status', 'target'])
+  assert.equal(buildTeacherPlanPayload('junior-fall', 'gpa', '计划', [{ name: '', status: 'pending' }]).ok, false)
+})
+
+test('teacher batch result mapping distinguishes partial failures and excludes successes from retry targets', () => {
+  const targetIds = ['student-a', 'student-b', 'student-c']
+  const result = presentTeacherApplyResults([
+    { studentId: 'student-a', ok: true, planId: 'plan-a' },
+    { studentId: 'student-b', ok: false, error: 'student_not_assigned' },
+  ], targetIds, [{ studentId: 'student-a', name: '小安' }, { studentId: 'student-b', name: '小宁' }])
+  assert.equal(result.successCount, 1)
+  assert.equal(result.failedCount, 2)
+  assert.equal(result.rows[0].message, '已保存独立规划')
+  assert.equal(result.rows[1].message, '分配关系已失效，未写入')
+  assert.equal(result.rows[2].error, undefined)
+  assert.match(result.rows[2].message, /result_missing/)
+  assert.deepEqual(remainingTeacherApplyTargets(targetIds, ['student-a', 'student-a']), ['student-b', 'student-c'])
+  assert.equal(presentTeacherApplyResults(undefined, targetIds, []), null)
 })
