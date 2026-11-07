@@ -643,7 +643,7 @@ export async function getMyAcademicProfile(): Promise<AcademicProfile> {
 }
 
 export async function updateMyAcademicProfile(
-  profile: AcademicProfile,
+  profile: Partial<AcademicProfile>,
 ): Promise<AcademicProfile> {
   const result = await request<{ ok: true; profile: AcademicProfile }>(
     '/me/profile',

@@ -85,6 +85,13 @@
 .profile-state { padding: 24rpx; color: #5e6875; font-size: 23rpx; line-height: 1.6; }
 .profile-state button { width: max-content; margin: 16rpx 0 0; padding: 0 22rpx; border-radius: 8rpx; background: #eaf2fa; color: #173e67; font-size: 22rpx; }
 .profile-state button::after { border: 0; }
+.profile-edit-card{padding-top:12rpx;padding-bottom:18rpx;}
+.profile-edit-card .profile-input{height:58rpx;}
+.profile-error{display:block;margin-top:12rpx;color:#ad4437;font-size:22rpx;}
+.profile-resume{padding:18rpx 0;color:#74542b;font-size:23rpx;line-height:1.5;}
+.profile-actions{display:flex;gap:12rpx;margin-top:18rpx;}
+.profile-actions button{flex:1;margin:0;font-size:23rpx;}
+.profile-actions .primary-btn{height:76rpx;margin:0;}
 
 .profile-row {
   display: flex;

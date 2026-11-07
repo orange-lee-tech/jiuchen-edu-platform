@@ -11,12 +11,27 @@
   <view class="section-head">
     <view>
       <text class="section-title">我的背景</text>
-      <text class="section-subtitle">{{canEditProfile ? '来自“我的个人资料”，仅在资料编辑页修改' : '登录后可查看个人学业背景'}}</text>
+      <text class="section-subtitle">{{canEditProfile ? '与“我的个人资料”同步' : '登录后可查看个人学业背景'}}</text>
     </view>
-    <text wx:if="{{canEditProfile && !readOnly}}" class="link" bindtap="onProfileCardTap">编辑资料 ›</text>
+    <text wx:if="{{canEditProfile && !readOnly && !profileDraft && !profileLoading && !profileError}}" class="link" bindtap="onProfileCardTap">编辑资料 ›</text>
   </view>
 
-  <view wx:if="{{canEditProfile && profileLoading}}" class="profile-card surface profile-state">正在读取学业资料…</view>
+  <view wx:if="{{canEditProfile && profileDraft && !readOnly}}" class="profile-card surface profile-edit-card">
+    <view wx:if="{{profileNeedsResume}}" class="profile-resume">
+      <text>有未保存的资料修改，草稿已保留在当前账号。</text>
+      <view class="profile-actions"><button bindtap="onContinueProfile">继续编辑</button><button bindtap="onCancelProfile">放弃修改</button></view>
+    </view>
+    <block wx:else>
+      <label class="profile-row"><text class="profile-label">本科院校</text><input class="profile-input" data-field="university" value="{{profileDraft.university}}" placeholder="请输入本科院校" bindinput="onProfileInput" /></label>
+      <label class="profile-row"><text class="profile-label">专业方向</text><input class="profile-input" data-field="major" value="{{profileDraft.major}}" placeholder="请输入专业" bindinput="onProfileInput" /></label>
+      <view class="profile-row"><text class="profile-label">当前年级</text><picker range="{{gradeOptions}}" bindchange="onProfileGradeChange"><view class="profile-input">{{profileDraft.currentGrade || '请选择年级 ›'}}</view></picker></view>
+      <label class="profile-row"><text class="profile-label">绩点 / 均分</text><input class="profile-input" data-field="gpaText" value="{{profileDraft.gpaText}}" placeholder="请输入绩点或均分" bindinput="onProfileInput" /></label>
+      <label class="profile-row"><text class="profile-label">专业排名</text><input class="profile-input" data-field="rankText" value="{{profileDraft.rankText}}" placeholder="请输入专业排名" bindinput="onProfileInput" /></label>
+      <text wx:if="{{profileSaveError}}" class="profile-error">{{profileSaveError}}</text>
+      <view class="profile-actions"><button bindtap="onCancelProfile" disabled="{{profileSaving}}">取消</button><button class="primary-btn" bindtap="onSaveProfile" loading="{{profileSaving}}" disabled="{{profileSaving}}">保存资料</button></view>
+    </block>
+  </view>
+  <view wx:elif="{{canEditProfile && profileLoading}}" class="profile-card surface profile-state">正在读取学业资料…</view>
   <view wx:elif="{{canEditProfile && profileError}}" class="profile-card surface profile-state"><text>{{profileError}}</text><button bindtap="onRetryProfile">重新读取</button></view>
   <view wx:elif="{{canEditProfile}}" class="profile-card surface" bindtap="onProfileCardTap">
     <label class="profile-row">
