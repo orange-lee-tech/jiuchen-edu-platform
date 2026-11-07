@@ -1,0 +1,28 @@
+<view class="plan-task-editor">
+  <view wx:if="{{schedulePrefillCount > 0}}" class="empty-note">已从最近一次课表带入 {{schedulePrefillCount}} 门课程。请核对并补充目标，点击保存后生效。</view>
+  <text class="field-label">计划名称</text>
+  <input disabled="{{readOnly || saving}}" class="title-input" value="{{title}}" placeholder="填写计划名称" bindinput="onTitleInput" />
+
+  <view class="section-row">
+    <text class="section-title">任务清单</text>
+    <text wx:if="{{!readOnly}}" class="add-link {{items.length >= 50 ? 'disabled-link' : ''}}" bindtap="onAddItem">{{items.length >= 50 ? '最多 50 条' : '+ 添加任务'}}</text>
+  </view>
+
+  <view wx:for="{{items}}" wx:key="index" id="{{index === focusTaskIndex ? 'focused-plan-task' : ''}}" class="item-card {{index === focusTaskIndex ? 'focused-task' : ''}}">
+    <input disabled="{{readOnly || saving}}" class="item-input strong" data-index="{{index}}" data-field="name" value="{{item.name}}" placeholder="任务名称" bindinput="onItemInput" />
+    <input disabled="{{readOnly || saving}}" class="item-input" data-index="{{index}}" data-field="target" value="{{item.target}}" placeholder="目标 / 说明（可选）" bindinput="onItemInput" />
+    <view class="due-date-row">
+      <picker mode="date" disabled="{{readOnly || saving}}" start="1000-01-01" end="9999-12-31" value="{{item.dueDate || ''}}" data-index="{{index}}" bindchange="onDueDateChange">
+        <view class="due-date-picker">截止日期：{{item.dueDate || '未设置（可选）'}}{{readOnly ? '' : ' ›'}}</view>
+      </picker>
+      <text wx:if="{{item.dueDate && !readOnly}}" class="clear-date" data-index="{{index}}" bindtap="onClearDueDate">清除日期</text>
+    </view>
+    <view class="item-actions">
+      <picker disabled="{{readOnly || saving}}" range="{{statusOptions}}" range-key="label" data-index="{{index}}" bindchange="onStatusChange">
+        <text class="status-picker">{{item.status === 'done' ? '已完成' : item.status === 'in_progress' ? '进行中' : '未开始'}} ▾</text>
+      </picker>
+      <text wx:if="{{!readOnly}}" class="remove-link" data-index="{{index}}" bindtap="onRemoveItem">删除</text>
+    </view>
+  </view>
+  <view wx:if="{{items.length === 0}}" class="empty-note">还没有任务，点击“+ 添加任务”开始建立真实计划。</view>
+</view>

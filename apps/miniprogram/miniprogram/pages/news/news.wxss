@@ -346,3 +346,24 @@
 .news-section-tab{flex:0 0 auto;padding:10rpx 3rpx;font-size:20rpx;line-height:1.4;white-space:nowrap;}
 .news-section-tab.active{border-bottom-width:4rpx;}
 .teacher-guidance{display:flex;gap:20rpx;margin:24rpx 0}.teacher-guidance button{flex:1;background:#fff9e9;color:#203b58;border:1rpx solid #e5d8b3}.teacher-tags-entry{font-size:26rpx;color:#365d7e;background:#f0f4f6;margin:16rpx 0}
+
+/* All real news tags stay on one horizontal, scrollable row. */
+.news-sections{width:100%;overflow:hidden;margin:10rpx 0 13rpx;white-space:nowrap;}
+.news-sections-row{display:flex;justify-content:flex-start;align-items:center;gap:13rpx;width:max-content;min-width:100%;}
+.news-section-tab{flex:none;padding:12rpx 10rpx;font-size:23rpx;line-height:1.45;white-space:nowrap;}
+/* The multi-choice panel opens directly below its own button, not under the tag rail. */
+.news-search{position:relative;z-index:12;overflow:visible;}
+.news-filter-anchor{position:relative;flex:none;z-index:14;}
+.news-filter-dropdown{position:absolute;top:calc(100% + 8rpx);right:0;z-index:30;box-sizing:border-box;width:420rpx;max-width:90vw;padding:13rpx 15rpx;border:1rpx solid #d8e2e6;border-radius:12rpx;background:#fffdf9;box-shadow:0 14rpx 28rpx rgba(25,60,78,.16);white-space:normal;}
+.news-filter-dropdown-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8rpx;font-size:22rpx;font-weight:750;color:#214763;}
+.news-filter-clear{color:#1d5f8a;font-weight:750;}
+.news-filter-options{height:340rpx;max-height:42vh;}
+.news-filter-option{display:flex;align-items:center;gap:10rpx;min-height:60rpx;padding:5rpx 3rpx;border-bottom:1rpx solid #e8eded;font-size:22rpx;color:#315167;}
+.news-filter-option checkbox{flex:none;transform:scale(.78);transform-origin:left center;}
+/* Favorites are an independent, collapsible area, not part of feed filters. */
+.news-favorites{margin:0 0 13rpx;padding:0 19rpx;}
+.news-favorites-head{display:flex;align-items:center;justify-content:space-between;gap:12rpx;min-height:77rpx;}
+.news-favorites-title{color:#193f5c;font-size:26rpx;font-weight:800;}
+.news-favorites-arrow{color:#346681;font-size:22rpx;font-weight:750;}
+.news-favorites-body{border-top:1rpx solid #e6dfd3;padding:3rpx 0 13rpx;}
+.news-favorites-body .news-extra-meta{display:block;margin-top:6rpx;}

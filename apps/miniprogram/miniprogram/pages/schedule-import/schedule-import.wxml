@@ -5,8 +5,8 @@
   </view>
 
   <view class="mode-tabs">
-    <view class="mode-tab {{viewMode === 'current' ? 'active' : ''}}" data-mode="current" bindtap="onViewModeTap">本周课表</view>
     <view class="mode-tab {{viewMode === 'all' ? 'active' : ''}}" data-mode="all" bindtap="onViewModeTap">全部课表</view>
+    <view class="mode-tab {{viewMode === 'current' ? 'active' : ''}}" data-mode="current" bindtap="onViewModeTap">本周课表</view>
     <view class="mode-tab {{viewMode === 'manage' ? 'active' : ''}}" data-mode="manage" bindtap="onViewModeTap">导入 / 编辑</view>
   </view>
 
@@ -142,12 +142,35 @@
       <text class="field-label">教师</text>
       <input class="field-input" value="{{courseDraft.teacher || ''}}" placeholder="可选" bindinput="onDraftTeacher" />
 
-      <view class="editor-actions">
-        <button class="secondary" bindtap="onCancelEdit">取消</button>
-        <button class="primary" loading="{{saving}}" disabled="{{saving}}" bindtap="onSaveCourse">保存课程</button>
+      <view class="course-fact-section">
+        <text class="field-label">同一门课程的时段关联</text>
+        <text class="editor-note">同一学期多次上课可共用一份学分成绩。重导入后请手动选择旧课程；同名课程不会自动合并。</text>
+        <text class="association-current">{{courseDraft.courseKey ? '当前已关联课程；编辑时段会保留关联' : '当前为独立课程，保存后生成课程身份'}}</text>
+        <view wx:if="{{associationOptions.length}}" class="association-list">
+          <button wx:for="{{associationOptions}}" wx:key="key" class="association-option" data-key="{{item.key}}" bindtap="onAssociateCourse">关联：{{item.label}}</button>
+        </view>
+        <button wx:if="{{courseDraft.courseKey}}" class="association-separate" bindtap="onSeparateCourse">将此时段设为独立课程</button>
+
+        <text class="field-label">学分（可留空）</text>
+        <input class="field-input" type="digit" disabled="{{!factReady}}" value="{{factDraft.credits}}" placeholder="例如：3.5；0 也可保存" bindinput="onDraftCredits" />
+
+        <text class="field-label">成绩计分制</text>
+        <picker range="{{gradeOptions}}" range-key="label" value="{{gradeIndex}}" disabled="{{!factReady}}" bindchange="onDraftGradeScale">
+          <view class="field-picker">{{gradeOptions[gradeIndex].label}} ›</view>
+        </picker>
+        <input wx:if="{{factDraft.gradeScale !== 'unset'}}" class="field-input" disabled="{{!factReady}}" value="{{factDraft.gradeValue}}" placeholder="按所选计分制填写；可留空" bindinput="onDraftGradeValue" />
+        <text wx:if="{{factDraft.gradeScale === 'other'}}" class="editor-note">其他计分制仅保留原文，不换算 GPA。</text>
+        <text wx:if="{{factLoading}}" class="editor-note">正在读取本学期已确认成绩…</text>
+        <button wx:if="{{!factLoading && !factReady}}" class="association-option" bindtap="onRetryFacts">重新读取成绩</button>
+        <text wx:if="{{courseSaveError}}" class="schedule-save-error">{{courseSaveError}}</text>
       </view>
 
-      <text class="editor-note">这里是学员自己的临时课表，保存后立即生效。</text>
+      <view class="editor-actions">
+        <button class="secondary" bindtap="onCancelEdit">取消</button>
+        <button class="primary" loading="{{courseSaving}}" disabled="{{courseSaving}}" bindtap="onSaveCourse">保存课程</button>
+      </view>
+
+      <text class="editor-note">课表时段和确认成绩分别保存；如成绩保存失败，此处保留草稿供重试。</text>
     </view>
   </view>
 </view>

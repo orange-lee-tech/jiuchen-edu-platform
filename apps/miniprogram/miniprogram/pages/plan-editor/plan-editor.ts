@@ -1,5 +1,6 @@
 import { authorizePage } from '../../utils/navigation'
 import {isReadOnly} from '../../utils/read-only-context'
+import { normalizePlanDraft } from '../../utils/plan-editor-form'
 import {
   friendlyRequestError,
   getLatestScheduleImport,
@@ -146,19 +147,19 @@ Page({
     })
   },
 
-  onItemInput(event: WechatMiniprogram.Input) {
+  onItemInput(event: WechatMiniprogram.CustomEvent<{ index: number; field: string; value: string }>) {
     if(isReadOnly())return
-    const index = Number(event.currentTarget.dataset.index)
-    const field = String(event.currentTarget.dataset.field) as 'name' | 'target'
+    const index = Number(event.detail.index)
+    const field = String(event.detail.field) as 'name' | 'target'
     const items = [...this.data.items]
     if (!items[index]) return
     items[index] = { ...items[index], [field]: event.detail.value }
     this.setData({ items })
   },
 
-  onStatusChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+  onStatusChange(event: WechatMiniprogram.CustomEvent<{ index: number; value: string }>) {
     if(isReadOnly())return
-    const index = Number(event.currentTarget.dataset.index)
+    const index = Number(event.detail.index)
     const option = STATUS_OPTIONS[Number(event.detail.value)]
     const items = [...this.data.items]
     if (!items[index] || !option) return
@@ -166,27 +167,27 @@ Page({
     this.setData({ items })
   },
 
-  onDueDateChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+  onDueDateChange(event: WechatMiniprogram.CustomEvent<{ index: number; value: string }>) {
     if (isReadOnly() || this.data.saving) return
-    const index = Number(event.currentTarget.dataset.index)
+    const index = Number(event.detail.index)
     const items = [...this.data.items]
     if (!items[index]) return
     items[index] = { ...items[index], dueDate: event.detail.value }
     this.setData({ items })
   },
 
-  onClearDueDate(event: WechatMiniprogram.BaseEvent) {
+  onClearDueDate(event: WechatMiniprogram.CustomEvent<{ index: number }>) {
     if (isReadOnly() || this.data.saving) return
-    const index = Number(event.currentTarget.dataset.index)
+    const index = Number(event.detail.index)
     const items = [...this.data.items]
     if (!items[index]) return
     items[index] = { ...items[index], dueDate: null }
     this.setData({ items })
   },
 
-  onRemoveItem(event: WechatMiniprogram.BaseEvent) {
+  onRemoveItem(event: WechatMiniprogram.CustomEvent<{ index: number }>) {
     if(isReadOnly())return
-    const index = Number(event.currentTarget.dataset.index)
+    const index = Number(event.detail.index)
     const items = [...this.data.items]
     items.splice(index, 1)
     this.setData({ items })
@@ -199,20 +200,12 @@ Page({
       wx.showToast({ title: '请先重新读取规划', icon: 'none' })
       return
     }
-    const title = this.data.title.trim()
-    const items = this.data.items
-      .map((item) => ({
-        name: item.name.trim(),
-        target: item.target?.trim() || null,
-        dueDate: item.dueDate || null,
-        status: item.status,
-      }))
-      .filter((item) => item.name)
-
-    if (!title) {
-      wx.showToast({ title: '请填写计划名称', icon: 'none' })
+    const normalized = normalizePlanDraft(this.data.title, this.data.items)
+    if (!normalized.ok) {
+      wx.showToast({ title: normalized.message, icon: 'none' })
       return
     }
+    const { title, items } = normalized.value
 
     try {
       this.setData({ saving: true })

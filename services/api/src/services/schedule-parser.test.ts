@@ -7,6 +7,7 @@ import {
   isOwnedScheduleImportFile,
   isSupportedScheduleFileName,
   normalizeEditableSchedule,
+  assignCourseKeysOnSave,
   isScheduleFirstMonday,
   parseImageSchedule,
   parseSpreadsheetSchedule,
@@ -203,6 +204,19 @@ test('editable schedule normalization preserves manual edits and term start date
 
   assert.equal(schedule.courses[0]?.day, '周一')
   assert.equal(schedule.termStartDate, '2026-09-07')
+})
+
+test('old schedules stay keyless until explicit save; save retains and returns course identity', () => {
+  const legacy = normalizeEditableSchedule({ sourceType: 'spreadsheet', warnings: [], courses: [{
+    name: '工程热力学', day: '周一', dayIndex: 1, slot: '第1-2节', startSection: 1, endSection: 2,
+    time: null, location: null, teacher: null, weeks: null, raw: '工程热力学',
+  }] })
+  assert.equal(legacy.courses[0]?.courseKey, undefined)
+  const saved = assignCourseKeysOnSave(legacy)
+  assert.match(saved.courses[0]?.courseKey || '', /^[0-9a-f-]{36}$/)
+  const second = assignCourseKeysOnSave({ ...saved, courses: [{ ...saved.courses[0]!, day: '周二', dayIndex: 2 }] })
+  assert.equal(second.courses[0]?.courseKey, saved.courses[0]?.courseKey)
+  assert.equal(legacy.courses[0]?.courseKey, undefined)
 })
 
 test('manual fallback is explicit instead of pretending an image was parsed', () => {

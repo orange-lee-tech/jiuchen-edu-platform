@@ -11,9 +11,17 @@
         <text wx:if="{{!assessmentReady && !readOnly}}" class="home-minor-link" bindtap="onCompleteProfile">{{loggedIn ? '补全学业资料 ›' : '登录并建立档案 ›'}}</text>
       </view>
     </view>
+    <view class="home-assessment home-card" bindtap="onAssessmentEntry" hover-class="home-assessment-pressed" aria-role="button" aria-label="AI 保研评估">
+      <image class="home-assessment-icon" src="/assets/jiuchen-visual-v1/icons/ai-assessment.png" mode="aspectFit" />
+      <view class="home-assessment-content">
+        <text class="home-assessment-title">AI 保研评估</text>
+        <text class="home-assessment-desc">{{!loggedIn ? '登录后建立档案并开始评估' : readOnly ? '当前为只读查看' : assessmentReady ? '结合学业资料与规划，开始或继续评估' : '完善学业资料后开始评估'}}</text>
+      </view>
+      <text class="home-assessment-arrow">›</text>
+    </view>
     <view class="home-schedule home-card">
-      <view class="home-card-head"><view class="home-heading-with-icon"><image class="home-heading-icon" src="/assets/jiuchen-visual-v1/icons/calendar.png" mode="aspectFit" /><text class="section-heading">今日课表</text></view><text class="home-card-link" bindtap="onPlanning">本周完整课表 ›</text></view>
-      <view class="day-tabs"><view class="day-tab {{scheduleDay === 0 ? 'active' : ''}}" data-day="0" bindtap="onScheduleDay">今天</view><view class="day-tab {{scheduleDay === 1 ? 'active' : ''}}" data-day="1" bindtap="onScheduleDay">明天</view></view>
+      <view class="home-card-head"><view class="home-heading-with-icon"><image class="home-heading-icon" src="/assets/jiuchen-visual-v1/icons/calendar.png" mode="aspectFit" /><text class="section-heading">今日课表</text></view><text class="home-card-link" bindtap="onOpenFullWeekSchedule">本周完整课表 ›</text></view>
+      <view class="day-tabs"><view wx:for="{{scheduleTabs}}" wx:key="dayIndex" class="day-tab {{scheduleDay === item.dayIndex ? 'active' : ''}} {{item.isToday ? 'today' : ''}}" data-day="{{item.dayIndex}}" bindtap="onScheduleDay">{{item.label}}</view></view>
       <text class="home-schedule-meta">{{scheduleDateLabel}}{{scheduleStage ? ' · 档案阶段：' + scheduleStage : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
       <text wx:if="{{scheduleLoading}}" class="home-state">正在读取课表…</text>
       <view wx:elif="{{scheduleError}}" class="home-state"><text>{{scheduleError}}</text><text class="home-state-link" bindtap="onPlanning">进入规划页校准 ›</text></view>
@@ -74,52 +82,6 @@
       <text wx:elif="{{planState === 'unbound'}}" class="home-state">绑定学员身份后，即可查看和编辑自己的阶段规划。</text>
       <block wx:else><text class="home-plan-stage">档案阶段：{{planStageLabel}}{{stageConfirmed ? '' : ' · 待校准'}}</text><view wx:for="{{planPreview}}" wx:key="title" class="home-plan-row"><text class="home-plan-name">{{item.title}}</text><text class="home-plan-status">{{item.status}}</text></view><text wx:if="{{!planPreview.length}}" class="home-state">本阶段暂无计划，进入规划页查看可用内容。</text></block>
     </view>
-    <view class="home-shortcuts home-card">
-      <view class="home-section-bar"><text class="section-heading">常用入口</text></view>
-      <view class="action-list">
-<view class="action-row action-assessment" bindtap="onAssessment" hover-class="action-pressed" aria-role="button" aria-label="AI评估与历史结果">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/ai-assessment.png" mode="aspectFit" /></view>
-        <text class="action-title">AI 评估</text>
-        <text class="action-more">›</text>
-      </view>
-<view class="action-row action-planning" bindtap="onPlanning" hover-class="action-pressed" aria-role="button" aria-label="打开我的规划">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/calendar.png" mode="aspectFit" /></view>
-        <text class="action-title">我的规划</text>
-      </view>
-<view class="action-row action-schools" bindtap="onSchools" hover-class="action-pressed" aria-role="button" aria-label="筛选院校库">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/library.png" mode="aspectFit" /></view>
-        <text class="action-title">院校库</text><text class="action-more">›</text>
-      </view>
-<view class="action-row action-news" bindtap="onNews" hover-class="action-pressed" aria-role="button" aria-label="阅读保研资讯">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/news.png" mode="aspectFit" /></view>
-        <text class="action-title">保研资讯</text>
-        <text class="action-more">›</text>
-      </view>
-<view class="action-row action-consult" bindtap="onCustomerService" hover-class="action-pressed" aria-role="button" aria-label="联系九辰客服">
-        <view class="action-symbol"><image class="action-icon" src="/assets/jiuchen-visual-v1/icons/headset.png" mode="aspectFit" /></view>
-        <text class="action-title">联系客服</text>
-        <text class="action-more">›</text>
-      </view>
-      </view>
-    </view>
-    <view class="service-section">
-      <text class="section-heading">认识九辰</text>
-      <view class="service-links">
-        <view class="service-link service-products" bindtap="onProducts" hover-class="service-pressed" aria-role="button" aria-label="查看九辰服务介绍">
-          <view class="service-symbol"><image class="service-icon" src="/assets/icons/business-active.png" mode="aspectFit" /></view>
-          <text class="service-title">服务介绍</text>
-        </view>
-        <view class="service-link service-brand" bindtap="onBrand" hover-class="service-pressed" aria-role="button" aria-label="了解九辰品牌">
-          <view class="service-symbol"><image class="service-icon" src="/assets/icons/users-active.png" mode="aspectFit" /></view>
-          <text class="service-title">关于九辰</text>
-        </view>
-        <view class="service-link service-website" bindtap="onWebsite" hover-class="service-pressed" aria-role="button" aria-label="访问九辰官网">
-          <view class="service-symbol"><image class="service-icon" src="/assets/icons/website-active.png" mode="aspectFit" /></view>
-          <text class="service-title">九辰官网</text>
-        </view>
-      </view>
-    </view>
   </block>
 </view>
 <first-use-guide wx:if="{{!readOnly}}" />
-<official-website-dialog id="website-dialog" />

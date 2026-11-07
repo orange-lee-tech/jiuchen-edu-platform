@@ -28,8 +28,7 @@ export function weeklyScheduleView(schedule: ParsedSchedule | null, today = new 
 }
 
 /** The timetable uses China local calendar days, regardless of the phone's timezone. */
-export function dailyScheduleView(schedule: ParsedSchedule | null, offset: 0 | 1, now = new Date()) {
-  const chinaDay = Math.floor((now.getTime() + 8 * 3600000) / 86400000) + offset
+function scheduleViewForChinaDay(schedule: ParsedSchedule | null, chinaDay: number) {
   const target = new Date(chinaDay * 86400000 - 8 * 3600000 + 12 * 3600000)
   const dayIndex = ((chinaDay + 3) % 7 + 7) % 7 + 1 // Monday = 1
   const week = currentWeekFromStart(schedule?.termStartDate, target)
@@ -46,6 +45,26 @@ export function dailyScheduleView(schedule: ParsedSchedule | null, offset: 0 | 1
     : !week ? 'date' : courses.length ? 'ready' : 'empty'
   const dateLabel = `${localDate.getUTCMonth() + 1}月${localDate.getUTCDate()}日 · 周${'一二三四五六日'[dayIndex - 1]}`
   return { state, week, dayIndex, dateLabel, courses }
+}
+
+/** 0 means today and 1 means tomorrow. Kept for existing callers. */
+export function dailyScheduleView(schedule: ParsedSchedule | null, offset: 0 | 1, now = new Date()) {
+  const todayChinaDay = Math.floor((now.getTime() + 8 * 3600000) / 86400000)
+  return scheduleViewForChinaDay(schedule, todayChinaDay + offset)
+}
+
+/** Select a weekday in the current China calendar week; negative offsets stay in this week. */
+export function weekdayScheduleView(schedule: ParsedSchedule | null, weekday: number, now = new Date()) {
+  if (!Number.isInteger(weekday) || weekday < 1 || weekday > 7) throw new RangeError('weekday must be 1..7')
+  const todayChinaDay = Math.floor((now.getTime() + 8 * 3600000) / 86400000)
+  const todayIndex = ((todayChinaDay + 3) % 7 + 7) % 7 + 1
+  return scheduleViewForChinaDay(schedule, todayChinaDay + weekday - todayIndex)
+}
+export function chinaWeekDayTabs(now = new Date()) {
+  const todayIndex = ((Math.floor((now.getTime() + 8 * 3600000) / 86400000) + 3) % 7 + 7) % 7 + 1
+  return ['一','二','三','四','五','六','日'].map((label, index) => ({
+    dayIndex: index + 1, label: index + 1 === todayIndex ? '今天' : `周${label}`, isToday: index + 1 === todayIndex,
+  }))
 }
 export function courseTimeLabel(course: ParsedScheduleCourse) {
   return course.slot || (course.startSection ? `第${course.startSection}${course.endSection && course.endSection !== course.startSection ? '-' + course.endSection : ''}节` : course.time || '节次待确认')

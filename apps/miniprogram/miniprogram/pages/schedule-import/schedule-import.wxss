@@ -15,6 +15,14 @@
   display: block;
 }
 
+.course-fact-section { margin-top: 25rpx; padding-top: 16rpx; border-top: 1rpx solid #dce5eb; }
+.course-fact-section .field-label, .course-fact-section .editor-note { display: block; }
+.association-current { display: block; margin: 15rpx 0; color: #256159; font-size: 21rpx; }
+.association-list { display: flex; flex-wrap: wrap; gap: 10rpx; margin: 8rpx 0; }
+.association-option, .association-separate { margin: 0; font-size: 20rpx; line-height: 58rpx; padding: 0 12rpx; border-radius: 7rpx; }
+.association-option { background: #e9f2fb; color: #22558c; }
+.association-separate { background: #fff0e9; color: #a34b32; }
+
 .page-title {
   font-size: 38rpx;
   font-weight: 800;

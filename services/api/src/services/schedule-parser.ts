@@ -1,8 +1,10 @@
 import * as XLSX from 'xlsx'
+import { randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import type { JsonModelProvider } from './ai-provider.js'
 
 export type ParsedScheduleCourse = {
+  courseKey?: string
   name: string
   day: string
   dayIndex: number
@@ -44,6 +46,7 @@ const DAY_ALIASES: Array<{ index: number; label: string; tokens: string[] }> = [
 
 export const parsedScheduleCourseSchema = z
   .object({
+    courseKey: z.string().uuid().optional(),
     name: z.string().trim().min(1).max(160),
     day: z.string().trim().min(1).max(16),
     dayIndex: z.number().int().min(1).max(7),
@@ -85,7 +88,7 @@ export const editableScheduleSchema = z
   .strict()
 
 const schedulePayloadSchema = z.object({
-  courses: z.array(parsedScheduleCourseSchema).max(MAX_SCHEDULE_COURSES),
+  courses: z.array(parsedScheduleCourseSchema.omit({ courseKey: true })).max(MAX_SCHEDULE_COURSES),
   warnings: z.array(z.string().trim().min(1).max(300)).max(20).optional().default([]),
 })
 
@@ -216,6 +219,11 @@ export function normalizeEditableSchedule(value: unknown): ParsedSchedule {
     termStartDate: parsed.termStartDate ?? null,
     editedAt: parsed.editedAt ?? null,
   }
+}
+
+/** Assign stable identities only on an explicit schedule save, never on a GET or parse. */
+export function assignCourseKeysOnSave(schedule: ParsedSchedule): ParsedSchedule {
+  return { ...schedule, courses: schedule.courses.map(course => ({ ...course, courseKey: course.courseKey || randomUUID() })) }
 }
 
 export function maxScheduleUploadBytes(sourceType: ParsedSchedule['sourceType']) {

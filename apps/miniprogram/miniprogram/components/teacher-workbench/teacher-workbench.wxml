@@ -45,6 +45,8 @@
           <button class="secondary" disabled="{{busy || items.length >= 50}}" bindtap="onAddItem">添加任务</button>
           <button class="primary" loading="{{busy}}" disabled="{{busy}}" bindtap="onApply">{{selectedIds.length ? '应用到已选 ' + selectedIds.length + ' 位学员' : '保存到当前学员'}}</button>
         </block>
+        <view wx:if="{{applyError}}" class="notice error">{{applyError}}</view>
+        <view wx:if="{{resultSummary}}" class="result-summary">{{resultSummary}}</view>
         <view wx:for="{{results}}" wx:key="studentId" class="result {{item.ok ? '' : 'error'}}">{{item.name}}：{{item.message}}</view>
       </view>
       <view class="card">

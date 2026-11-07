@@ -88,9 +88,23 @@
           </view>
           <text class="record-title">{{item.title}}</text>
           <text class="record-text">{{item.standardExpression}}</text>
-          <button wx:if="{{item.source.type === 'manual' && !readOnly}}" class="record-edit" data-id="{{item.id}}" bindtap="onEditRecord">编辑这条经历</button>
+          <text wx:if="{{item.courseFact}}" class="record-text">{{item.courseStageLabel}} · 学分 {{item.courseFact.credits === null ? '未录入' : item.courseFact.credits}} · {{item.courseGradeLabel}} {{item.courseFact.gradeValue || '未录入'}}</text>
+          <button wx:if="{{item.courseFact && !readOnly}}" class="record-edit" data-id="{{item.id}}" bindtap="onEditCourseFact">编辑课程学分与成绩</button>
+          <button wx:if="{{item.source.type === 'manual' && item.metadata.schemaVersion !== 'course-academic-fact-v1' && !readOnly}}" class="record-edit" data-id="{{item.id}}" bindtap="onEditRecord">编辑这条经历</button>
         </view>
       </view>
+    </view>
+
+    <view wx:if="{{courseFactEditingKey && !readOnly}}" class="section-card record-editor">
+      <text class="section-title">编辑课程成绩 · {{courseFactTitle}}</text>
+      <text class="record-field-label">学分（可留空）</text>
+      <input class="record-input" type="digit" value="{{courseFactDraft.credits}}" placeholder="0–30，最多两位小数" bindinput="onCourseFactCredits" />
+      <text class="record-field-label">成绩计分制</text>
+      <picker range="{{courseGradeOptions}}" range-key="label" value="{{courseGradeIndex}}" bindchange="onCourseFactScale"><view class="record-picker">{{courseGradeOptions[courseGradeIndex].label}} ›</view></picker>
+      <input wx:if="{{courseFactDraft.gradeScale !== 'unset'}}" class="record-input" value="{{courseFactDraft.gradeValue}}" placeholder="按计分制填写，可留空" bindinput="onCourseFactGrade" />
+      <text wx:if="{{courseFactDraft.gradeScale === 'other'}}" class="record-text">其他计分制仅保留原文，不换算 GPA。</text>
+      <text wx:if="{{courseFactError}}" class="record-error">{{courseFactError}}</text>
+      <view class="record-form-actions"><button class="record-cancel" disabled="{{courseFactSaving}}" bindtap="onCancelCourseFact">取消</button><button class="record-save" loading="{{courseFactSaving}}" disabled="{{courseFactSaving}}" bindtap="onSaveCourseFact">保存课程成绩</button></view>
     </view>
 
     <view wx:if="{{recordFormOpen && growthSchemaReady && !readOnly}}" id="growth-record-editor" class="section-card record-editor">

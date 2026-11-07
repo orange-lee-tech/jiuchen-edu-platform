@@ -61,8 +61,9 @@ button::after{border:0;}
 .home-card{box-sizing:border-box;margin-top:20rpx;padding:25rpx;background:#fffdf9;border:1rpx solid #e7ded0;border-radius: 8rpx;box-shadow:0 5rpx 18rpx rgba(27,59,77,.055);}
 .home-card-head{display:flex;align-items:center;justify-content:space-between;gap:12rpx;}
 .home-card-link,.home-state-link{color:#276384;font-size:22rpx;font-weight:750;}
-.day-tabs{display:flex;gap:10rpx;margin-top:18rpx;}
-.day-tab{padding:10rpx 27rpx;background:#edf3f5;color:#456278;border-radius: 999rpx;font-size:24rpx;font-weight:700;}
+.day-tabs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6rpx;margin-top:18rpx;}
+.day-tab{display:flex;align-items:center;justify-content:center;min-height:64rpx;padding:8rpx 0;background:#edf3f5;color:#456278;border-radius:12rpx;font-size:20rpx;font-weight:700;white-space:nowrap;}
+.day-tab.today{box-shadow:inset 0 0 0 2rpx #d7b36d;}
 .day-tab.active{background:#1b5479;color:#fff;border-bottom:3rpx solid #e8bf71;}
 .home-schedule-meta{margin-top:15rpx;color:#667986;}
 .home-state{display:block;margin-top:18rpx;color:#536c79;font-size:23rpx;line-height:1.6;}
@@ -73,6 +74,11 @@ button::after{border:0;}
 .next-label{display:block;margin-top:5rpx;color:#94682c;font-size:18rpx;font-weight:800;}
 .home-plan-stage{display:block;margin-top:17rpx;color:#526b7b;font-size:23rpx;}
 .home-plan-row{display:flex;justify-content:space-between;gap:12rpx;padding:15rpx 0;border-bottom:1rpx solid #edf0ee;font-size:23rpx;}
+.home-plan.home-card{padding:17rpx 20rpx;}
+.home-plan-stage{margin-top:9rpx;}
+.home-plan-row{padding:11rpx 0;}
+.home-more-toggle{display:block;margin-top:14rpx;padding:13rpx 8rpx;text-align:center;color:#276384;font-size:23rpx;font-weight:750;border-top:1rpx solid #e7ded0;}
+.home-more-actions{margin-top:10rpx;padding:14rpx;background:#fffdf9;}
 .home-plan-name{color:#1b3f58;font-weight:700;flex:1;min-width:0;}
 .home-plan-status{color:#8a6434;flex:none;}
 .action-row,.service-link,.action-row:nth-child(even),.service-link:nth-child(even){background:#fffdf9;border:1rpx solid #e3ddd0;border-top:4rpx solid #d9b368;border-radius: 8rpx;box-shadow:0 4rpx 12rpx rgba(25,57,75,.06);}
@@ -287,3 +293,12 @@ button::after{border:0;}
 .upcoming-task-name { display: block; color: #173f58; font-size: 28rpx; font-weight: 600; overflow-wrap: break-word; }
 .upcoming-task-meta { display: block; margin-top: 6rpx; }
 .upcoming-task-date { flex-shrink: 0; color: #8b6b2d; font-size: 24rpx; text-align: right; }
+
+/* Primary assessment entry: always visible, full row above the timetable. */
+.home-assessment{display:flex;align-items:center;gap:17rpx;min-height:125rpx;padding:20rpx 23rpx;background:linear-gradient(125deg,#174b76,#245f7d);border:1rpx solid #2b6483;border-radius:10rpx;color:#fff;}
+.home-assessment-pressed{opacity:.85;}
+.home-assessment-icon{width:64rpx;height:64rpx;flex:none;}
+.home-assessment-content{flex:1;min-width:0;}
+.home-assessment-title{display:block;font-size:28rpx;line-height:1.35;font-weight:850;color:#fff;}
+.home-assessment-desc{display:block;margin-top:6rpx;font-size:22rpx;line-height:1.45;color:#e3eef4;word-break:break-word;}
+.home-assessment-arrow{flex:none;font-size:39rpx;font-weight:800;color:#f1c87f;}
