@@ -1,8 +1,9 @@
 /** Bounded, server-owned context. Never accept plan/history text from the client. */
 import { and, desc, eq, inArray, ne } from 'drizzle-orm'
 import type { DatabaseContext } from '../db/client.js'
-import { assessments, planItems, scheduleImports, studentPlans, students } from '../db/schema.js'
+import { assessments, growthRecords, planItems, scheduleImports, studentPlans, students } from '../db/schema.js'
 import { assessmentOutputSchema, type AssessmentEvidenceItem } from '../domain/assessment.js'
+import { courseAcademicFactSchema, courseAcademicFactWriteSchema } from '../domain/course-academic-fact.js'
 
 type JsonObject = Record<string, unknown>
 type Plan = { id: string; stageCode: string; type: string; title: string }
@@ -81,6 +82,45 @@ export function summarizeHistory(rows: Report[]) {
   return entries.join('\n').slice(0,1450)
 }
 
+type CourseFactRow = { title: string; metadataJson: unknown; userConfirmed: boolean; status: string; type: string }
+export function summarizeConfirmedCourseFacts(rows: CourseFactRow[]) {
+  const stageNames: Record<string, string> = {
+    'freshman-fall': '大一上', 'freshman-spring': '大一下',
+    'sophomore-fall': '大二上', 'sophomore-spring': '大二下',
+    'junior-fall': '大三上', 'junior-spring': '大三下',
+    'senior-fall': '大四上', 'senior-spring': '大四下',
+  }
+  const gradeNames: Record<string, string> = {
+    percentage: '百分制', four_point: '四分制', five_point: '五分制',
+    letter: '字母等级', pass_fail: '通过情况', other: '其他计分制',
+  }
+  const seen = new Set<string>(), entries: string[] = []
+  for (const row of rows) {
+    if (row.type !== 'course' || row.status !== 'active' || !row.userConfirmed) continue
+    const parsed = courseAcademicFactSchema.safeParse(row.metadataJson)
+    if (!parsed.success) continue
+    const fact = parsed.data
+    if (!courseAcademicFactWriteSchema.safeParse({
+      stageCode: fact.stageCode, credits: fact.credits,
+      gradeScale: fact.gradeScale, gradeValue: fact.gradeValue,
+    }).success || !fact.gradeValue || fact.gradeScale === 'unset') continue
+    const identity = fact.stageCode + ':' + fact.courseKey
+    if (seen.has(identity)) continue
+    seen.add(identity)
+    const title = clean(row.title, 70)
+    if (!title) continue
+    entries.push(`${stageNames[fact.stageCode]}/${title}：${fact.credits === null ? '' : `${fact.credits} 学分；`}${gradeNames[fact.gradeScale]} ${clean(fact.gradeValue, 80)}（本人确认，不作 GPA 换算）`)
+    if (entries.length >= 12) break
+  }
+  return entries.join('\n').slice(0, 1200)
+}
+
+function missingGrowthTable(error: unknown) {
+  const value = error as { code?: string; errno?: number; sqlState?: string; cause?: { code?: string; errno?: number; sqlState?: string } }
+  return value?.code === 'ER_NO_SUCH_TABLE' || value?.errno === 1146 || value?.sqlState === '42S02' ||
+    value?.cause?.code === 'ER_NO_SUCH_TABLE' || value?.cause?.errno === 1146 || value?.cause?.sqlState === '42S02'
+}
+
 const asEvidence = (ref:string,title:string,excerpt:string):AssessmentEvidenceItem => ({
   ref,kind:'other',sourceType:'internal',sourceId:null,title,
   sourceLabel:'当前账号已保存数据；非院校官方材料',sourceUrl:null,excerpt,
@@ -109,6 +149,18 @@ export function createAssessmentAccountContextLoader(db: Extract<DatabaseContext
           .orderBy(planItems.sortOrder).limit(400):[]
         const excerpt=summarizePlanning({plans,items,schedules})
         if(excerpt)result.push(asEvidence('account:planning','个人计划与课程进度',excerpt))
+      }
+      try {
+        const facts = await db.db.select({
+          title: growthRecords.title, metadataJson: growthRecords.metadataJson,
+          userConfirmed: growthRecords.userConfirmed, status: growthRecords.status, type: growthRecords.type,
+        }).from(growthRecords).where(and(eq(growthRecords.userId, args.userId),
+          eq(growthRecords.type, 'course'), eq(growthRecords.status, 'active'), eq(growthRecords.userConfirmed, true)))
+          .orderBy(desc(growthRecords.updatedAt)).limit(80)
+        const excerpt = summarizeConfirmedCourseFacts(facts)
+        if (excerpt) result.push(asEvidence('account:confirmed-courses', '本人已确认的课程学分与成绩', excerpt))
+      } catch (error) {
+        if (!missingGrowthTable(error)) throw error
       }
     }
     if (args.includeRecentAssessments) {

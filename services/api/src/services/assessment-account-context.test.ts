@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { summarizeHistory,summarizePlanning } from './assessment-account-context.js'
+import { summarizeConfirmedCourseFacts,summarizeHistory,summarizePlanning } from './assessment-account-context.js'
 const report={
   profileSummary:'背景情况',strengths:[{title:'英语',detail:'英语较好',evidenceRefs:['input:profile']}],
   risks:[], targetAssessments:[{schoolName:'甲大学',programName:null,tier:'insufficient_data',
@@ -30,4 +30,19 @@ test('history is limited to 3 and deduplicates repeated advice',()=>{
 })
 test('invalid prior report contributes no fabricated evidence',()=>{
   assert.equal(summarizeHistory([{completedAt:null,outputJson:{wrong:true}}]),'')
+})
+
+test('assessment reads confirmed course grades once and never infers GPA', () => {
+  const courseKey = '3ba737aa-5af4-42ca-b24e-b85e56d9bb85'
+  const row = { title: '高等数学', type: 'course', status: 'active', userConfirmed: true,
+    metadataJson: { schemaVersion: 'course-academic-fact-v1', stageCode: 'freshman-fall', courseKey,
+      credits: 3.5, gradeScale: 'percentage', gradeValue: '89' } }
+  const text = summarizeConfirmedCourseFacts([row, row, { ...row, userConfirmed: false },
+    { ...row, metadataJson: { ...row.metadataJson, gradeValue: null } },
+    { ...row, metadataJson: { ...row.metadataJson, gradeValue: '101' } },
+    { ...row, type: 'other' }])
+  assert.match(text, /大一上\/高等数学：3.5 学分；百分制 89/)
+  assert.equal((text.match(/高等数学/g) || []).length, 1)
+  assert.match(text, /不作 GPA 换算/)
+  assert.doesNotMatch(text, /101/)
 })

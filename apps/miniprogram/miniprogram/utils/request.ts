@@ -229,7 +229,7 @@ export function friendlyRequestError(
     growth_profile_schema_not_ready: '成长履历服务正在准备中，请稍后重试',
     invalid_course_fact: '学分或成绩格式不正确，请检查后重试',
     course_key_not_owned: '这门课程尚未在当前账号的该学期课表确认，请先保存课表',
-    course_fact_requires_dedicated_editor: '课程成绩请到课表课程编辑中修改',
+    course_fact_requires_dedicated_editor: '课程成绩请在专用课程编辑入口修改',
     course_fact_readback_mismatch: '成绩保存后未能核对，请刷新后重试',
     assessment_or_growth_schema_not_ready: '成长履历与评估数据正在准备中，请稍后重试',
     assessment_provider_not_configured: 'AI模型尚未接入，暂时不能运行评估',
@@ -1651,6 +1651,7 @@ export type CanonicalGrowthRecord = {
   description?: string | null
   result?: string | null
   standardExpression: string
+  metadata?: Record<string, unknown>
   source: {
     type: 'manual' | 'assessment' | 'classroom' | 'admin'
     recordId: string | null
