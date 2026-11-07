@@ -268,18 +268,20 @@ Page({
   onLoad(query: Record<string, string | undefined>) {
     authorizePage('pages/assessment-form/assessment-form', query, () => { void this.initializeForm(query) })
   },
+  academicProfileSnapshot: null as Record<'university' | 'major' | 'currentGrade' | 'gpaText' | 'rankText', string> | null,
   onShow() {
-    // Read the canonical account profile after returning from 我的 → 编辑个人资料.
-    // Never promote resume extraction or a historical draft to the source of truth.
+    // Refresh canonical fields that the student has not changed in this assessment draft.
     if (!this.data.profileReady || this.data.loading) return
+    const owner = getSavedAuthResult()?.user.id
     void getMyAcademicProfile().then((profile) => {
-      this.setData({
-        'profile.university': profile.university || '',
-        'profile.major': profile.major || '',
-        'profile.currentGrade': profile.currentGrade || '',
-        'profile.gpaText': profile.gpaText || '',
-        'profile.rankText': profile.rankText || '',
-      })
+      if (!owner || getSavedAuthResult()?.user.id !== owner) return
+      const canonical = { university: profile.university || '', major: profile.major || '', currentGrade: profile.currentGrade || '',
+        gpaText: profile.gpaText || '', rankText: profile.rankText || '' }
+      const changes: Record<string, string> = {}
+      const fields = ['university', 'major', 'currentGrade', 'gpaText', 'rankText'] as const
+      for (const field of fields) if (this.academicProfileSnapshot && this.data.profile[field] === this.academicProfileSnapshot[field]) changes[`profile.${field}`] = canonical[field]
+      this.academicProfileSnapshot = canonical
+      if (Object.keys(changes).length) this.setData(changes)
     }).catch(() => wx.showToast({ title: '资料同步失败，请重新打开', icon: 'none' }))
   },
   onOpenProfileEdit() {
@@ -319,6 +321,9 @@ Page({
 
       const draftInput = draft?.input
       const draftProfile = draftInput?.profile
+
+      this.academicProfileSnapshot = { university: profile.university || '', major: profile.major || '', currentGrade: profile.currentGrade || '',
+        gpaText: profile.gpaText || '', rankText: profile.rankText || '' }
 
       this.setData({
         providerConfigured: meta.providerConfigured,

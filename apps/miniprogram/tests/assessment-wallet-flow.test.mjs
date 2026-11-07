@@ -22,6 +22,7 @@ Module._load = function (id, parent, isMain) {
     createAssessmentDraft: async () => ({ id: 'draft-1' }),
     updateAssessmentDraft: async () => ({}),
     runMyAssessment: () => new Promise((resolve, reject) => { rejectRun = reject }),
+    getMyAcademicProfile: async () => ({ university: '后台学校', major: '后台专业', currentGrade: '大三', gpaText: null, rankText: null }),
   }
   return originalLoad.call(this, id, parent, isMain)
 }
@@ -52,4 +53,23 @@ test('insufficient credits opens the shared wallet without clearing assessment i
   assert.equal(page.data.profile.university, '保留的院校')
   assert.equal(page.data.english[0].score, '550')
   assert.equal(purchasePanels, 1)
+})
+
+test('returning from Mine refreshes untouched profile fields and keeps edited assessment fields', async () => {
+  const page = { ...definition, data: structuredClone(definition.data), setData(patch) {
+    for (const [key, value] of Object.entries(patch)) {
+      const [section, field] = key.split('.')
+      if (field) this.data[section][field] = value
+      else this.data[key] = value
+    }
+  } }
+  page.data.profileReady = true
+  page.data.loading = false
+  page.academicProfileSnapshot = { university: '原学校', major: '原专业', currentGrade: '大二', gpaText: '', rankText: '' }
+  page.data.profile = { ...page.data.profile, university: '评估草稿学校', major: '原专业', currentGrade: '大二', backgroundNote: '未保存备注' }
+  page.onShow()
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.equal(page.data.profile.university, '评估草稿学校')
+  assert.equal(page.data.profile.major, '后台专业')
+  assert.equal(page.data.profile.backgroundNote, '未保存备注')
 })
