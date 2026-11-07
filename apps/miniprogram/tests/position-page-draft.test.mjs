@@ -14,6 +14,8 @@ let auth = { user: { id: 'student-a', role: 'student' }, businessIdentity: null 
 let readOnly = false
 let savedPayload
 let saveFails = false
+let growthRecords = []
+let growthWrite
 let pageDefinition
 globalThis.wx = { showModal() {}, showToast() {} }
 globalThis.Page = definition => { pageDefinition = definition }
@@ -29,6 +31,10 @@ Module._load = function (id, parent, isMain) {
     friendlyRequestError: () => '网络失败',
     getMyAcademicProfile: async () => ({ university: '原学校', major: null, currentGrade: null, enrollmentYear: 2023, gpaText: null, rankText: null }),
     updateMyAcademicProfile: async payload => { savedPayload = payload; if (saveFails) throw new Error('offline'); return { ...payload, enrollmentYear: 2023 } },
+    getMyGrowthProfile: async () => ({ profile: { records: growthRecords }, growthSchemaReady: true }),
+    createMyGrowthRecord: async payload => { growthWrite = payload; growthRecords.push({ ...payload, id: 'record-1', standardExpression: payload.title, source: { type: 'manual' } }) },
+    updateMyGrowthRecord: async (id, payload) => { growthWrite = payload; growthRecords = growthRecords.map(item => item.id === id ? { ...item, ...payload } : item) },
+    deleteMyGrowthRecord: async id => { growthRecords = growthRecords.filter(item => item.id !== id) },
   }
   if (id.endsWith('/profile-cache')) return { saveCachedAcademicProfile: async () => {} }
   if (id.endsWith('/growth-profile-cache')) return { clearGrowthProfileBootstrapCache: async () => {} }
@@ -96,4 +102,37 @@ test('network failure keeps the draft and non-student role cannot edit', async (
   page.initializePosition()
   assert.equal(page.data.canEditProfile, false)
   assert.equal(page.data.profileDraft, null)
+})
+
+test('growth records share the canonical source and writes strip read-only fields', async () => {
+  auth = { user: { id: 'student-a', role: 'student' }, businessIdentity: null }
+  const page = makePage()
+  page.profileOwner = 'student-a::'
+  page.data.canEditProfile = true
+  page.data.expandedDimension = 'research'
+  growthRecords = [{ id: 'existing', type: 'research', title: '旧科研', standardExpression: '旧科研', source: { type: 'manual' }, updatedAt: 'now' }]
+  await page.loadGrowthRecords()
+  assert.equal(page.data.dimensionRecords[0].title, '旧科研')
+  page.onNewGrowthRecord()
+  page.data.growthDraft.title = '新科研'
+  page.data.growthDraft.id = 'server-owned'
+  page.data.growthDraft.source = { type: 'assessment' }
+  await page.onSaveGrowth()
+  assert.deepEqual(Object.keys(growthWrite).sort(), ['description', 'endDate', 'organization', 'result', 'role', 'startDate', 'title', 'type'])
+  assert.equal(page.data.dimensionRecords.length, 2)
+  page.onEditGrowthRecord({ currentTarget: { dataset: { id: 'record-1' } } })
+  page.data.growthDraft.result = '已获成果'
+  await page.onSaveGrowth()
+  assert.equal(page.data.dimensionRecords.find(item => item.id === 'record-1').result, '已获成果')
+  readOnly = true
+  page.onNewGrowthRecord()
+  assert.equal(page.data.growthDraft, null)
+  readOnly = false
+  page.data.growthDraft = { ...growthWrite, title: '未保存修改' }
+  page.onHide()
+  assert.equal(page.data.growthNeedsResume, true)
+  auth = { user: { id: 'student-b', role: 'student' }, businessIdentity: null }
+  page.initializePosition()
+  assert.equal(page.data.growthDraft, null)
+  assert.equal(page.detachedGrowthDrafts[0].owner, 'student-a::')
 })

@@ -22,6 +22,7 @@ import { openResumeDocx } from '../../utils/resume-document'
 import { authorizePage } from '../../utils/navigation'
 import { getSavedAuthResult } from '../../utils/auth'
 import { getReadOnlyContext, isReadOnly } from '../../utils/read-only-context'
+import { normalizeGrowthRecordInput } from '../../utils/growth-record-form'
 
 type ResumeTarget = 'general' | 'technical' | 'academic'
 
@@ -381,15 +382,7 @@ Page({
       this.setData({ recordError: '请先填写这段经历的名称。' })
       return
     }
-    const input: GrowthRecordInput = {
-      ...form, title,
-      organization: form.organization?.trim() || null,
-      role: form.role?.trim() || null,
-      startDate: form.startDate?.trim() || null,
-      endDate: form.endDate?.trim() || null,
-      description: form.description?.trim() || null,
-      result: form.result?.trim() || null,
-    }
+    const input: GrowthRecordInput = normalizeGrowthRecordInput(form)
     this.setData({ recordSaving: true, recordError: '' })
     try {
       if (this.data.recordEditingId) await updateMyGrowthRecord(this.data.recordEditingId, input)

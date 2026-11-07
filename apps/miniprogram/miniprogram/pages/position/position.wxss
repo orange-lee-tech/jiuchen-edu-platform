@@ -137,13 +137,20 @@
 
 .dimension-card {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: 18rpx;
   min-height: 112rpx;
   box-sizing: border-box;
   padding: 20rpx 24rpx;
 }
+.dimension-card-head{display:flex;align-items:center;justify-content:space-between;gap:18rpx;width:100%;}
+.dimension-details{width:100%;margin-top:18rpx;padding-top:16rpx;border-top:1rpx solid #e8e2d8;}
+.dimension-record{padding:14rpx 0;border-bottom:1rpx solid #eee9df;}
+.dimension-record-actions{display:flex;gap:10rpx;margin-top:8rpx;}
+.dimension-record-actions button{margin:0;font-size:21rpx;}
+.growth-editor{margin-top:16rpx;}
+.growth-field{display:block;box-sizing:border-box;width:100%;min-height:66rpx;margin-top:12rpx;padding:12rpx 14rpx;border:1rpx solid #e4ded2;border-radius:8rpx;background:#fffdf9;font-size:23rpx;}
+.growth-textarea{height:125rpx;}
 
 .dimension-card:active {
   background: #f8faff;

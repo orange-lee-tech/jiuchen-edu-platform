@@ -1654,6 +1654,10 @@ export async function updateMyGrowthRecord(id: string, input: GrowthRecordInput)
   return result.record
 }
 
+export async function deleteMyGrowthRecord(id: string): Promise<void> {
+  await request<{ ok: true }>('/me/growth-records/' + encodeURIComponent(id), 'DELETE')
+}
+
 export type CanonicalGrowthProfile = {
   schemaVersion: 'growth-profile-v1'
   identity: {

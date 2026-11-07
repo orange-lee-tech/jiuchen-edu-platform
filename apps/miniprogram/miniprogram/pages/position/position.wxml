@@ -69,14 +69,46 @@
       wx:for="{{dimensions}}"
       wx:key="title"
       class="dimension-card surface"
-      data-key="{{item.key}}"
-      bindtap="onDimensionTap"
     >
-      <view>
-        <text class="dimension-title">{{item.title}}</text>
-        <text class="dimension-desc">{{item.desc}}</text>
+      <view class="dimension-card-head" data-key="{{item.key}}" bindtap="onDimensionTap">
+        <view>
+          <text class="dimension-title">{{item.title}}</text>
+          <text class="dimension-desc">{{item.desc}}</text>
+        </view>
+        <text class="dimension-status">{{expandedDimension === item.key ? '收起 ⌃' : item.status}}</text>
       </view>
-      <text class="dimension-status">{{item.status}}</text>
+      <view wx:if="{{expandedDimension === item.key && item.key !== 'profile'}}" class="dimension-details">
+        <text wx:if="{{readOnly}}" class="profile-state">只读查看，不能编辑成长记录。</text>
+        <text wx:elif="{{growthLoading}}" class="profile-state">正在读取成长记录…</text>
+        <view wx:elif="{{growthError}}" class="profile-state"><text>{{growthError}}</text><button bindtap="onRetryGrowth">重新读取</button></view>
+        <block wx:else>
+          <text wx:if="{{!dimensionRecords.length}}" class="profile-state">暂无已确认记录，可在这里补充真实经历。</text>
+          <view wx:for="{{dimensionRecords}}" wx:for-item="record" wx:key="id" class="dimension-record">
+            <text class="dimension-title">{{record.title}}</text>
+            <text class="dimension-desc">{{record.standardExpression}}</text>
+            <view wx:if="{{record.source.type === 'manual' && !readOnly}}" class="dimension-record-actions">
+              <button data-id="{{record.id}}" bindtap="onEditGrowthRecord">编辑</button><button data-id="{{record.id}}" bindtap="onDeleteGrowthRecord">删除</button>
+            </view>
+          </view>
+          <button wx:if="{{growthSchemaReady && !growthDraft && !readOnly}}" class="history-btn" bindtap="onNewGrowthRecord">新增经历</button>
+          <text wx:if="{{!growthSchemaReady}}" class="profile-state">成长档案暂不可编辑，请稍后重试。</text>
+          <view wx:if="{{growthDraft && growthNeedsResume}}" class="profile-resume"><text>有未保存的经历修改，草稿已保留在当前账号。</text><view class="profile-actions"><button bindtap="onContinueGrowth">继续编辑</button><button bindtap="onCancelGrowth">放弃修改</button></view></view>
+          <view wx:elif="{{growthDraft && !readOnly}}" class="growth-editor">
+            <text class="dimension-title">{{growthEditingId ? '编辑经历' : '新增经历'}}</text>
+            <picker range="{{growthTypeOptions}}" range-key="label" bindchange="onGrowthTypeChange"><view class="growth-field">类型：{{growthDraft.type === 'publication' ? '论文成果' : item.title}} ›</view></picker>
+            <picker wx:if="{{item.key === 'english'}}" range="{{languageOptions}}" bindchange="onLanguageTypeChange"><view class="growth-field">考试类别：{{growthDraft.title || '请选择 ›'}}</view></picker>
+            <input class="growth-field" data-field="title" maxlength="220" value="{{growthDraft.title}}" placeholder="名称，例如：英语六级 / 科研项目 / 竞赛名称" bindinput="onGrowthInput" />
+            <input class="growth-field" data-field="organization" maxlength="220" value="{{growthDraft.organization}}" placeholder="机构／主办方" bindinput="onGrowthInput" />
+            <input class="growth-field" data-field="role" maxlength="160" value="{{growthDraft.role}}" placeholder="参与角色" bindinput="onGrowthInput" />
+            <input class="growth-field" data-field="startDate" maxlength="32" value="{{growthDraft.startDate}}" placeholder="开始时间，例如 2025-09" bindinput="onGrowthInput" />
+            <input class="growth-field" data-field="endDate" maxlength="32" value="{{growthDraft.endDate}}" placeholder="结束时间，可留空" bindinput="onGrowthInput" />
+            <textarea class="growth-field growth-textarea" data-field="description" maxlength="2000" value="{{growthDraft.description}}" placeholder="主要内容" bindinput="onGrowthInput" />
+            <textarea class="growth-field growth-textarea" data-field="result" maxlength="1200" value="{{growthDraft.result}}" placeholder="成果／成绩／证明" bindinput="onGrowthInput" />
+            <text wx:if="{{growthSaveError}}" class="profile-error">{{growthSaveError}}</text>
+            <view class="profile-actions"><button bindtap="onCancelGrowth" disabled="{{growthSaving}}">取消</button><button class="primary-btn" bindtap="onSaveGrowth" loading="{{growthSaving}}" disabled="{{growthSaving}}">保存经历</button></view>
+          </view>
+        </block>
+      </view>
     </view>
   </view>
 
