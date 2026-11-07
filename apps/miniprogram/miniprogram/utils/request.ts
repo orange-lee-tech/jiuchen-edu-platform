@@ -227,6 +227,10 @@ export function friendlyRequestError(
     wechat_identity_mismatch: '当前微信与登录账号不一致',
     virtual_payment_query_unavailable: '支付结果尚未核实，请稍后重试',
     growth_profile_schema_not_ready: '成长履历服务正在准备中，请稍后重试',
+    invalid_course_fact: '学分或成绩格式不正确，请检查后重试',
+    course_key_not_owned: '这门课程尚未在当前账号的该学期课表确认，请先保存课表',
+    course_fact_requires_dedicated_editor: '课程成绩请到课表课程编辑中修改',
+    course_fact_readback_mismatch: '成绩保存后未能核对，请刷新后重试',
     assessment_or_growth_schema_not_ready: '成长履历与评估数据正在准备中，请稍后重试',
     assessment_provider_not_configured: 'AI模型尚未接入，暂时不能运行评估',
     assessment_ai_authentication: 'AI 密钥验证失败，请联系管理员检查当前服务',
@@ -544,6 +548,7 @@ export async function saveTeacherStudentPlan(
 }
 
 export type ParsedScheduleCourse = {
+  courseKey?: string
   name: string
   day: string
   dayIndex: number
@@ -625,6 +630,25 @@ export async function updateScheduleImport(
     } as unknown as WechatMiniprogram.IAnyObject,
   )
   return result.schedule
+}
+
+export type CourseGradeScale = 'unset' | 'percentage' | 'four_point' | 'five_point' | 'letter' | 'pass_fail' | 'other'
+export type CourseAcademicFact = {
+  recordId: string; title: string; updatedAt: string; schemaVersion: 'course-academic-fact-v1'
+  stageCode: string; courseKey: string; credits: number | null; gradeScale: CourseGradeScale; gradeValue: string | null
+}
+export type CourseAcademicFactInput = Pick<CourseAcademicFact, 'stageCode' | 'credits' | 'gradeScale' | 'gradeValue'>
+
+export async function getMyCourseAcademicFacts(stageCode: string): Promise<CourseAcademicFact[]> {
+  const result = await request<{ ok: true; facts: CourseAcademicFact[] }>(
+    '/me/course-academic-facts?stageCode=' + encodeURIComponent(stageCode))
+  return result.facts
+}
+
+export async function saveMyCourseAcademicFact(courseKey: string, input: CourseAcademicFactInput): Promise<CourseAcademicFact> {
+  const result = await request<{ ok: true; fact: CourseAcademicFact }>(
+    '/me/course-academic-facts/' + encodeURIComponent(courseKey), 'PUT', input)
+  return result.fact
 }
 
 
