@@ -68,6 +68,7 @@ Component({
       this.setData({ canEndPendingOrder: Boolean(id) })
     },
     refresh() { void this.loadCredits() },
+    openPurchasePanel() { this.setData({ offersOpen: true }); if (!this.data.billingEnabled && !this.data.creditLoading) void this.loadCredits() },
     onToggleOffers() { this.setData({ offersOpen: !this.data.offersOpen }) },
     onToggleOrders() {
       const ordersOpen = !this.data.ordersOpen

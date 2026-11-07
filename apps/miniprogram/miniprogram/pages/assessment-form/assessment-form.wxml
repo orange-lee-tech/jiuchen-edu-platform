@@ -8,7 +8,7 @@
 
   <block wx:else>
     <view wx:if="{{retryNotice}}" class="card"><text class="card-note">{{retryNotice}}</text></view>
-    <credit-wallet id="assessment-wallet" mode="full" />
+    <view class="assessment-wallet"><credit-wallet id="assessment-wallet" mode="compact" /></view>
 
     <view class="card import-card">
       <view class="import-copy">

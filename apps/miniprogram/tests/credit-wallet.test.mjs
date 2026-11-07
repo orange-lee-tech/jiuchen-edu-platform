@@ -11,12 +11,14 @@ const originalLoad = Module._load
 const filename = path.resolve(import.meta.dirname, '../miniprogram/components/credit-wallet/credit-wallet.ts')
 const storage = new Map()
 let owner = 'student-a', platform = 'android', grants = 0, orderReads = 0, orderCreates = 0, metaFails = false
-let reconcileFails = false, reconcileState = 'paid', afterSales = 0
+let reconcileFails = false, reconcileState = 'paid', afterSales = 0, allowOrder = false, paymentFails = false
 let definition
 globalThis.Component = value => { definition = value }
 globalThis.wx = {
   getStorageSync: key => storage.get(key), setStorageSync: (key, value) => storage.set(key, value), removeStorageSync: key => storage.delete(key),
   getSystemInfoSync: () => ({ platform }), showModal() {}, showToast() {},
+  login: options => options.success({ code: 'mock-wechat-code' }),
+  requestVirtualPayment: options => paymentFails ? options.fail({ errCode: -1, errMsg: 'cancel' }) : options.success(),
 }
 Module._load = function (id, parent, isMain) {
   if (id.endsWith('/auth')) return { getSavedAuthResult: () => ({ user: { id: owner } }) }
@@ -27,7 +29,7 @@ Module._load = function (id, parent, isMain) {
     grantMyFreeCredits: async () => { grants += 1 },
     getMyCreditAccount: async () => ({ availableBalance: 2 }),
     getMyVirtualPurchaseOrders: async () => { orderReads += 1; return [{ id: 'paid-1', skuKey: 'JC001', amountFen: 300, purchasedCredits: 3, credited: 3, status: 'paid' }] },
-    createVirtualAssessmentOrder: async () => { orderCreates += 1; throw new Error('should not create') },
+    createVirtualAssessmentOrder: async () => { orderCreates += 1; if (!allowOrder) throw new Error('should not create'); return { order: { id: `order-${orderCreates}` }, payment: { mode: 'short_series_goods', signData: 'mock', paySig: 'mock', signature: 'mock' } } },
     reconcileVirtualAssessmentOrder: async () => { if (reconcileFails) throw new Error('query failed'); return { state: reconcileState, credited: reconcileState === 'paid', deliveryPending: false } },
     requestVirtualPurchaseAfterSales: async () => { afterSales += 1 }, endUnpaidVirtualAssessmentOrder: async () => ({ state: 'closed', credited: false }),
   }
@@ -105,4 +107,21 @@ test('failed official query keeps pending protection; refund and after-sales use
   await view.requestAfterSales('paid-1')
   assert.equal(afterSales, 1)
   reconcileState = 'paid'
+})
+
+test('mock checkout verifies payment; a failed payment keeps a recoverable pending order', async () => {
+  owner = 'student-g'; allowOrder = true; paymentFails = false; orderCreates = 0
+  const view = wallet()
+  await view.loadCredits()
+  await view.beginCreditPurchase('JC001')
+  assert.equal(orderCreates, 1)
+  assert.equal(view.data.pendingPaymentOrderId, '')
+  assert.equal(storage.has('jiuchen:virtual-order:student-g'), false)
+  paymentFails = true
+  await view.beginCreditPurchase('JC001')
+  assert.equal(orderCreates, 2)
+  assert.equal(view.data.pendingPaymentOrderId, 'order-2')
+  assert.equal(view.data.canEndPendingOrder, true)
+  assert.equal(storage.get('jiuchen:virtual-order:student-g'), 'order-2')
+  allowOrder = false; paymentFails = false
 })

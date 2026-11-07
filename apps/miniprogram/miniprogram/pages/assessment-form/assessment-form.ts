@@ -2,6 +2,7 @@ import { getSavedAuthResult } from '../../utils/auth'
 import { authorizePage, safeBack } from '../../utils/navigation'
 import {
   createAssessmentDraft,
+  ApiRequestError,
   friendlyRequestError,
   getAssessmentMeta,
   getMyAcademicProfile,
@@ -932,6 +933,9 @@ Page({
 
       wx.showToast({ title: '评估未进入运行状态，请稍后重试', icon: 'none' })
     } catch (error) {
+      if (error instanceof ApiRequestError && error.code === 'assessment_credit_insufficient') {
+        (this.selectComponent('#assessment-wallet') as { openPurchasePanel?: () => void } | null)?.openPurchasePanel?.()
+      }
       wx.showToast({
         title: friendlyRequestError(error, '评估运行失败，请稍后重试'),
         icon: 'none',
