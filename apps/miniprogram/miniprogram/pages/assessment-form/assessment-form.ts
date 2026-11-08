@@ -803,6 +803,11 @@ Page({
     if (this.data.english.some(item => !(item.score || '').trim())) throw new Error('请完善或删除未填写分数的英语记录')
     if (this.data.research.some(item => !(item.title || '').trim())) throw new Error('请完善或删除未完成的科研经历')
     if (this.data.competitions.some(item => !(item.name || '').trim())) throw new Error('请完善或删除未完成的竞赛经历')
+    // Legacy drafts can contain an unnamed school with partial details; do not discard it on submit.
+    if (this.data.targets.some(item => (item.schoolName || '').trim()) &&
+      this.data.targets.some(item => !(item.schoolName || '').trim() &&
+        ((item.programName || '').trim() || (item.researchDirection || '').trim() || (item.note || '').trim())))
+      throw new Error('请完善或删除未完成的目标院校')
     const direction = (this.data.researchDirection || '').trim()
     if (!direction) throw new Error('请填写研究方向')
 
