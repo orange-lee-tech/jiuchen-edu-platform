@@ -18,15 +18,15 @@
 
 ## ECS 发布候选与门禁
 
-- 2026-11-01 的用户现场记录显示上一轮现役 API 是 `4250785eb709d198742453762fa52f5d0524b62e`；**本轮尚无 ECS 实时只读回执**。实际现役 SHA、previous、资源限制及启动状态必须重新核实。
+- 2026-11-08 13:34:46 +08 用户 ECS 只读预检回执：现役 API 精确 SHA `4250785eb709d198742453762fa52f5d0524b62e`（current/COMMIT_SHA 一致）、previous `03bc43b7ebe648b310a2499a1d77fba86e5e6623`（目录存在）；service active、MemoryMax=256MiB、CPUQuota=50%、TasksMax=64、环境文件 root:root 600；READY 缺席；目标 release 尚不存在；`jiuchen-promote` 工具位于 `/usr/local/sbin/jiuchen-promote`，sha256 `6894b6b85242a1fcff4d6e8ad548704215ce946dfe44b3f78ebae74ef3f3ee24`；内网及公网 API 200，官网 200，余量约 17.3GiB 磁盘、~1.0GiB 可用内存。**仅为只读预检，未切流。**
 - 用户已允许开始新版 API 发布流程；待确认发布范围是固定应用源码 `cfb0f85c39b44b8a8a2726c26108e465da6f9a45`。先读 ECS `current`、`jiuchen-api.service`、官网只读健康、现役 promotion 工具、恢复点、数据库结构和权限；再独立 staging 构建、校验归档、生产切流及失败回滚。
 - 发布只可更改 `/opt/jiuchen-api` 内候选 release 和 `jiuchen-api.service`，保持 3100 内网端口、资源限制、现役密钥文件不变。**不得重建或绕过 approved-release / READY / promotion 门禁**；若现场工具与旧记录不符，停在只读预检并记录。禁止修改官网、NPM、Harbor、Portainer、Docker、系统代理、其他服务及 CloudBase 数据库。
 - 任何脚本必须核实 root-owned 不可变 release、服务用户真实可读、`/health/live` 和 `/health`、生产 DB 已知结构、回滚 SHA 和官网不变。审查依据：[ECS 运维约束](../../ops/ecs/AGENTS.md)、[后端工程地图](../ops/miniprogram-backend-engineering-map.md)。
-- 当前 **`CODE=MERGED`、`CI=PASS`、`DB STRUCTURE=PASS（用户回执）`、`ECS PRECHECK=PENDING`、`ECS PROMOTE=PENDING`、`DEVICE=PENDING`**。
+- 当前 **`CODE=MERGED`、`CI=PASS`、`DB STRUCTURE=PASS（此前用户回执）`、`ECS READONLY PRECHECK=PASS`、`NEW 56-TABLE BACKUP=PENDING`、`ECS PROMOTE=PENDING`、`DEVICE=PENDING`**。
 
 ## GitHub 分支整理
 
-2026-11-08 核验：远端只有 `main`、`codex/ux-batch-a-20261106`、`codex/ux-batch-a-checkpoint-20261106`，开放 PR 为 0。前者零独有提交，可删；checkpoint 相对 main 有一条独有的早期首页/规划提交 `81d9de7827d5d96c6508acf1103ed8e7f720adaa`，必须**先打归档 tag 再删**，不可把旧 UI 合并回 main。见[精确清理操作](github-branch-prune-2026-11-08.md)。本页写入时**尚未完成远端删除**。
+2026-11-08 清理前：远端三条分支、开放 PR 为 0。清理后：**远端仅 `main`**，归档标签已验证解引用至 `81d9de7827d5d96c6508acf1103ed8e7f720adaa`。前者已完整合入 main；checkpoint 的独有早期首页/规划提交 `81d9de7827d5d96c6508acf1103ed8e7f720adaa` 已由管理员建立归档标签 `archive/2026-11-08/codex/ux-batch-a-checkpoint-20261106`。2026-11-08 管理员 PowerShell 回执：两条远端功能分支均经固定 SHA lease 剪除，最终远端仅 `main`；本地 `project.config.json` 改动与四个 stash 保留。见[精确清理与回执](github-branch-prune-2026-11-08.md)。
 
 ## 下一轮验收
 
