@@ -23,6 +23,7 @@ import { registerProductRoutes } from './routes/products.js'
 import { registerBrandRoutes } from './routes/brand.js'
 import { registerClassroomWorkspaceRoutes } from './routes/classroom-workspace.js'
 import { registerGrowthProfileRoutes } from './routes/growth-profile.js'
+import { registerCourseAcademicFactRoutes } from './routes/course-academic-facts.js'
 import { registerReadOnlyWorkspaceRoutes } from './routes/read-only-workspace.js'
 import { registerCommercialRoutes } from './routes/commercial.js'
 import { registerAdminControlRoutes } from './routes/admin-controls.js'
@@ -257,6 +258,7 @@ export function buildApp(env: AppEnv) {
   registerBrandRoutes(app)
   registerClassroomWorkspaceRoutes(app, database, env)
   registerGrowthProfileRoutes(app, database)
+  registerCourseAcademicFactRoutes(app, database)
   registerReadOnlyWorkspaceRoutes(app, database)
   registerCommercialRoutes(app, database, liveCommercialConfig, wechatPay, env)
   registerAdminControlRoutes(app, database, env, assessmentVault.refresh)

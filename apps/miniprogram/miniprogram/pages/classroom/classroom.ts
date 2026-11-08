@@ -2,6 +2,8 @@ import { getSavedAuthResult } from '../../utils/auth'
 import {getReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
 import { weeklyScheduleView, courseTimeLabel } from '../../utils/schedule-view'
+import { initialPlanView, type PlanNavigationIntent } from '../../utils/plan-navigation-intent'
+import { normalizePlanDraft } from '../../utils/plan-editor-form'
 import { resolveCurrentStage } from '../../utils/current-stage'
 import {
   ApiRequestError,
@@ -11,11 +13,13 @@ import {
   getMyClassroom,
   getCurrentStageSuggestion,
   setCurrentClassroomStage,
+  saveMyClassroomPlan,
   type ClassroomCoachingRecord,
   type ClassroomMentor,
   type ClassroomPlan,
   type ClassroomPlanType,
   type ClassroomStage,
+  type PlanEditorItem,
 } from '../../utils/request'
 
 function stageErrorMessage(error: unknown) {
@@ -46,7 +50,9 @@ type PlanCard = {
   title: string
   progress: string
   revisionStatus: 'none' | 'pending' | 'approved'
+  items: Array<{ id: string; name: string; target: string | null; dueDate: string | null; status: PlanEditorItem['status'] }>
 }
+type InlinePlanDraft = { owner: string; stageCode: string; type: ClassroomPlanType; title: string; items: PlanEditorItem[]; revisionStatus: PlanCard['revisionStatus'] }
 
 const PLAN_CARDS: Record<ClassroomPlanType, Pick<PlanCard, 'type' | 'title'>> = {
   gpa: { type: 'gpa', title: '课程成绩计划' },
@@ -99,6 +105,7 @@ function toPlanCard(plan: ClassroomPlan): PlanCard {
     title: plan.title,
     progress: plan.items.length ? `${completed} / ${plan.items.length}` : '',
     revisionStatus: plan.revisionStatus || (plan.id ? 'approved' : 'none'),
+    items: plan.items.map(item => ({ id: item.id, name: item.name, target: item.target, dueDate: item.dueDate ?? null, status: item.status })),
   }
 }
 
@@ -116,6 +123,15 @@ Page({
     stageScrollTarget: 'semester-freshman-fall', actualStageLabel: '待确认',
     actualStageCode: '', actualStageKnown: false, stageMode: null as 'auto' | 'manual' | null, stageModeKnown: false, stageNotice: '', stageScheduleSafe: false,
     stageChangeBusy: false, stageCalibrationMode: false, stageSaveError: '',
+    semesterSettingsOpen: false,
+    expandedPlanType: '',
+    inlinePlanDraft: null as InlinePlanDraft | null,
+    inlinePlanNeedsResume: false,
+    detachedPlanDrafts: [] as InlinePlanDraft[],
+    inlinePlanSaving: false,
+    inlinePlanError: '',
+    bindingHelpOpen: false,
+    stageSuggestion: null as { code: string; label: string; expectedStage: string | null; expectedMode: 'auto' | 'manual' | null } | null,
     ...emptyStageView(FALLBACK_STAGES[0], 0),
   },
 
@@ -131,13 +147,21 @@ Page({
       else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
     })
   },
-  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading', stageCalibrationMode: false }) },
+  onHide() {
+    const inlinePlanNeedsResume = this.data.inlinePlanNeedsResume || Boolean(this.data.inlinePlanDraft && !this.data.inlinePlanSaving && this.inlinePlanDirty())
+    this.stopShell?.(); this.viewGeneration += 1
+    this.setData({ shellPhase: 'loading', stageCalibrationMode: false, semesterSettingsOpen: false, stageSuggestion: null, inlinePlanNeedsResume })
+  },
   onUnload() { this.stopShell?.() },
 
   async initializeClassroom() {
     const generation = ++this.viewGeneration
+    // Suggestions are tied to the active student and must not survive role/account changes.
+    this.setData({ stageSuggestion: null })
     const auth = getSavedAuthResult()
     const role=getReadOnlyContext()?.role||auth?.user.role
+    const currentOwner = getReadOnlyContext()?.id || auth?.user.id || ''
+    this.separateInlineDraftForIdentity(currentOwner, !auth || role !== 'student' || isReadOnly())
     if (!auth) {
       this.setData({ mode: 'guest', plans: [], mentors: [], records: [], actualStageCode: '', actualStageKnown: false, stageMode: null, stageModeKnown: false })
       return
@@ -153,9 +177,15 @@ Page({
       return
     }
     const owner=getReadOnlyContext()?.id||auth.user.id
+    let navigationIntent: PlanNavigationIntent | undefined
+    try {
+      navigationIntent = wx.getStorageSync('jiuchen-navigation-intent:plan') as PlanNavigationIntent | undefined
+      if (navigationIntent) wx.removeStorageSync('jiuchen-navigation-intent:plan')
+    } catch { /* Ignore stale or unavailable navigation state. */ }
     const sameOwner = this.selectedOwner === owner
     this.selectedOwner = owner
-    if (!sameOwner) this.setData({ selectedView: 'stage' })
+    const initialView = initialPlanView(owner, navigationIntent)
+    if (initialView === 'week' || !sameOwner) this.setData({ selectedView: initialView })
 
     this.setData({ mode: 'student', loading: true, loadError: '', studentName: '', actualStageKnown: false, stageModeKnown: false, plans: [], mentors: [], records: [] })
     let stageSuggestionError = ''
@@ -200,7 +230,13 @@ Page({
         })),
         stageSaveError: '',
       })
-      if (this.data.selectedView === 'week') void this.loadCurrentWeek()
+      const detachedDraft = !isReadOnly() ? this.data.detachedPlanDrafts.find(item => item.owner === owner && item.stageCode === stage.code) : undefined
+      if (detachedDraft) this.setData({ inlinePlanDraft: detachedDraft, inlinePlanNeedsResume: true, expandedPlanType: detachedDraft.type,
+        detachedPlanDrafts: this.data.detachedPlanDrafts.filter(item => item !== detachedDraft) })
+      if (this.data.selectedView === 'week') {
+        void this.loadCurrentWeek()
+        wx.pageScrollTo({ selector: '.current-week-link', duration: 0 })
+      }
     } catch (error) {
       if (generation !== this.viewGeneration) return
       logStageFailure('load', error)
@@ -228,12 +264,20 @@ Page({
   },
 
   onStageChange(event: WechatMiniprogram.BaseEvent) {
-    if (this.data.stageChangeBusy) return
+    if (this.data.stageChangeBusy || this.data.inlinePlanSaving) return
     const code = String(event.currentTarget.dataset.code || '')
     const stages = this.data.stages as ClassroomStage[]
     const index = code ? stages.findIndex(item => item.code === code) : Number(event.currentTarget.dataset.index)
     const stage = stages[index]
     if (!stage) return
+    if (this.data.inlinePlanDraft && this.inlinePlanDirty()) {
+      this.confirmDiscardInlinePlan(() => this.applyStageChange(stage, index))
+      return
+    }
+    this.applyStageChange(stage, index)
+  },
+  applyStageChange(stage: ClassroomStage, index: number) {
+    if (this.data.inlinePlanDraft) this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, inlinePlanError: '', expandedPlanType: '' })
     if (this.data.stageCalibrationMode) {
       const expected = this.data.actualStageKnown ? (this.data.actualStageCode || null) : undefined
       const expectedMode = this.data.stageModeKnown ? this.data.stageMode : undefined
@@ -245,10 +289,11 @@ Page({
     void this.reloadStage(stage.code)
   },
   onToggleStageCalibration() {
-    if (isReadOnly() || this.data.stageChangeBusy) return
+    if (isReadOnly() || this.data.stageChangeBusy || this.data.inlinePlanSaving) return
     const opening = !this.data.stageCalibrationMode
-    this.setData({ stageCalibrationMode: opening })
+    this.setData({ stageCalibrationMode: opening, semesterSettingsOpen: opening })
   },
+  onToggleSemesterSettings() { this.setData({ semesterSettingsOpen: !this.data.semesterSettingsOpen }) },
   onAcademicProfile() { if (!isReadOnly()) openPage('/pages/profile-edit/profile-edit') },
   async onReviewCurrentStage() {
     if (isReadOnly() || this.data.stageChangeBusy) return
@@ -259,12 +304,11 @@ Page({
       if (generation !== this.viewGeneration || owner !== this.selectedOwner) return
       const stage = (this.data.stages as ClassroomStage[]).find(item => item.code === result.suggestedStage)
       if (!stage) {
-        wx.showModal({ title: '当前阶段待确认', content: '无法根据入学年份确定阶段。请在学期选择器中选择实际阶段，再设为当前。', showCancel: false })
+        this.setData({ stageSuggestion: { code: '', label: '无法根据入学年份确定建议阶段，请补充资料或手动选择。', expectedStage: result.currentStage, expectedMode: result.mode === 'auto' || result.mode === 'manual' ? result.mode : null } })
       } else if (stage.code === result.currentStage && result.mode === 'auto') {
         wx.showToast({ title: '当前阶段与建议一致', icon: 'none' })
       } else {
-        wx.showModal({ title: '启用自动定位', content: `按普通四年制及入学年份估算为${stage.label}。如有休学或其他学制，请手动选择实际阶段。`, confirmText: '启用自动',
-          success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(stage.code, result.currentStage, 'auto', result.mode) } })
+        this.setData({ stageSuggestion: { code: stage.code, label: `按入学年份建议为${stage.label}。如有休学或其他学制，请手动选择实际阶段。`, expectedStage: result.currentStage, expectedMode: result.mode === 'auto' || result.mode === 'manual' ? result.mode : null } })
       }
     } catch (error) {
       if (generation === this.viewGeneration && owner === this.selectedOwner) {
@@ -275,6 +319,13 @@ Page({
     }
     finally { this.setData({ stageChangeBusy: false }) }
   },
+  onApplyStageSuggestion() {
+    const suggestion = this.data.stageSuggestion
+    if (!suggestion?.code || isReadOnly() || this.data.stageChangeBusy) return
+    this.setData({ stageSuggestion: null })
+    void this.saveCurrentStage(suggestion.code, suggestion.expectedStage, 'auto', suggestion.expectedMode)
+  },
+  onDismissStageSuggestion() { this.setData({ stageSuggestion: null }) },
   onSetViewedStage() {
     if (isReadOnly() || this.data.stageChangeBusy) return
     const code = this.data.currentStageCode, expected = this.data.actualStageKnown ? (this.data.actualStageCode || null) : undefined
@@ -290,7 +341,11 @@ Page({
       success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(code, code, 'manual', mode) } })
   },
   async saveCurrentStage(code: string, expected: string | null | undefined, mode: 'auto' | 'manual' = 'manual', expectedMode?: 'auto' | 'manual' | null) {
-    if (this.data.stageChangeBusy || isReadOnly()) return
+    if (this.data.stageChangeBusy || this.data.inlinePlanSaving || isReadOnly()) return
+    if (this.data.inlinePlanDraft && this.inlinePlanDirty()) {
+      this.confirmDiscardInlinePlan(() => void this.saveCurrentStage(code, expected, mode, expectedMode))
+      return
+    }
     const generation = this.viewGeneration, owner = this.selectedOwner
     let operation: 'save' | 'verify' = 'save'
     this.setData({ stageChangeBusy: true, stageSaveError: '' })
@@ -306,7 +361,7 @@ Page({
       if (!confirmed.ok || confirmed.currentStage !== code || confirmed.mode !== mode) throw new ApiRequestError(409, 'current_stage_changed')
       const index = (this.data.stages as ClassroomStage[]).findIndex(item => item.code === confirmed.currentStage)
       if (index < 0) throw new ApiRequestError(409, 'stage_save_response_invalid')
-      this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage', stageScrollTarget: `semester-${this.data.stages[index].code}`, stageCalibrationMode: false })
+      this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage', stageScrollTarget: `semester-${this.data.stages[index].code}`, stageCalibrationMode: false, semesterSettingsOpen: false })
       const refreshedGeneration = this.viewGeneration + 1
       await this.initializeClassroom()
       if (owner !== this.selectedOwner || refreshedGeneration !== this.viewGeneration) return
@@ -335,11 +390,135 @@ Page({
   },
 
   onPlanTap(event: WechatMiniprogram.BaseEvent) {
+    if (this.data.inlinePlanSaving) return
     const type = String(event.currentTarget.dataset.type || '')
     if (!type) return
-    wx.navigateTo({
-      url: `/pages/plan-editor/plan-editor?stage=${encodeURIComponent(this.data.currentStageCode)}&type=${encodeURIComponent(type)}`,
-    })
+    if (isReadOnly()) {
+      this.setData({ expandedPlanType: this.data.expandedPlanType === type ? '' : type })
+      return
+    }
+    if (this.data.inlinePlanDraft?.type === type) {
+      if (this.data.inlinePlanNeedsResume) { this.setData({ inlinePlanNeedsResume: false }); return }
+      const dirty = this.inlinePlanDirty()
+      if (dirty) this.confirmDiscardInlinePlan(() => this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '' }))
+      else this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '' })
+      return
+    }
+    const open = () => this.openInlinePlan(type)
+    if (this.data.inlinePlanDraft && this.inlinePlanDirty()) this.confirmDiscardInlinePlan(open)
+    else open()
+  },
+  openInlinePlan(type: string) {
+    const plan = (this.data.plans as PlanCard[]).find(item => item.type === type)
+    if (!plan || isReadOnly()) return
+    this.setData({ inlinePlanDraft: {
+      owner: this.selectedOwner, stageCode: this.data.currentStageCode, type: plan.type, title: plan.title,
+      revisionStatus: plan.revisionStatus,
+      items: plan.items.map(item => ({ name: item.name, target: item.target, dueDate: item.dueDate, status: item.status })),
+    }, inlinePlanNeedsResume: false, expandedPlanType: type, inlinePlanError: '' })
+  },
+  inlinePlanDirty() {
+    const draft = this.data.inlinePlanDraft
+    if (!draft) return false
+    const original = (this.data.plans as PlanCard[]).find(item => item.type === draft.type)
+    if (!original) return true
+    const simplify = (items: PlanEditorItem[]) => items.map(item => ({ name: item.name, target: item.target || null, dueDate: item.dueDate || null, status: item.status }))
+    return draft.title !== original.title || JSON.stringify(simplify(draft.items)) !== JSON.stringify(simplify(original.items))
+  },
+  separateInlineDraftForIdentity(owner: string, forceSeparate = false) {
+    const activeDraft = this.data.inlinePlanDraft
+    if (!activeDraft || (!forceSeparate && activeDraft.owner === owner)) return
+    const dirty = this.inlinePlanDirty()
+    const detachedPlanDrafts = dirty && !this.data.detachedPlanDrafts.some(item => item.owner === activeDraft.owner && item.stageCode === activeDraft.stageCode && item.type === activeDraft.type)
+      ? [...this.data.detachedPlanDrafts, activeDraft] : this.data.detachedPlanDrafts
+    this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '', detachedPlanDrafts })
+    if (dirty) wx.showModal({ title: '身份已切换', content: '上一个身份有未保存的计划修改。该草稿已隔离，不会提交到当前身份。是否确认丢弃？', confirmText: '丢弃草稿', cancelText: '暂时保留',
+      success: result => { if (result.confirm) this.setData({ detachedPlanDrafts: this.data.detachedPlanDrafts.filter(item => item !== activeDraft) }) } })
+  },
+  confirmDiscardInlinePlan(continueAction: () => void) {
+    const draft = this.data.inlinePlanDraft
+    if (!draft) { continueAction(); return }
+    const owner = this.selectedOwner, stage = this.data.currentStageCode
+    wx.showModal({ title: '放弃未保存修改？', content: '当前计划有尚未保存的修改。继续操作会丢弃这些内容。', confirmText: '放弃修改', cancelText: '继续编辑',
+      success: result => {
+        if (result.confirm && this.selectedOwner === owner && this.data.currentStageCode === stage && this.data.inlinePlanDraft?.owner === owner) {
+          this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '' })
+          continueAction()
+        }
+      } })
+  },
+  onCancelInlinePlan() {
+    if (!this.data.inlinePlanDraft) return
+    if (this.inlinePlanDirty()) this.confirmDiscardInlinePlan(() => undefined)
+    else this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '' })
+  },
+  onContinueInlinePlan() { if (this.data.inlinePlanDraft) this.setData({ inlinePlanNeedsResume: false }) },
+  updateInlinePlan(change: Partial<Pick<InlinePlanDraft, 'title' | 'items'>>) {
+    const draft = this.data.inlinePlanDraft
+    if (!draft || isReadOnly()) return
+    this.setData({ inlinePlanDraft: { ...draft, ...change }, inlinePlanError: '' })
+  },
+  onInlineTitleInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.updateInlinePlan({ title: event.detail.value }) },
+  onInlineAddItem() {
+    const draft = this.data.inlinePlanDraft
+    if (!draft || isReadOnly()) return
+    if (draft.items.length >= 50) { this.setData({ inlinePlanError: '计划最多添加 50 条任务' }); return }
+    this.updateInlinePlan({ items: [...draft.items, { name: '', target: '', status: 'pending' }] })
+  },
+  onInlineItemInput(event: WechatMiniprogram.CustomEvent<{ index: number; field: string; value: string }>) {
+    const draft = this.data.inlinePlanDraft, index = Number(event.detail.index)
+    if (!draft || !draft.items[index] || !['name', 'target'].includes(event.detail.field)) return
+    const items = [...draft.items]
+    items[index] = { ...items[index], [event.detail.field]: event.detail.value }
+    this.updateInlinePlan({ items })
+  },
+  onInlineStatusChange(event: WechatMiniprogram.CustomEvent<{ index: number; value: string }>) {
+    const draft = this.data.inlinePlanDraft, index = Number(event.detail.index)
+    const status = ['pending', 'in_progress', 'done'][Number(event.detail.value)] as PlanEditorItem['status'] | undefined
+    if (!draft || !draft.items[index] || !status) return
+    const items = [...draft.items]; items[index] = { ...items[index], status }; this.updateInlinePlan({ items })
+  },
+  onInlineDueDateChange(event: WechatMiniprogram.CustomEvent<{ index: number; value: string }>) {
+    const draft = this.data.inlinePlanDraft, index = Number(event.detail.index)
+    if (!draft || !draft.items[index]) return
+    const items = [...draft.items]; items[index] = { ...items[index], dueDate: event.detail.value }; this.updateInlinePlan({ items })
+  },
+  onInlineClearDueDate(event: WechatMiniprogram.CustomEvent<{ index: number }>) {
+    const draft = this.data.inlinePlanDraft, index = Number(event.detail.index)
+    if (!draft || !draft.items[index]) return
+    const items = [...draft.items]; items[index] = { ...items[index], dueDate: null }; this.updateInlinePlan({ items })
+  },
+  onInlineRemoveItem(event: WechatMiniprogram.CustomEvent<{ index: number }>) {
+    const draft = this.data.inlinePlanDraft, index = Number(event.detail.index)
+    if (!draft || !draft.items[index]) return
+    const items = [...draft.items]; items.splice(index, 1); this.updateInlinePlan({ items })
+  },
+  async onSaveInlinePlan() {
+    const draft = this.data.inlinePlanDraft
+    if (!draft || isReadOnly() || this.data.inlinePlanSaving) return
+    if (draft.owner !== this.selectedOwner || draft.stageCode !== this.data.currentStageCode) {
+      this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '身份或学期已变化，请重新打开计划。' }); return
+    }
+    const normalized = normalizePlanDraft(draft.title, draft.items)
+    if (!normalized.ok) { this.setData({ inlinePlanError: normalized.message }); return }
+    const generation = this.viewGeneration, owner = draft.owner, stage = draft.stageCode
+    let saved = false
+    this.setData({ inlinePlanSaving: true, inlinePlanError: '' })
+    try {
+      await saveMyClassroomPlan(stage, draft.type, normalized.value)
+      saved = true
+      if (generation !== this.viewGeneration || owner !== this.selectedOwner || stage !== this.data.currentStageCode || isReadOnly()) return
+      await this.hydratePlanData(stage)
+      if (generation !== this.viewGeneration || owner !== this.selectedOwner || stage !== this.data.currentStageCode) return
+      this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '' })
+      wx.showToast({ title: '计划已保存', icon: 'success' })
+    } catch (error) {
+      if (generation === this.viewGeneration && owner === this.selectedOwner && stage === this.data.currentStageCode) {
+        this.setData({ inlinePlanError: saved ? '计划已保存，但最新内容暂时未能重新读取。草稿仍保留，请重试读取。' : friendlyRequestError(error, '保存失败，草稿已保留，请重试') })
+      }
+    } finally {
+      if (generation === this.viewGeneration && owner === this.selectedOwner) this.setData({ inlinePlanSaving: false })
+    }
   },
 
   onCurrentWeekSchedule() {
@@ -380,11 +559,6 @@ Page({
     } finally { if (generation === this.viewGeneration && request === this.weekRequest) this.setData({ weekLoading: false }) }
   },
 
-  onScheduleImport() {
-    if(isReadOnly())return
-    wx.navigateTo({ url: '/pages/schedule-import/schedule-import?view=manage' })
-  },
-
   onTeacherWorkspace() {
     openPage('/pages/teacher-students/teacher-students')
   },
@@ -396,6 +570,7 @@ Page({
   onBindIdentity() {
     openPage('/pages/profile-edit/profile-edit')
   },
+  onToggleBindingHelp() { this.setData({ bindingHelpOpen: !this.data.bindingHelpOpen }) },
   onRetryPlan() {
     if (this.data.studentName) void this.reloadStage(this.data.currentStageCode)
     else void this.initializeClassroom()

@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { and, desc, eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
+import { isProtectedCourseFact } from '../domain/course-academic-fact.js'
 import type { DatabaseContext } from '../db/client.js'
 import {
   assessments,
@@ -318,6 +319,8 @@ export function registerGrowthProfileRoutes(
         issues: parsed.error.issues,
       })
     }
+    if (isProtectedCourseFact(parsed.data.metadata))
+      return reply.code(409).send({ ok: false, error: 'course_fact_requires_dedicated_editor' })
 
     const id = randomUUID()
     const now = new Date()
@@ -366,16 +369,20 @@ export function registerGrowthProfileRoutes(
           issues: parsed.error.issues,
         })
       }
+      if (isProtectedCourseFact(parsed.data.metadata))
+        return reply.code(409).send({ ok: false, error: 'course_fact_requires_dedicated_editor' })
 
       try {
         const [existing] = await database.db
-          .select({ id: growthRecords.id })
+          .select({ id: growthRecords.id, metadataJson: growthRecords.metadataJson })
           .from(growthRecords)
           .where(and(eq(growthRecords.id, request.params.id), eq(growthRecords.userId, session.userId)))
           .limit(1)
         if (!existing) {
           return reply.code(404).send({ ok: false, error: 'growth_record_not_found' })
         }
+        if (isProtectedCourseFact(existing.metadataJson))
+          return reply.code(409).send({ ok: false, error: 'course_fact_requires_dedicated_editor' })
         const { evidence, metadata, ...fields } = parsed.data
         await database.db
           .update(growthRecords)
@@ -410,6 +417,10 @@ export function registerGrowthProfileRoutes(
       if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
 
       try {
+        const [existing] = await database.db.select({ metadataJson: growthRecords.metadataJson }).from(growthRecords)
+          .where(and(eq(growthRecords.id, request.params.id), eq(growthRecords.userId, session.userId))).limit(1)
+        if (isProtectedCourseFact(existing?.metadataJson))
+          return reply.code(409).send({ ok: false, error: 'course_fact_requires_dedicated_editor' })
         await database.db
           .update(growthRecords)
           .set({ status: 'archived' })

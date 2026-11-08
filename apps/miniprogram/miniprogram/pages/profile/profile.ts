@@ -33,7 +33,7 @@ const ADMIN_MENUS = [
 Page({
   data: {
     ...INITIAL_SHELL, loggedIn: false, role: '' as UserRole | '', roleLabel: '未登录',
-    businessId: '', userName: '', profileStageLabel: '', mentorName: '', menus: PERSONAL_MENUS, loggingOut: false, deleting: false,
+    businessId: '', walletOwner: '', userName: '', profileStageLabel: '', mentorName: '', menus: PERSONAL_MENUS, loggingOut: false, deleting: false,
     favoritesVisible:false,favoritesLoading:false,favoritesError:'',favorites:[] as NewsFavorite[],
     identities: [] as MyIdentity[], identityInput: '', identityBusy: false, identityError: '', identityDetailsOpen: false, accountSettingsOpen: false,
   },
@@ -47,7 +47,7 @@ Page({
       const auth = state.auth
       const role = auth?.user.role || ''
       this.setData({
-        ...shellView(state), loggedIn: Boolean(auth), role,
+        ...shellView(state), loggedIn: Boolean(auth), role, walletOwner: auth?.user.id || '',
         roleLabel: shellView(state).shellRoleLabel, businessId: auth?.businessIdentity?.businessId || '',
         userName: auth?.user.displayName || (role === 'staff' ? '九辰内部员工' : role === 'teacher' ? '九辰辅导老师' : role === 'admin' ? '九辰管理员' : role === 'student' ? '九辰学员' : '我的保研档案'), profileStageLabel: '', mentorName: '',
         menus: role === 'admin' ? ADMIN_MENUS : role === 'teacher' || role === 'staff' ? TEACHER_MENUS : PERSONAL_MENUS,
@@ -135,17 +135,23 @@ Page({
   onHide() { this.profileViewEpoch += 1; this.stopShell?.(); this.setData({ shellPhase: 'loading', identities: [], profileStageLabel: '',
     favorites: [], favoritesVisible: false, identityInput: '', identityDetailsOpen: false, mentorName: '' }) },
   onUnload() { this.profileViewEpoch += 1; this.stopShell?.() },
+  onScheduleImport() {
+    if (!this.data.loggedIn || this.data.role !== 'student' || isReadOnly()) return
+    openPage('/pages/schedule-import/schedule-import?view=auto')
+  },
   onCustomerServiceTap() { void openVerifiedWechatCustomerService('账号及运营支持') },
   onMyTeacher() { openSlot('plan') },
   onToggleAccountSettings() { this.setData({ accountSettingsOpen: !this.data.accountSettingsOpen }) },
   onToggleIdentityDetails() { this.setData({ identityDetailsOpen: !this.data.identityDetailsOpen }) },
+  onProducts() { openPage('/pages/products/products') },
+  onBrand() { openPage('/pages/brand/brand') },
   onWebsite() { (this.selectComponent('#website-dialog') as { open?: () => void } | null)?.open?.() },
   onIdentityTap() {
     if(isReadOnly()){wx.showToast({title:'当前为只读查看，不能编辑资料',icon:'none'});return}
     if (this.data.loggedIn && (this.data.role === 'teacher' || this.data.role === 'admin')) {
       openPage('/pages/staff-profile/staff-profile'); return
     }
-    if (this.data.loggedIn && this.data.identities.some(item => item.type === 'admin')) {
+    if (this.data.loggedIn && this.data.role !== 'student' && this.data.identities.some(item => item.type === 'admin')) {
       this.setData({ identityDetailsOpen: true }, () => wx.pageScrollTo({ selector: '#identity-section', duration: 200 }))
       return
     }

@@ -8,7 +8,12 @@ import {
   type ParsedSchedule,
   type ParsedScheduleCourse,
   getMyAcademicProfile,
+  getMyCourseAcademicFacts,
+  saveMyCourseAcademicFact,
+  type CourseAcademicFact,
 } from '../../utils/request'
+import { getSavedAuthResult } from '../../utils/auth'
+import { courseAssociationOptions, emptyFactDraft, factDraftFrom, factDraftError, GRADE_OPTIONS, sameCourseContext, saveCourseSteps } from './course-editor'
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
 import { authorizePage } from '../../utils/navigation'
 import { currentWeekFromStart, weekMatches } from '../../utils/schedule-view'
@@ -103,37 +108,88 @@ Page({
     editingIndex: -1,
     editing: false,
     courseDraft: emptyDraft(),
+    courseSaving: false,
+    courseSaveError: '',
+    facts: [] as CourseAcademicFact[],
+    factStageCode: '',
+    factLoading: false,
+    factReady: false,
+    factDraft: emptyFactDraft(),
+    factTouched: false,
+    gradeOptions: GRADE_OPTIONS,
+    gradeIndex: 0,
+    associationOptions: [] as Array<{key: string; label: string}>,
   },
 
+  entryAutoViewPending: false,
+  editorOwner: '' as string,
+  factsGeneration: 0,
+  latestGeneration: 0,
+  importGeneration: 0,
   onLoad(options: Record<string, string | undefined>) {
     authorizePage('pages/schedule-import/schedule-import', options, () => this.initializeSchedule(options))
   },
   onShow() {
+    const owner = getSavedAuthResult()?.user.id || ''
+    let identityChanged = false
+    if (this.editorOwner && this.editorOwner !== owner) {
+      identityChanged = true
+      ++this.factsGeneration
+      ++this.latestGeneration
+      ++this.importGeneration
+      this.setData({
+        editing: false, editingIndex: -1, courseDraft: emptyDraft(),
+        factDraft: emptyFactDraft(), factTouched: false, facts: [], factStageCode: '',
+        factReady: false, factLoading: false, associationOptions: [],
+        schedule: null, visibleCourses: [], importId: '', fileName: '',
+        saving: false, parsing: false, courseSaving: false, saveError: '', courseSaveError: '',
+        stageChoice: '', stageChoiceLabel: '', termStartDate: '',
+      })
+      void this.loadLatestSchedule()
+    }
+    this.editorOwner = owner
+    if (identityChanged) return
     // A page kept in the navigation stack can be shown after another edit.
     // Do not replace an in-progress import or unsaved local correction.
     if (this.data.importId && !this.data.parsing && !this.data.saving && !this.data.editing) void this.loadLatestSchedule()
   },
   initializeSchedule(options: Record<string, string | undefined>) {
-    const requested = options.view === 'manage' ? 'manage' : 'current'
-    this.setData({ viewMode: requested })
+    this.editorOwner = getSavedAuthResult()?.user.id || ''
+    this.entryAutoViewPending = options.view === 'auto'
+    const requested = options.view === 'manage' ? 'manage' : options.view === 'all' ? 'all' : 'current'
+    this.setData({ viewMode: this.entryAutoViewPending ? 'all' : requested })
     void this.loadLatestSchedule()
+    const owner = this.editorOwner
     void getMyAcademicProfile()
-      .then(profile => this.setData({ stageHint: hintTerm(profile.enrollmentYear) }))
-      .catch(() => this.setData({ stageHint: '入学年份尚未读取；导入前仍须本人确认归属学期。' }))
+      .then(profile => {
+        if (owner === (getSavedAuthResult()?.user.id || '')) this.setData({ stageHint: hintTerm(profile.enrollmentYear) })
+      })
+      .catch(() => {
+        if (owner === (getSavedAuthResult()?.user.id || '')) this.setData({ stageHint: '入学年份尚未读取；导入前仍须本人确认归属学期。' })
+      })
   },
 
   async loadLatestSchedule() {
+    const owner = getSavedAuthResult()?.user.id || ''
+    const generation = ++this.latestGeneration
     try {
       const latest = await getLatestScheduleImport()
+      if (generation !== this.latestGeneration || owner !== (getSavedAuthResult()?.user.id || '')) return
       if (this.data.parsing || this.data.saving || this.data.editing) return
       if (!latest?.schedule) {
-        this.setData({ importId: '', fileName: '', schedule: null, termStartDate: '', stageChoice: '', stageChoiceLabel: '' })
+        const autoView = this.entryAutoViewPending
+        this.entryAutoViewPending = false
+        ++this.factsGeneration
+        this.setData({ importId: '', fileName: '', schedule: null, termStartDate: '', stageChoice: '', stageChoiceLabel: '', facts: [], factStageCode: '', factReady: false, factLoading: false, associationOptions: [], ...(autoView ? { viewMode: 'manage' as const } : {}) })
         this.refreshVisibleCourses()
         return
       }
 
       const schedule = latest.schedule
+      const autoView = this.entryAutoViewPending
+      this.entryAutoViewPending = false
       this.setData({
+        ...(autoView ? { viewMode: 'all' as const } : {}),
         importId: latest.id,
         fileName: latest.fileName,
         schedule,
@@ -143,9 +199,51 @@ Page({
         stageChoiceLabel: TERM_OPTIONS.find(stage => stage.code === schedule.stageCode)?.label || '未归档的旧课表',
       })
       this.refreshVisibleCourses()
+      if (schedule.stageCode) void this.loadFacts(schedule.stageCode)
     } catch (error) {
+      if (generation !== this.latestGeneration || owner !== (getSavedAuthResult()?.user.id || '')) return
       this.setData({ saveError: friendlyRequestError(error, '课表读取失败，请重新进入或稍后重试') })
     }
+  },
+
+  async loadFacts(stageCode: string) {
+    const owner = getSavedAuthResult()?.user.id || ''
+    const importId = this.data.importId
+    const generation = ++this.factsGeneration
+    const expectedContext = { owner, importId, stageCode }
+    const isCurrent = () => generation === this.factsGeneration && sameCourseContext(expectedContext, {
+      owner: getSavedAuthResult()?.user.id || '', importId: this.data.importId,
+      stageCode: this.data.schedule?.stageCode || '',
+    })
+    this.setData({ factLoading: true, factReady: false, factStageCode: stageCode, facts: [], associationOptions: [] })
+    try {
+      const facts = await getMyCourseAcademicFacts(stageCode)
+      if (!isCurrent()) return
+      this.setData({ facts, factLoading: false, factReady: true })
+      if (this.data.editing) {
+        if (!this.data.factTouched) this.setEditorFact(this.data.courseDraft.courseKey)
+        else this.setData({ associationOptions: courseAssociationOptions(
+          this.data.schedule?.courses || [], facts, this.data.courseDraft.courseKey, stageCode,
+        ) })
+      }
+    } catch (error) {
+      if (!isCurrent()) return
+      this.setData({ factLoading: false, factReady: false, factStageCode: '', associationOptions: [], courseSaveError: friendlyRequestError(error, '课程成绩暂时无法读取，请稍后重试') })
+    }
+  },
+
+  setEditorFact(courseKey?: string) {
+    const stageCode = this.data.schedule?.stageCode || ''
+    const facts = this.data.factReady && this.data.factStageCode === stageCode
+      ? this.data.facts.filter(item => item.stageCode === stageCode) : []
+    const fact = facts.find(item => item.courseKey === courseKey)
+    const factDraft = factDraftFrom(fact)
+    this.setData({
+      factDraft,
+      gradeIndex: GRADE_OPTIONS.findIndex(item => item.value === factDraft.gradeScale),
+      associationOptions: this.data.factReady
+        ? courseAssociationOptions(this.data.schedule?.courses || [], facts, courseKey, stageCode) : [],
+    })
   },
 
   refreshVisibleCourses() {
@@ -190,10 +288,11 @@ Page({
   onChooseSpreadsheet() { this.openStageSelection('spreadsheet') },
   onChooseImage() { this.openStageSelection('image') },
   openStageSelection(source: 'spreadsheet' | 'image') {
+    if (this.data.saving || this.data.courseSaving || this.data.parsing) return
     this.setData({ showStagePicker: true, sourceForStage: source, stageChoice: '', stageChoiceLabel: '' })
   },
   onReassignStage() {
-    if (!this.data.schedule || !this.data.importId || this.data.parsing || this.data.saving) return
+    if (!this.data.schedule || !this.data.importId || this.data.parsing || this.data.saving || this.data.courseSaving) return
     this.setData({showStagePicker:true,sourceForStage:'reassign',stageChoice:'',stageChoiceLabel:''})
   },
   onSelectStage(event: WechatMiniprogram.BaseEvent) {
@@ -205,6 +304,7 @@ Page({
     this.setData({ showStagePicker: false, sourceForStage: '', stageChoice: '' })
   },
   onConfirmStage() {
+    if (this.data.saving || this.data.courseSaving || this.data.parsing) return
     if (!this.data.stageChoice) {
       wx.showToast({ title: '请先选择课表归属学期', icon: 'none' })
       return
@@ -262,6 +362,10 @@ Page({
     sourceType: 'spreadsheet' | 'image',
     fileSize = 0,
   ) {
+    const owner = getSavedAuthResult()?.user.id || ''
+    const generation = ++this.importGeneration
+    ++this.latestGeneration
+    ++this.factsGeneration
     try {
       const selectedStage = this.data.stageChoice
       if (!TERM_OPTIONS.some(stage => stage.code === selectedStage))
@@ -275,11 +379,14 @@ Page({
         parsing: true,
         fileName,
         schedule: null,
-        visibleCourses: [],
+        visibleCourses: [], facts: [], factReady: false, factLoading: false,
+        factStageCode: '', associationOptions: [],
       })
 
       const fileID = await uploadAuthenticatedCloudFile({ namespace: 'schedule-imports', filePath, fileName })
+      if (generation !== this.importGeneration || owner !== (getSavedAuthResult()?.user.id || '')) return
       const result = await createScheduleImport({ fileID, fileName, sourceType, stageCode: selectedStage })
+      if (generation !== this.importGeneration || owner !== (getSavedAuthResult()?.user.id || '')) return
       const schedule = result.schedule
 
       this.setData({
@@ -291,6 +398,7 @@ Page({
         stageChoiceLabel: TERM_OPTIONS.find(stage => stage.code === selectedStage)?.label || '',
       })
       this.refreshVisibleCourses()
+      void this.loadFacts(selectedStage)
 
       if (result.fallbackReason) {
         wx.showModal({
@@ -305,13 +413,14 @@ Page({
         })
       }
     } catch (error) {
+      if (generation !== this.importGeneration || owner !== (getSavedAuthResult()?.user.id || '')) return
       wx.showModal({
         title: '课表导入失败',
         content: friendlyRequestError(error, '请检查文件格式、网络与课表布局后重试'),
         showCancel: false,
       })
     } finally {
-      this.setData({ parsing: false })
+      if (generation === this.importGeneration && owner === (getSavedAuthResult()?.user.id || '')) this.setData({ parsing: false })
     }
   },
 
@@ -327,9 +436,13 @@ Page({
       return false
     }
 
+    const owner = getSavedAuthResult()?.user.id || ''
+    const importId = this.data.importId
+    ++this.latestGeneration
     try {
       this.setData({ saving: true, saveError: '' })
-      const persisted = await updateScheduleImport(this.data.importId, schedule)
+      const persisted = await updateScheduleImport(importId, schedule)
+      if (owner !== (getSavedAuthResult()?.user.id || '') || this.data.importId !== importId) return false
       this.setData({
         schedule: persisted,
         termStartDate: persisted.termStartDate || '',
@@ -337,8 +450,10 @@ Page({
         stageChoiceLabel: TERM_OPTIONS.find(item => item.code === persisted.stageCode)?.label || '',
       })
       this.refreshVisibleCourses()
+      if (persisted.stageCode && this.data.factStageCode !== persisted.stageCode) void this.loadFacts(persisted.stageCode)
       return true
     } catch (error) {
+      if (owner !== (getSavedAuthResult()?.user.id || '') || this.data.importId !== importId) return false
       const message = friendlyRequestError(error, '课表暂时未能保存，请稍后再试')
       const code = error instanceof ApiRequestError
         ? error.code
@@ -353,13 +468,15 @@ Page({
       })
       return false
     } finally {
-      this.setData({ saving: false })
+      if (owner === (getSavedAuthResult()?.user.id || '') && this.data.importId === importId) this.setData({ saving: false })
     }
   },
 
   async saveTermStartDate(date: string) {
     if (this.data.saving || !this.data.importId || !this.data.schedule) return
     const id = this.data.importId
+    const owner = getSavedAuthResult()?.user.id || ''
+    ++this.latestGeneration
     try {
       this.setData({ saving: true, saveError: '' })
       // Metadata-only write: NEVER retry using the old full timetable PUT.
@@ -367,7 +484,7 @@ Page({
       // invalid_schedule_edit_payload and risks overwriting course edits.
       const confirmed = await updateScheduleFirstMonday(id, date)
       // An older pending response cannot rewrite a newly imported timetable.
-      if (this.data.importId !== id || !this.data.schedule) return
+      if (this.data.importId !== id || owner !== (getSavedAuthResult()?.user.id || '') || !this.data.schedule) return
       if (confirmed !== date) throw new Error('schedule_date_readback_mismatch')
       this.setData({
         schedule: { ...this.data.schedule, termStartDate: confirmed },
@@ -375,7 +492,7 @@ Page({
       })
       this.refreshVisibleCourses()
     } catch (error) {
-      if (this.data.importId !== id) return
+      if (this.data.importId !== id || owner !== (getSavedAuthResult()?.user.id || '')) return
       const missingRoute = error instanceof ApiRequestError &&
         error.code === 'backend_version_mismatch'
       const message = missingRoute
@@ -392,7 +509,7 @@ Page({
         showCancel: false,
       })
     } finally {
-      this.setData({ saving: false })
+      if (this.data.importId === id && owner === (getSavedAuthResult()?.user.id || '')) this.setData({ saving: false })
     }
   },
 
@@ -457,7 +574,11 @@ Page({
       editing: true,
       editingIndex: -1,
       courseDraft: emptyDraft(),
+      factTouched: false,
+      courseSaveError: '',
     })
+    this.setEditorFact()
+    if (this.data.schedule.stageCode && this.data.factStageCode !== this.data.schedule.stageCode) void this.loadFacts(this.data.schedule.stageCode)
   },
 
   onEditCourse(event: WechatMiniprogram.BaseEvent) {
@@ -469,14 +590,57 @@ Page({
       editing: true,
       editingIndex: index,
       courseDraft: { ...course },
+      factTouched: false,
+      courseSaveError: '',
     })
+    this.setEditorFact(course.courseKey)
+    if (this.data.schedule?.stageCode && this.data.factStageCode !== this.data.schedule.stageCode) void this.loadFacts(this.data.schedule.stageCode)
+  },
+
+  onAssociateCourse(event: WechatMiniprogram.BaseEvent) {
+    if (this.data.courseSaving || !this.data.factReady || this.data.factStageCode !== this.data.schedule?.stageCode) return
+    const key = String(event.currentTarget.dataset.key || '')
+    if (!this.data.associationOptions.some(option => option.key === key)) return
+    this.setData({ 'courseDraft.courseKey': key, factTouched: false, courseSaveError: '' })
+    this.setEditorFact(key)
+  },
+
+  onSeparateCourse() {
+    if (this.data.courseSaving) return
+    this.setData({ 'courseDraft.courseKey': undefined, factTouched: false, courseSaveError: '' })
+    this.setEditorFact()
+  },
+
+  onDraftCredits(event: WechatMiniprogram.Input) {
+    if (!this.data.factReady || this.data.courseSaving) return
+    this.setData({ 'factDraft.credits': event.detail.value, factTouched: true })
+  },
+
+  onDraftGradeScale(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (!this.data.factReady || this.data.courseSaving) return
+    const gradeIndex = Number(event.detail.value)
+    const gradeScale = GRADE_OPTIONS[gradeIndex]?.value
+    if (!gradeScale) return
+    this.setData({ gradeIndex, 'factDraft.gradeScale': gradeScale, 'factDraft.gradeValue': '', factTouched: true })
+  },
+
+  onDraftGradeValue(event: WechatMiniprogram.Input) {
+    if (!this.data.factReady || this.data.courseSaving) return
+    this.setData({ 'factDraft.gradeValue': event.detail.value, factTouched: true })
+  },
+
+  onRetryFacts() {
+    const stageCode = this.data.schedule?.stageCode
+    if (stageCode && !this.data.factLoading) void this.loadFacts(stageCode)
   },
 
   onDraftName(event: WechatMiniprogram.Input) {
+    if (this.data.courseSaving) return
     this.setData({ 'courseDraft.name': event.detail.value })
   },
 
   onDraftDay(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (this.data.courseSaving) return
     const dayIndex = Number(event.detail.value) + 1
     this.setData({
       'courseDraft.dayIndex': dayIndex,
@@ -485,6 +649,7 @@ Page({
   },
 
   onDraftSlot(event: WechatMiniprogram.Input) {
+    if (this.data.courseSaving) return
     const slot = event.detail.value
     const sections = sectionRange(slot)
     this.setData({
@@ -495,32 +660,49 @@ Page({
   },
 
   onDraftLocation(event: WechatMiniprogram.Input) {
+    if (this.data.courseSaving) return
     this.setData({ 'courseDraft.location': event.detail.value || null })
   },
 
   onDraftTeacher(event: WechatMiniprogram.Input) {
+    if (this.data.courseSaving) return
     this.setData({ 'courseDraft.teacher': event.detail.value || null })
   },
 
   onDraftWeeks(event: WechatMiniprogram.Input) {
+    if (this.data.courseSaving) return
     this.setData({ 'courseDraft.weeks': event.detail.value || null })
   },
 
   onCancelEdit() {
+    if (this.data.courseSaving) return
     this.setData({
       editing: false,
       editingIndex: -1,
       courseDraft: emptyDraft(),
+      factDraft: emptyFactDraft(),
+      factTouched: false,
+      courseSaveError: '',
     })
   },
 
   async onSaveCourse() {
     const schedule = this.data.schedule
-    if (!schedule) return
+    if (!schedule || this.data.courseSaving) return
 
     const draft = this.data.courseDraft
     if (!draft.name.trim() || !draft.slot.trim()) {
       wx.showToast({ title: '请填写课程名和节次', icon: 'none' })
+      return
+    }
+    if (this.data.factTouched && (!this.data.factReady || this.data.factStageCode !== schedule.stageCode)) {
+      this.setData({ courseSaveError: '尚未读取当前学期已确认成绩。请稍后重试，避免覆盖原有成绩。' })
+      if (schedule.stageCode) void this.loadFacts(schedule.stageCode)
+      return
+    }
+    const factError = this.data.factTouched ? factDraftError(this.data.factDraft) : null
+    if (factError) {
+      this.setData({ courseSaveError: factError })
       return
     }
 
@@ -534,22 +716,68 @@ Page({
       raw: draft.raw || draft.name.trim(),
     }
 
+    const owner = getSavedAuthResult()?.user.id || ''
+    const importId = this.data.importId
+    const factDraft = { ...this.data.factDraft }
+    const factTouched = this.data.factTouched
+    const savedIndex = this.data.editingIndex >= 0 ? this.data.editingIndex : schedule.courses.length
     const courses = [...schedule.courses]
-    if (this.data.editingIndex >= 0) {
-      courses[this.data.editingIndex] = normalized
+    if (savedIndex < courses.length) {
+      courses[savedIndex] = normalized
     } else {
       courses.push(normalized)
     }
-
-    const ok = await this.persistSchedule({
-      ...schedule,
-      courses,
-      warnings: schedule.warnings.filter((item) => !item.includes('手动')),
-    })
-
-    if (ok) {
-      this.onCancelEdit()
-      wx.showToast({ title: '课表已保存', icon: 'success' })
+    this.setData({ courseSaving: true, courseSaveError: '' })
+    try {
+      const result = await saveCourseSteps(
+        () => this.persistSchedule({
+          ...schedule,
+          courses,
+          warnings: schedule.warnings.filter((item) => !item.includes('手动')),
+        }),
+        () => this.data.schedule?.courses[savedIndex]?.courseKey,
+        factTouched ? courseKey => {
+          // The schedule and the fact are two requests. Never start the second
+          // request after an account, import, or academic-term switch.
+          if (!sameCourseContext({ owner, importId, stageCode: schedule.stageCode || '' }, {
+            owner: getSavedAuthResult()?.user.id || '', importId: this.data.importId,
+            stageCode: this.data.schedule?.stageCode || '',
+          })) {
+            throw new Error('course_editor_context_changed')
+          }
+          return saveMyCourseAcademicFact(courseKey, {
+            stageCode: schedule.stageCode || '',
+            credits: factDraft.credits.trim() === '' ? null : Number(factDraft.credits),
+            gradeScale: factDraft.gradeScale,
+            gradeValue: factDraft.gradeValue.trim() || null,
+          })
+        } : undefined,
+      )
+      if (owner !== (getSavedAuthResult()?.user.id || '') || this.data.importId !== importId || result.status === 'schedule-failed') return
+      if (result.status === 'key-missing') {
+        this.setData({ courseSaveError: '课表已保存，但课程关联键未读回；成绩未提交，请稍后重试。' })
+        return
+      }
+      const persistedCourse = this.data.schedule?.courses[savedIndex]
+      if (persistedCourse) this.setData({ editingIndex: savedIndex, courseDraft: { ...persistedCourse } })
+      if (result.status === 'fact-failed') {
+        this.setData({ courseSaveError: '课表时段已保存，学分或成绩未确认：' + friendlyRequestError(result.error, '请检查成绩并重试。当前草稿已保留。') })
+        return
+      }
+      const fact = result.fact
+      if (fact) {
+        if (fact.courseKey !== result.courseKey || fact.stageCode !== schedule.stageCode) {
+          this.setData({ courseSaveError: '课表时段已保存，成绩保存结果未能核对；请重试确认。' })
+          return
+        }
+        this.setData({ facts: [...this.data.facts.filter(item => item.courseKey !== fact.courseKey), fact], factTouched: false })
+      }
+      this.setData({ editing: false, editingIndex: -1, courseDraft: emptyDraft(), factDraft: emptyFactDraft(), courseSaveError: '' })
+      wx.showToast({ title: '课程已保存', icon: 'success' })
+    } finally {
+      if (owner === (getSavedAuthResult()?.user.id || '') && this.data.importId === importId) {
+        this.setData({ courseSaving: false })
+      }
     }
   },
 

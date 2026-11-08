@@ -1,7 +1,8 @@
 import { isReadOnly } from '../../utils/read-only-context'
-import { request, getTeacherStudents, getTeacherStudentClassroom, getTeacherStudentSummary,
+import { ApiRequestError, request, getTeacherStudents, getTeacherStudentClassroom, getTeacherStudentSummary,
   getTeacherTodos, saveTeacherTodo, deleteTeacherTodo, friendlyRequestError,
   type TeacherStudent, type TeacherStudentSummary, type ClassroomPlanType, type PlanEditorItem, type TeacherTodo } from '../../utils/request'
+import { buildTeacherPlanPayload, presentTeacherApplyResults, remainingTeacherApplyTargets, type TeacherApplyResult } from '../../utils/teacher-plan-apply'
 
 const STAGES = [
   ['freshman-fall','大一上'],['freshman-winter','大一寒假'],['freshman-spring','大一下'],['freshman-summer','大一暑假'],
@@ -11,7 +12,6 @@ const STAGES = [
 ]
 type Plan = { stageCode: string; type: ClassroomPlanType; title: string; items: PlanEditorItem[] }
 type Template = { id: string; name: string; plan: Plan }
-type Result = { studentId: string; ok: boolean; error?: string; planId?: string }
 const PLAN_LABELS: Record<ClassroomPlanType, string> = { gpa:'课程成绩',english:'英语',competition:'竞赛',research:'科研',internship:'实习',custom:'自定义规划' }
 const STATUSES = [{value:'pending',label:'未开始'},{value:'in_progress',label:'进行中'},{value:'done',label:'已完成'}] as const
 
@@ -22,7 +22,7 @@ Component({
     selectedIds:[] as string[],stageLabels:STAGES.map(s=>s[1]),stageIndex:0,actualStage:'',
     plans:[] as {type:ClassroomPlanType;title:string;items:PlanEditorItem[]}[],planLabels:[] as string[],planIndex:0,
     title:'',items:[] as PlanEditorItem[],templates:[] as Template[],templateLabels:[] as string[],templateIndex:-1,templateName:'',
-    summary:null as TeacherStudentSummary|null,summaryError:'',planError:'',templateError:'',results:[] as (Result & {name:string;message:string})[],
+    summary:null as TeacherStudentSummary|null,summaryError:'',planError:'',templateError:'',results:[] as (TeacherApplyResult & {name:string;message:string})[],resultSummary:'',applyError:'',completedStudentIds:[] as string[],
     statuses:STATUSES,todos:[] as TeacherTodo[],todoError:'',todoId:'',todoTitle:'',todoDescription:'',todoDate:'',
   },
   lifetimes: {
@@ -45,7 +45,7 @@ Component({
     async selectStudent(index:number) {
       const student=this.data.students[index];if(!student)return
       const stageIndex=STAGES.findIndex(stage=>stage[0]===student.currentStage)
-      this.setData({studentIndex:index,stageIndex:Math.max(0,stageIndex),actualStage:student.stageLabel,summary:null,summaryError:'',results:[]})
+      this.setData({studentIndex:index,stageIndex:Math.max(0,stageIndex),actualStage:student.stageLabel,summary:null,summaryError:'',results:[],completedStudentIds:[],resultSummary:'',applyError:''})
       const selectedId=student.studentId
       await Promise.all([
         this.loadPlans(),
@@ -66,30 +66,48 @@ Component({
     choosePlan(index:number){const plan=this.data.plans[index];if(plan)this.setData({planIndex:index,title:plan.title,items:plan.items.map(item=>({...item})),templateIndex:-1,templateName:'',results:[]})},
     onStudent(event:WechatMiniprogram.PickerChange){void this.selectStudent(Number(event.detail.value))},
     onStudentCard(event:WechatMiniprogram.BaseEvent){void this.selectStudent(Number(event.currentTarget.dataset.index))},
-    onStage(event:WechatMiniprogram.PickerChange){this.setData({stageIndex:Number(event.detail.value)});void this.loadPlans()},
-    onPlan(event:WechatMiniprogram.PickerChange){this.choosePlan(Number(event.detail.value))},
-    onSelection(event:WechatMiniprogram.CheckboxGroupChange){const selectedIds=event.detail.value;this.setData({selectedIds,students:this.data.students.map(s=>({...s,checked:selectedIds.includes(s.studentId)}))})},
-    onText(event:WechatMiniprogram.Input){const field=String(event.currentTarget.dataset.field);if(['title','templateName','todoTitle','todoDescription'].includes(field))this.setData({[field]:event.detail.value})},
-    onItemText(event:WechatMiniprogram.Input){const index=Number(event.currentTarget.dataset.index),field=String(event.currentTarget.dataset.field);const items=[...this.data.items];if(items[index]&&(field==='name'||field==='target')){items[index]={...items[index],[field]:event.detail.value};this.setData({items})}},
-    onItemDate(event:WechatMiniprogram.PickerChange){const index=Number(event.currentTarget.dataset.index),items=[...this.data.items];if(items[index]){items[index]={...items[index],dueDate:String(event.detail.value)};this.setData({items})}},
-    onClearDate(event:WechatMiniprogram.BaseEvent){const index=Number(event.currentTarget.dataset.index),items=[...this.data.items];if(items[index]){items[index]={...items[index],dueDate:null};this.setData({items})}},
-    onItemStatus(event:WechatMiniprogram.PickerChange){const index=Number(event.currentTarget.dataset.index),status=STATUSES[Number(event.detail.value)],items=[...this.data.items];if(items[index]&&status){items[index]={...items[index],status:status.value};this.setData({items})}},
-    onAddItem(){if(this.data.items.length<50)this.setData({items:[...this.data.items,{name:'',target:'',status:'pending'}]})},
-    onRemoveItem(event:WechatMiniprogram.BaseEvent){const items=[...this.data.items];items.splice(Number(event.currentTarget.dataset.index),1);this.setData({items})},
+    clearApplyProgress(){this.setData({completedStudentIds:[],results:[],resultSummary:'',applyError:''})},
+    onStage(event:WechatMiniprogram.PickerChange){this.clearApplyProgress();this.setData({stageIndex:Number(event.detail.value)});void this.loadPlans()},
+    onPlan(event:WechatMiniprogram.PickerChange){this.clearApplyProgress();this.choosePlan(Number(event.detail.value))},
+    onSelection(event:WechatMiniprogram.CheckboxGroupChange){const selectedIds=event.detail.value;this.clearApplyProgress();this.setData({selectedIds,students:this.data.students.map(s=>({...s,checked:selectedIds.includes(s.studentId)}))})},
+    onText(event:WechatMiniprogram.Input){const field=String(event.currentTarget.dataset.field);if(['title','templateName','todoTitle','todoDescription'].includes(field)){if(field==='title')this.clearApplyProgress();this.setData({[field]:event.detail.value})}},
+    onItemText(event:WechatMiniprogram.Input){const index=Number(event.currentTarget.dataset.index),field=String(event.currentTarget.dataset.field);const items=[...this.data.items];if(items[index]&&(field==='name'||field==='target')){this.clearApplyProgress();items[index]={...items[index],[field]:event.detail.value};this.setData({items})}},
+    onItemDate(event:WechatMiniprogram.PickerChange){const index=Number(event.currentTarget.dataset.index),items=[...this.data.items];if(items[index]){this.clearApplyProgress();items[index]={...items[index],dueDate:String(event.detail.value)};this.setData({items})}},
+    onClearDate(event:WechatMiniprogram.BaseEvent){const index=Number(event.currentTarget.dataset.index),items=[...this.data.items];if(items[index]){this.clearApplyProgress();items[index]={...items[index],dueDate:null};this.setData({items})}},
+    onItemStatus(event:WechatMiniprogram.PickerChange){const index=Number(event.currentTarget.dataset.index),status=STATUSES[Number(event.detail.value)],items=[...this.data.items];if(items[index]&&status){this.clearApplyProgress();items[index]={...items[index],status:status.value};this.setData({items})}},
+    onAddItem(){if(this.data.items.length<50){this.clearApplyProgress();this.setData({items:[...this.data.items,{name:'',target:'',status:'pending'}]})}},
+    onRemoveItem(event:WechatMiniprogram.BaseEvent){const items=[...this.data.items];items.splice(Number(event.currentTarget.dataset.index),1);this.clearApplyProgress();this.setData({items})},
     currentPlan():Plan|null {
       const plan=this.data.plans[this.data.planIndex],stageCode=STAGES[this.data.stageIndex]?.[0]
-      if(!plan||!stageCode||!this.data.title.trim()||this.data.items.some(item=>!item.name.trim())){wx.showToast({title:'请填写规划名称和每个任务名称',icon:'none'});return null}
-      return {stageCode,type:plan.type,title:this.data.title.trim(),items:this.data.items.map(item=>({...item,name:item.name.trim(),target:item.target?.trim()||null,dueDate:item.dueDate||null}))}
+      if(!plan||!stageCode){wx.showToast({title:'请先选择有效的规划阶段和类型',icon:'none'});return null}
+      const normalized=buildTeacherPlanPayload(stageCode,plan.type,this.data.title,this.data.items)
+      if(!normalized.ok){wx.showToast({title:normalized.message,icon:'none'});return null}
+      return normalized.value
     },
     async onApply(){
       if(isReadOnly()||this.data.busy)return
       const plan=this.currentPlan(),student=this.data.students[this.data.studentIndex];if(!plan||!student)return
-      const studentIds=this.data.selectedIds.length?this.data.selectedIds:[student.studentId]
+      const candidateIds=this.data.selectedIds.length?this.data.selectedIds:[student.studentId]
+      const studentIds=remainingTeacherApplyTargets(candidateIds,this.data.completedStudentIds)
+      if(!studentIds.length){wx.showToast({title:'所选学员已成功应用此方案',icon:'none'});return}
       wx.showModal({title:'应用规划',content:`将分别保存到 ${studentIds.length} 位学员的对应阶段；已有同类规划会被本方案替换。`,success:async result=>{
         if(!result.confirm||this.data.busy||isReadOnly())return
-        this.setData({busy:true,results:[]})
-        try{const response=await request<{results:Result[]}>('/me/teacher/plans/apply','POST',{studentIds,plan});this.setData({results:response.results.map(row=>({...row,name:this.data.students.find(s=>s.studentId===row.studentId)?.name||'学员',message:row.ok?'已保存独立规划':row.error==='student_not_assigned'?'分配关系已失效，未保存':'保存失败，请重试'}))})}
-        catch(error){wx.showToast({title:friendlyRequestError(error,'规划应用失败，请重试'),icon:'none'})}
+        this.setData({busy:true,results:[],applyError:'',resultSummary:''})
+        try{
+          const response=await request<{results:TeacherApplyResult[]}>('/me/teacher/plans/apply','POST',{studentIds,plan})
+          const presentation=presentTeacherApplyResults(response.results,studentIds,this.data.students)
+          if(!presentation){this.setData({applyError:'服务端未返回逐位应用结果，不能确认哪些学员已保存。请重新读取学员规划后核对。'});return}
+          const completedStudentIds=[...new Set([...this.data.completedStudentIds,...presentation.rows.filter(row=>row.ok).map(row=>row.studentId)])]
+          const remainingSelected=studentIds.filter(id=>!completedStudentIds.includes(id))
+          this.setData({results:presentation.rows,resultSummary:`成功 ${presentation.successCount} 位 · 失败 ${presentation.failedCount} 位`,completedStudentIds,
+            selectedIds:remainingSelected,students:this.data.students.map(s=>({...s,checked:remainingSelected.includes(s.studentId)}))})
+        }
+        catch(error){
+          const code=error instanceof ApiRequestError?error.code:'unknown_error'
+          console.warn('Teacher plan apply request failed.',{statusCode:error instanceof ApiRequestError?error.statusCode:0,code:/^[a-z][a-z0-9_]{0,79}$/.test(code)?code:'unknown_error'})
+          const message=code==='invalid_teacher_plan_batch'?'服务端拒绝了规划数据（invalid_teacher_plan_batch）；请核对阶段、类型和任务字段后重试。':friendlyRequestError(error,'规划应用失败，请重试')
+          this.setData({applyError:message})
+        }
         finally{this.setData({busy:false})}
       }})
     },
@@ -98,6 +116,7 @@ Component({
       const index=Number(event.detail.value),template=this.data.templates[index];if(!template)return
       const stageIndex=STAGES.findIndex(stage=>stage[0]===template.plan.stageCode)
       const plans=[{type:template.plan.type,title:template.plan.title,items:template.plan.items}]
+      this.clearApplyProgress()
       this.setData({templateIndex:index,templateName:template.name,stageIndex,plans,planIndex:0,planLabels:[PLAN_LABELS[template.plan.type]],title:template.plan.title,items:template.plan.items.map(item=>({...item})),results:[]})
     },
     async onSaveTemplate(){

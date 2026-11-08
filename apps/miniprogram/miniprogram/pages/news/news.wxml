@@ -9,23 +9,51 @@
   </view>
 
   <block wx:if="{{shellPhase === 'ready' && (shellKind === 'student' || showReferenceNews)}}">
-  <view class="news-head">
-    <view>
-      <text class="page-title">{{shellKind === 'student' ? '保研机会与文章' : '保研参考文章'}}</text>
-      <text class="page-desc">项目条件与时间请以文章原始来源为准。</text>
-    </view>
-    <text class="source-chip">{{sourceLabel}}</text>
+  <view wx:if="{{shellKind !== 'student'}}" class="news-head">
+    <text class="page-title">保研参考文章</text>
+    <text class="page-desc">具体项目条件请以来源原文为准。</text>
   </view>
 
   <button wx:if="{{canManageTeacherTags}}" class="teacher-tags-entry" bindtap="onTeacherNewsTags">管理我的资讯标签</button>
-
-  <view class="news-search"><input class="news-search-input" placeholder="搜索已加载的资讯" value="{{searchQuery}}" bindinput="onSearchInput" confirm-type="search" /><button class="news-filter-button" bindtap="onFilterTap">筛选 ▾</button></view>
 
   <view wx:if="{{shellKind !== 'teacher'}}" class="school-entry" bindtap="onSchools" hover-class="school-entry-hover" aria-role="button">
     <image class="school-entry-art" src="/assets/jiuchen-visual-v1/banners/school-library-hero.png" mode="aspectFill" aria-hidden="true" />
     <view class="school-entry-icon"><image src="/assets/jiuchen-visual-v1/icons/library.png" mode="aspectFit" /></view>
     <view class="school-entry-copy"><text class="school-entry-title">院校库 · 双一流与特色高校</text></view>
     <text class="school-entry-arrow">›</text>
+  </view>
+
+  <view wx:if="{{newsV2Enabled}}" class="news-favorites surface">
+    <view class="news-favorites-head" bindtap="onToggleFavorites" aria-role="button">
+      <text class="news-favorites-title">我的收藏 · {{favorites.length}} 篇</text>
+      <text class="news-favorites-arrow">{{favoritesOpen ? '收起 ⌃' : '展开 ›'}}</text>
+    </view>
+    <view wx:if="{{favoritesOpen}}" class="news-favorites-body">
+      <text wx:if="{{favoritesError}}" class="news-extra-meta">{{favoritesError}}</text>
+      <text wx:elif="{{!favorites.length}}" class="news-extra-meta">暂无收藏文章</text>
+      <view wx:for="{{favorites}}" wx:key="postId" class="news-extra-row" data-id="{{item.postId}}" bindtap="onFavoriteTap">
+        <text class="news-extra-title">{{item.title}}</text>
+        <text class="news-extra-meta">打开服务号原文 ›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="news-search">
+    <input class="news-search-input" placeholder="搜索资讯" value="{{searchQuery}}" bindinput="onSearchInput" confirm-type="search" />
+    <view class="news-filter-anchor">
+      <button class="news-filter-button" bindtap="onFilterTap">{{selectedTags.length ? '复选 · ' + selectedTags.length : '复选筛选'}} {{filtersOpen ? '⌃' : '▾'}}</button>
+      <view wx:if="{{filtersOpen}}" class="news-filter-dropdown">
+        <view class="news-filter-dropdown-head"><text>选择标签</text><text class="news-filter-clear" bindtap="onClearTags">清空</text></view>
+        <scroll-view class="news-filter-options" scroll-y>
+          <checkbox-group bindchange="onFilterCheckboxChange">
+            <label wx:for="{{tagChoices}}" wx:key="name" class="news-filter-option">
+              <checkbox value="{{item.name}}" checked="{{item.selected}}" color="#1b5678" />
+              <text>{{item.name}}</text>
+            </label>
+          </checkbox-group>
+        </scroll-view>
+      </view>
+    </view>
   </view>
 
   <view wx:if="{{pendingClassificationCount > 0}}" class="pending-news-note">
@@ -40,16 +68,9 @@
   <view wx:elif="{{loading && !allArticles.length}}" class="news-loading">正在读取文章…</view>
   <view wx:elif="{{!allArticles.length}}" class="news-empty"><text>暂无可阅读文章</text><button bindtap="loadNews">刷新文章</button></view>
   <block wx:else>
-  <scroll-view class="news-sections" scroll-x enhanced show-scrollbar="{{false}}"><view class="news-sections-row"><text wx:for="{{sections}}" wx:key="*this" class="news-section-tab {{currentSection === item ? 'active' : ''}}" data-section="{{item}}" bindtap="onSectionTap">{{item}}</text></view></scroll-view>
-  <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}">
-    <view class="category-row">
-      <view
-        wx:for="{{categories}}"
-        wx:key="*this"
-        class="category {{currentCategory === index ? 'active' : ''}}"
-        data-index="{{index}}"
-        bindtap="onCategoryTap"
-      >{{item}}</view>
+  <scroll-view class="news-sections" scroll-x enhanced show-scrollbar="{{false}}">
+    <view class="news-sections-row">
+      <text wx:for="{{sections}}" wx:key="*this" class="news-section-tab {{currentSection === item ? 'active' : ''}}" data-section="{{item}}" bindtap="onSectionTap">{{item}}</text>
     </view>
   </scroll-view>
 
@@ -132,15 +153,6 @@
     <view wx:for="{{retiring}}" wx:key="id" class="news-extra-row" data-id="{{item.id}}" bindtap="onArticleTap">
       <text class="news-extra-title">{{item.title}}</text>
       <text class="news-extra-meta">{{item.sourceLabel}} · {{item.dateLabel}} · 将于 {{item.retireAt}} 退出资讯列表</text>
-    </view>
-  </view>
-  <view wx:if="{{newsV2Enabled}}" class="news-extra">
-    <text class="section-title">我的收藏 · {{favorites.length}} 篇</text>
-    <text wx:if="{{favoritesError}}" class="news-extra-meta">{{favoritesError}}</text>
-    <text wx:elif="{{!favorites.length}}" class="news-extra-meta">暂无收藏文章</text>
-    <view wx:for="{{favorites}}" wx:key="postId" class="news-extra-row" data-id="{{item.postId}}" bindtap="onFavoriteTap">
-      <text class="news-extra-title">{{item.title}}</text>
-      <text class="news-extra-meta">在小程序内阅读 ›</text>
     </view>
   </view>
 

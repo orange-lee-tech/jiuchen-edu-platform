@@ -3,9 +3,11 @@ import {
   confirmAssessmentGrowthImport,
   createMyGrowthRecord,
   getMyGrowthProfileBootstrap,
+  saveMyCourseAcademicFact,
   updateMyGrowthRecord,
   type ApplicationProjection,
   type CanonicalGrowthRecord,
+  type CourseAcademicFact,
   type CanonicalGrowthProfile,
   type GrowthRecordInput,
   type GrowthRecordType,
@@ -22,6 +24,8 @@ import { openResumeDocx } from '../../utils/resume-document'
 import { authorizePage } from '../../utils/navigation'
 import { getSavedAuthResult } from '../../utils/auth'
 import { getReadOnlyContext, isReadOnly } from '../../utils/read-only-context'
+import { normalizeGrowthRecordInput } from '../../utils/growth-record-form'
+import { courseFactFromGrowthRecord, emptyFactDraft, factDraftFrom, factDraftError, GRADE_OPTIONS } from '../schedule-import/course-editor'
 
 type ResumeTarget = 'general' | 'technical' | 'academic'
 
@@ -43,6 +47,12 @@ const TYPE_LABELS: Record<string, string> = {
   award: '荣誉奖项',
   skill: '技能',
   other: '其他经历',
+}
+const COURSE_STAGES: Record<string, string> = {
+  'freshman-fall': '大一上', 'freshman-spring': '大一下',
+  'sophomore-fall': '大二上', 'sophomore-spring': '大二下',
+  'junior-fall': '大三上', 'junior-spring': '大三下',
+  'senior-fall': '大四上', 'senior-spring': '大四下',
 }
 
 const RECORD_TYPES: Array<{ key: GrowthRecordType; label: string }> = [
@@ -99,7 +109,15 @@ Page({
     growthSchemaReady: true,
     assessmentSchemaReady: true,
     profile: emptyProfile(),
-    records: [] as Array<CanonicalGrowthRecord & { typeLabel: string; sourceLabel: string }>,
+    records: [] as Array<CanonicalGrowthRecord & { typeLabel: string; sourceLabel: string; courseFact: CourseAcademicFact | null; courseStageLabel: string; courseGradeLabel: string }>,
+    courseFactEditingKey: '',
+    courseFactStageCode: '',
+    courseFactTitle: '',
+    courseFactDraft: emptyFactDraft(),
+    courseGradeOptions: GRADE_OPTIONS,
+    courseGradeIndex: 0,
+    courseFactSaving: false,
+    courseFactError: '',
     recordTypes: RECORD_TYPES,
     recordTypeIndex: 0,
     recordFormOpen: false,
@@ -138,6 +156,8 @@ Page({
         importAssessmentId: '', importCandidates: [], importing: false,
         openingDocument: false, recordFormOpen: false, recordSaving: false,
         recordError: '', recordEditingId: '', recordForm: { ...EMPTY_RECORD_FORM },
+        courseFactEditingKey: '', courseFactStageCode: '', courseFactTitle: '',
+        courseFactDraft: emptyFactDraft(), courseGradeIndex: 0, courseFactSaving: false, courseFactError: '',
       })
       authorizePage('pages/growth-profile/growth-profile', this.options || {}, () => {
         this.setData({ readOnly: isReadOnly(), ownerKey: currentOwnerKey() })
@@ -162,6 +182,9 @@ Page({
       profile: bootstrap.profile,
       records: bootstrap.profile.records.map((record) => ({
         ...record,
+        courseFact: courseFactFromGrowthRecord(record),
+        courseStageLabel: COURSE_STAGES[String(record.metadata?.stageCode)] || '',
+        courseGradeLabel: GRADE_OPTIONS.find(option => option.value === record.metadata?.gradeScale)?.label || '',
         typeLabel: TYPE_LABELS[record.type] || '经历',
         sourceLabel:
           record.source.type === 'assessment'
@@ -342,7 +365,7 @@ Page({
   onEditRecord(event: WechatMiniprogram.BaseEvent) {
     if (isReadOnly() || !this.data.growthSchemaReady) return
     const record = this.data.records.find((item) => item.id === event.currentTarget.dataset.id)
-    if (!record || record.source.type !== 'manual') return
+    if (!record || record.source.type !== 'manual' || record.metadata?.schemaVersion === 'course-academic-fact-v1') return
     this.setData({
       recordFormOpen: true, recordEditingId: record.id,
       recordTypeIndex: RECORD_TYPES.findIndex((item) => item.key === record.type),
@@ -353,6 +376,70 @@ Page({
       },
       recordError: '',
     })
+  },
+
+  onEditCourseFact(event: WechatMiniprogram.BaseEvent) {
+    if (isReadOnly()) return
+    const record = this.data.records.find(item => item.id === event.currentTarget.dataset.id)
+    const fact = record?.courseFact
+    if (!fact) return
+    const draft = factDraftFrom(fact)
+    this.setData({
+      courseFactEditingKey: fact.courseKey, courseFactStageCode: fact.stageCode,
+      courseFactTitle: record.title, courseFactDraft: draft,
+      courseGradeIndex: GRADE_OPTIONS.findIndex(item => item.value === draft.gradeScale),
+      courseFactError: '',
+    })
+  },
+
+  onCourseFactCredits(event: WechatMiniprogram.Input) {
+    if (this.data.courseFactSaving) return
+    this.setData({ 'courseFactDraft.credits': event.detail.value })
+  },
+
+  onCourseFactScale(event: WechatMiniprogram.CustomEvent<{value:string}>) {
+    if (this.data.courseFactSaving) return
+    const index = Number(event.detail.value), selected = GRADE_OPTIONS[index]
+    if (selected) this.setData({ courseGradeIndex: index, 'courseFactDraft.gradeScale': selected.value, 'courseFactDraft.gradeValue': '' })
+  },
+
+  onCourseFactGrade(event: WechatMiniprogram.Input) {
+    if (this.data.courseFactSaving) return
+    this.setData({ 'courseFactDraft.gradeValue': event.detail.value })
+  },
+
+  onCancelCourseFact() {
+    if (!this.data.courseFactSaving) this.setData({ courseFactEditingKey: '', courseFactError: '' })
+  },
+
+  async onSaveCourseFact() {
+    if (isReadOnly() || this.data.courseFactSaving || !this.data.courseFactEditingKey) return
+    const ownerKey = this.data.ownerKey, courseKey = this.data.courseFactEditingKey
+    const stageCode = this.data.courseFactStageCode, draft = this.data.courseFactDraft
+    const error = factDraftError(draft)
+    if (error) {
+      this.setData({ courseFactError: error })
+      return
+    }
+    const credits = draft.credits.trim() === '' ? null : Number(draft.credits)
+    this.setData({ courseFactSaving: true, courseFactError: '' })
+    try {
+      const saved = await saveMyCourseAcademicFact(courseKey, {
+        stageCode, credits, gradeScale: draft.gradeScale,
+        gradeValue: draft.gradeValue.trim() || null,
+      })
+      if (ownerKey !== currentOwnerKey() || ownerKey !== this.data.ownerKey) return
+      if (saved.courseKey !== courseKey || saved.stageCode !== stageCode) throw new Error('course_fact_readback_mismatch')
+      await clearGrowthProfileBootstrapCache()
+      const refreshed = await this.loadBootstrap(true)
+      this.setData({ courseFactEditingKey: '', courseFactError: '' })
+      wx.showToast({ title: refreshed ? '课程成绩已保存' : '已保存，请稍后刷新', icon: refreshed ? 'success' : 'none' })
+    } catch (error) {
+      if (ownerKey !== currentOwnerKey() || ownerKey !== this.data.ownerKey) return
+      this.setData({ courseFactError: friendlyRequestError(error, '课程成绩暂时无法保存，请重试') })
+    } finally {
+      if (ownerKey === currentOwnerKey() && ownerKey === this.data.ownerKey) this.setData({ courseFactSaving: false })
+    }
   },
 
   onRecordTypeChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -381,15 +468,7 @@ Page({
       this.setData({ recordError: '请先填写这段经历的名称。' })
       return
     }
-    const input: GrowthRecordInput = {
-      ...form, title,
-      organization: form.organization?.trim() || null,
-      role: form.role?.trim() || null,
-      startDate: form.startDate?.trim() || null,
-      endDate: form.endDate?.trim() || null,
-      description: form.description?.trim() || null,
-      result: form.result?.trim() || null,
-    }
+    const input: GrowthRecordInput = normalizeGrowthRecordInput(form)
     this.setData({ recordSaving: true, recordError: '' })
     try {
       if (this.data.recordEditingId) await updateMyGrowthRecord(this.data.recordEditingId, input)

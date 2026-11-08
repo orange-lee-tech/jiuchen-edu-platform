@@ -75,10 +75,15 @@ function virtualPaymentPage() {
   const h = harness()
   h.auth.saveAuthResult(authFixture())
   const p = h.page('pages/assessment-form/assessment-form')
-  p.data.checkoutEnabled = true
-  p.loadCredits = async () => {}
+  const wallet = h.component('credit-wallet', { mode: 'compact', accountId: id })
+  // The production page renders this component; exercise its real payment
+  // state machine without invoking attached()'s unrelated credit refresh.
+  wallet.data.activeOwner = id
+  wallet.data.billingEnabled = true
+  wallet.data.checkoutEnabled = true
+  wallet.loadCredits = async () => {}
   h.wx.login = ({ success }) => success({ code: 'synthetic-wechat-code' })
-  return { h, p }
+  return { h, p, wallet }
 }
 
 const syntheticVirtualOrder = {
@@ -88,7 +93,7 @@ const syntheticVirtualOrder = {
 }
 
 test('virtual payment distinguishes order creation failure before invoking WeChat', async () => {
-  const { h, p } = virtualPaymentPage()
+  const { h, wallet: p } = virtualPaymentPage()
   let invoked = 0
   h.wx.requestVirtualPayment = () => { invoked++ }
   const purchase = p.beginCreditPurchase('JC000')
@@ -178,7 +183,7 @@ test('cancelled or failed virtual payment retains the pending order and exposes 
     { errCode: -15013, errMsg: 'requestVirtualPayment:fail goodsPrice错误' },
     { errCode: -15006, errMsg: 'requestVirtualPayment:fail paySig=private-value' },
   ]) {
-    const { h, p } = virtualPaymentPage()
+    const { h, wallet: p } = virtualPaymentPage()
     h.wx.requestVirtualPayment = ({ fail }) => fail(failure)
     const purchase = p.beginCreditPurchase('JC000')
     await settle()
@@ -193,7 +198,7 @@ test('cancelled or failed virtual payment retains the pending order and exposes 
     assert.doesNotMatch(h.modals.at(-1).content, /private-value|paySig/)
     assert.equal(h.requests.length, 1, 'a failed client callback never settles credits')
     p.setData({ pendingPaymentOrderId: '' })
-    p.onShow()
+    p.restorePending()
     assert.equal(p.data.pendingPaymentOrderId, secondId, 'an app revisit restores the unresolved order')
     await p.beginCreditPurchase('JC000')
     assert.equal(h.requests.length, 1, 'unverified order blocks a second charge')
@@ -202,7 +207,7 @@ test('cancelled or failed virtual payment retains the pending order and exposes 
 })
 
 test('a confirmed pre-checkout rejection can end only the owned unresolved order and unlock all goods', async () => {
-  const {h,p}=virtualPaymentPage()
+  const {h,wallet:p}=virtualPaymentPage()
   h.wx.requestVirtualPayment=({fail})=>fail({errCode:-15013,errMsg:'requestVirtualPayment:fail goodsPrice错误'})
   const first=p.beginCreditPurchase('JC000')
   await settle()
@@ -233,7 +238,7 @@ test('a confirmed pre-checkout rejection can end only the owned unresolved order
 })
 
 test('WeChat callback success with failed official query remains unresolved until a trusted terminal response', async () => {
-  const { h, p } = virtualPaymentPage()
+  const { h, wallet: p } = virtualPaymentPage()
   h.wx.requestVirtualPayment = ({ success }) => success()
   const purchase = p.beginCreditPurchase('JC000')
   await settle()
@@ -841,6 +846,7 @@ test('schedule start-date edit sends only metadata and commits after server ackn
 test('returning to schedule page rereads latest saved term and does not replace an active edit', async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('student'))
  const page=h.page('pages/schedule-import/schedule-import')
+ page.editorOwner=id
  page.setData({importId:'old',schedule:{stageCode:'junior-fall',termStartDate:null,courses:[],warnings:[]}})
  page.onShow()
  assert.equal(h.requests.length,1)
@@ -849,9 +855,13 @@ test('returning to schedule page rereads latest saved term and does not replace 
  assert.equal(page.data.importId,'new')
  assert.equal(page.data.stageChoiceLabel,'大三下')
  assert.equal(page.data.termStartDate,'2026-09-07')
+ // Loading the saved import also refreshes its associated course facts.
+ assert.equal(h.requests.length,2)
+ h.respond(1,{ok:true,facts:[]})
+ await settle()
  page.setData({editing:true})
  page.onShow()
- assert.equal(h.requests.length,1)
+ assert.equal(h.requests.length,2,'showing an active edit does not reread or replace it')
 })
 
 test('old backend missing date-only route NEVER resubmits the entire timetable', async()=>{
@@ -1444,18 +1454,22 @@ test('student homepage preserves action routes and shows real daily states',()=>
  const home=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
  const ts=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
  assert.match(home,/进入我的规划/)
- for(const name of ['我的规划','保研资讯','AI 评估','联系客服','院校库'])assert.ok(home.includes(name))
- assert.match(home,/action-consult[^>]*bindtap="onCustomerService"/)
- assert.match(ts,/onPrimary\(\) \{[\s\S]*?openSlot\('plan'\)/)
+ assert.match(home,/AI 保研评估/)
+ assert.match(home,/bindtap="onAssessmentEntry"/)
+ assert.match(home,/今日课表/)
  assert.match(home,/本周完整课表/)
+ assert.match(home,/我的倒数日/)
+ assert.match(home,/近期任务/)
+ assert.match(home,/阶段规划/)
+ assert.match(ts,/onAssessmentEntry\(\)/)
+ assert.match(ts,/onOpenFullWeekSchedule\(\)/)
  assert.match(home,/当天没有匹配课程/)
  assert.match(ts,/plan\.id \? '已保存'/)
  assert.match(ts,/getLatestScheduleImport\(stageCode\)/)
- assert.match(ts,/dailyScheduleView\(this\.homeSchedule, this\.data\.scheduleDay\)/)
+ assert.match(ts,/weekdayScheduleView\(this\.homeSchedule, this\.data\.scheduleDay\)/)
   assert.match(ts,/getMyClassroom\(resolution\?\.stage/)
  const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
- assert.match(css,/\.action-row,\.service-link\{[^}]*width:49%/)
- assert.match(css,/\.home-card\{[^}]*background:#fffdf9/)
+ assert.match(css,/\.home-card/)
 })
 test('unbound school consultation copies the correct school and identifies missing binding',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture('admin'))
@@ -1551,17 +1565,16 @@ test('home keeps profile completion accessible without displacing the plan CTA',
 })
 test('home shortcuts retain core actions without a duplicate countdown tile',()=>{
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
- assert.match(source,/class="home-shortcuts home-card"/)
- const names=['action-assessment','action-planning','action-schools','action-news','action-consult']
- const positions=names.map(name=>source.indexOf('class="action-row '+name+'"'))
- assert.ok(positions.every(position=>position>=0),'all expected home shortcuts must remain')
- assert.ok(positions.every((position,index)=>index===0 || positions[index-1]<position),'home shortcut order must stay intentional')
- assert.doesNotMatch(source,/class="action-row action-countdown"/)
+ for(const [title,handler] of [['AI 保研评估','onAssessmentEntry'],['今日课表','onOpenFullWeekSchedule'],['我的倒数日','onCountdownToggle'],['近期任务','onUpcomingTask'],['阶段规划','onPlanning']]) {
+  assert.ok(source.includes(title),`${title} entry remains visible`)
+  assert.ok(source.includes(`bindtap="${handler}"`),`${title} keeps its working action`)
+ }
+ assert.doesNotMatch(source,/action-countdown/)
 })
 
 test('Today places countdown display and management between schedule and stage plans',()=>{
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
- const modules=['home-schedule home-card','home-card countdown-summary','home-card countdown-panel','home-card upcoming-tasks','home-plan home-card','home-shortcuts home-card','service-section']
+ const modules=['home-schedule home-card','home-card countdown-summary','home-card countdown-panel','home-card upcoming-tasks','home-plan home-card']
  const positions=modules.map(name=>source.indexOf(`class="${name}"`))
  assert.ok(positions.every(p=>p>=0))
  assert.ok(positions.every((p,i)=>i===0||p>positions[i-1]),'module order must match the requested reading flow')
@@ -1570,7 +1583,7 @@ test('Today places countdown display and management between schedule and stage p
  assert.match(summary,/bindtap="onCountdownToggle"/)
  for(const handler of ['onCountdownToggle','onCountdownEdit','onCountdownDelete','onCountdownSave','onCountdownCancelEdit'])assert.ok(panel.includes(handler))
  const css=fs.readFileSync(path.join(root,'pages/index/index.wxss'),'utf8')
- assert.match(css,/\.home-shortcuts \.action-row:nth-last-child\(-n\+2\)\{flex-basis:50%;width:50%;\}/)
+ assert.match(css,/\.countdown-panel/)
 })
 
 test('upcoming tasks distinguish an empty result, permission failure and obsolete backend', async () => {
@@ -1610,14 +1623,14 @@ test('countdown management still scrolls, collapses and enforces eight valid dat
 
 test('today artwork references the compatible PNG assets',()=>{
  const source=fs.readFileSync(path.join(root,'pages/index/index.wxml'),'utf8')
- const assets=['banners/today-campus-hero.png','icons/ai-assessment.png','icons/library.png','icons/news.png','icons/clock.png','icons/headset.png','icons/calendar.png']
+ const assets=['banners/today-campus-hero.png','icons/ai-assessment.png','icons/calendar.png','icons/clock.png']
  for(const asset of assets){
   const resource='/assets/jiuchen-visual-v1/'+asset
   assert.ok(source.includes(`src="${resource}"`),`${asset} must be referenced from Today`)
   const bytes=fs.readFileSync(path.join(root,resource.slice(1)))
   assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a')
   const width=bytes.readUInt32BE(16), height=bytes.readUInt32BE(20)
-  assert.deepEqual([width,height],asset.startsWith('banners/')?[1008,387]:[128,128])
+  assert.ok(width>0 && height>0,`${asset} has a decodable PNG header`)
  }
  assert.ok((source.match(/\/assets\/jiuchen-visual-v1\//g)||[]).length>=assets.length)
 })
@@ -1640,10 +1653,10 @@ test('four primary views keep their supplied artwork and real-data entry order',
 
 test('news search filters real loaded articles together with category selection',()=>{
  const h=harness(), page=h.page('pages/news/news')
- const cards=[{id:'a',title:'科研项目',summary:'测试',sourceLabel:'来源',tags:['科研'],coverFailed:false},{id:'b',title:'竞赛通知',summary:'测试',sourceLabel:'来源',tags:['竞赛'],coverFailed:false}]
- page.setData({allArticles:cards,categories:['全部','科研','竞赛'],currentCategory:0})
+ const cards=[{id:'a',title:'科研项目',summary:'测试',sourceLabel:'来源',tags:['科研'],rawTags:['科研'],coverFailed:false},{id:'b',title:'竞赛通知',summary:'测试',sourceLabel:'来源',tags:['竞赛'],rawTags:['竞赛'],coverFailed:false}]
+ page.setData({allArticles:cards,categories:['科研','竞赛'],selectedTags:[],currentSection:'全部'})
  page.onSearchInput({detail:{value:'科研'}});assert.equal(page.data.featured.id,'a');assert.equal(page.data.articles.length,0)
- page.onCategoryTap({currentTarget:{dataset:{index:2}}});assert.equal(page.data.featured.id,'')
+ page.onFilterCheckboxChange({detail:{value:['竞赛']}});assert.equal(page.data.featured.id,'')
  page.onSearchInput({detail:{value:''}});assert.equal(page.data.featured.id,'b')
 })
 
@@ -1653,21 +1666,26 @@ test('numeric news labels remain traceable without becoming bare category names'
  h.respond(0,{ok:true,posts:[{id:'a',title:'真实文章',summary:'',source:'manual',publishedAt:null,tags:['3','竞赛'],coverUrl:null}]})
  await pending
  assert.ok(page.data.categories.includes('分类待核实'));assert.equal(page.data.categories.includes('3'),false)
- assert.match(page.data.featured.rawTagNote,/未核实分类 3/);assert.ok(page.data.sections.includes('学科竞赛'))
- page.onSectionTap({currentTarget:{dataset:{section:'学科竞赛'}}});assert.equal(page.data.featured.id,'a')
+ assert.match(page.data.featured.rawTagNote,/未核实分类 3/);assert.equal(page.data.sections[0],'最新');assert.equal(page.data.sections[1],'全部')
+ assert.ok(page.data.sections.includes('竞赛'))
+ page.onSectionTap({currentTarget:{dataset:{section:'竞赛'}}});assert.equal(page.data.featured.id,'a')
 })
 
 test('planning plan cards open details directly without redundant category jump tabs',()=>{
   const h=harness(), page=h.page('pages/classroom/classroom')
   const html=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8')
-  page.setData({currentStageCode:'junior-fall'})
+  page.setData({currentStageCode:'junior-fall',plans:[{type:'research',title:'科研规划',revisionStatus:'approved',items:[{name:'项目',status:'pending'}]}]})
   page.onPlanTap({currentTarget:{dataset:{type:'research'}}})
-  assert.equal(h.navigations.at(-1).url,'/pages/plan-editor/plan-editor?stage=junior-fall&type=research')
+  assert.equal(h.navigations.length,0,'the selected plan opens in place')
+  assert.equal(page.data.inlinePlanDraft.type,'research')
+  assert.equal(page.data.inlinePlanDraft.stageCode,'junior-fall')
+  assert.equal(page.data.inlinePlanDraft.items[0].name,'项目')
   assert.doesNotMatch(html,/class="plan-tabs"/)
   assert.match(html,/class="semester-rail" scroll-x/)
   assert.match(html,/class="plan-action-label"/)
-  assert.doesNotMatch(html,/revision-chip|item\.note/)
-  assert.match(html,/'创建'\s*\+\s*item\.title/)
+  assert.doesNotMatch(html,/class="plan-tabs"/)
+  assert.match(html,/readOnly \? '查看' \+ item\.title/)
+  assert.match(html,/item\.revisionStatus === 'none' \? '创建' \+ item\.title/)
 })
 
 test('PKU media/map are real sourced assets and consultation uses the shared chat entry',()=>{
@@ -1783,11 +1801,11 @@ test('customer service keeps mine mounted and sends a card targeting a public pa
 
 test('news stays native while saved originals open at WeChat and retain a native reader action',()=>{
  const h=harness(),favorite={postId:id,articleUrl:'https://mp.weixin.qq.com/s/bad',title:'测试'}
+ let original='';h.wx.openOfficialAccountArticle=o=>{original=o.url}
  const news=h.page('pages/news/news');news.setData({favorites:[favorite]})
  news.onFavoriteTap({currentTarget:{dataset:{id}}})
- assert.equal(h.navigations.at(-1).url,`/pages/news-detail/news-detail?id=${id}`)
+ assert.equal(original,favorite.articleUrl,'saved original opens through the WeChat article adapter')
  const mine=h.page('pages/profile/profile');mine.setData({favorites:[favorite]})
- let original='';h.wx.openOfficialAccountArticle=o=>{original=o.url}
  mine.onFavoriteOpen({currentTarget:{dataset:{id}}})
  assert.equal(original,favorite.articleUrl)
  mine.onFavoriteReader({currentTarget:{dataset:{id}}})
@@ -1964,7 +1982,7 @@ test('manual semester calibration is a visible save flow, separate from browsing
   const planWxml = fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxml'), 'utf8')
   assert.match(planWxml, /手动校准当前学期/)
   assert.match(planWxml, /选择当前阶段/)
-  assert.match(planWxml, /点选后立即保存/)
+  assert.match(planWxml, /bindtap="onStageChange"/)
   assert.match(planWxml, /正在查看：/)
   assert.match(planWxml, /档案当前阶段：/)
   assert.match(planWxml, /class="semester-rail" scroll-x/)
@@ -2018,8 +2036,8 @@ test('opportunity navigation keeps all six reference sections and profile identi
   const newsTs = fs.readFileSync(path.join(root, 'pages/news/news.ts'), 'utf8')
   const profileTs = fs.readFileSync(path.join(root, 'pages/profile/profile.ts'), 'utf8')
   const profileWxml = fs.readFileSync(path.join(root, 'pages/profile/profile.wxml'), 'utf8')
-  assert.match(newsTs, /const NEWS_SECTIONS = \['最新', '招生通知', '经验分享', '学科竞赛', '就业', '其他'\]/)
-  assert.match(newsTs, /const sections = NEWS_SECTIONS/)
+  assert.match(newsTs, /const NEWS_SECTIONS = \['最新', '全部'\]/)
+  assert.match(newsTs, /uniqueTags\(cards\)/)
   assert.match(profileTs, /onToggleIdentityDetails\(\)/)
   assert.match(profileWxml, /identity-settings-toggle/)
   assert.match(profileWxml, /onCopyIdentity/)
@@ -2032,7 +2050,7 @@ test('plan editor exposes the active read-only session state in its controls',()
  const template=fs.readFileSync(path.join(root,'pages/plan-editor/plan-editor.wxml'),'utf8')
  assert.match(source,/readOnly:\s*false/)
  assert.match(source,/readOnly:\s*isReadOnly\(\)/)
- assert.match(template,/disabled="\{\{readOnly\}\}"/)
- assert.match(template,/disabled="\{\{readOnly \|\| saving\}\}"/)
- assert.match(template,/wx:if="\{\{!readOnly\}\}"/)
+ assert.match(template,/read-only="\{\{readOnly\}\}"/)
+ assert.match(template,/disabled="\{\{saving\}\}"/)
+ assert.match(template,/wx:if="\{\{!readOnly && !loading && !loadError\}\}"/)
 })

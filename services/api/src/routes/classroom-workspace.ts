@@ -29,6 +29,7 @@ import {
   isOwnedScheduleImportFile,
   isSupportedScheduleFileName,
   normalizeEditableSchedule,
+  assignCourseKeysOnSave,
   isScheduleFirstMonday,
   parseImageSchedule,
   parseSpreadsheetSchedule,
@@ -785,11 +786,11 @@ export function registerClassroomWorkspaceRoutes(
     }
     let schedule
     try {
-      schedule = normalizeEditableSchedule({
+      schedule = assignCourseKeysOnSave(normalizeEditableSchedule({
         ...draft,
         sourceType: record.sourceType,
         editedAt: new Date().toISOString(),
-      })
+      }))
     } catch (error) {
       // Only field paths are exposed: never echo student timetable content.
       const fields = error instanceof z.ZodError

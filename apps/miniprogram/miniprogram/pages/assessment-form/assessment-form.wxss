@@ -257,14 +257,7 @@
   overflow-wrap: anywhere;
   font-weight: 600;
 }
-/* Small native credit purchasing panel: no chart or payment bundle on the client. */
-.credit-panel { border-left: 6rpx solid #896526; }
-.credit-balance { display:block; font-size:48rpx; font-weight:800; color:#173e67; margin:12rpx 0; }
-.credit-subtitle { display:block; font-size:22rpx; line-height:1.65; color:#53677d; }
-.credit-status { display:block; color:#987026; font-size:22rpx; margin:12rpx 0; }
-.credit-offers { display:flex; gap:12rpx; flex-wrap:wrap; margin:18rpx 0 6rpx; }
-.credit-offer { margin:0; flex:1 1 220rpx; padding:14rpx; font-size:24rpx; line-height:1.6; color:white; background:#173e67; border-radius: 8rpx; }
-.credit-verify { margin:16rpx 0 0; background:#eaf2fa; color:#245681; border-radius: 8rpx; font-size:24rpx; }
+.assessment-wallet{margin:16rpx 0;}
 
 .context-card{border-left:5rpx solid #0d9488;background:#f7fcfb;}
 .context-choice{display:flex;gap:20rpx;align-items:center;justify-content:space-between;padding:19rpx 0;border-top:1rpx solid #dceee9;}

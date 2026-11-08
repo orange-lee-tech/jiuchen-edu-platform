@@ -1,0 +1,12 @@
+.wallet{padding:22rpx;border:1rpx solid #e4ded2;border-left:6rpx solid #896526;border-radius:12rpx;background:#fffdf9;}
+.wallet-head{display:flex;align-items:center;justify-content:space-between;gap:12rpx;}
+.wallet-title{font-size:27rpx;font-weight:800;color:#173e67;}
+.wallet-link{font-size:21rpx;color:#245681;}
+.wallet-balance{display:block;margin:12rpx 0;font-size:38rpx;font-weight:800;color:#173e67;}
+.wallet-status,.wallet-note{display:block;margin:10rpx 0;color:#6b7180;font-size:21rpx;line-height:1.55;}
+.wallet-toggle,.wallet-action{margin:12rpx 0 0;padding:8rpx 14rpx;border-radius:8rpx;background:#eaf2fa;color:#245681;font-size:22rpx;}
+.wallet-offers{display:flex;flex-wrap:wrap;gap:10rpx;margin-top:12rpx;}
+.wallet-offers button{flex:1 1 220rpx;margin:0;background:#173e67;color:#fff;font-size:22rpx;}
+.wallet-order{display:flex;flex-direction:column;gap:5rpx;padding:12rpx 0;border-bottom:1rpx solid #eee7dc;font-size:21rpx;color:#43556a;}
+.wallet-order button{margin:6rpx 0;background:#eaf2fa;color:#245681;font-size:20rpx;}
+button::after{border:0;}
