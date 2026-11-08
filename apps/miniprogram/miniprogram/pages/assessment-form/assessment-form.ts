@@ -735,8 +735,9 @@ Page({
     this.setData({ competitions, competitionSuggestions })
   },
 
-  schoolOptionsFor(query: string, targets: AssessmentTarget[] = this.data.targets) {
-    const names = new Set(targets.map(item => (item.schoolName || '').trim()).filter(Boolean))
+  schoolOptionsFor(query: string, targets?: AssessmentTarget[]) {
+    const selectedTargets = targets ?? this.data.targets
+    const names = new Set(selectedTargets.map(item => (item.schoolName || '').trim()).filter(Boolean))
     return filterAssessmentSchools(query).map(name => ({ name, selected: names.has(name) }))
   },
   onToggleSchoolPicker() {
