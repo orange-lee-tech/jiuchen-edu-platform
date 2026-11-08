@@ -131,7 +131,9 @@ Page({
   },
   onShow() {
     const owner = getSavedAuthResult()?.user.id || ''
+    let identityChanged = false
     if (this.editorOwner && this.editorOwner !== owner) {
+      identityChanged = true
       ++this.factsGeneration
       ++this.latestGeneration
       ++this.importGeneration
@@ -146,6 +148,7 @@ Page({
       void this.loadLatestSchedule()
     }
     this.editorOwner = owner
+    if (identityChanged) return
     // A page kept in the navigation stack can be shown after another edit.
     // Do not replace an in-progress import or unsaved local correction.
     if (this.data.importId && !this.data.parsing && !this.data.saving && !this.data.editing) void this.loadLatestSchedule()

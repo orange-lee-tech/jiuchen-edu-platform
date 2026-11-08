@@ -62,7 +62,7 @@ test('news administrator defaults to publication ordering and switches classific
 test('news cards expose source date, keep every category and defer favorites until the V2 source is ready',()=>{
  const load=loadModules();load('pages/news/news');const page=load.page()
  const cards=[{id:'a',tags:['分类一']},{id:'b',tags:['分类二']}]
- assert.equal(page.filterArticles(cards,1,['全部','分类一','分类二'])[0].id,'a')
+ assert.equal(page.filterArticles(cards,'','全部',['分类一'])[0].id,'a')
  const listing=fs.readFileSync(path.join(root,'pages/news/news.wxml'),'utf8')
  const detail=fs.readFileSync(path.join(root,'pages/news-detail/news-detail.wxml'),'utf8')
  const source=fs.readFileSync(path.join(root,'pages/news/news.ts'),'utf8')

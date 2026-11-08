@@ -45,6 +45,9 @@ function normalizeRemoteUrl(value: string | null | undefined) {
 }
 
 function toCard(post: NewsPost): NewsCard {
+  // Public/listing payloads may come from older API versions or synthetic
+  // fixtures. Treat absent and malformed optional tag data as uncategorized.
+  const rawTags = Array.isArray(post.tags) ? post.tags.filter((tag): tag is string => typeof tag === 'string') : []
   return {
     isVideo:post.mediaType==='video',
     id: post.id,
@@ -52,11 +55,11 @@ function toCard(post: NewsPost): NewsCard {
     summary: (post.summary ?? '').replace(/\\(?:x0[ad]|[nr])/gi, ' ').replace(/\s+/g, ' ').trim(),
     sourceLabel: post.source === 'manual' ? '九辰编辑' : post.publicationTimeSource === 'admin_verified_publish_record' ? '九辰教育服务号 · 管理员核实原文' : '九辰教育服务号',
     dateLabel: newsPublicationLabel(post),
-    tags: [...new Set(post.tags.map(tag => /^\d+$/.test(tag.trim()) ? '分类待核实' : tag))],
-    rawTags: post.tags,
-    rawTagNote: post.tags.some(tag => /^\d+$/.test(tag.trim())) ? `未核实分类 ${post.tags.filter(tag => /^\d+$/.test(tag.trim())).join('、')}` : '',
+    tags: [...new Set(rawTags.map(tag => /^\d+$/.test(tag.trim()) ? '分类待核实' : tag))],
+    rawTags,
+    rawTagNote: rawTags.some(tag => /^\d+$/.test(tag.trim())) ? `未核实分类 ${rawTags.filter(tag => /^\d+$/.test(tag.trim())).join('、')}` : '',
     scopeNote: newsTagScopeNote(post),
-    primaryTag: post.tags[0] || '未分类',
+    primaryTag: rawTags[0] || '未分类',
     coverUrl: normalizeRemoteUrl(post.coverUrl),
     coverFailed: false,
   }
@@ -247,14 +250,16 @@ Page({
     section?: string,
     tags?: string[],
   ) {
-    const keyword = (query ?? this.data.searchQuery).trim().toLocaleLowerCase()
+    const keyword = String(query ?? this.data.searchQuery ?? '').trim().toLocaleLowerCase()
     const activeSection = section ?? this.data.currentSection
     const activeTags = tags ?? this.data.selectedTags
     const filtered = articles.filter(article => {
+      const articleTags = Array.isArray(article.tags) ? article.tags : []
       const tagMatches = !activeTags.length || activeTags.some(tag =>
-        tag === '未分类' ? article.tags.length === 0 : article.tags.includes(tag))
-      const queryMatches = !keyword || [article.title, article.summary, article.sourceLabel, ...article.tags, ...article.rawTags]
-        .some(value => value.toLocaleLowerCase().includes(keyword))
+        tag === '未分类' ? articleTags.length === 0 : articleTags.includes(tag))
+      const rawTags = Array.isArray(article.rawTags) ? article.rawTags : []
+      const queryMatches = !keyword || [article.title, article.summary, article.sourceLabel, ...articleTags, ...rawTags]
+        .some(value => typeof value === 'string' && value.toLocaleLowerCase().includes(keyword))
       return matchesNewsSection(article, activeSection) && tagMatches && queryMatches
     })
     // Latest is a concise view of the first ten items in the server-provided feed order.
