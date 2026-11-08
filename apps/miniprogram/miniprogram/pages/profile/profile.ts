@@ -14,7 +14,7 @@ import { resolveCurrentStage } from '../../utils/current-stage'
 // action in a long menu or create parallel assessment entry routes.
 const PERSONAL_MENUS = [
   { key: 'growth', title: '成长档案与简历', desc: '整理长期成长记录，生成真实申请材料' },
-  { key: 'assessment', title: 'AI 评估历史与草稿', desc: '接续未完成评估，查看既有报告' },
+  { key: 'assessment', title: '评估历史与草稿', desc: '接续未完成评估，查看既有报告' },
   { key: 'position', title: 'AI 评估', desc: '查看评估入口' },
   { key: 'favorites', title: '我的收藏', desc: '重新打开已收藏的服务号原文' },
   { key: 'service', title: '联系客服', desc: '咨询院校信息与九辰服务' },
@@ -183,6 +183,7 @@ Page({
   async onFavorites(){
     const owner=getSavedAuthResult()?.user.id
     if(!owner){loginFor('pages/profile/profile');return}
+    if(this.data.favoritesVisible){this.setData({favoritesVisible:false,favoritesLoading:false});return}
     this.setData({favoritesVisible:true,favoritesLoading:true,favoritesError:'',favorites:[]})
     try{
       const favorites=await getMyNewsFavorites()

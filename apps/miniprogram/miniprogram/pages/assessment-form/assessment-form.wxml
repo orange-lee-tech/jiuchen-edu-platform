@@ -8,7 +8,6 @@
 
   <block wx:else>
     <view wx:if="{{retryNotice}}" class="card"><text class="card-note">{{retryNotice}}</text></view>
-    <view class="assessment-wallet"><credit-wallet id="assessment-wallet" mode="compact" /></view>
 
     <view class="card import-card">
       <view class="import-copy">
@@ -102,18 +101,36 @@
       </view>
     </view>
 
-    <view class="card">
+    <view class="card target-school-card">
       <view class="section-head">
         <text class="section-title">目标院校</text>
-        <text class="link" bindtap="onAddTarget">+ 添加（最多5所）</text>
+        <text class="target-count">已选 {{targets.length}} / 5 所</text>
       </view>
-      <view wx:for="{{targets}}" wx:key="index" class="entry vertical">
-        <input class="input" data-index="{{index}}" data-field="schoolName" value="{{item.schoolName}}" placeholder="目标院校（必填）" bindinput="onTargetInput" />
-        <input class="input" data-index="{{index}}" data-field="programName" value="{{item.programName}}" placeholder="学院 / 项目（可选）" bindinput="onTargetInput" />
-        <input class="input" data-index="{{index}}" data-field="researchDirection" value="{{item.researchDirection}}" placeholder="研究方向（可选）" bindinput="onTargetInput" />
-        <input class="input" data-index="{{index}}" data-field="note" value="{{item.note}}" placeholder="其它说明（可选）" bindinput="onTargetInput" />
-        <button wx:if="{{targets.length > 1}}" class="remove" data-index="{{index}}" bindtap="onRemoveTarget">删除</button>
+      <view wx:if="{{targets.length}}" class="target-school-selected">
+        <view wx:for="{{targets}}" wx:key="index" class="target-school-chip">
+          <text class="target-school-chip-name">{{item.schoolName}}</text>
+          <text class="target-school-remove" data-index="{{index}}" bindtap="onRemoveTarget" aria-role="button">×</text>
+        </view>
       </view>
+      <text wx:else class="empty">请选择目标院校，最多5所；也可直接填写院校名称。</text>
+      <view class="target-school-input-row">
+        <input class="input" maxlength="160" value="{{schoolQuery}}" placeholder="搜索院校名称 / 手动填写" bindinput="onSchoolQueryInput" />
+        <view class="target-school-add" bindtap="onAddManualSchool" aria-role="button">添加</view>
+        <view class="target-school-trigger" bindtap="onToggleSchoolPicker" aria-role="button">{{schoolPickerOpen ? '收起' : '选择'}}</view>
+      </view>
+      <scroll-view wx:if="{{schoolPickerOpen}}" class="target-school-suggestions" scroll-y="{{true}}">
+        <view wx:for="{{schoolOptions}}" wx:key="name" class="target-school-option {{item.selected ? 'selected' : ''}}" data-name="{{item.name}}" bindtap="onToggleSchoolChoice" aria-role="checkbox" aria-checked="{{item.selected}}">
+          <text>{{item.name}}</text><text class="target-school-check">{{item.selected ? '✓' : '○'}}</text>
+        </view>
+        <text wx:if="{{!schoolOptions.length}}" class="target-school-empty">暂无匹配院校，可使用上方输入框手动添加。</text>
+      </scroll-view>
+    </view>
+
+    <view class="card target-research-card">
+      <text class="section-title">研究方向（必填）</text>
+      <input class="input target-research-input" maxlength="160" value="{{researchDirection}}" placeholder="例如：人工智能 / 电力系统 / 英语教育" bindinput="onResearchDirectionInput" />
+      <text class="section-title target-note-title">其他说明（选填）</text>
+      <textarea class="textarea target-note-input" maxlength="500" value="{{targetNote}}" placeholder="补充申请意向、个人偏好等" bindinput="onTargetNoteInput" />
     </view>
 
     <view class="card context-card">
@@ -127,10 +144,6 @@
         <switch checked="{{includeRecentAssessments}}" color="#173e67" bindchange="onIncludeHistory" />
       </view>
       <text class="context-disclaimer">两个选项保存到当前草稿，仅影响新评估。原始个人记录由服务端按登录账号查取，不接收他人数据。</text>
-    </view>
-
-    <view class="status-card">
-      <text class="status-title">{{providerConfigured ? '评估服务已配置' : '当前仅可保存草稿'}}</text>
     </view>
 
     <view class="actions">

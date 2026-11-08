@@ -4,7 +4,7 @@
   <view class="position-hero surface">
     <text class="hero-title">AI 保研定位</text>
     <text class="hero-desc">结果仅供规划参考，不代表录取概率。</text>
-    <button wx:if="{{!readOnly}}" class="primary-btn" bindtap="onStartAssessment">开始 AI 评估</button>
+    <button wx:if="{{!readOnly}}" class="primary-btn" bindtap="onStartAssessment" loading="{{assessmentStarting}}" disabled="{{assessmentStarting}}">开始 AI 评估</button>
     <button class="history-btn" bindtap="onAssessmentHistory">查看历史评估</button>
   </view>
 

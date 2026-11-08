@@ -258,3 +258,8 @@ button::after { border:0; }
 .plan-card-foot,.plan-title-row,.revision-chip,.plan-note{display:none;}
 .stage-picker-caption{line-height:1.35;}
 .stage-picker-current{margin-top:2rpx;}
+
+/* Display archive stage and viewed stage on one horizontal row in the semester card. */
+.stage-picker-top{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:14rpx;min-height:70rpx;}
+.stage-picker-current{flex:1;min-width:0;margin:0;font-size:28rpx;font-weight:800;line-height:1.4;color:#174b6c;}
+.stage-picker-caption{display:block;flex:none;box-sizing:border-box;max-width:48%;margin:0;padding:9rpx 12rpx;border-radius:8rpx;background:#fff3d8;color:#765624;text-align:right;font-size:21rpx;line-height:1.35;overflow-wrap:break-word;}

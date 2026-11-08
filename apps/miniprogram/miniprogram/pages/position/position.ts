@@ -1,7 +1,7 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import {isReadOnly,getReadOnlyContext} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeShell, openSlot, shellView } from '../../utils/navigation'
-import { createMyGrowthRecord, deleteMyGrowthRecord, friendlyRequestError, getMyAcademicProfile, getMyGrowthProfile, updateMyAcademicProfile, updateMyGrowthRecord,
+import { createMyGrowthRecord, deleteMyGrowthRecord, friendlyRequestError, getMyAcademicProfile, getMyGrowthProfile, getCommercialMeta, grantMyFreeCredits, getMyCreditAccount, updateMyAcademicProfile, updateMyGrowthRecord,
   type CanonicalGrowthRecord, type GrowthRecordInput, type GrowthRecordType } from '../../utils/request'
 import { saveCachedAcademicProfile } from '../../utils/profile-cache'
 import { clearGrowthProfileBootstrapCache } from '../../utils/growth-profile-cache'
@@ -13,6 +13,7 @@ Page({
   data: {
     ...INITIAL_SHELL,
     canEditProfile: false,
+    assessmentStarting: false,
     profileLoading: false,
     profileError: '',
     profileForm: { ...EMPTY_POSITION_PROFILE },
@@ -225,21 +226,46 @@ Page({
 
   onUnload() { this.stopAuth?.() },
 
-  onStartAssessment() {
-    if(isReadOnly())return
+  async onStartAssessment() {
+    if (isReadOnly() || this.data.assessmentStarting) return
     const auth = getSavedAuthResult()
-
     if (!auth) {
       loginFor('pages/assessment-form/assessment-form', {}, true)
       return
     }
-
     if (auth.user.role !== 'user' && auth.user.role !== 'student') {
       wx.showToast({ title: '当前身份不使用 AI 定位', icon: 'none' })
       return
     }
-
-    wx.navigateTo({ url: '/pages/assessment-form/assessment-form' })
+    const owner = auth.user.id
+    this.setData({ assessmentStarting: true })
+    try {
+      const meta = await getCommercialMeta()
+      if (getSavedAuthResult()?.user.id !== owner || isReadOnly()) return
+      if (meta.policy.enforcementEnabled) {
+        // The server grants free credits idempotently; never treat a first visit as zero before grant.
+        await grantMyFreeCredits()
+        const account = await getMyCreditAccount()
+        if (getSavedAuthResult()?.user.id !== owner || isReadOnly()) return
+        if (account.availableBalance <= 0) {
+          wx.showModal({
+            title: '评估次数不足',
+            content: '请前往「我的」购买评估次数后再开始新的评估。',
+            confirmText: '前往我的', cancelText: '取消',
+            success: result => { if (result.confirm) wx.switchTab({ url: '/pages/profile/profile' }) },
+          })
+          return
+        }
+      }
+    } catch {
+      // Credit read failure must not prevent opening the form to save a draft.
+      // The API is still the authority when a paid assessment is submitted.
+    } finally {
+      this.setData({ assessmentStarting: false })
+    }
+    if (getSavedAuthResult()?.user.id === owner && !isReadOnly()) {
+      wx.navigateTo({ url: '/pages/assessment-form/assessment-form' })
+    }
   },
 
   onAssessmentHistory() {

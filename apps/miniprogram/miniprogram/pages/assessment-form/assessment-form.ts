@@ -18,6 +18,7 @@ import {
   type AssessmentTarget,
 } from '../../utils/request'
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
+import { filterAssessmentSchools } from '../../utils/assessment-school-names'
 
 const RESEARCH_TIERS = [
   'Nature',
@@ -235,6 +236,9 @@ Page({
     includePlanning: true,
     includeRecentAssessments: true,
     importing: false,
+    schoolQuery: '', schoolPickerOpen: false,
+    schoolOptions: [] as Array<{ name: string; selected: boolean }>,
+    researchDirection: '', targetNote: '',
     providerConfigured: false,
     materialImportConfigured: false,
     draftId: '',
@@ -255,14 +259,7 @@ Page({
     research: [] as AssessmentResearchExperience[],
     competitions: [] as AssessmentCompetitionExperience[],
     competitionSuggestions: [] as string[][],
-    targets: [
-      {
-        schoolName: '',
-        programName: '',
-        researchDirection: '',
-        note: '',
-      },
-    ] as AssessmentTarget[],
+    targets: [] as AssessmentTarget[],
   },
 
   onLoad(query: Record<string, string | undefined>) {
@@ -346,16 +343,10 @@ Page({
         research: draftInput?.research ?? [],
         competitions: draftInput?.competitions ?? [],
         competitionSuggestions: (draftInput?.competitions ?? []).map(() => []),
-        targets: draftInput?.targets
-          ? draftInput.targets
-          : [
-              {
-                schoolName: '',
-                programName: '',
-                researchDirection: '',
-                note: '',
-              },
-            ],
+        targets: (draftInput?.targets || []).filter(item => (item.schoolName || '').trim()),
+        researchDirection: draftInput?.preferences?.researchDirection ?? draftInput?.targets?.find(item => item.researchDirection)?.researchDirection ?? '',
+        targetNote: draftInput?.preferences?.note ?? draftInput?.targets?.find(item => item.note)?.note ?? '',
+        schoolQuery: '', schoolPickerOpen: false, schoolOptions: [],
       })
     } catch (error) {
       console.info('Assessment form bootstrap failed.')
@@ -559,17 +550,10 @@ Page({
       research,
       competitions,
       competitionSuggestions: competitions.map(() => []),
-      targets:
-        targets.length > 0
-          ? targets
-          : [
-              {
-                schoolName: '',
-                programName: '',
-                researchDirection: '',
-                note: '',
-              },
-            ],
+      targets: targets.filter(item => (item.schoolName || '').trim()),
+      researchDirection: this.data.researchDirection || targets.find(item => item.researchDirection)?.researchDirection || '',
+      targetNote: this.data.targetNote || targets.find(item => item.note)?.note || '',
+      schoolQuery: '', schoolPickerOpen: false, schoolOptions: [],
     })
   },
 
@@ -751,37 +735,56 @@ Page({
     this.setData({ competitions, competitionSuggestions })
   },
 
-  onAddTarget() {
-    if (this.data.targets.length >= 5) return
-    this.setData({
-      targets: [
-        ...this.data.targets,
-        {
-          schoolName: '',
-          programName: '',
-          researchDirection: '',
-          note: '',
-        },
-      ],
-    })
+  schoolOptionsFor(query: string, targets: AssessmentTarget[] = this.data.targets) {
+    const names = new Set(targets.map(item => (item.schoolName || '').trim()).filter(Boolean))
+    return filterAssessmentSchools(query).map(name => ({ name, selected: names.has(name) }))
   },
-
-  onTargetInput(event: WechatMiniprogram.Input) {
-    const index = Number(event.currentTarget.dataset.index)
-    const field = String(event.currentTarget.dataset.field)
-    const targets = [...this.data.targets]
-    const item = targets[index]
-    if (!item) return
-    targets[index] = { ...item, [field]: event.detail.value }
-    this.setData({ targets })
+  onToggleSchoolPicker() {
+    const open = !this.data.schoolPickerOpen
+    this.setData({ schoolPickerOpen: open,
+      schoolOptions: open ? this.schoolOptionsFor(this.data.schoolQuery) : [] })
   },
-
+  onSchoolQueryInput(event: WechatMiniprogram.Input) {
+    const query = event.detail.value
+    this.setData({ schoolQuery: query, schoolPickerOpen: true,
+      schoolOptions: this.schoolOptionsFor(query) })
+  },
+  onToggleSchoolChoice(event: WechatMiniprogram.BaseEvent) {
+    const name = String(event.currentTarget.dataset.name || '')
+    if (!name) return
+    const targets = this.data.targets.filter(item => (item.schoolName || '').trim())
+    const index = targets.findIndex(item => item.schoolName === name)
+    if (index >= 0) targets.splice(index, 1)
+    else {
+      if (targets.length >= 5) { wx.showToast({ title: '最多选择5所目标院校', icon: 'none' }); return }
+      targets.push({ schoolName: name, programName: '', researchDirection: '', note: '' })
+    }
+    this.setData({ targets, schoolOptions: this.schoolOptionsFor(this.data.schoolQuery, targets) })
+  },
+  onAddManualSchool() {
+    const name = (this.data.schoolQuery || '').trim()
+    if (!name) { wx.showToast({ title: '请输入院校名称', icon: 'none' }); return }
+    if (name.length > 160) { wx.showToast({ title: '院校名称过长', icon: 'none' }); return }
+    const targets = this.data.targets.filter(item => (item.schoolName || '').trim())
+    if (targets.some(item => item.schoolName === name)) {
+      wx.showToast({ title: '这所院校已经添加', icon: 'none' }); return
+    }
+    if (targets.length >= 5) { wx.showToast({ title: '最多选择5所目标院校', icon: 'none' }); return }
+    targets.push({ schoolName: name, programName: '', researchDirection: '', note: '' })
+    this.setData({ targets, schoolQuery: '', schoolPickerOpen: false, schoolOptions: [] })
+  },
   onRemoveTarget(event: WechatMiniprogram.BaseEvent) {
     const index = Number(event.currentTarget.dataset.index)
-    if (this.data.targets.length <= 1) return
     const targets = [...this.data.targets]
+    if (!Number.isInteger(index) || index < 0 || index >= targets.length) return
     targets.splice(index, 1)
-    this.setData({ targets })
+    this.setData({ targets, schoolOptions: this.data.schoolPickerOpen ? this.schoolOptionsFor(this.data.schoolQuery, targets) : [] })
+  },
+  onResearchDirectionInput(event: WechatMiniprogram.Input) {
+    this.setData({ researchDirection: event.detail.value })
+  },
+  onTargetNoteInput(event: WechatMiniprogram.Input) {
+    this.setData({ targetNote: event.detail.value })
   },
 
   onIncludePlanning(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
@@ -799,8 +802,8 @@ Page({
     if (this.data.english.some(item => !(item.score || '').trim())) throw new Error('请完善或删除未填写分数的英语记录')
     if (this.data.research.some(item => !(item.title || '').trim())) throw new Error('请完善或删除未完成的科研经历')
     if (this.data.competitions.some(item => !(item.name || '').trim())) throw new Error('请完善或删除未完成的竞赛经历')
-    if (this.data.targets.some(item => !(item.schoolName || '').trim()) && this.data.targets.some(item => (item.schoolName || '').trim()))
-      throw new Error('请完善或删除未完成的目标院校')
+    const direction = (this.data.researchDirection || '').trim()
+    if (!direction) throw new Error('请填写研究方向')
 
     const english = this.data.english
       .map((item) => ({
@@ -835,8 +838,8 @@ Page({
       .map((item) => ({
         schoolName: (item.schoolName || '').trim(),
         programName: item.programName?.trim() || null,
-        researchDirection: item.researchDirection?.trim() || null,
-        note: item.note?.trim() || null,
+        researchDirection: direction,
+        note: (this.data.targetNote || '').trim() || null,
       }))
       .filter((item) => item.schoolName)
 
@@ -857,6 +860,7 @@ Page({
       research,
       competitions,
       targets,
+      preferences: { ...(this.data.draftPreferences || {}), researchDirection: direction, note: (this.data.targetNote || '').trim() || null },
       contextOptions: {
         includePlanning: this.data.includePlanning,
         includeRecentAssessments: this.data.includeRecentAssessments,
@@ -866,9 +870,12 @@ Page({
   buildDraftInput() {
     return { profile: { ...this.data.profile }, english: this.data.english.map(item => ({ ...item })),
       research: this.data.research.map(item => ({ ...item })), competitions: this.data.competitions.map(item => ({ ...item })),
-      targets: this.data.targets.map(item => ({ ...item })),
+      targets: this.data.targets.map(item => ({ ...item,
+        researchDirection: this.data.researchDirection || item.researchDirection || '',
+        note: this.data.targetNote || item.note || '' })),
       contextOptions: { includePlanning: this.data.includePlanning, includeRecentAssessments: this.data.includeRecentAssessments },
-      ...(this.data.draftPreferences ? { preferences: this.data.draftPreferences } : {}) }
+      preferences: { ...(this.data.draftPreferences || {}), researchDirection: this.data.researchDirection || '',
+        note: this.data.targetNote || '' } }
   },
 
   async onSaveDraft() {
@@ -939,7 +946,12 @@ Page({
       wx.showToast({ title: '评估未进入运行状态，请稍后重试', icon: 'none' })
     } catch (error) {
       if (error instanceof ApiRequestError && error.code === 'assessment_credit_insufficient') {
-        (this.selectComponent('#assessment-wallet') as { openPurchasePanel?: () => void } | null)?.openPurchasePanel?.()
+        wx.showModal({
+          title: '评估次数不足', content: '评估草稿已保存，请到「我的」购买次数后再提交。',
+          confirmText: '前往我的', cancelText: '继续编辑',
+          success: result => { if (result.confirm) wx.switchTab({ url: '/pages/profile/profile' }) },
+        })
+        return
       }
       wx.showToast({
         title: friendlyRequestError(error, '评估运行失败，请稍后重试'),

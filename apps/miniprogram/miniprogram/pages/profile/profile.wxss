@@ -250,3 +250,8 @@ button::after{border:0;}
 .account-role-switch{margin-bottom:17rpx;padding-bottom:15rpx;border-bottom:1rpx solid #e4ded2;}
 .account-role-heading{display:block;margin-bottom:10rpx;color:#214b64;font-size:22rpx;font-weight:750;}
 .account-role-button{box-sizing:border-box;width:100%;margin:8rpx 0 0;padding:10rpx 14rpx;background:#e8eff0;color:#1d5876;border-radius:8rpx;font-size:23rpx;}
+
+/* Allow favorites to collapse from either the shortcut or the expanded heading. */
+.favorites-heading{display:flex;align-items:center;justify-content:space-between;gap:14rpx;margin:16rpx 0 12rpx;}
+.favorites-heading .section-heading{margin:0;}
+.favorites-collapse{flex:none;padding:12rpx;color:#245681;font-size:23rpx;font-weight:700;}

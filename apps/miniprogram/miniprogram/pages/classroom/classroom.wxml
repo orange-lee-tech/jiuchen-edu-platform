@@ -1,13 +1,6 @@
 <view class="classroom-page">
   <role-shell view-slot="plan" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready' && shellKind === 'student'}}">
-  <view class="classroom-top">
-    <view>
-      <text class="page-title">我的规划</text>
-    </view>
-    <view wx:if="{{mode === 'student' && !loading && !loadError}}" class="stage-badge"><text wx:if="{{selectedView === 'week'}}">本周课表</text><text wx:else>当前档案：{{actualStageLabel}}</text></view>
-  </view>
-
   <view wx:if="{{mode === 'student' && stageSaveError}}" class="plan-error">
     <text>{{stageSaveError}}</text>
     <button disabled="{{stageChangeBusy}}" bindtap="onReloadCurrentStage">重新读取档案</button>
@@ -51,10 +44,8 @@
     <view class="stage-picker surface">
       <image class="stage-banner" src="/assets/jiuchen-visual-v1/banners/semester-books-banner.png" mode="aspectFill" aria-hidden="true" />
       <view class="stage-picker-top">
-        <view>
-          <text class="stage-picker-caption">档案当前阶段：{{actualStageLabel}}</text>
-          <text class="stage-picker-current">正在查看：{{selectedView === 'week' ? '本周课表' : currentStageLabel}}</text>
-        </view>
+        <text class="stage-picker-current">正在查看：{{selectedView === 'week' ? '本周课表' : currentStageLabel}}</text>
+        <text wx:if="{{mode === 'student'}}" class="stage-picker-caption">当前档案：{{actualStageLabel}}</text>
       </view>
       <text wx:if="{{stageNotice}}" class="stage-notice">{{stageNotice}}</text>
       <view wx:if="{{stageSuggestion}}" class="stage-suggestion">

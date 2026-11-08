@@ -257,7 +257,6 @@
   overflow-wrap: anywhere;
   font-weight: 600;
 }
-.assessment-wallet{margin:16rpx 0;}
 
 .context-card{border-left:5rpx solid #0d9488;background:#f7fcfb;}
 .context-choice{display:flex;gap:20rpx;align-items:center;justify-content:space-between;padding:19rpx 0;border-top:1rpx solid #dceee9;}
@@ -265,3 +264,22 @@
 .context-title{font-weight:800;color:#174f54;font-size:27rpx;}
 .context-hint{font-size:22rpx;line-height:1.55;color:#4a7476;}
 .context-disclaimer{display:block;font-size:20rpx;line-height:1.5;color:#648581;margin-top:12rpx;}
+
+/* Name-only multi-select school picker: searchable, free text, 5 maximum. */
+.target-count{flex:none;color:#5d7180;font-size:22rpx;}
+.target-school-selected{display:flex;flex-wrap:wrap;gap:10rpx;margin:8rpx 0 18rpx;}
+.target-school-chip{box-sizing:border-box;display:flex;align-items:center;gap:10rpx;max-width:100%;padding:9rpx 13rpx;border:1rpx solid #d8e5ef;border-radius:8rpx;background:#edf5f9;color:#214b67;font-size:23rpx;line-height:1.5;}
+.target-school-chip-name{min-width:0;overflow-wrap:break-word;}
+.target-school-remove{flex:none;padding:2rpx 7rpx;color:#9d5149;font-size:29rpx;font-weight:700;}
+.target-school-input-row{display:flex;align-items:center;gap:9rpx;}
+.target-school-input-row .input{flex:1;min-width:0;}
+.target-school-add,.target-school-trigger{box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex:none;min-height:70rpx;padding:0 13rpx;border-radius:7rpx;background:#e8f0f4;color:#1d5474;font-size:22rpx;font-weight:700;}
+.target-school-add{background:#20577b;color:#fff;}
+.target-school-suggestions{box-sizing:border-box;width:100%;height:320rpx;margin-top:12rpx;border:1rpx solid #dce5ea;border-radius:9rpx;background:#fffdf9;}
+.target-school-option{display:flex;justify-content:space-between;gap:12rpx;align-items:center;min-height:65rpx;padding:12rpx 18rpx;border-bottom:1rpx solid #edf0f2;color:#2b4b61;font-size:24rpx;line-height:1.4;}
+.target-school-option.selected{background:#edf5fa;color:#134b75;font-weight:700;}
+.target-school-check{flex:none;color:#25618a;font-size:25rpx;}
+.target-school-empty{display:block;padding:15rpx;color:#687a88;font-size:22rpx;line-height:1.5;}
+.target-research-input{margin-top:18rpx;}
+.target-note-title{margin-top:24rpx;}
+.target-note-input{margin-top:14rpx;min-height:115rpx;}
