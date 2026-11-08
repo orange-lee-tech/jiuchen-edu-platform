@@ -1,6 +1,6 @@
 # 2026-11-08 远端分支精确整理清单
 
-> 本清单是待执行任务，不是已剪除回执。必须保留本地未提交 `apps/miniprogram/project.config.json` 与四个 stash。**不使用 reset、clean、强推 main、删除本地工作分支或重写历史。**
+> **2026-11-08 已完成回执**：管理员执行本页脚本成功。远端仅 `main`（执行时 `32e03b3bd16efeb3f55a22d669cd1552049ac945`）；归档标签解引用为 `81d9de7827d5d96c6508acf1103ed8e7f720adaa`；两条功能分支均删除。本地未提交 `apps/miniprogram/project.config.json` 与四个 stash。**不使用 reset、clean、强推 main、删除本地工作分支或重写历史。**
 
 ## 核验基线
 
@@ -9,7 +9,7 @@
 - `codex/ux-batch-a-checkpoint-20261106`：`81d9de7827d5d96c6508acf1103ed8e7f720adaa`，对 main 存在 **1 个独有提交**。这是一份早期首页/规划 UI 快照，先归档标签再删；不得反向合并覆盖新版。
 - 开放 PR：0；历史已合并或已关闭 PR 不必重开。
 
-## Windows PowerShell（可在既有仓库工作树执行）
+## 已执行的 Windows PowerShell（历史可审计记录，请勿重复执行）
 
 ```powershell
 Set-Location 'C:\Users\yulia\Desktop\jiuchen-edu-platform-main'
@@ -59,4 +59,4 @@ git status --short
 git stash list
 ```
 
-**最终 PASS**：远端仅 `main`、归档标签解引用为 `81d9de...`、本地配置与四个 stash 原样保留。若验证失败，立即停止；不得删除 checkpoint 后再补标签。
+**实际 PASS（管理员原始回执）**：远端仅 `main`，归档标签 ref 对应 tag object `e950d7255605ce1c9433cc9131c9676b0dc7c303`，解引用至 `81d9de7827d5d96c6508acf1103ed8e7f720adaa`。本地 `apps/miniprogram/project.config.json` 仍为 modified，四个 stash 原样保留。以上脚本为审计记录，不需要再次执行。
