@@ -33,7 +33,7 @@ try {
     "CREATE TABLE teachers (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), name VARCHAR(80) NOT NULL, title VARCHAR(120), bio VARCHAR(500), status ENUM('active','inactive') NOT NULL DEFAULT 'active')",
     'CREATE TABLE student_teacher_assignments (id VARCHAR(36) PRIMARY KEY, teacher_id VARCHAR(36), student_id VARCHAR(36), relationship VARCHAR(16), stage_code VARCHAR(32), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
     'CREATE TABLE coaching_records (id VARCHAR(36) PRIMARY KEY, student_id VARCHAR(36), teacher_id VARCHAR(36), stage_code VARCHAR(32), title VARCHAR(160), content TEXT, occurred_at TIMESTAMP)',
-    "CREATE TABLE student_plans (id VARCHAR(36) PRIMARY KEY, student_id VARCHAR(36), stage_code VARCHAR(32), type ENUM('gpa','english','competition','research','internship'), title VARCHAR(160), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (student_id) REFERENCES students(id))",
+    "CREATE TABLE student_plans (id VARCHAR(36) PRIMARY KEY, student_id VARCHAR(36), stage_code VARCHAR(32), type ENUM('gpa','english','competition','research','internship','custom'), title VARCHAR(160), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (student_id) REFERENCES students(id))",
     "CREATE TABLE plan_items (id VARCHAR(36) PRIMARY KEY, plan_id VARCHAR(36), sort_order INT DEFAULT 0, name VARCHAR(160), target VARCHAR(255), status ENUM('pending','in_progress','done') NOT NULL DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (plan_id) REFERENCES student_plans(id))",
     "CREATE TABLE plan_revisions (id VARCHAR(36) PRIMARY KEY, student_id VARCHAR(36), stage_code VARCHAR(32), type VARCHAR(32), title VARCHAR(160), status VARCHAR(16), review_note VARCHAR(500), reviewed_by_user_id VARCHAR(36), reviewed_at TIMESTAMP NULL)",
   ]) await db.query(ddl)
@@ -113,7 +113,7 @@ try {
     assert.equal((await put('u1', `/me/classroom/plans/${stage}/internship`, [{ name: '实习', dueDate: window.from }])).statusCode, 200)
     const senior = (await app.inject({ url: `/me/classroom?stage=${stage}`, headers: headers('u1') })).json()
     assert.equal(senior.showGuidance, false)
-    assert.deepEqual(senior.plans.map((p: { type: string }) => p.type), ['internship'])
+    assert.deepEqual(senior.plans.map((p: { type: string }) => p.type), ['internship', 'custom'])
     assert.deepEqual(senior.mentors, []); assert.deepEqual(senior.records, [])
   }
   // Fixed cross-year boundary verifies SQL DATE comparison independently of host timezone.
