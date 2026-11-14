@@ -1,28 +1,45 @@
-# 九辰教育平台
+# 九辰教育平台 | Jiuchen Education Platform
 
-## 共同开发者：下载最新版并导入微信开发者工具
+## 共同开发者：下载最新版并导入微信开发者工具 | Co-developers: Download the Latest Version and Import It into WeChat DevTools
 
 **[下载 `main` 最新完整源码 ZIP](https://github.com/orange-lee-tech/jiuchen-edu-platform/archive/refs/heads/main.zip)** · [导入说明与协作须知](docs/handoff/co-developer-download.md)
 
+**[Download the latest complete source ZIP from `main`](https://github.com/orange-lee-tech/jiuchen-edu-platform/archive/refs/heads/main.zip)** · [Import instructions and collaboration notes](docs/handoff/co-developer-download.md)
+
 登录有权限的 GitHub 账号，下载 ZIP、解压，在**微信开发者工具 → 导入项目**选择解压目录里的 `apps/miniprogram`（该目录含 `project.config.json`，已经配置 `miniprogramRoot`）。不要选择仓库根目录或下一层 `miniprogram` 源码目录。
+
+Sign in with a GitHub account that has access, download and extract the ZIP, then choose `apps/miniprogram` from the extracted directory via **WeChat DevTools → Import Project**. This directory contains `project.config.json` with `miniprogramRoot` already configured. Do not select the repository root or the nested `miniprogram` source directory.
 
 此链接始终对应 GitHub 最新 `main`；下载的是前端 + API + 工程文档的**源代码**，不是生产数据库、服务器密钥或运行中的 ECS。可打开、修改、预览小程序；微信 AppID 需要相应开发者权限。如涉及 npm 依赖，按导入说明安装后在开发者工具构建 npm。**GitHub 下载不会自动合并协作者的本地修改，也不会自动上传体验版或发布正式版。**
 
+This link always points to the latest GitHub `main`. The download contains the **source code** for the frontend, API, and engineering documentation—not the production database, server secrets, or running ECS environment. You can open, edit, and preview the mini program; access to the WeChat AppID requires the appropriate developer permissions. If npm dependencies are involved, install them as described in the import guide and build npm in DevTools. **Downloading from GitHub does not automatically merge collaborators' local changes, upload a trial build, or publish a production release.**
+
 **当前交接：** [2026-11-01 生产状态与 GitHub 收口](docs/handoff/STATUS-2026-11-01-release-and-github.md)。历史章节注明历史日期，不作为生产现况。
+
+**Current handoff:** [2026-11-01 production status and GitHub closeout](docs/handoff/STATUS-2026-11-01-release-and-github.md). Historical sections retain their original dates and must not be treated as the current production state.
 
 微信原生小程序、Fastify API 与 Vue 管理后台的单仓库。线上业务数据以 MySQL 为准；官网与小程序 API 在同一台 ECS 上独立运行。
 
-## 当前工程状态（2026-10-27）
+A monorepo containing the native WeChat Mini Program, Fastify API, and Vue admin console. MySQL is the source of truth for live business data. The official website and Mini Program API run independently on the same ECS instance.
+
+## 当前工程状态（2026-10-27） | Current Engineering Status (2026-10-27)
 
 - `main` 已合并 PR #9（虚拟支付可靠性、订单核对与未付款订单恢复提示）。PR 合并提交：`8778fde63cfaa74170bfb50090fbac7c623278d9`；PR 源提交：`b6318c748e26c868374a7fdd92c345da8317ed44`。
+  PR #9 has been merged into `main` (virtual-payment reliability, order reconciliation, and recovery prompts for unpaid orders). Merge commit: `8778fde63cfaa74170bfb50090fbac7c623278d9`; PR head commit: `b6318c748e26c868374a7fdd92c345da8317ed44`.
 - PR 头部 CI run [#40489949057](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/40489949057) 通过；合并提交的 main-push CI run [#40491735769](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/40491735769) 通过。检查包含小程序、管理员、API 及一次性 MySQL 8 迁移验证。
+  The PR-head CI run [#40489949057](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/40489949057) passed, as did the main-push CI run for the merge commit [#40491735769](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/40491735769). Checks covered the Mini Program, admin console, API, and a one-off MySQL 8 migration validation.
 - 用户报告两笔安卓微信虚拟支付测试交易：JC000 ¥0.10 / 2 次、JC001 ¥1.90 / 1 次。此处记录为用户提供的验收事实，不代表本次仓库维护重新核对了微信商户账单或生产账本。
+  The user reported two Android WeChat virtual-payment test transactions: JC000, ¥0.10 for 2 credits; and JC001, ¥1.90 for 1 credit. These are user-provided acceptance facts; this repository maintenance did not independently reconcile WeChat merchant statements or the production ledger.
 - 合并与 CI 不代表 ECS 部署、生产数据库迁移、微信正式发布、支付开关变更或密钥变更。当前生产 API SHA 需要新的 ECS 只读回执确认；不要把历史文档中的旧 SHA 当作当前生产版本。
+  A merge and passing CI do not imply ECS deployment, production database migration, official WeChat release, payment-toggle changes, or secret rotation. The current production API SHA must be confirmed by a new read-only ECS receipt. Do not treat an old SHA in historical documentation as the current production version.
 - 当前唯一状态入口为 [docs/handoff/CURRENT.md](docs/handoff/CURRENT.md)，交接文档导航为 [docs/handoff/README.md](docs/handoff/README.md)，工作流登记为 [docs/automation/registry.yml](docs/automation/registry.yml)。
+  The single current-status entry point is [docs/handoff/CURRENT.md](docs/handoff/CURRENT.md); the handoff documentation index is [docs/handoff/README.md](docs/handoff/README.md); and the workflow registry is [docs/automation/registry.yml](docs/automation/registry.yml).
 - 五条固定 SHA 的历史 P1 工作流已从现役工作流目录移除；GitHub 已有运行记录保留。当前保留通用 CI、News V2 MySQL Gate、Profile MySQL Gate。
+  Five historical P1 workflows pinned to fixed SHAs have been removed from the active workflow directory; their existing GitHub run records remain. The active workflows retained are general CI, News V2 MySQL Gate, and Profile MySQL Gate.
 - UI/UX 方向已批准为蓝金温润版。开始改版前，先完成远端分支与 Windows 本地工作区规整，并确认本地工程同步到最新 `main`。
+  The blue-and-gold, warm visual direction has been approved for the UI/UX redesign. Before starting, organize remote branches and the local Windows workspace, and confirm that the local project is synchronized with the latest `main`.
 
-## 代码入口
+## 代码入口 | Code Entry Points
 
 | 模块 | 路径 |
 | --- | --- |
@@ -32,7 +49,17 @@
 | 运维与演练 | `ops/ecs`、`tools/release`、`tools/maintenance` |
 | 验收与交接 | `tools/testing`、`docs/handoff` |
 
+| Module | Path |
+| --- | --- |
+| WeChat Mini Program | `apps/miniprogram` |
+| Admin console | `apps/admin` |
+| API | `services/api` |
+| Operations and drills | `ops/ecs`, `tools/release`, `tools/maintenance` |
+| Acceptance and handoff | `tools/testing`, `docs/handoff` |
+
 三个 npm 工程独立安装依赖。API 使用 Node 22；小程序的 `apps/miniprogram` 没有固定 lockfile，安装时用 `npm install --package-lock=false`。本地常用检查：
+
+The three npm projects install dependencies independently. The API uses Node 22. The Mini Program under `apps/miniprogram` does not maintain a fixed lockfile, so install it with `npm install --package-lock=false`. Common local checks:
 
 ```sh
 cd services/api && npm ci --no-audit --no-fund && npm run typecheck && npm test && npm run build
@@ -40,8 +67,16 @@ cd ../../apps/miniprogram && npm install --package-lock=false --no-audit --no-fu
 cd ../admin && npm install --no-audit --no-fund && npm run typecheck && npm test && npm run build
 ```
 
-此外从仓库根目录运行 `node --test tools/testing/miniprogram-navigation.test.cjs tools/testing/school-catalog.test.cjs tools/testing/report-export.test.cjs tools/testing/real-data.test.cjs`。
+此外从仓库根目录运行：
 
-## 发布边界
+Also run the following from the repository root:
+
+```sh
+node --test tools/testing/miniprogram-navigation.test.cjs tools/testing/school-catalog.test.cjs tools/testing/report-export.test.cjs tools/testing/real-data.test.cjs
+```
+
+## 发布边界 | Release Boundaries
 
 合并到 `main` 仅表示源码统一，不会部署 ECS、启用支付、改数据库或发布微信正式版。生产变更按 [当前交接](docs/handoff/CURRENT.md) 的固定 SHA、恢复点、审批范围和真机回执执行。凭据和真实学生数据不得进入 Git；工程约束见 [CONSTITUTION.md](CONSTITUTION.md) 与 [AGENTS.md](AGENTS.md)。
+
+Merging into `main` only unifies the source code. It does not deploy to ECS, enable payments, modify the database, or publish the official WeChat release. Production changes must follow the fixed SHA, recovery point, approval scope, and real-device receipts specified in the [current handoff](docs/handoff/CURRENT.md). Credentials and real student data must never enter Git. See [CONSTITUTION.md](CONSTITUTION.md) and [AGENTS.md](AGENTS.md) for engineering constraints.
