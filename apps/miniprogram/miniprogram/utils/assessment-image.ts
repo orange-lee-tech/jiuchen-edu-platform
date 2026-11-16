@@ -1,4 +1,4 @@
-import { buildAssessmentReportPlainText, formatAssessmentDate, traceableAssessmentCaseId, type AssessmentReportExportContext } from './assessment-report-export'
+import { AI_GENERATED_DESCRIPTION, AI_GENERATED_TITLE, buildAssessmentReportPlainText, formatAssessmentDate, traceableAssessmentCaseId, type AssessmentReportExportContext } from './assessment-report-export'
 import { beijingDate } from './consultation-payload'
 
 export const REPORT_WIDTH = 750
@@ -42,7 +42,7 @@ export function shareReport(context: AssessmentReportExportContext, kind: 'summa
   const limit = kind === 'summary' ? 2 : 4
   const lines = [
     '九辰教育 AI评估报告',
-    '摘要分享图｜适合转发，仅含重点结论',
+    '摘要分享图｜AI生成 · 仅含重点结论',
     '核心结论',
     short(output.profileSummary, kind === 'summary' ? 180 : 280),
   ]
@@ -65,6 +65,7 @@ export function shareReport(context: AssessmentReportExportContext, kind: 'summa
   } else {
     lines.push('本次摘要没有可展示的案例引用')
   }
+  lines.push(AI_GENERATED_TITLE, AI_GENERATED_DESCRIPTION)
   lines.push('本图为分享摘要，完整报告请在九辰教育小程序查看。')
   let summary=lines.join('\n')
   for(const privateValue of [context.userId,context.displayName.trim()]){
@@ -89,7 +90,7 @@ export function layoutAssessmentImage(context: AssessmentReportExportContext, us
   const lines: ReportLine[]=[]
   let y=kind==='summary'?54:42
   paragraphs.forEach(paragraph=>paragraph.split('\n').forEach(p=>{
-    const heading=/^九辰|^免责声明$|^核心结论$|^优势$|^风险$|^目标建议$|^关键行动$|^参考依据$/.test(p)
+    const heading=/^九辰|^AI生成内容$|^免责声明$|^核心结论$|^优势$|^风险$|^目标建议$|^关键行动$|^参考依据$/.test(p)
     if(kind==='summary'&&heading&&p!=='九辰教育 AI评估报告')y+=18
     const size=heading?(kind==='summary'&&p==='九辰教育 AI评估报告'?38:30):25
     wrapReportText(p,t=>measure(t,size),kind==='summary'?610:650).forEach(text=>{lines.push({text,y,size,heading});y+=kind==='summary'?(heading?52:42):(heading?48:38)})
@@ -121,7 +122,7 @@ function paintWatermark(ctx: WechatMiniprogram.CanvasContext, mark:string, offse
 }
 
 function longSectionTitle(text:string){
-  return /^(?:用户提供的信息|学业背景与评估概要|[一二三四五六七八九十]+、|免责声明$)/.test(text)
+  return /^(?:AI生成内容$|用户提供的信息|学业背景与评估概要|[一二三四五六七八九十]+、|免责声明$)/.test(text)
 }
 
 /** Each strip uses absolute layout coordinates so colors and cards align at tile boundaries. */

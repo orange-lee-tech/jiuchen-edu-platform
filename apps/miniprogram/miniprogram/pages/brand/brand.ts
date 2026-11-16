@@ -45,6 +45,15 @@ function serviceItems(value: unknown): Array<{
 }
 
 Page({
+  onShow() {
+    try { wx.showShareMenu({ menus: ['shareAppMessage', 'shareTimeline'], fail: () => {} }) } catch { /* Sharing support varies by platform. */ }
+  },
+  onShareAppMessage() {
+    return { title: '关于九辰教育｜保研规划与成长陪伴', path: '/pages/brand/brand', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
+  },
+  onShareTimeline() {
+    return { title: '关于九辰教育｜保研规划与成长陪伴', query: '', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
+  },
   data: {
     loading: true,
     error: '',

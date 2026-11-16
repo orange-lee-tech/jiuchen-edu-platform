@@ -263,3 +263,28 @@ button::after { border:0; }
 .stage-picker-top{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:14rpx;min-height:70rpx;}
 .stage-picker-current{flex:1;min-width:0;margin:0;font-size:28rpx;font-weight:800;line-height:1.4;color:#174b6c;}
 .stage-picker-caption{display:block;flex:none;box-sizing:border-box;max-width:48%;margin:0;padding:9rpx 12rpx;border-radius:8rpx;background:#fff3d8;color:#765624;text-align:right;font-size:21rpx;line-height:1.35;overflow-wrap:break-word;}
+/* Three persistent planning cards: stage, plans and timetable. */
+.planning-card,.week-card{box-sizing:border-box;padding:20rpx;border-radius:16rpx;}
+.planning-card{margin-bottom:18rpx;}
+.planning-card .section-title-row{margin-top:0;}
+.planning-card .stage-desc{display:block;margin:0 0 15rpx;color:#647987;font-size:21rpx;line-height:1.5;}
+.week-card-head{display:flex;align-items:center;justify-content:space-between;gap:16rpx;min-height:58rpx;}
+.week-card-heading{min-width:0;display:flex;flex-direction:column;gap:5rpx;}
+.week-card-heading .stage-desc{color:#647987;font-size:20rpx;line-height:1.4;}
+.week-toggle{flex:none;color:#236383;font-size:21rpx;font-weight:750;}
+.teaching-week-rail{width:100%;margin-top:13rpx;white-space:nowrap;}
+.teaching-week-row{display:flex;width:max-content;gap:8rpx;padding:2rpx 0 8rpx;}
+.teaching-week-option{flex:none;padding:10rpx 15rpx;border:1rpx solid #e2dacc;border-radius:9rpx;background:#fffdf9;color:#38586b;font-size:20rpx;line-height:1.4;}
+.teaching-week-option.current:not(.active){border-color:#d6ad69;color:#815f2f;}
+.teaching-week-option.active{border-color:#1d5779;background:#1d5779;color:#fff;font-weight:750;}
+.week-full-link{display:inline-block;margin:5rpx 0 0;color:#236383;font-size:21rpx;font-weight:700;}
+.week-content{margin-top:14rpx;border-top:1rpx solid #e8e1d5;padding-top:14rpx;}
+.schedule-day-row{display:flex;justify-content:space-between;gap:4rpx;margin-bottom:14rpx;}
+.schedule-day-option{flex:1;min-width:0;padding:11rpx 0;border-radius:8rpx;color:#607786;font-size:19rpx;text-align:center;white-space:nowrap;}
+.schedule-day-option.today:not(.active){color:#9b7138;font-weight:750;}
+.schedule-day-option.active{background:#1d5779;color:#fff;font-weight:750;}
+.week-list{display:flex;flex-direction:column;gap:10rpx;}
+.week-course{display:flex;flex-direction:column;gap:5rpx;padding:15rpx;border:1rpx solid #e8e1d5;border-radius:10rpx;background:#fffdf9;box-shadow:none;}
+.course-slot{color:#9b7138;font-size:20rpx;font-weight:750;}
+.week-course .plan-title{display:block;color:#1d4e6a;font-size:24rpx;font-weight:750;}
+.course-detail{color:#667c89;font-size:20rpx;line-height:1.4;}

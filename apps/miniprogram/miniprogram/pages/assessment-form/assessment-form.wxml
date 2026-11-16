@@ -139,9 +139,9 @@
         <view class="context-copy"><text class="context-title">导入我的规划</text><text class="context-hint">默认开启。提炼本人已保存的阶段计划、任务进展和课表；没有内容则自动跳过。</text></view>
         <switch checked="{{includePlanning}}" color="#173e67" bindchange="onIncludePlanning" />
       </view>
-      <view class="context-choice">
+      <view class="context-choice history-choice">
         <view class="context-copy"><text class="context-title">考虑历史评估记录</text><text class="context-hint">默认开启。仅参考本人最近最多 3 次成功评估的精简摘要，去除重复；不会重新调用历史评估或收费。</text></view>
-        <switch checked="{{includeRecentAssessments}}" color="#173e67" bindchange="onIncludeHistory" />
+        <view class="context-history-actions"><button class="context-history-button" bindtap="onViewHistory">查看历史</button><switch checked="{{includeRecentAssessments}}" color="#173e67" bindchange="onIncludeHistory" /></view>
       </view>
       <text class="context-disclaimer">两个选项保存到当前草稿，仅影响新评估。原始个人记录由服务端按登录账号查取，不接收他人数据。</text>
     </view>

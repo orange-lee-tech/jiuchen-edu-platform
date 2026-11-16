@@ -11,6 +11,7 @@
     <view class="report-hero">
       <text class="report-title">{{assessment.input.profile.university}} · {{assessment.input.profile.major}}</text>
       <text class="report-meta">{{assessmentDate}} · {{assessment.model.name || '评估模型'}}</text>
+      <text class="ai-generated-badge">AI生成</text>
       <view class="report-actions">
         <button class="action-button primary-action" bindtap="onCopyReport">复制报告</button>
         <button class="action-button" loading="{{exporting}}" disabled="{{exporting}}" bindtap="onDownloadReport">下载报告</button>
@@ -155,6 +156,11 @@
       <text class="section-title">不确定性及说明</text>
       <text wx:for="{{output.uncertainties}}" wx:key="*this" class="bullet" user-select="true">· {{item}}</text>
       <text wx:if="{{output.disclaimer}}" class="body-text" user-select="true">{{output.disclaimer}}</text>
+    </view>
+
+    <view class="ai-generated-notice">
+      <text class="ai-generated-title">AI生成内容</text>
+      <text class="ai-generated-description">本报告由人工智能生成，仅供保研规划参考。请结合个人实际情况核验，重要决策请以学校官方信息及专业判断为准。</text>
     </view>
 
     <button class="secondary history-link" bindtap="onViewHistory">查看全部历史评估</button>

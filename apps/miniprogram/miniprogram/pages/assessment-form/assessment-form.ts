@@ -794,6 +794,9 @@ Page({
   onIncludeHistory(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     this.setData({ includeRecentAssessments: Boolean(event.detail.value) })
   },
+  onViewHistory() {
+    wx.navigateTo({ url: '/pages/assessment-history/assessment-history' })
+  },
   buildInput() {
     const profile = this.data.profile
 
