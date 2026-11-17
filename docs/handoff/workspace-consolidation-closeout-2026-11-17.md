@@ -153,3 +153,14 @@ SHA-256：`80da02c8ee00068456eff39a74f08a9fb82f9b52ce66b1b761ee580fc1873372`
 4. OLD 工作区继续保留至最终回归完成。NEW 仍是唯一施工基准。
 
 **本文件只记录审计与处置，不代表已完成本地归档、清理、PR 合并、ECS 部署或微信发布。**
+
+## 11. GitHub 文档固化提交核验
+
+以 `4bea21d1ec91d058783be3cfc073922c7b9bbd97` 为基线，本轮新增/更新 4 个文档提交，当前施工分支 HEAD 为 `c74e9e394986fc7380b7a42c1bee5a08ca8de9e3`。GitHub compare 返回 `ahead_by=4`、`behind_by=0`，文件变更仅限：
+
+- `docs/handoff/workspace-consolidation-closeout-2026-11-17.md`（新增）；
+- `docs/handoff/README.md`（导航更新）；
+- `docs/handoff/CURRENT.md`（当前入口更新）；
+- `docs/handoff/workspace-consolidation-audit-2026-11-17.md`（补充六文件 Diff 结论）。
+
+**本轮没有修改应用代码、API 代码、数据库迁移、CI 工作流或生产配置。** `main` 仍为 `d179ea8db76b2796f0bb9c929ec2c467fa45c87a`，本轮没有创建 PR、合并 main、部署 ECS 或上传微信版本。
