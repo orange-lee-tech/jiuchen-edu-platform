@@ -2,7 +2,8 @@
 
 ## 当前状态
 
-- **当前工作区收束（2026-11-17）：** [本地工作区整合审计](workspace-consolidation-audit-2026-11-17.md)（优先阅读；NEW 是唯一默认基准，OLD 仅用于差异举证；未授权的差异不得融合）。
+- **当前工作区收束（2026-11-17）：** [收束与历史资产归档记录](workspace-consolidation-closeout-2026-11-17.md)（六文件 Diff 已裁决；NEW 为唯一施工基准；本地归档、七份 API 归档 SHA 核验及清理仍待现场执行）。
+- **原始工作区审计：** [本地工作区整合审计](workspace-consolidation-audit-2026-11-17.md)（48 路径/96 条时间戳记录、分支、Stash、Worktree 与未跟踪资产原始证据）。
 - **当前小程序代码候选（2026-11-16）：** `1b2a33f0aeeb804b300c9d4e4c7149e8175b2fb7`，分支 `codex/ux-consolidation-20261116`；尚未合并 main、未部署 ECS、未上传或发布微信小程序。
 - **历史状态（2026-11-08）：** [Batch A/B/C 合并、CI 与 ECS 发布门禁](STATUS-2026-11-08-batch-abc-release.md)（历史工程快照，不覆盖本轮收束状态）。
 - **本轮分支整理历史：** [可删除分支与 checkpoint 归档清单](github-branch-prune-2026-11-08.md)（仅作历史参考；当前本地 worktree、stash 和未跟踪资产以本轮审计为准）。
