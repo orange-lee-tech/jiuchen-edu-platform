@@ -16,6 +16,7 @@ globalThis.wx = { showToast() {}, showModal(options) { purchaseModal = options }
 Module._load = function (id, parent, isMain) {
   if (id.endsWith('/auth')) return { getSavedAuthResult: () => ({ user: { id: 'student-a', role: 'student' } }) }
   if (id.endsWith('/assessment-school-names')) return { filterAssessmentSchools: query => ['北京大学', '清华大学'].filter(n => n.includes(query)) }
+  if (id.endsWith('/native-share')) return { enableNativeShare() {}, disableNativeShare() {}, friendShare() {}, timelineShare() {} }
   if (id.endsWith('/navigation')) return { authorizePage() {}, safeBack() {} }
   if (id.endsWith('/cloud-upload')) return { uploadAuthenticatedCloudFile() {} }
   if (id.endsWith('/request')) return {

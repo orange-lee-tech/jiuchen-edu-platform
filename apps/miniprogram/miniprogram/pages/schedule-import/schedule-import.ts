@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import {
   createScheduleImport,
   friendlyRequestError,
@@ -83,6 +84,11 @@ function emptyDraft(): ParsedScheduleCourse {
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/schedule-import/schedule-import', this) },
+  onShareTimeline() { return timelineShare('pages/schedule-import/schedule-import', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
   data: {
     parsing: false,
     saving: false,
@@ -130,6 +136,7 @@ Page({
     authorizePage('pages/schedule-import/schedule-import', options, () => this.initializeSchedule(options))
   },
   onShow() {
+    enableNativeShare('pages/schedule-import/schedule-import', this);
     const owner = getSavedAuthResult()?.user.id || ''
     let identityChanged = false
     if (this.editorOwner && this.editorOwner !== owner) {

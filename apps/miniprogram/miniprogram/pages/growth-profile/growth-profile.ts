@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import {
   friendlyRequestError,
   confirmAssessmentGrowthImport,
@@ -98,6 +99,11 @@ function currentOwnerKey() {
 const bootstrapOwnerInFlight = new WeakMap<object, string>()
 
 Page({
+  onShareAppMessage() { return friendShare('pages/growth-profile/growth-profile', this) },
+  onShareTimeline() { return timelineShare('pages/growth-profile/growth-profile', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
   data: {
     loading: true,
     ownerKey: '',
@@ -147,6 +153,7 @@ Page({
   },
 
   onShow() {
+    enableNativeShare('pages/growth-profile/growth-profile', this);
     if (this.data.ownerKey && this.data.ownerKey !== currentOwnerKey()) {
       this.setData({
         ownerKey: '', readOnly: isReadOnly(), loading: true, refreshing: false,

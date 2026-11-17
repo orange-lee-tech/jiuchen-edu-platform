@@ -416,7 +416,7 @@ test('public shares carry fixed routes and assessment history keeps its existing
   const brand = fs.readFileSync(path.join(root, 'pages/brand/brand.ts'), 'utf8')
   const assessment = fs.readFileSync(path.join(root, 'pages/assessment-form/assessment-form.wxml'), 'utf8')
   for (const [source, route] of [[today, '/pages/index/index'], [brand, '/pages/brand/brand']]) {
-    assert.match(source, /showShareMenu\(\{ menus: \['shareAppMessage', 'shareTimeline'\]/)
+    assert.match(source, /enableNativeShare\('/)
     assert.match(source, /onShareAppMessage\(\)/)
     assert.match(source, /onShareTimeline\(\)/)
     assert.ok(source.includes(`path: '${route}'`))
@@ -425,6 +425,7 @@ test('public shares carry fixed routes and assessment history keeps its existing
     assert.ok(fs.existsSync(path.join(root, 'assets/jiuchen-visual-v1/banners/today-campus-hero.png')))
   }
   assert.match(assessment, /bindtap="onViewHistory"/)
+  assert.match(assessment, /class="context-history-link" bindtap="onViewHistory"/)
   assert.match(assessment, /checked="\{\{includeRecentAssessments\}\}"[^>]*bindchange="onIncludeHistory"/)
 })
 

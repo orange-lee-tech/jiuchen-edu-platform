@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { refreshAuthResult } from '../../utils/auth'
 import { friendlyRequestError, request } from '../../utils/request'
 import { isReadOnly } from '../../utils/read-only-context'
@@ -5,12 +6,16 @@ type Student = {id:string;userId:string;name:string;university:string|null}
 type Receipt = {ledgerEntryId:string;before:number;after:number;amount:number;reason:string;actorId:string;idempotent:boolean}
 function requestId(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const n=Math.floor(Math.random()*16);return(c==='x'?n:(n&3)|8).toString(16)})}
 Page({
+  onShareAppMessage() { return friendShare('pages/admin-credits/admin-credits', this) },
+  onShareTimeline() { return timelineShare('pages/admin-credits/admin-credits', this) },
+
   data:{loading:false,busy:false,error:'',allowed:false,students:[] as Student[],studentNames:[] as string[],selected:-1,
     amount:'',reason:'',pin:'',key:'',attempted:false,balance:null as number|null,receipt:null as Receipt|null},
   epoch:0,owner:'',
-  onShow(){void this.load()},
-  onHide(){this.epoch++;this.owner='';this.setData({pin:'',busy:false,allowed:false,students:[],studentNames:[],balance:null,receipt:null,selected:-1,amount:'',reason:'',key:'',attempted:false})},
-  onUnload(){this.epoch++},
+  onShow() {
+    enableNativeShare('pages/admin-credits/admin-credits', this);void this.load()},
+  onHide() { disableNativeShare(this);this.epoch++;this.owner='';this.setData({pin:'',busy:false,allowed:false,students:[],studentNames:[],balance:null,receipt:null,selected:-1,amount:'',reason:'',key:'',attempted:false})},
+  onUnload() { disableNativeShare(this);this.epoch++},
   async load(){const epoch=++this.epoch;this.setData({loading:true,error:''})
     try{const auth=await refreshAuthResult();if(epoch!==this.epoch)return
       if(auth?.user.role!=='admin'||isReadOnly())throw new Error('请以本人管理员身份进入')

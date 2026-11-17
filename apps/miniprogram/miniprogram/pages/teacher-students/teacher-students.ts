@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { authorizePage } from '../../utils/navigation'
 import {isReadOnly} from '../../utils/read-only-context'
 import {
@@ -35,6 +36,10 @@ const STAGES = [
 ]
 
 Page({
+  onShareAppMessage() { return friendShare('pages/teacher-students/teacher-students', this) },
+  onShareTimeline() { return timelineShare('pages/teacher-students/teacher-students', this) },
+
+  onUnload() { disableNativeShare(this) },
   data: {
     loading: true,
     loadError: '',
@@ -48,10 +53,11 @@ Page({
 
   workspaceEpoch: 0,
   onShow() {
+    enableNativeShare('pages/teacher-students/teacher-students', this);
     ++this.workspaceEpoch
     authorizePage('pages/teacher-students/teacher-students', {}, () => { void this.loadData() })
   },
-  onHide() {
+  onHide() { disableNativeShare(this);
     ++this.workspaceEpoch
     this.setData({ students: [], todos: [], aiCosts: null, aiCostsNotice: '', todoError: '', studentSummary: null, summaryStudentId: '', todoTitle: '', todoDescription: '', todoDate: '', todoEditingId: '' })
   },

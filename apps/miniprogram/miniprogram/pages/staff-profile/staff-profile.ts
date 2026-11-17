@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult, refreshAuthResult } from '../../utils/auth'
 import { friendlyRequestError, request } from '../../utils/request'
 import { isReadOnly } from '../../utils/read-only-context'
@@ -5,11 +6,15 @@ import { isReadOnly } from '../../utils/read-only-context'
 type StaffProfile = {realName:string|null;phone:string|null;department:string|null;supervisor:string|null;completedFields:number;complete:boolean}
 type StaffTeacher = StaffProfile & {teacherId:string;businessName:string}
 Page({
+  onShareAppMessage() { return friendShare('pages/staff-profile/staff-profile', this) },
+  onShareTimeline() { return timelineShare('pages/staff-profile/staff-profile', this) },
+
   data:{loading:false,saving:false,error:'',role:'',realName:'',phone:'',department:'',supervisor:'',teachers:[] as StaffTeacher[]},
   epoch:0,
-  onShow(){void this.load()},
-  onHide(){this.epoch++;this.setData({saving:false,realName:'',phone:'',department:'',supervisor:'',teachers:[],role:''})},
-  onUnload(){this.epoch++},
+  onShow() {
+    enableNativeShare('pages/staff-profile/staff-profile', this);void this.load()},
+  onHide() { disableNativeShare(this);this.epoch++;this.setData({saving:false,realName:'',phone:'',department:'',supervisor:'',teachers:[],role:''})},
+  onUnload() { disableNativeShare(this);this.epoch++},
   async load(){
     const epoch=++this.epoch
     this.setData({loading:true,saving:false,error:''})

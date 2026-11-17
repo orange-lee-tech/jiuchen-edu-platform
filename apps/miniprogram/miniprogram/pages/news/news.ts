@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult } from '../../utils/auth'
 import { INITIAL_SHELL, observeSlot, openPage, shellView } from '../../utils/navigation'
 import { getNewsListing, getMyNewsFavorites, type NewsFavorite, type NewsPost } from '../../utils/request'
@@ -92,6 +93,9 @@ function uniqueTags(cards: NewsCard[]) {
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/news/news', this) },
+  onShareTimeline() { return timelineShare('pages/news/news', this) },
+
   data: {
     ...INITIAL_SHELL,
     categories: [] as string[],
@@ -117,6 +121,7 @@ Page({
   viewGeneration: 0,
   viewerKey: '',
   onShow() {
+    enableNativeShare('pages/news/news', this);
     this.stopShell?.()
     this.stopShell = observeSlot('opportunity', (state) => {
       this.viewGeneration += 1
@@ -135,9 +140,9 @@ Page({
       if (state.phase === 'ready') void this.loadNews()
     })
   },
-  onHide() { this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading',
+  onHide() { disableNativeShare(this); this.stopShell?.(); this.viewGeneration += 1; this.setData({ shellPhase: 'loading',
     favorites: [], favoritesOpen: false, retiring: [], articles: [], allArticles: [], searchQuery: '', filtersOpen: false, selectedTags: [] }) },
-  onUnload() { this.stopShell?.() },
+  onUnload() { disableNativeShare(this); this.stopShell?.() },
   onSchools() { openPage('/packages/schools/directory/directory') },
   onTeacherNews() { this.setData({ showReferenceNews: true }); void this.loadNews() },
   onTeacherNewsTags() {

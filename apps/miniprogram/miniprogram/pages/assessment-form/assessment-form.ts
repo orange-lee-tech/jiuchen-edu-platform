@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult } from '../../utils/auth'
 import { authorizePage, safeBack } from '../../utils/navigation'
 import {
@@ -229,6 +230,11 @@ function mergeUnique<T>(
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/assessment-form/assessment-form', this) },
+  onShareTimeline() { return timelineShare('pages/assessment-form/assessment-form', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
   data: {
     loading: true,
     saving: false,
@@ -267,6 +273,7 @@ Page({
   },
   academicProfileSnapshot: null as Record<'university' | 'major' | 'currentGrade' | 'gpaText' | 'rankText', string> | null,
   onShow() {
+    enableNativeShare('pages/assessment-form/assessment-form', this);
     // Refresh canonical fields that the student has not changed in this assessment draft.
     if (!this.data.profileReady || this.data.loading) return
     const owner = getSavedAuthResult()?.user.id

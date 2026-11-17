@@ -1,8 +1,12 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult } from '../../utils/auth'
 import { getReadOnlyContext } from '../../utils/read-only-context'
 import { getTeacherTaggedNews, saveTeacherNewsTags, teacherNewsError, type TeacherTaggedPost } from '../../utils/teacher-news-tags'
 
 Page({
+  onShareAppMessage() { return friendShare('pages/teacher-news-tags/teacher-news-tags', this) },
+  onShareTimeline() { return timelineShare('pages/teacher-news-tags/teacher-news-tags', this) },
+
   data: {
     loading: false, busy: false, error: '', notice: '',
     posts: [] as Array<TeacherTaggedPost & { globalNote: string; teacherNote: string }>,
@@ -10,14 +14,15 @@ Page({
   },
   generation: 0,
   onShow() {
+    enableNativeShare('pages/teacher-news-tags/teacher-news-tags', this);
     this.generation++
     const allowed = getSavedAuthResult()?.user.role === 'teacher' && !getReadOnlyContext()
     this.setData({ allowed, posts: [], selectedId: '', selectedTitle: '', draftTags: '', notice: '',
       error: allowed ? '' : '请使用教师本人身份管理自己的资讯标签。' })
     if (allowed) void this.loadPosts()
   },
-  onHide() { this.generation++; this.setData({ posts: [], selectedId: '', draftTags: '', busy: false }) },
-  onUnload() { this.generation++ },
+  onHide() { disableNativeShare(this); this.generation++; this.setData({ posts: [], selectedId: '', draftTags: '', busy: false }) },
+  onUnload() { disableNativeShare(this); this.generation++ },
   async loadPosts() {
     if (!this.data.allowed || getReadOnlyContext()) return
     const owner = getSavedAuthResult()?.user.id, generation = ++this.generation

@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult } from '../../utils/auth'
 import {getReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
@@ -111,6 +112,9 @@ function toPlanCard(plan: ClassroomPlan): PlanCard {
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/classroom/classroom', this) },
+  onShareTimeline() { return timelineShare('pages/classroom/classroom', this) },
+
   data: {
     ...INITIAL_SHELL,
     mode: 'guest' as 'guest' | 'unbound' | 'student' | 'teacher',
@@ -145,6 +149,7 @@ Page({
   weekRequest: 0,
   weekSchedule: null as ParsedSchedule | null,
   onShow() {
+    enableNativeShare('pages/classroom/classroom', this);
     this.stopShell?.()
     this.setData({ weekExpanded: false })
     this.stopShell = observeSlot('plan', (state) => {
@@ -153,12 +158,12 @@ Page({
       else { this.viewGeneration += 1; this.weekRequest += 1; this.weekSchedule = null; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
     })
   },
-  onHide() {
+  onHide() { disableNativeShare(this);
     const inlinePlanNeedsResume = this.data.inlinePlanNeedsResume || Boolean(this.data.inlinePlanDraft && !this.data.inlinePlanSaving && this.inlinePlanDirty())
     this.stopShell?.(); this.viewGeneration += 1; this.weekRequest += 1; this.weekSchedule = null
     this.setData({ shellPhase: 'loading', stageCalibrationMode: false, semesterSettingsOpen: false, stageSuggestion: null, inlinePlanNeedsResume })
   },
-  onUnload() { this.stopShell?.() },
+  onUnload() { disableNativeShare(this); this.stopShell?.() },
 
   async initializeClassroom() {
     const generation = ++this.viewGeneration

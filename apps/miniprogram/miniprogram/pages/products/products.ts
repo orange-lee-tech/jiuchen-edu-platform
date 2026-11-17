@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getProducts } from '../../utils/request'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 
@@ -21,6 +22,12 @@ function asStrings(value: unknown): string[] {
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/products/products', this) },
+  onShareTimeline() { return timelineShare('pages/products/products', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('pages/products/products', this); },
   data: {
     loading: true,
     error: '',

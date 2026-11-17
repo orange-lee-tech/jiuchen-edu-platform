@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare } from '../../utils/native-share'
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, openSlot, shellView } from '../../utils/navigation'
 import { ApiRequestError, getLatestScheduleImport, getMyAcademicProfile, getMyClassroom, getUpcomingPlanTasks, type UpcomingPlanTask, type ParsedSchedule } from '../../utils/request'
 import { chinaWeekDayTabs, courseTimeLabel, dailyScheduleView, weekdayScheduleView } from '../../utils/schedule-view'
@@ -166,7 +167,7 @@ Page({
   homeSchedule: null as ParsedSchedule | null,
   stopShell: undefined as (() => void) | undefined,
   onShow() {
-    try { wx.showShareMenu({ menus: ['shareAppMessage', 'shareTimeline'], fail: () => {} }) } catch { /* Sharing support varies by platform. */ }
+    enableNativeShare('pages/index/index', this);
     this.stopShell?.()
     const epoch = ++this.homeEpoch
     this.homeSchedule = null
@@ -305,14 +306,14 @@ Page({
     }
     this.renderScheduleDay()
   },
-  onHide() { ++this.homeEpoch; this.currentHomeStudentId = null; this.countdownOwner = ''; this.homeSchedule = null; this.stopShell?.(); this.setData({ shellPhase: 'loading', assessmentReady: false, scheduleCourses: [], planPreview: [], upcomingTasks: [], upcomingError: '', upcomingLoading: false, countdowns: [], countdownPreview: [], countdownOpen: false, countdownEditingId: '' }) },
+  onHide() { disableNativeShare(this); ++this.homeEpoch; this.currentHomeStudentId = null; this.countdownOwner = ''; this.homeSchedule = null; this.stopShell?.(); this.setData({ shellPhase: 'loading', assessmentReady: false, scheduleCourses: [], planPreview: [], upcomingTasks: [], upcomingError: '', upcomingLoading: false, countdowns: [], countdownPreview: [], countdownOpen: false, countdownEditingId: '' }) },
   onShareAppMessage() {
     return { title: '九辰保研｜让保研规划更清晰', path: '/pages/index/index', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
   },
   onShareTimeline() {
     return { title: '九辰保研｜让保研规划更清晰', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
   },
-  onUnload() { ++this.homeEpoch; this.stopShell?.() },
+  onUnload() { disableNativeShare(this); ++this.homeEpoch; this.stopShell?.() },
   onPrimary() {
     // The daily workflow starts with the plan, not another AI request.
     // Public visitor still enters the planning shell and can bind an account there.
