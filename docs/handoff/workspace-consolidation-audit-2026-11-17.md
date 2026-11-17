@@ -18,7 +18,7 @@
 | 提交 | `feat(miniprogram): integrate assessment, sharing and timetable UX` |
 | 提交范围 | 15 files changed, 259 insertions(+), 71 deletions(-) |
 | 推送 | 已推送至 `origin/codex/ux-consolidation-20261116` |
-| 远端核对 | GitHub 当前分支 HEAD 为 `ca035018bd17355be9d86bcc4c721d8eafff8b7a`；相对本机最后回执 `1b2a33f0...` 为 ahead 2 / behind 0，新增的两个提交仅修改本审计文件。本机尚需快进同步。 |
+| 远端核对 | GitHub 当前分支相对本机最后回执 `1b2a33f0...` 仅前进；后续提交均为 `docs/handoff/*` 文档更新，应用代码未变。本机需要先核对远端 ref，再执行 fast-forward；精确 SHA 以同步时 GitHub 实际分支指针为准。 |
 | 提交时检查 | 暂存文件 15 个；无未解决冲突；`git diff --cached --check` 无输出 |
 | 最近代码检查 | 用户此前回执：小程序 typecheck 通过；导航测试 122/122 通过；相关定向测试通过。以上是本地代码证据，不替代微信开发者工具和真机验收。 |
 
