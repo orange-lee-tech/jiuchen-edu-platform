@@ -279,10 +279,9 @@ button::after { border:0; }
 .teaching-week-option.active{border-color:#1d5779;background:#1d5779;color:#fff;font-weight:750;}
 .week-full-link{display:inline-block;margin:5rpx 0 0;color:#236383;font-size:21rpx;font-weight:700;}
 .week-content{margin-top:14rpx;border-top:1rpx solid #e8e1d5;padding-top:14rpx;}
-.schedule-day-row{display:flex;justify-content:space-between;gap:4rpx;margin-bottom:14rpx;}
-.schedule-day-option{flex:1;min-width:0;padding:11rpx 0;border-radius:8rpx;color:#607786;font-size:19rpx;text-align:center;white-space:nowrap;}
-.schedule-day-option.today:not(.active){color:#9b7138;font-weight:750;}
-.schedule-day-option.active{background:#1d5779;color:#fff;font-weight:750;}
+.week-day-group{display:flex;flex-direction:column;gap:8rpx;padding:12rpx 0;border-bottom:1rpx solid #ece5da;}
+.week-day-title{color:#1d5779;font-size:24rpx;font-weight:750;}
+.week-day-empty{color:#78858a;font-size:22rpx;padding:8rpx 0;}
 .week-list{display:flex;flex-direction:column;gap:10rpx;}
 .week-course{display:flex;flex-direction:column;gap:5rpx;padding:15rpx;border:1rpx solid #e8e1d5;border-radius:10rpx;background:#fffdf9;box-shadow:none;}
 .course-slot{color:#9b7138;font-size:20rpx;font-weight:750;}

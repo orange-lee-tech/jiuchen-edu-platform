@@ -740,10 +740,8 @@ Page({
     const names = new Set(selectedTargets.map(item => (item.schoolName || '').trim()).filter(Boolean))
     return filterAssessmentSchools(query).map(name => ({ name, selected: names.has(name) }))
   },
-  onToggleSchoolPicker() {
-    const open = !this.data.schoolPickerOpen
-    this.setData({ schoolPickerOpen: open,
-      schoolOptions: open ? this.schoolOptionsFor(this.data.schoolQuery) : [] })
+  onSchoolInputFocus() {
+    this.setData({ schoolPickerOpen: true, schoolOptions: this.schoolOptionsFor(this.data.schoolQuery) })
   },
   onSchoolQueryInput(event: WechatMiniprogram.Input) {
     const query = event.detail.value
@@ -772,7 +770,7 @@ Page({
     }
     if (targets.length >= 5) { wx.showToast({ title: '最多选择5所目标院校', icon: 'none' }); return }
     targets.push({ schoolName: name, programName: '', researchDirection: '', note: '' })
-    this.setData({ targets, schoolQuery: '', schoolPickerOpen: false, schoolOptions: [] })
+    this.setData({ targets, schoolQuery: '', schoolPickerOpen: true, schoolOptions: this.schoolOptionsFor('', targets) })
   },
   onRemoveTarget(event: WechatMiniprogram.BaseEvent) {
     const index = Number(event.currentTarget.dataset.index)

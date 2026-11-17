@@ -52,7 +52,7 @@ Page({
     return { title: '关于九辰教育｜保研规划与成长陪伴', path: '/pages/brand/brand', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
   },
   onShareTimeline() {
-    return { title: '关于九辰教育｜保研规划与成长陪伴', query: '', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
+    return { title: '关于九辰教育｜保研规划与成长陪伴', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
   },
   data: {
     loading: true,

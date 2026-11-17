@@ -1,7 +1,7 @@
 import { getSavedAuthResult } from '../../utils/auth'
 import {getReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
-import { chinaWeekDayTabs, currentWeekFromStart, weekMatches, courseTimeLabel } from '../../utils/schedule-view'
+import { currentWeekFromStart, teachingWeekDays } from '../../utils/schedule-view'
 import { initialPlanView, type PlanNavigationIntent } from '../../utils/plan-navigation-intent'
 import { normalizePlanDraft } from '../../utils/plan-editor-form'
 import { resolveCurrentStage } from '../../utils/current-stage'
@@ -119,10 +119,10 @@ Page({
     studentName: '',
     weekExpanded: false,
     weekLoading: false, weekError: '', weekState: 'missing', weekLabel: '',
-    currentTeachingWeek: 0, selectedTeachingWeek: 0, selectedScheduleDay: 1,
+    currentTeachingWeek: 0, selectedTeachingWeek: 0,
     weekOptions: Array.from({ length: 20 }, (_, index) => ({ week: index + 1, label: `第${index + 1}周` })),
-    weekScrollTarget: '', dayOptions: chinaWeekDayTabs().map(day => ({ ...day, isToday: false })),
-    weekCourses: [] as Array<{ name: string; day: string; slot: string; location: string | null; teacher: string | null }>,
+    weekScrollTarget: '',
+    weekDays: [] as ReturnType<typeof teachingWeekDays>,
     stages: stageLabels(FALLBACK_STAGES),
     stageScrollTarget: 'semester-freshman-fall', actualStageLabel: '待确认',
     actualStageCode: '', actualStageKnown: false, stageMode: null as 'auto' | 'manual' | null, stageModeKnown: false, stageNotice: '', stageScheduleSafe: false,
@@ -194,7 +194,7 @@ Page({
     this.weekRequest += 1; this.weekSchedule = null
     this.setData({ weekExpanded, currentTeachingWeek: 0, selectedTeachingWeek: 0,
       weekOptions: Array.from({ length: 20 }, (_, index) => ({ week: index + 1, label: `第${index + 1}周` })),
-      weekScrollTarget: '', weekState: 'missing', weekLabel: '', weekCourses: [] })
+      weekScrollTarget: '', weekState: 'missing', weekLabel: '', weekDays: [] })
 
     this.setData({ mode: 'student', loading: true, loadError: '', studentName: '', actualStageKnown: false, stageModeKnown: false, plans: [], mentors: [], records: [] })
     let stageSuggestionError = ''
@@ -533,31 +533,22 @@ Page({
   onTeachingWeekChange(event: WechatMiniprogram.BaseEvent) {
     const week = Number(event.currentTarget.dataset.week)
     if (!Number.isInteger(week) || week < 1 || week > this.data.weekOptions.length) return
-    this.updateWeekSelection(week, week === this.data.currentTeachingWeek
-      ? (chinaWeekDayTabs().find(day => day.isToday)?.dayIndex || 1) : 1)
+    this.updateWeekSelection(week)
   },
-  onScheduleDayChange(event: WechatMiniprogram.BaseEvent) {
-    const day = Number(event.currentTarget.dataset.day)
-    if (!Number.isInteger(day) || day < 1 || day > 7 || !this.data.selectedTeachingWeek) return
-    this.updateWeekSelection(this.data.selectedTeachingWeek, day)
-  },
-  updateWeekSelection(week: number, day: number) {
-    const todayTabs = chinaWeekDayTabs()
-    const dayOptions = todayTabs.map(item => ({ ...item, isToday: week === this.data.currentTeachingWeek && item.isToday,
-      label: week === this.data.currentTeachingWeek ? item.label : `周${'一二三四五六日'[item.dayIndex - 1]}` }))
+  updateWeekSelection(week: number) {
     const schedule = this.weekSchedule
-    const courses = schedule?.courses.filter(course => course.dayIndex === day && weekMatches(course.weeks, week))
-      .sort((a, b) => (a.startSection ?? 99) - (b.startSection ?? 99)) || []
+    const weekDays = teachingWeekDays(schedule, week)
+    const hasCourses = weekDays.some(day => day.courses.length > 0)
     const canShow = Boolean(schedule && this.data.stageScheduleSafe && this.data.currentTeachingWeek)
-    this.setData({ selectedTeachingWeek: week, selectedScheduleDay: day, dayOptions,
+    this.setData({ selectedTeachingWeek: week,
       weekScrollTarget: `teaching-week-${week}`,
-      weekState: canShow ? (courses.length ? 'ready' : 'empty') : this.data.weekState,
-      weekCourses: canShow ? courses.map(course => ({ ...course, day: `周${'一二三四五六日'[day - 1]}`, slot: courseTimeLabel(course) })) : [] })
+      weekState: canShow ? (hasCourses ? 'ready' : 'empty') : this.data.weekState,
+      weekDays: canShow ? weekDays : [] })
   },
   async loadCurrentWeek() {
     const generation = this.viewGeneration, request = ++this.weekRequest
     this.weekSchedule = null
-    this.setData({ weekLoading: true, weekError: '', weekCourses: [], currentTeachingWeek: 0, selectedTeachingWeek: 0 })
+    this.setData({ weekLoading: true, weekError: '', weekDays: [], currentTeachingWeek: 0, selectedTeachingWeek: 0 })
     try {
       // The current-week panel follows the student's actual stage, not the viewed stage.
       const stageCode = this.data.actualStageCode
@@ -591,7 +582,7 @@ Page({
       this.weekSchedule = schedule
       this.setData({ weekState: state, weekLabel, currentTeachingWeek: currentWeek, weekOptions,
         selectedTeachingWeek: selectedWeek, weekScrollTarget: selectedWeek ? `teaching-week-${selectedWeek}` : '' })
-      if (selectedWeek) this.updateWeekSelection(selectedWeek, chinaWeekDayTabs().find(day => day.isToday)?.dayIndex || 1)
+      if (selectedWeek) this.updateWeekSelection(selectedWeek)
     } catch {
       if (generation === this.viewGeneration && request === this.weekRequest) this.setData({ weekError: '本周课表读取失败，请重试。' })
     } finally { if (generation === this.viewGeneration && request === this.weekRequest) this.setData({ weekLoading: false }) }

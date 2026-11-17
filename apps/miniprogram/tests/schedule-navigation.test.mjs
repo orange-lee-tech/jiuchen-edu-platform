@@ -25,7 +25,7 @@ function loadTypeScript(relativePath) {
   return loaded.exports
 }
 
-const { dailyScheduleView, weekdayScheduleView, weekMatches } = loadTypeScript('utils/schedule-view.ts')
+const { dailyScheduleView, weekdayScheduleView, weekMatches, teachingWeekDays } = loadTypeScript('utils/schedule-view.ts')
 const { initialPlanView } = loadTypeScript('utils/plan-navigation-intent.ts')
 const { normalizePlanDraft } = loadTypeScript('utils/plan-editor-form.ts')
 const { buildTeacherPlanPayload, presentTeacherApplyResults, remainingTeacherApplyTargets } = loadTypeScript('utils/teacher-plan-apply.ts')
@@ -57,6 +57,24 @@ test('weekday view filters odd and even week courses', () => {
   assert.deepEqual(weekdayScheduleView(alternating, 1, atChinaNoon('2022-01-03')).courses.map(c => c.weeks), ['双周'])
   assert.equal(weekMatches('单周', 1), true)
   assert.equal(weekMatches('双周', 2), true)
+})
+
+test('teaching week groups all seven days, sorts multiple classes and switches weeks', () => {
+  const source = { courses: [
+    { name: '周一晚课', dayIndex: 1, weeks: '1-2周', startSection: 7 },
+    { name: '周一早课', dayIndex: 1, weeks: '1-2周', startSection: 1 },
+    { name: '第二周课', dayIndex: 3, weeks: '2周', startSection: 3 },
+    { name: '周日课', dayIndex: 7, weeks: '1周', startSection: 2 },
+  ] }
+  const first = teachingWeekDays(source, 1)
+  assert.equal(first.length, 7)
+  assert.deepEqual(first[0].courses.map(course => course.name), ['周一早课', '周一晚课'])
+  assert.equal(first[2].courses.length, 0)
+  assert.equal(first[6].courses[0].name, '周日课')
+  const second = teachingWeekDays(source, 2)
+  assert.equal(second[2].courses[0].name, '第二周课')
+  assert.equal(second[6].courses.length, 0)
+  assert.ok(teachingWeekDays({ courses: [] }, 1).every(day => day.courses.length === 0))
 })
 
 test('first entry honors a fresh owner-matched week intent; account changes and expiry fall back to stage', () => {

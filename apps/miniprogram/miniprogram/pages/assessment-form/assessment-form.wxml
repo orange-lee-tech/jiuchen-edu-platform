@@ -114,9 +114,8 @@
       </view>
       <text wx:else class="empty">请选择目标院校，最多5所；也可直接填写院校名称。</text>
       <view class="target-school-input-row">
-        <input class="input" maxlength="160" value="{{schoolQuery}}" placeholder="搜索院校名称 / 手动填写" bindinput="onSchoolQueryInput" />
+        <input class="input" maxlength="160" value="{{schoolQuery}}" placeholder="搜索院校名称 / 手动填写" bindfocus="onSchoolInputFocus" bindinput="onSchoolQueryInput" />
         <view class="target-school-add" bindtap="onAddManualSchool" aria-role="button">添加</view>
-        <view class="target-school-trigger" bindtap="onToggleSchoolPicker" aria-role="button">{{schoolPickerOpen ? '收起' : '选择'}}</view>
       </view>
       <scroll-view wx:if="{{schoolPickerOpen}}" class="target-school-suggestions" scroll-y="{{true}}">
         <view wx:for="{{schoolOptions}}" wx:key="name" class="target-school-option {{item.selected ? 'selected' : ''}}" data-name="{{item.name}}" bindtap="onToggleSchoolChoice" aria-role="checkbox" aria-checked="{{item.selected}}">

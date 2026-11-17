@@ -393,18 +393,20 @@ test('weekly card expands independently of plans and failures are retryable', as
   h.respond(2, { error: 'failure' }, 500); await settle()
 })
 
-test('weekly card filters teaching week, weekday and odd/even courses without changing plans', () => {
+test('weekly card groups all seven days by teaching week without changing plans', () => {
   const p = harness().page('pages/classroom/classroom')
   const course = (name, weeks) => ({ name, dayIndex: 1, startSection: 1, endSection: 2, weeks, location: null, teacher: null })
   p.weekSchedule = { courses: [course('单周课', '单周'), course('双周课', '双周')], termStartDate: '2026-09-07', stageCode: 'junior-fall' }
   p.setData({ stageScheduleSafe: true, currentTeachingWeek: 3, plans: [{ type: 'gpa' }] })
   assert.equal(p.data.weekOptions.length, 20)
-  p.updateWeekSelection(2, 1)
-  assert.deepEqual(Array.from(p.data.weekCourses, item => item.name), ['双周课'])
-  assert.equal(p.data.dayOptions.some(day => day.isToday), false)
-  p.updateWeekSelection(3, 1)
-  assert.deepEqual(Array.from(p.data.weekCourses, item => item.name), ['单周课'])
-  p.updateWeekSelection(3, 2)
+  p.updateWeekSelection(2)
+  assert.equal(p.data.weekDays.length, 7)
+  assert.deepEqual(Array.from(p.data.weekDays[0].courses, item => item.name), ['双周课'])
+  assert.equal(p.data.weekDays[1].courses.length, 0)
+  p.updateWeekSelection(3)
+  assert.deepEqual(Array.from(p.data.weekDays[0].courses, item => item.name), ['单周课'])
+  p.weekSchedule = { ...p.weekSchedule, courses: [] }
+  p.updateWeekSelection(4)
   assert.equal(p.data.weekState, 'empty')
   assert.equal(p.data.plans.length, 1)
 })
@@ -418,7 +420,9 @@ test('public shares carry fixed routes and assessment history keeps its existing
     assert.match(source, /onShareAppMessage\(\)/)
     assert.match(source, /onShareTimeline\(\)/)
     assert.ok(source.includes(`path: '${route}'`))
-    assert.match(source, /query: ''/)
+    assert.doesNotMatch(source, /query: ''/)
+    assert.ok(fs.existsSync(path.join(root, route.slice(1) + '.wxml')))
+    assert.ok(fs.existsSync(path.join(root, 'assets/jiuchen-visual-v1/banners/today-campus-hero.png')))
   }
   assert.match(assessment, /bindtap="onViewHistory"/)
   assert.match(assessment, /checked="\{\{includeRecentAssessments\}\}"[^>]*bindchange="onIncludeHistory"/)
@@ -1601,7 +1605,7 @@ test('home keeps profile completion accessible without displacing the plan CTA',
  const page=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
  assert.match(source,/wx:if="\{\{!assessmentReady && !readOnly\}\}".*bindtap="onCompleteProfile"/)
  assert.match(source,/只读模式 · 无编辑和评估权限/)
-  assert.match(fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8'),/地点：\{\{item.location \|\| '暂无'\}\}/)
+  assert.match(fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8'),/地点：\{\{course.location \|\| '暂无'\}\}/)
  assert.match(page,/onCompleteProfile\(\)/)
 })
 test('home shortcuts retain core actions without a duplicate countdown tile',()=>{

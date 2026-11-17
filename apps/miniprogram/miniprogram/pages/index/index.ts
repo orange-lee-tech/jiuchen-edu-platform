@@ -310,7 +310,7 @@ Page({
     return { title: '九辰保研｜让保研规划更清晰', path: '/pages/index/index', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
   },
   onShareTimeline() {
-    return { title: '九辰保研｜让保研规划更清晰', query: '', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
+    return { title: '九辰保研｜让保研规划更清晰', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
   },
   onUnload() { ++this.homeEpoch; this.stopShell?.() },
   onPrimary() {

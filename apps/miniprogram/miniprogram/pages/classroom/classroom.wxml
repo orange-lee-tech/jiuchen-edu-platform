@@ -189,20 +189,21 @@
       </scroll-view>
       <text class="week-full-link" bindtap="onCurrentWeekSchedule">{{weekExpanded ? '收起完整课表' : '查看完整课表 ›'}}</text>
       <view wx:if="{{weekExpanded}}" class="week-content">
-        <view class="schedule-day-row">
-          <view wx:for="{{dayOptions}}" wx:key="dayIndex" class="schedule-day-option {{selectedScheduleDay === item.dayIndex ? 'active' : ''}} {{item.isToday && selectedTeachingWeek === currentTeachingWeek ? 'today' : ''}}" data-day="{{item.dayIndex}}" bindtap="onScheduleDayChange">{{item.label}}</view>
-        </view>
         <view wx:if="{{weekLoading}}" class="pending-card"><text class="pending-title">正在读取课表…</text></view>
         <view wx:elif="{{weekError}}" class="plan-error"><text>{{weekError}}</text><button bindtap="loadCurrentWeek">重新读取课表</button></view>
-        <view wx:elif="{{weekState !== 'ready'}}" class="pending-card">
-          <text class="pending-title">{{weekState === 'empty' ? '该日暂无课程安排。' : weekState === 'holiday' ? '当前阶段没有学期课表' : weekState === 'before' ? '学期尚未开始' : weekState === 'date' ? '课表日期待核对' : weekState === 'unknown' ? '当前学期待核对' : '暂无课表'}}</text>
-          <text class="pending-desc">{{weekState === 'empty' ? '可切换教学周或星期查看其他课程。' : '请核对当前学期与课表信息。'}}</text>
+        <view wx:elif="{{weekState !== 'ready' && weekState !== 'empty'}}" class="pending-card">
+          <text class="pending-title">{{weekState === 'holiday' ? '当前阶段没有学期课表' : weekState === 'before' ? '学期尚未开始' : weekState === 'date' ? '课表日期待核对' : weekState === 'unknown' ? '当前学期待核对' : '暂无课表'}}</text>
+          <text class="pending-desc">请核对当前学期与课表信息。</text>
         </view>
         <view wx:else class="week-list">
-          <view wx:for="{{weekCourses}}" wx:key="index" class="week-course surface">
-            <text class="course-slot">{{item.slot}}</text>
-            <text class="plan-title">{{item.name}}</text>
-            <text class="course-detail">地点：{{item.location || '暂无'}}{{item.teacher ? ' · ' + item.teacher : ''}}</text>
+          <view wx:for="{{weekDays}}" wx:key="dayIndex" wx:for-item="day" class="week-day-group">
+            <text class="week-day-title">{{day.label}}</text>
+            <text wx:if="{{!day.courses.length}}" class="week-day-empty">暂无课程</text>
+            <view wx:for="{{day.courses}}" wx:key="index" wx:for-item="course" class="week-course surface">
+              <text class="course-slot">{{course.slot}}</text>
+              <text class="plan-title">{{course.name}}</text>
+              <text class="course-detail">地点：{{course.location || '暂无'}}{{course.teacher ? ' · ' + course.teacher : ''}}</text>
+            </view>
           </view>
         </view>
       </view>

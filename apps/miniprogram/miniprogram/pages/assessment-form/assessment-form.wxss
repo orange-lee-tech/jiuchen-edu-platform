@@ -279,7 +279,7 @@
 .target-school-remove{flex:none;padding:2rpx 7rpx;color:#9d5149;font-size:29rpx;font-weight:700;}
 .target-school-input-row{display:flex;align-items:center;gap:9rpx;}
 .target-school-input-row .input{flex:1;min-width:0;}
-.target-school-add,.target-school-trigger{box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex:none;min-height:70rpx;padding:0 13rpx;border-radius:7rpx;background:#e8f0f4;color:#1d5474;font-size:22rpx;font-weight:700;}
+.target-school-add{box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex:none;min-height:70rpx;padding:0 13rpx;border-radius:7rpx;color:#1d5474;font-size:22rpx;font-weight:700;}
 .target-school-add{background:#20577b;color:#fff;}
 .target-school-suggestions{box-sizing:border-box;width:100%;height:320rpx;margin-top:12rpx;border:1rpx solid #dce5ea;border-radius:9rpx;background:#fffdf9;}
 .target-school-option{display:flex;justify-content:space-between;gap:12rpx;align-items:center;min-height:65rpx;padding:12rpx 18rpx;border-bottom:1rpx solid #edf0f2;color:#2b4b61;font-size:24rpx;line-height:1.4;}
