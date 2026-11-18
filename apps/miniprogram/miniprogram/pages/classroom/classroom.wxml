@@ -1,26 +1,12 @@
 <view class="classroom-page">
   <role-shell view-slot="plan" phase="{{shellPhase}}" kind="{{shellKind}}" role-label="{{shellRoleLabel}}" message="{{shellMessage}}" />
   <block wx:if="{{shellPhase === 'ready' && shellKind === 'student'}}">
-  <view wx:if="{{mode === 'student' && stageSaveError}}" class="plan-error">
+  <view wx:if="{{stageSaveError}}" class="plan-error">
     <text>{{stageSaveError}}</text>
     <button disabled="{{stageChangeBusy}}" bindtap="onReloadCurrentStage">重新读取档案</button>
   </view>
 
-  <view wx:if="{{mode === 'guest'}}" class="entry-state surface">
-    <text class="entry-title">接续你的大学阶段规划</text>
-    <button class="entry-button" bindtap="onLogin">登录并绑定学员身份</button>
-  </view>
-
-  <view wx:elif="{{mode === 'unbound'}}" class="entry-state surface">
-    <text class="entry-title">绑定学员身份，查看阶段规划</text>
-    <text class="binding-help-toggle" bindtap="onToggleBindingHelp">{{bindingHelpOpen ? '收起绑定说明' : '我有九辰学员编号 ›'}}</text>
-    <view wx:if="{{bindingHelpOpen}}" class="binding-help">
-      <text>在个人资料中填写老师提供的九辰学员编号，验证后即可关联本人的规划档案。</text>
-      <button class="entry-button" bindtap="onBindIdentity">前往填写编号</button>
-    </view>
-  </view>
-
-  <view wx:elif="{{mode === 'teacher'}}" class="entry-state surface">
+  <view wx:if="{{mode === 'teacher'}}" class="entry-state surface">
     <text class="entry-title">老师工作台</text>
     <button class="entry-button" bindtap="onTeacherWorkspace">进入我的学员</button>
   </view>
@@ -101,7 +87,14 @@
               </view>
               <text class="plan-arrow">›</text>
             </view>
-            <view wx:if="{{expandedPlanType === item.type && readOnly}}" class="plan-inline-details">
+            <view wx:if="{{item.sources.length > 1}}" class="plan-source-groups">
+              <view wx:for="{{item.sources}}" wx:for-item="source" wx:key="id" class="plan-source-group">
+                <text class="plan-source-title">{{source.source === 'formal' ? '正式学员计划' : '个人计划'}} · {{source.title}}</text>
+                <view wx:for="{{source.items}}" wx:for-item="task" wx:key="id" class="plan-source-task">{{task.name}}{{task.target ? ' · ' + task.target : ''}}{{task.dueDate ? ' · 截止 ' + task.dueDate : ''}} · {{task.status === 'done' ? '已完成' : task.status === 'in_progress' ? '进行中' : '未开始'}}</view>
+                <text wx:if="{{!readOnly}}" class="plan-source-edit" data-type="{{item.type}}" data-id="{{source.id}}" bindtap="onPlanSourceTap">编辑这份计划 ›</text>
+              </view>
+            </view>
+            <view wx:if="{{expandedPlanType === item.type && readOnly && item.sources.length <= 1}}" class="plan-inline-details">
               <view wx:for="{{item.items}}" wx:for-item="task" wx:key="index" class="plan-inline-row">
                 <view class="plan-inline-main"><text>{{task.name}}</text><text wx:if="{{task.target}}" class="plan-inline-target">{{task.target}}</text><text wx:if="{{task.dueDate}}" class="plan-inline-target">截止：{{task.dueDate}}</text></view><text>{{task.status === 'done' ? '已完成' : task.status === 'in_progress' ? '进行中' : '未开始'}}</text>
               </view>
@@ -122,7 +115,7 @@
               <plan-task-editor title="{{inlinePlanDraft.title}}" items="{{inlinePlanDraft.items}}" read-only="{{readOnly}}" saving="{{inlinePlanSaving}}"
                 bind:titleinput="onInlineTitleInput" bind:additem="onInlineAddItem" bind:iteminput="onInlineItemInput" bind:statuschange="onInlineStatusChange"
                 bind:duedatechange="onInlineDueDateChange" bind:clearduedate="onInlineClearDueDate" bind:removeitem="onInlineRemoveItem" />
-              <view class="plan-inline-controls"><button disabled="{{inlinePlanSaving}}" bindtap="onCancelInlinePlan">取消</button><button class="plan-inline-action" loading="{{inlinePlanSaving}}" disabled="{{inlinePlanSaving || readOnly}}" bindtap="onSaveInlinePlan">保存计划</button></view>
+              <view class="plan-inline-controls"><button disabled="{{inlinePlanSaving}}" bindtap="onCancelInlinePlan">取消</button><button wx:if="{{inlinePlanDraft.sourceKind === 'personal'}}" disabled="{{inlinePlanSaving}}" bindtap="onDeleteInlinePlan">删除个人计划</button><button class="plan-inline-action" loading="{{inlinePlanSaving}}" disabled="{{inlinePlanSaving || readOnly}}" bindtap="onSaveInlinePlan">保存计划</button></view>
               </view>
             </view>
           </view>
@@ -176,6 +169,7 @@
           </view>
           </view></view>
         </block>
+        <view wx:if="{{mode === 'guest' || mode === 'unbound'}}" class="pending-card surface">正式学员专属服务，绑定学员身份后开放老师辅导。</view>
     </view>
     <view class="week-card surface">
       <view class="week-card-head" bindtap="onCurrentWeekSchedule" aria-role="button">

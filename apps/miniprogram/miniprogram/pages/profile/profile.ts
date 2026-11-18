@@ -57,16 +57,17 @@ Page({
         userName: auth?.user.displayName || (role === 'staff' ? '九辰内部员工' : role === 'teacher' ? '九辰辅导老师' : role === 'admin' ? '九辰管理员' : role === 'student' ? '九辰学员' : '我的保研档案'), profileStageLabel: '', mentorName: '',
         menus: role === 'admin' ? ADMIN_MENUS : role === 'teacher' || role === 'staff' ? TEACHER_MENUS : PERSONAL_MENUS,
       })
-      if (state.phase === 'ready' && role === 'student' && auth && !isReadOnly()) {
+      if (state.phase === 'ready' && (role === 'student' || role === 'user') && auth && !isReadOnly()) {
         const owner = auth.user.id
         void (async () => {
           const resolution = await resolveCurrentStage().catch(() => null)
           if (epoch !== this.profileViewEpoch || isReadOnly() || getSavedAuthResult()?.user.id !== owner) return
           const view = await getMyClassroom(resolution?.stage || undefined).catch(() => null)
-          if (epoch === this.profileViewEpoch && !isReadOnly() && getSavedAuthResult()?.user.id === owner && getSavedAuthResult()?.user.role === 'student') {
+          if (epoch === this.profileViewEpoch && !isReadOnly() && getSavedAuthResult()?.user.id === owner &&
+            ['student', 'user'].includes(getSavedAuthResult()?.user.role || '')) {
             this.setData({
-              profileStageLabel: resolution?.stage && resolution.scheduleSafe && view?.student.currentStage === resolution.stage ? view.stage.label : '学期待核对',
-              mentorName: view?.mentors?.[0]?.name || '',
+              profileStageLabel: resolution?.stage && resolution.scheduleSafe && view?.currentStage === resolution.stage ? view.stage.label : '学期待核对',
+              mentorName: role === 'student' ? view?.mentors?.[0]?.name || '' : '',
             })
           }
         })().catch(() => { if (epoch === this.profileViewEpoch && !isReadOnly() && getSavedAuthResult()?.user.id === owner) this.setData({ profileStageLabel: '学期待核对', mentorName: '' }) })
@@ -141,7 +142,7 @@ Page({
     favorites: [], favoritesVisible: false, identityInput: '', identityDetailsOpen: false, mentorName: '' }) },
   onUnload() { disableNativeShare(this); this.profileViewEpoch += 1; this.stopShell?.() },
   onScheduleImport() {
-    if (!this.data.loggedIn || this.data.role !== 'student' || isReadOnly()) return
+    if ((this.data.loggedIn && !['user', 'student'].includes(this.data.role)) || isReadOnly()) return
     openPage('/pages/schedule-import/schedule-import?view=auto')
   },
   onCustomerServiceTap() { void openVerifiedWechatCustomerService('账号及运营支持') },

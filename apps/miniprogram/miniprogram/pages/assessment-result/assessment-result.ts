@@ -225,7 +225,7 @@ Page({
       const output = buildResultView(assessment.output, references)
       let displayName=''
       if((getReadOnlyContext()?.role||getSavedAuthResult()?.user.role)==='student'){
-        try{displayName=(await getMyClassroom()).student.name||''}catch{/* A nickname is never a real-name fallback. */}
+        try{displayName=(await getMyClassroom()).student?.name||''}catch{/* A nickname is never a real-name fallback. */}
       }
       if(getSavedAuthResult()?.user.id!==owner)return
 

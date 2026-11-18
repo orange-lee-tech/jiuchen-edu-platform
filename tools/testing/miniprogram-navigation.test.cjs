@@ -86,6 +86,98 @@ function virtualPaymentPage() {
   return { h, p, wallet }
 }
 
+test('guest manual timetable stays local through login and saves only on a second tap', async () => {
+  const h = harness()
+  const page = h.page('pages/schedule-import/schedule-import')
+  page.onLoad({})
+  assert.equal(page.data.guestEditing, true)
+  page.onStartManualSchedule()
+  page.onSelectStage({ currentTarget: { dataset: { code: 'junior-fall' } } })
+  page.onConfirmStage()
+  assert.equal(page.data.schedule.sourceType, 'manual')
+  page.setData({ editing: true, courseDraft: { ...page.data.courseDraft, name: '合成课程', slot: '第1-2节' } })
+  await page.onSaveCourse()
+  assert.equal(h.requests.length, 0, 'guest never uploads or writes a timetable')
+  assert.equal(h.navigations.at(-1)?.url, '/pages/login/login')
+  assert.equal(page.data.courseDraft.name, '合成课程')
+
+  h.auth.saveAuthResult(authFixture('user'))
+  page.onShow()
+  assert.equal(page.data.courseDraft.name, '合成课程')
+  assert.equal(h.requests.length, 0, 'login return does not submit')
+  const pending = page.onSaveCourse()
+  await settle()
+  assert.equal(h.requests.length, 1)
+  assert.match(h.requests[0].url, /\/me\/classroom\/schedule-imports\/manual$/)
+  assert.equal(h.requests[0].data.schedule.courses[0].name, '合成课程')
+  h.respond(0, { ok: true, importId: secondId, schedule: {
+    ...h.requests[0].data.schedule, courses: [{ ...h.requests[0].data.schedule.courses[0], courseKey: id }],
+  } })
+  await pending
+  assert.equal(page.data.importId, secondId)
+  assert.equal(page.data.editing, false)
+})
+
+test('guest assessment keeps typed fields across login without creating a draft', async () => {
+  const h = harness()
+  const page = h.page('pages/assessment-form/assessment-form')
+  page.onLoad({})
+  page.data.profile.university = '登录前填写的学校'
+  page.setData({ researchDirection: '研究方向' })
+  await page.onRunAssessment()
+  assert.equal(h.requests.length, 0)
+  assert.equal(h.navigations.at(-1)?.url, '/pages/login/login')
+  h.auth.saveAuthResult(authFixture('user'))
+  page.onShow()
+  await settle()
+  assert.equal(h.requests.length, 2)
+  h.respond(0, { ok: true, profile: { university: null, major: null, currentGrade: null,
+    gpaText: null, rankText: null, enrollmentYear: null } })
+  h.respond(1, { ok: true, providerConfigured: true, materialImport: { enabled: false } })
+  await settle()
+  assert.equal(page.data.profile.university, '登录前填写的学校')
+  assert.equal(page.data.researchDirection, '研究方向')
+  assert.equal(page.data.guestEditing, false)
+  assert.equal(h.requests.filter(request => /\/me\/assessments$/.test(request.url)).length, 0)
+})
+
+test('guest planning shows editable cards and saves nothing before login', async () => {
+  const h = harness()
+  const page = h.page('pages/classroom/classroom')
+  await page.initializeClassroom()
+  assert.equal(page.data.mode, 'guest')
+  assert.ok(page.data.plans.some(plan => plan.type === 'gpa'))
+  assert.equal(page.data.showGuidance, false)
+  page.onPlanTap({ currentTarget: { dataset: { type: 'gpa' } } })
+  page.onInlineTitleInput({ detail: { value: '登录前的成绩规划' } })
+  await page.onSaveInlinePlan()
+  assert.equal(h.requests.length, 0)
+  assert.equal(page.data.inlinePlanDraft.title, '登录前的成绩规划')
+  assert.equal(h.navigations.at(-1)?.url, '/pages/login/login')
+})
+
+test('switching grouped plan sources asks before discarding an edited draft', () => {
+  const h = harness()
+  const page = h.page('pages/classroom/classroom')
+  page.selectedOwner = 'account-1'
+  page.data.currentStageCode = 'senior-fall'
+  page.data.plans = [{ id: 'personal-plan', type: 'internship', title: '个人标题', items: [],
+    revisionStatus: 'approved', progress: '', sources: [
+      { id: 'personal-plan', source: 'personal', title: '个人标题', items: [] },
+      { id: 'formal-plan', source: 'formal', title: '正式标题', items: [] },
+    ] }]
+  page.onPlanSourceTap({ currentTarget: { dataset: { type: 'internship', id: 'personal-plan' } } })
+  page.onInlineTitleInput({ detail: { value: '未保存的新标题' } })
+  page.onPlanSourceTap({ currentTarget: { dataset: { type: 'internship', id: 'formal-plan' } } })
+  assert.equal(page.data.inlinePlanDraft.title, '未保存的新标题')
+  assert.equal(h.modals.at(-1).title, '放弃未保存修改？')
+  h.modals.at(-1).success({ confirm: false })
+  assert.equal(page.data.inlinePlanDraft.title, '未保存的新标题')
+  h.modals.at(-1).success({ confirm: true })
+  assert.equal(page.data.inlinePlanDraft.sourcePlanId, 'formal-plan')
+  assert.equal(page.data.inlinePlanDraft.title, '正式标题')
+})
+
 const syntheticVirtualOrder = {
   ok: true,
   order: { id: secondId, status: 'pending', amountFen: 10, creditAmount: 2 },

@@ -104,6 +104,30 @@ export async function unbindMyIdentity(database: Db, userId: string, identityId:
     }
     const remaining = bindings.filter((row) => row.id !== target.id)
     const nextRole: Role = user.role === target.type ? (remaining[0]?.type ?? 'user') : user.role
+    if (target.type === 'student' && target.entity_id) {
+      // Keep the formal source intact for teachers; copy a private snapshot to
+      // the account before removing its student association. Both operations
+      // are in the same transaction as the unbind.
+      await connection.query('SELECT id FROM students WHERE id=? FOR UPDATE', [target.entity_id])
+      await connection.query(`INSERT INTO user_profiles (id,user_id,current_stage,current_stage_mode)
+        SELECT UUID(),?,s.current_stage,s.current_stage_mode FROM students s WHERE s.id=?
+        ON DUPLICATE KEY UPDATE current_stage=COALESCE(user_profiles.current_stage,VALUES(current_stage)),
+          current_stage_mode=COALESCE(user_profiles.current_stage_mode,VALUES(current_stage_mode))`, [userId, target.entity_id])
+      const [plans] = await connection.query<mysql.RowDataPacket[]>(
+        'SELECT id,stage_code AS stageCode,type,title,created_at AS createdAt,updated_at AS updatedAt FROM student_plans WHERE student_id=? FOR UPDATE',
+        [target.entity_id])
+      for (const plan of plans) {
+        const copyId = randomUUID()
+        await connection.query(`INSERT INTO student_plans
+          (id,student_id,owner_user_id,stage_code,type,title,created_at,updated_at)
+          VALUES (?,NULL,?,?,?,?,?,?)`,
+          [copyId,userId,plan.stageCode,plan.type,plan.title,plan.createdAt,plan.updatedAt])
+        await connection.query(`INSERT INTO plan_items
+          (id,plan_id,sort_order,name,target,due_date,status,created_at,updated_at)
+          SELECT UUID(),?,sort_order,name,target,due_date,status,created_at,updated_at
+          FROM plan_items WHERE plan_id=?`, [copyId,plan.id])
+      }
+    }
     if (target.type === 'teacher' || target.type === 'student') {
       const table = target.type === 'teacher' ? 'teachers' : 'students'
       await connection.query(`UPDATE ${table} SET user_id=NULL WHERE id=? AND user_id=?`, [target.entity_id, userId])

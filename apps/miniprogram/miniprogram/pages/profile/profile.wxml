@@ -23,7 +23,7 @@
         </view>
       </block>
     </view>
-    <view wx:if="{{loggedIn && role === 'student' && !readOnly}}" class="profile-schedule-import" bindtap="onScheduleImport" hover-class="menu-pressed" aria-role="button" aria-label="导入或管理我的课表">
+    <view wx:if="{{(!loggedIn || role === 'user' || role === 'student') && !readOnly}}" class="profile-schedule-import" bindtap="onScheduleImport" hover-class="menu-pressed" aria-role="button" aria-label="导入或管理我的课表">
       <image class="profile-schedule-icon" src="/assets/jiuchen-visual-v1/icons/courses.png" mode="aspectFit" />
       <view class="menu-main">
         <text class="menu-title">设置学期与课表</text>

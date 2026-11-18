@@ -177,13 +177,14 @@ Page({
     const todayDay = scheduleTabs.find(tab => tab.isToday)?.dayIndex || 1
     this.setData({ todayLabel: today.dateLabel, greeting: hour < 11 ? '早上好' : hour < 18 ? '下午好' : '晚上好', scheduleDay: todayDay, scheduleTabs, scheduleDateLabel: today.dateLabel, stageConfirmed:false, stageNeedsEnrollmentYear:false })
     this.stopShell = observeSlot('home', (state) => {
-      const studentId = state.phase === 'ready' && state.auth?.user.role === 'student'
+      const studentId = state.phase === 'ready' && (state.auth?.user.role === 'student' || state.auth?.user.role === 'user')
         ? state.auth.user.id : null
       this.currentHomeStudentId = studentId
       this.setData({ upcomingTasks: [], upcomingError: '' })
       this.loadCountdowns(studentId)
       this.setData({ ...shellView(state), loggedIn: Boolean(state.auth), userName: state.auth?.user.displayName || '同学', assessmentReady: false })
-      if (!studentId) { this.homeSchedule = null; this.setData({ planLoading: false, planError: '', planState: 'unbound', planPreview: [], stageNotice: '', stageConfirmed:false, stageNeedsEnrollmentYear:false, scheduleLoading: false, scheduleError: '', scheduleStage: '', scheduleCourses: [], scheduleState: 'missing' }); return }
+      if (!studentId) { this.homeSchedule = null; this.setData({ planLoading: false, planError: '', planState: 'ready', planStageLabel: '未设置', planPreview: [], stageNotice: '', stageConfirmed:false, stageNeedsEnrollmentYear:false,
+        upcomingLoading: false, scheduleLoading: false, scheduleError: '', scheduleLabel: '', scheduleStage: '', scheduleCourses: [], scheduleState: 'missing' }); return }
       this.setData({ scheduleLoading: true, scheduleError: '', scheduleStage: '', scheduleCourses: [], planLoading: true, planError: '', planPreview: [], stageNotice: '' })
       void this.loadUpcomingTasks()
       void (async () => {
@@ -196,7 +197,7 @@ Page({
         if (epoch !== this.homeEpoch || studentId !== this.currentHomeStudentId) return
         const { view, resolution } = result
         const stageCode = view.stage.code
-        const stageChanged = Boolean(resolution && view.student.currentStage !== resolution.stage)
+        const stageChanged = Boolean(resolution && (view.currentStage ?? view.student?.currentStage) !== resolution.stage)
         const stageConfirmed = Boolean(resolution?.scheduleSafe && !stageChanged)
         this.setData({ planLoading: false, planState: 'ready', stageConfirmed,
           stageNeedsEnrollmentYear: Boolean(resolution && !resolution.suggested),
@@ -328,10 +329,7 @@ Page({
       wx.showToast({ title: '只读查看不能进行 AI 评估', icon: 'none' })
       return
     }
-    if (!this.data.loggedIn) {
-      loginFor('pages/profile-edit/profile-edit')
-      return
-    }
+    if (!this.data.loggedIn) { openPage('/pages/assessment-form/assessment-form'); return }
     if (!this.data.assessmentReady) {
       openPage('/pages/profile-edit/profile-edit')
       return

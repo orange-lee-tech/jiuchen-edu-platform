@@ -92,7 +92,7 @@ Page({
         status: item.status,
       }))
       this.setData({
-        studentName: this.data.studentName || classroom.student.name,
+        studentName: this.data.studentName || classroom.student?.name || '',
         title: plan.title,
         items,
         revisionStatus,

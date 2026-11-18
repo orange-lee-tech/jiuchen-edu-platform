@@ -7,17 +7,21 @@ import type { DatabaseContext } from '../db/client.js'
 import type { AppEnv } from '../config/env.js'
 
 function fixture(role = 'student') {
-  const state: { stage: string | null; mode: 'auto' | 'manual' | null; writes: number } = { stage: 'freshman-fall', mode: null, writes: 0 }
+  const state: { stage: string | null; mode: 'auto' | 'manual' | null; writes: number;
+    formalStage: string | null; formalWrites: number } = {
+    stage: 'freshman-fall', mode: null, writes: 0, formalStage: 'freshman-fall', formalWrites: 0,
+  }
   const china = new Date(Date.now() + 8 * 60 * 60 * 1000)
   const enrollmentYear = china.getUTCFullYear() - (china.getUTCMonth() + 1 >= 9 ? 1 : 2)
   const session = { userId: 'student-user', role, status: 'active', internalIdStatus: 'claimed', expiresAt: new Date('2099-01-01') }
   const db = {
     select: (fields: Record<string, unknown>) => { let table: unknown; const q = { from(t: unknown) { table = t; return q }, innerJoin() { return q }, leftJoin() { return q }, where() { return q },
-      async limit() { return table === userSessions ? [session] : table === userProfiles ? [{ enrollmentYear, currentGrade: null }] : table === students ? [('mode' in fields) ? { mode: state.mode, currentStage: state.stage } : { id: 's1', currentStage: state.stage }] : [] } }; return q },
+      async limit() { return table === userSessions ? [session] : table === userProfiles ? [{ enrollmentYear, currentGrade: null, currentStage: state.stage, mode: state.mode }] : table === students ? role === 'user' ? [] : [('mode' in fields) ? { mode: state.mode, currentStage: state.stage } : { id: 's1', currentStage: state.stage, currentStageMode: state.mode }] : [] } }; return q },
     transaction: async <T>(work: (tx: unknown) => Promise<T>) => { let calls = 0; return work({
-      execute: async () => ++calls === 1 ? [[{ id: 's1', currentStage: state.stage, mode: state.mode }]] : [[{ enrollmentYear, currentGrade: null }]],
+      execute: async () => ++calls === 1 ? [[{ id: 'user' }]] : calls === 2 ? [[{ currentStage: state.stage, mode: state.mode }]] : [[{ enrollmentYear, currentGrade: null }]],
       update: (table: unknown) => ({ set: (values: { currentStage: string; currentStageMode: 'auto' | 'manual' }) => ({ where: async () => {
-        assert.equal(table, students); state.stage = values.currentStage; state.mode = values.currentStageMode; state.writes += 1
+        if (table === students) { state.formalStage = values.currentStage; state.formalWrites += 1; return }
+        assert.equal(table, userProfiles); state.stage = values.currentStage; state.mode = values.currentStageMode; state.writes += 1
       } }) }),
     }) },
   }
@@ -36,9 +40,25 @@ test('student confirms a current stage; stale changes fail without touching hist
     const changed = await app.inject({ method: 'PUT', url: '/me/classroom/current-stage', headers, payload: { stageCode: 'junior-fall', expectedCurrentStage: 'freshman-fall' } })
     assert.equal(changed.statusCode, 200); assert.equal(changed.json().currentStage, 'junior-fall')
     assert.equal(state.mode, 'manual')
+    assert.equal(state.formalStage, 'junior-fall'); assert.equal(state.formalWrites, 1)
     const stale = await app.inject({ method: 'PUT', url: '/me/classroom/current-stage', headers, payload: { stageCode: 'senior-fall', expectedCurrentStage: 'freshman-fall' } })
     assert.equal(stale.statusCode, 409); assert.equal(state.stage, 'junior-fall'); assert.equal(state.writes, 1)
     assert.equal((await app.inject({ method: 'PUT', url: '/me/classroom/current-stage', headers, payload: { stageCode: 'invalid', expectedCurrentStage: 'junior-fall' } })).statusCode, 400)
+  } finally { await app.close() }
+})
+
+test('ordinary account sets its own current stage without a student record', async () => {
+  const { app, state, headers } = fixture('user')
+  try {
+    const suggestion = await app.inject({ url: '/me/classroom/stage-suggestion', headers })
+    assert.equal(suggestion.statusCode, 200)
+    assert.equal(suggestion.json().currentStage, 'freshman-fall')
+    const saved = await app.inject({ method: 'PUT', url: '/me/classroom/current-stage', headers,
+      payload: { stageCode: 'junior-fall', expectedCurrentStage: 'freshman-fall' } })
+    assert.equal(saved.statusCode, 200)
+    assert.equal(state.stage, 'junior-fall')
+    assert.equal(state.mode, 'manual')
+    assert.equal(state.formalWrites, 0)
   } finally { await app.close() }
 })
 

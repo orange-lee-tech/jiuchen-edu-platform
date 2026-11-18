@@ -343,6 +343,21 @@ export function createConfiguredStore(
 ): AssessmentBackgroundStore {
   const batchSize = 32
   let scanOffset = 0
+  const hasCreditReservation = async (job: AssessmentBackgroundJob) => {
+    if (commercial.creditEnforcementEnabled) return true
+    try {
+      const [rows] = await database.pool.query<mysql.RowDataPacket[]>(
+        'SELECT id FROM credit_reservations WHERE assessment_id = ? AND user_id = ? LIMIT 1',
+        [job.id, job.userId],
+      )
+      return rows.length > 0
+    } catch (error) {
+      // Older installations may run student assessments without the optional
+      // commercial tables. A user assessment cannot start without a reservation.
+      if ((error as { code?: string }).code === 'ER_NO_SUCH_TABLE') return false
+      throw error
+    }
+  }
   return {
     beginBalanceWindow: env ? (assessmentId, identity) => beginAssessmentBalanceWindow(database.pool, env, assessmentId, identity) : undefined,
     finishBalanceWindow: env ? assessmentId => finishAssessmentBalanceWindow(database.pool, env, assessmentId) : undefined,
@@ -371,7 +386,7 @@ export function createConfiguredStore(
     },
 
     async persistSuccess(job, result, completedAt) {
-      if (commercial.creditEnforcementEnabled) {
+      if (await hasCreditReservation(job)) {
         await persistAssessmentSuccessAndConsumeCredit({
           database,
           userId: job.userId,
@@ -408,7 +423,7 @@ export function createConfiguredStore(
     },
 
     async persistFailure(job, failureCode, completedAt) {
-      if (commercial.creditEnforcementEnabled) {
+      if (await hasCreditReservation(job)) {
         const result = await persistAssessmentFailureAndReleaseCredit({
           database,
           userId: job.userId,

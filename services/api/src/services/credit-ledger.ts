@@ -238,6 +238,16 @@ export async function grantFreeCredits(input: {
       return { granted: false, amount: 0, idempotencyKey }
     }
 
+    if (input.grant!.version === 'unbound-lifetime-v1') {
+      // Before the credit gate existed, successful assessments could complete
+      // without a debit. Do not issue a new lifetime free use to that account.
+      const [legacySuccess] = await connection.query<mysql.RowDataPacket[]>(
+        `SELECT id FROM assessments WHERE user_id = ? AND status = 'succeeded'
+          AND credit_consumed = 0 LIMIT 1 FOR UPDATE`, [input.userId],
+      )
+      if (legacySuccess.length) return { granted: false, amount: 0, idempotencyKey }
+    }
+
     await connection.query(
       `INSERT INTO credit_ledger_entries
         (id, user_id, type, delta, idempotency_key, note)

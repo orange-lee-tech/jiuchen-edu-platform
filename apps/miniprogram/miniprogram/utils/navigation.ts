@@ -74,8 +74,8 @@ export function routeAllowed(route: string, role: UserRole | undefined, options:
   if (route === 'pages/staff-profile/staff-profile') return (role === 'teacher' || role === 'admin') && !isReadOnly()
   if (route === 'pages/teacher-news-tags/teacher-news-tags') return role === 'teacher' && !isReadOnly()
   if (route === 'pages/teacher-students/teacher-students') return role === 'teacher' || role === 'staff' || role === 'admin'
-  if (route === 'pages/plan-editor/plan-editor') return options.studentId ? role === 'teacher' || role === 'staff' || role === 'admin' : role === 'student'
-  if (route === 'pages/schedule-import/schedule-import') return role === 'student'
+  if (route === 'pages/plan-editor/plan-editor') return options.studentId ? role === 'teacher' || role === 'staff' || role === 'admin' : role === 'student' || role === 'user'
+  if (route === 'pages/schedule-import/schedule-import') return !role || role === 'student' || role === 'user'
   if (route === 'pages/assessment-form/assessment-form') return Boolean(role && STUDENT_ROLES.includes(role))
   // Historical reports belong to the account even after an internal identity change.
   if (route === 'pages/assessment-history/assessment-history' || route === 'pages/assessment-result/assessment-result') return Boolean(role)
@@ -133,7 +133,7 @@ export function finishLoginNavigation(auth: BootstrapResult) {
   }
   const pages = getCurrentPages()
   const previous = pages[pages.length - 2]
-  if (intent.retained && intent.owner === auth.user.id && previous?.route === intent.route) {
+  if (intent.retained && (!intent.owner || intent.owner === auth.user.id) && previous?.route === intent.route) {
     wx.navigateBack({ fail: () => openSlot('mine') })
     return
   }

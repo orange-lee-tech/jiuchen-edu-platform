@@ -16,6 +16,8 @@
     "db:upgrade:auth": "tsx src/db/upgrade-auth-foundation.ts",
     "db:upgrade:enrollment-year": "tsx src/db/upgrade-enrollment-year.ts",
     "db:upgrade:academic-stage-mode": "tsx src/db/upgrade-academic-stage-mode.ts",
+    "db:upgrade:personal-workspace": "tsx src/db/upgrade-personal-workspace.ts",
+    "db:verify:personal-workspace": "tsx src/db/verify-personal-workspace-mysql.ts",
     "db:upgrade:plan-item-due-date": "tsx src/db/upgrade-plan-item-due-date.ts",
     "db:upgrade:teacher-todos": "tsx src/db/upgrade-teacher-todos.ts",
     "db:upgrade:staff-profiles": "tsx src/db/upgrade-staff-profiles.ts",
