@@ -180,14 +180,13 @@
     <view class="week-card surface">
       <view class="week-card-head" bindtap="onCurrentWeekSchedule" aria-role="button">
         <view class="week-card-heading"><text class="section-title">本周课表</text><text class="stage-desc">{{weekLabel || '课表按档案当前阶段显示'}}</text></view>
-        <text class="week-toggle">{{weekExpanded ? '收起 ⌃' : '展开课程 ﹀'}}</text>
+        <text class="week-toggle">{{weekExpanded ? '收起 ⌃' : '查看完整课表 ﹀'}}</text>
       </view>
       <scroll-view class="teaching-week-rail" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="{{weekScrollTarget}}">
         <view class="teaching-week-row">
           <view wx:for="{{weekOptions}}" wx:key="week" id="teaching-week-{{item.week}}" class="teaching-week-option {{selectedTeachingWeek === item.week ? 'active' : ''}} {{currentTeachingWeek === item.week ? 'current' : ''}}" data-week="{{item.week}}" bindtap="onTeachingWeekChange">{{item.label}}</view>
         </view>
       </scroll-view>
-      <text class="week-full-link" bindtap="onCurrentWeekSchedule">{{weekExpanded ? '收起完整课表' : '查看完整课表 ›'}}</text>
       <view wx:if="{{weekExpanded}}" class="week-content">
         <view wx:if="{{weekLoading}}" class="pending-card"><text class="pending-title">正在读取课表…</text></view>
         <view wx:elif="{{weekError}}" class="plan-error"><text>{{weekError}}</text><button bindtap="loadCurrentWeek">重新读取课表</button></view>
