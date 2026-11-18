@@ -2,6 +2,8 @@
 
 ## 当前状态
 
+- **用户端统一化与个人工作区改造（2026-11-18）：** [产品需求与 Codex 施工交接](unified-personal-workspace-2026-11-18.md)（Guest / Unbound / Bound Student 统一 UI；账号级规划、任务、阶段和课表归属；绑定/解绑无损要求；本轮禁止生产迁移与部署）。
+
 - **当前工作区收束（2026-11-17）：** [收束与历史资产归档记录](workspace-consolidation-closeout-2026-11-17.md)（六文件 Diff 已裁决；NEW 为唯一施工基准；本地归档、七份 API 归档 SHA 核验及清理仍待现场执行）。
 - **原始工作区审计：** [本地工作区整合审计](workspace-consolidation-audit-2026-11-17.md)（48 路径/96 条时间戳记录、分支、Stash、Worktree 与未跟踪资产原始证据）。
 - **当前小程序代码候选（2026-11-16）：** `1b2a33f0aeeb804b300c9d4e4c7149e8175b2fb7`，分支 `codex/ux-consolidation-20261116`；尚未合并 main、未部署 ECS、未上传或发布微信小程序。
