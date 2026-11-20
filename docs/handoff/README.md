@@ -10,7 +10,6 @@
 - **历史分支清理记录：** [github-branch-prune-2026-10-19.md](github-branch-prune-2026-10-19.md)（历史快照；不得直接照搬其中旧 SHA 或旧分支数量）
 - **项目规则：** 根目录 [CONSTITUTION.md](../../CONSTITUTION.md)、[AGENTS.md](../../AGENTS.md)
 
-
 ## 运维、备份与架构地图
 
 - **[自主手动备份与选择性恢复规范](../ops/manual-backup-and-selective-restore.md)**：管理员 WSL 手动备份、七个加密组件、选择性恢复、隔离 MySQL 演练、三代保留目标与当前覆盖缺口。
@@ -20,7 +19,8 @@
 
 ## 工程事故与预防
 
-- [Windows PowerShell → WSL 路径桥接故障复盘（2026-11-20）](powershell-wsl-path-bridge-incident-2026-11-20.md)：记录本次演练启动失败的证据、影响边界、根因和跨平台脚本回归要求。修复与现场复测完成前，数据库演练状态保持 PENDING。
+- [Windows PowerShell → WSL 路径桥接故障复盘（2026-11-20）](powershell-wsl-path-bridge-incident-2026-11-20.md)：记录演练启动阶段的路径参数缺陷、影响边界和跨平台脚本回归要求。
+- [MySQL 隔离迁移演练执行器故障复盘（2026-11-20）](mysql-rehearsal-runner-incident-2026-11-20.md)：记录备份解密后、MySQL ready 标记前的执行器异常；明确异常被折叠、底层异常未取得，并恢复使用历史已验证的 loopback 随机端口演练模式。
 
 ## 现役业务合同与技术依据
 
