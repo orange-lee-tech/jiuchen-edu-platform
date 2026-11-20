@@ -18,6 +18,10 @@
 - [ECS 资源地图](../ops/ecs-resource-map.md)：ECS 资源盘点与基础设施保护。
 - [ECS 运维保护规则](../../ops/ecs/AGENTS.md)：ECS 操作范围、禁止操作和发布门禁。
 
+## 工程事故与预防
+
+- [Windows PowerShell → WSL 路径桥接故障复盘（2026-11-20）](powershell-wsl-path-bridge-incident-2026-11-20.md)：记录本次演练启动失败的证据、影响边界、根因和跨平台脚本回归要求。修复与现场复测完成前，数据库演练状态保持 PENDING。
+
 ## 现役业务合同与技术依据
 
 - [虚拟支付可靠性与对账边界（2026-10-27）](virtual-payment-reliability-2026-10-27.md)
