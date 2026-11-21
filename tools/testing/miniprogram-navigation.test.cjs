@@ -86,6 +86,98 @@ function virtualPaymentPage() {
   return { h, p, wallet }
 }
 
+test('guest manual timetable stays local through login and saves only on a second tap', async () => {
+  const h = harness()
+  const page = h.page('pages/schedule-import/schedule-import')
+  page.onLoad({})
+  assert.equal(page.data.guestEditing, true)
+  page.onStartManualSchedule()
+  page.onSelectStage({ currentTarget: { dataset: { code: 'junior-fall' } } })
+  page.onConfirmStage()
+  assert.equal(page.data.schedule.sourceType, 'manual')
+  page.setData({ editing: true, courseDraft: { ...page.data.courseDraft, name: '合成课程', slot: '第1-2节' } })
+  await page.onSaveCourse()
+  assert.equal(h.requests.length, 0, 'guest never uploads or writes a timetable')
+  assert.equal(h.navigations.at(-1)?.url, '/pages/login/login')
+  assert.equal(page.data.courseDraft.name, '合成课程')
+
+  h.auth.saveAuthResult(authFixture('user'))
+  page.onShow()
+  assert.equal(page.data.courseDraft.name, '合成课程')
+  assert.equal(h.requests.length, 0, 'login return does not submit')
+  const pending = page.onSaveCourse()
+  await settle()
+  assert.equal(h.requests.length, 1)
+  assert.match(h.requests[0].url, /\/me\/classroom\/schedule-imports\/manual$/)
+  assert.equal(h.requests[0].data.schedule.courses[0].name, '合成课程')
+  h.respond(0, { ok: true, importId: secondId, schedule: {
+    ...h.requests[0].data.schedule, courses: [{ ...h.requests[0].data.schedule.courses[0], courseKey: id }],
+  } })
+  await pending
+  assert.equal(page.data.importId, secondId)
+  assert.equal(page.data.editing, false)
+})
+
+test('guest assessment keeps typed fields across login without creating a draft', async () => {
+  const h = harness()
+  const page = h.page('pages/assessment-form/assessment-form')
+  page.onLoad({})
+  page.data.profile.university = '登录前填写的学校'
+  page.setData({ researchDirection: '研究方向' })
+  await page.onRunAssessment()
+  assert.equal(h.requests.length, 0)
+  assert.equal(h.navigations.at(-1)?.url, '/pages/login/login')
+  h.auth.saveAuthResult(authFixture('user'))
+  page.onShow()
+  await settle()
+  assert.equal(h.requests.length, 2)
+  h.respond(0, { ok: true, profile: { university: null, major: null, currentGrade: null,
+    gpaText: null, rankText: null, enrollmentYear: null } })
+  h.respond(1, { ok: true, providerConfigured: true, materialImport: { enabled: false } })
+  await settle()
+  assert.equal(page.data.profile.university, '登录前填写的学校')
+  assert.equal(page.data.researchDirection, '研究方向')
+  assert.equal(page.data.guestEditing, false)
+  assert.equal(h.requests.filter(request => /\/me\/assessments$/.test(request.url)).length, 0)
+})
+
+test('guest planning shows editable cards and saves nothing before login', async () => {
+  const h = harness()
+  const page = h.page('pages/classroom/classroom')
+  await page.initializeClassroom()
+  assert.equal(page.data.mode, 'guest')
+  assert.ok(page.data.plans.some(plan => plan.type === 'gpa'))
+  assert.equal(page.data.showGuidance, false)
+  page.onPlanTap({ currentTarget: { dataset: { type: 'gpa' } } })
+  page.onInlineTitleInput({ detail: { value: '登录前的成绩规划' } })
+  await page.onSaveInlinePlan()
+  assert.equal(h.requests.length, 0)
+  assert.equal(page.data.inlinePlanDraft.title, '登录前的成绩规划')
+  assert.equal(h.navigations.at(-1)?.url, '/pages/login/login')
+})
+
+test('switching grouped plan sources asks before discarding an edited draft', () => {
+  const h = harness()
+  const page = h.page('pages/classroom/classroom')
+  page.selectedOwner = 'account-1'
+  page.data.currentStageCode = 'senior-fall'
+  page.data.plans = [{ id: 'personal-plan', type: 'internship', title: '个人标题', items: [],
+    revisionStatus: 'approved', progress: '', sources: [
+      { id: 'personal-plan', source: 'personal', title: '个人标题', items: [] },
+      { id: 'formal-plan', source: 'formal', title: '正式标题', items: [] },
+    ] }]
+  page.onPlanSourceTap({ currentTarget: { dataset: { type: 'internship', id: 'personal-plan' } } })
+  page.onInlineTitleInput({ detail: { value: '未保存的新标题' } })
+  page.onPlanSourceTap({ currentTarget: { dataset: { type: 'internship', id: 'formal-plan' } } })
+  assert.equal(page.data.inlinePlanDraft.title, '未保存的新标题')
+  assert.equal(h.modals.at(-1).title, '放弃未保存修改？')
+  h.modals.at(-1).success({ confirm: false })
+  assert.equal(page.data.inlinePlanDraft.title, '未保存的新标题')
+  h.modals.at(-1).success({ confirm: true })
+  assert.equal(page.data.inlinePlanDraft.sourcePlanId, 'formal-plan')
+  assert.equal(page.data.inlinePlanDraft.title, '正式标题')
+})
+
 const syntheticVirtualOrder = {
   ok: true,
   order: { id: secondId, status: 'pending', amountFen: 10, creditAmount: 2 },
@@ -375,21 +467,58 @@ test('plan save requires a direct-save response and rejects an old pending-revie
   assert.equal((await saved).id, 'saved-plan')
 })
 
-test('current week switches the right-hand view without any navigation and failures are retryable', async () => {
+test('weekly card expands independently of plans and failures are retryable', async () => {
   const h = harness(); h.auth.saveAuthResult(authFixture())
   const p = h.page('pages/classroom/classroom')
   p.setData({ actualStageCode: 'junior-fall', stageScheduleSafe: true })
   p.onCurrentWeekSchedule()
-  assert.equal(p.data.selectedView, 'week'); assert.equal(h.navigations.length, 0)
+  assert.equal(p.data.weekExpanded, true); assert.equal(h.navigations.length, 0)
+  p.loadCurrentWeek()
   assert.match(h.requests[0].url, /stageCode=junior-fall/)
   h.respond(0, { error: 'failure' }, 500); await settle()
   assert.ok(p.data.weekError); assert.equal(p.data.weekLoading, false)
   p.loadCurrentWeek(); h.respond(1, { ok: true, import: null }); await settle()
   assert.equal(p.data.weekState, 'missing'); assert.equal(p.data.weekError, '')
   p.onStageChange({ currentTarget: { dataset: { index: 1 } } })
-  assert.equal(p.data.selectedView, 'stage'); assert.equal(p.data.currentStageCode, 'freshman-winter')
+  assert.equal(p.data.weekExpanded, true); assert.equal(p.data.currentStageCode, 'freshman-winter')
   assert.equal(h.navigations.length, 0)
   h.respond(2, { error: 'failure' }, 500); await settle()
+})
+
+test('weekly card groups all seven days by teaching week without changing plans', () => {
+  const p = harness().page('pages/classroom/classroom')
+  const course = (name, weeks) => ({ name, dayIndex: 1, startSection: 1, endSection: 2, weeks, location: null, teacher: null })
+  p.weekSchedule = { courses: [course('单周课', '单周'), course('双周课', '双周')], termStartDate: '2026-09-07', stageCode: 'junior-fall' }
+  p.setData({ stageScheduleSafe: true, currentTeachingWeek: 3, plans: [{ type: 'gpa' }] })
+  assert.equal(p.data.weekOptions.length, 20)
+  p.updateWeekSelection(2)
+  assert.equal(p.data.weekDays.length, 7)
+  assert.deepEqual(Array.from(p.data.weekDays[0].courses, item => item.name), ['双周课'])
+  assert.equal(p.data.weekDays[1].courses.length, 0)
+  p.updateWeekSelection(3)
+  assert.deepEqual(Array.from(p.data.weekDays[0].courses, item => item.name), ['单周课'])
+  p.weekSchedule = { ...p.weekSchedule, courses: [] }
+  p.updateWeekSelection(4)
+  assert.equal(p.data.weekState, 'empty')
+  assert.equal(p.data.plans.length, 1)
+})
+
+test('public shares carry fixed routes and assessment history keeps its existing switch', () => {
+  const today = fs.readFileSync(path.join(root, 'pages/index/index.ts'), 'utf8')
+  const brand = fs.readFileSync(path.join(root, 'pages/brand/brand.ts'), 'utf8')
+  const assessment = fs.readFileSync(path.join(root, 'pages/assessment-form/assessment-form.wxml'), 'utf8')
+  for (const [source, route] of [[today, '/pages/index/index'], [brand, '/pages/brand/brand']]) {
+    assert.match(source, /enableNativeShare\('/)
+    assert.match(source, /onShareAppMessage\(\)/)
+    assert.match(source, /onShareTimeline\(\)/)
+    assert.ok(source.includes(`path: '${route}'`))
+    assert.doesNotMatch(source, /query: ''/)
+    assert.ok(fs.existsSync(path.join(root, route.slice(1) + '.wxml')))
+    assert.ok(fs.existsSync(path.join(root, 'assets/jiuchen-visual-v1/banners/today-campus-hero.png')))
+  }
+  assert.match(assessment, /bindtap="onViewHistory"/)
+  assert.match(assessment, /class="context-history-link" bindtap="onViewHistory"/)
+  assert.match(assessment, /checked="\{\{includeRecentAssessments\}\}"[^>]*bindchange="onIncludeHistory"/)
 })
 
 test('plan editor imports courses only from the selected semester and blocks saves after a failed read', async () => {
@@ -757,7 +886,8 @@ test('role-shell uses an ordinary view-slot property instead of reserved WXML sl
 test('planning header distinguishes saved current stage and exposes an always-visible horizontal semester rail', () => {
   const html = fs.readFileSync(path.join(root, 'pages/classroom/classroom.wxml'), 'utf8')
   assert.match(html, /本周课表/)
-  assert.match(html, /当前档案：\{\{actualStageLabel\}\}/)
+  assert.match(html, /当前档案阶段/)
+  assert.match(html, /档案保存：\{\{actualStageLabel\}\}/)
   assert.match(html, /class="semester-rail" scroll-x/)
   assert.match(html, /wx:for="\{\{stages\}\}"/)
   assert.doesNotMatch(html, /wx:if="\{\{stagePickerOpen\}\}"/)
@@ -882,14 +1012,21 @@ test('old backend missing date-only route NEVER resubmits the entire timetable',
  assert.match(page.data.saveError,/当前暂不能保存第一周日期/)
  assert.doesNotMatch(page.data.saveError,/HTTP|backend_version_mismatch/)
 })
-test('horizontal planning selector keeps all academic terms and holidays reachable with a week entry',()=>{
+test('horizontal planning selector keeps all academic terms and holidays reachable above the week card',()=>{
  const wxml=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8')
  const css=fs.readFileSync(path.join(root,'pages/classroom/classroom.wxss'),'utf8')
  assert.match(wxml,/class="stage-picker surface"/)
  assert.match(wxml,/class="semester-rail" scroll-x/)
  assert.match(wxml,/wx:for="\{\{stages\}\}"/)
- assert.match(wxml,/当前档案：\{\{actualStageLabel\}\}/)
- assert.match(wxml,/查看本周完整课表/)
+  assert.match(wxml,/档案保存：\{\{actualStageLabel\}\}/)
+  assert.match(wxml,/查看完整课表/)
+  const stageCard = wxml.indexOf('class="stage-picker surface"')
+  const planningCard = wxml.indexOf('class="planning-card surface"')
+  const weekCard = wxml.indexOf('class="week-card surface"')
+  assert.ok(stageCard >= 0 && stageCard < planningCard && planningCard < weekCard)
+  assert.match(wxml.slice(planningCard, weekCard), /wx:if="\{\{plans.length > 0\}\}"/)
+  assert.ok(wxml.indexOf('wx:if="{{weekExpanded}}"') > weekCard)
+  assert.doesNotMatch(wxml, /selectedView/)
  assert.match(css,/\.semester-rail-row\{[^}]*display:flex/)
  const page=harness().page('pages/classroom/classroom')
  assert.equal(page.data.stages.length,15)
@@ -1074,16 +1211,17 @@ test('home does not show an old schedule when legacy stage and suggestion disagr
  assert.equal(h.requests.some(r=>r.url.includes('/schedule-imports/latest')),false);page.onHide()
 })
 
-test('planning reloads plans and weekly schedule from the same resolved stage',async()=>{
+test('planning loads plans for the viewed stage and timetable for the saved stage',async()=>{
  const h=harness();h.auth.saveAuthResult(authFixture());const page=h.page('pages/classroom/classroom')
  const pending=page.initializeClassroom();const find=(part)=>h.requests.findIndex(r=>r.url.includes(part))
  h.respond(find('/classroom/stages'),{ok:true,stages:[{code:'sophomore-fall',label:'大二上',mode:'term',description:'正常学期',planTypes:['gpa']}]})
  h.respond(find('/me/classroom/stage-suggestion'),{ok:true,currentStage:'freshman-fall',mode:'auto',suggestedStage:'sophomore-fall'});await settle()
  h.respond(find('/me/classroom/current-stage'),{ok:true,currentStage:'sophomore-fall',mode:'auto'});await settle()
  h.respond(find('/me/classroom?stage=sophomore-fall'),{ok:true,student:{name:'测试',currentStage:'sophomore-fall'},stage:{code:'sophomore-fall'},plans:[],mentors:[],records:[],showGuidance:true,guidanceRecordsReady:true});await settle()
- const first=find('/schedule-imports/latest');assert.equal(first,-1,'initial plan load must not make a schedule request solely for card decoration');await pending
+  await pending
  assert.equal(page.data.actualStageCode,'sophomore-fall');assert.equal(page.data.currentStageCode,'sophomore-fall')
- page.onCurrentWeekSchedule();const latest=find('/schedule-imports/latest');assert.notEqual(latest,-1);assert.match(h.requests[latest].url,/stageCode=sophomore-fall/);h.respond(latest,{ok:true,import:null});await settle()
+  const latest=find('/schedule-imports/latest');assert.notEqual(latest,-1);assert.match(h.requests[latest].url,/stageCode=sophomore-fall/);h.respond(latest,{ok:true,import:null});await settle()
+  assert.equal(page.data.weekExpanded,false)
 })
 test('account settings stay reachable without exposing destructive actions on the main Mine surface',()=>{
  const h=harness(),page=h.page('pages/profile/profile')
@@ -1560,7 +1698,7 @@ test('home keeps profile completion accessible without displacing the plan CTA',
  const page=fs.readFileSync(path.join(root,'pages/index/index.ts'),'utf8')
  assert.match(source,/wx:if="\{\{!assessmentReady && !readOnly\}\}".*bindtap="onCompleteProfile"/)
  assert.match(source,/只读模式 · 无编辑和评估权限/)
- assert.match(fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8'),/地点：\{\{item.location \|\| '暂无'\}\}/)
+  assert.match(fs.readFileSync(path.join(root,'pages/classroom/classroom.wxml'),'utf8'),/地点：\{\{course.location \|\| '暂无'\}\}/)
  assert.match(page,/onCompleteProfile\(\)/)
 })
 test('home shortcuts retain core actions without a duplicate countdown tile',()=>{
@@ -1983,8 +2121,8 @@ test('manual semester calibration is a visible save flow, separate from browsing
   assert.match(planWxml, /手动校准当前学期/)
   assert.match(planWxml, /选择当前阶段/)
   assert.match(planWxml, /bindtap="onStageChange"/)
-  assert.match(planWxml, /正在查看：/)
-  assert.match(planWxml, /当前档案：/)
+  assert.doesNotMatch(planWxml, /正在查看：/)
+  assert.match(planWxml, /档案保存：/)
   assert.match(planWxml, /class="semester-rail" scroll-x/)
   assert.match(planWxml, /bindtap="onToggleStageCalibration"/)
   assert.doesNotMatch(planWxml, /将正在查看的阶段设为当前|固定当前学期/)

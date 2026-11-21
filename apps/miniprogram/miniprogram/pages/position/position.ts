@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult } from '../../utils/auth'
 import {isReadOnly,getReadOnlyContext} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeShell, openSlot, shellView } from '../../utils/navigation'
@@ -10,6 +11,9 @@ import { EMPTY_POSITION_PROFILE, POSITION_PROFILE_FIELDS, positionProfileDirty, 
 
 
 Page({
+  onShareAppMessage() { return friendShare('pages/position/position', this) },
+  onShareTimeline() { return timelineShare('pages/position/position', this) },
+
   data: {
     ...INITIAL_SHELL,
     canEditProfile: false,
@@ -43,6 +47,7 @@ Page({
   detachedProfileDrafts: [] as Array<{ owner: string; draft: PositionProfileForm }>,
   detachedGrowthDrafts: [] as Array<{ owner: string; dimension: string; id: string; draft: GrowthRecordInput }>,
   onShow() {
+    enableNativeShare('pages/position/position', this);
     this.stopAuth?.()
     this.stopAuth = observeShell((state) => {
       this.setData(shellView(state))
@@ -50,7 +55,7 @@ Page({
       else this.setData({ canEditProfile: false, profileLoading: false, profileError: '', profileForm: { ...EMPTY_POSITION_PROFILE } })
     })
   },
-  onHide() {
+  onHide() { disableNativeShare(this);
     if (this.profileDraftDirty()) this.setData({ profileNeedsResume: true })
     if (this.data.growthDraft) this.setData({ growthNeedsResume: true })
     this.stopAuth?.()
@@ -68,17 +73,17 @@ Page({
     if (owner !== this.profileOwner) {
       const previousOwner = this.profileOwner
       if (previousOwner && this.data.profileDraft && this.profileDraftDirty()) {
-        this.detachedProfileDrafts = this.detachedProfileDrafts.filter(item => item.owner !== previousOwner)
+        this.detachedProfileDrafts = this.detachedProfileDrafts.filter((item: { owner: string }) => item.owner !== previousOwner)
         this.detachedProfileDrafts.push({ owner: previousOwner, draft: this.data.profileDraft })
         wx.showModal({ title: '身份已切换', content: '上一身份的未保存资料已隔离，返回该身份后可继续编辑。', showCancel: false })
       }
       if (previousOwner && this.data.growthDraft) {
-        this.detachedGrowthDrafts = this.detachedGrowthDrafts.filter(item => item.owner !== previousOwner)
+        this.detachedGrowthDrafts = this.detachedGrowthDrafts.filter((item: { owner: string }) => item.owner !== previousOwner)
         this.detachedGrowthDrafts.push({ owner: previousOwner, dimension: this.data.expandedDimension, id: this.data.growthEditingId, draft: this.data.growthDraft })
       }
       this.profileOwner = owner
-      const detached = this.detachedProfileDrafts.find(item => item.owner === owner)
-      const growthDetached = this.detachedGrowthDrafts.find(item => item.owner === owner)
+      const detached = this.detachedProfileDrafts.find((item: { owner: string }) => item.owner === owner)
+      const growthDetached = this.detachedGrowthDrafts.find((item: { owner: string }) => item.owner === owner)
       const growthDimension = growthDetached?.dimension || ''
       const growthTypeOptions = growthDimension === 'research' ? [{ key: 'research' as GrowthRecordType, label: '科研经历' }, { key: 'publication' as GrowthRecordType, label: '论文成果' }]
         : growthDimension ? [{ key: (growthDimension === 'english' ? 'language' : 'competition') as GrowthRecordType, label: growthDimension === 'english' ? '语言考试' : '竞赛经历' }] : []
@@ -169,7 +174,7 @@ Page({
       else await createMyGrowthRecord(input)
       if (owner !== this.profileOwner) return
       await clearGrowthProfileBootstrapCache()
-      this.detachedGrowthDrafts = this.detachedGrowthDrafts.filter(item => item.owner !== owner)
+      this.detachedGrowthDrafts = this.detachedGrowthDrafts.filter((item: { owner: string }) => item.owner !== owner)
       this.setData({ growthDraft: null, growthEditingId: '', growthNeedsResume: false })
       await this.loadGrowthRecords()
     } catch (error) {
@@ -213,7 +218,7 @@ Page({
     try {
       const saved = await updateMyAcademicProfile(positionProfilePatch(draft))
       if (owner !== this.profileOwner || isReadOnly()) return
-      this.detachedProfileDrafts = this.detachedProfileDrafts.filter(item => item.owner !== owner)
+      this.detachedProfileDrafts = this.detachedProfileDrafts.filter((item: { owner: string }) => item.owner !== owner)
       this.setData({ profileForm: positionProfileForm(saved), profileDraft: null, profileNeedsResume: false })
       await Promise.all([saveCachedAcademicProfile(saved), clearGrowthProfileBootstrapCache()])
       wx.showToast({ title: '资料已保存', icon: 'success' })
@@ -224,7 +229,7 @@ Page({
     }
   },
 
-  onUnload() { this.stopAuth?.() },
+  onUnload() { disableNativeShare(this); this.stopAuth?.() },
 
   async onStartAssessment() {
     if (isReadOnly() || this.data.assessmentStarting) return

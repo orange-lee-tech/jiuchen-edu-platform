@@ -1,5 +1,7 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import {
   createScheduleImport,
+  createManualScheduleImport,
   friendlyRequestError,
   getLatestScheduleImport,
   updateScheduleImport,
@@ -15,7 +17,7 @@ import {
 import { getSavedAuthResult } from '../../utils/auth'
 import { courseAssociationOptions, emptyFactDraft, factDraftFrom, factDraftError, GRADE_OPTIONS, sameCourseContext, saveCourseSteps } from './course-editor'
 import { uploadAuthenticatedCloudFile } from '../../utils/cloud-upload'
-import { authorizePage } from '../../utils/navigation'
+import { authorizePage, loginFor } from '../../utils/navigation'
 import { currentWeekFromStart, weekMatches } from '../../utils/schedule-view'
 
 // Date-only checks use UTC to avoid shifting the school week on a user's device.
@@ -83,7 +85,13 @@ function emptyDraft(): ParsedScheduleCourse {
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/schedule-import/schedule-import', this) },
+  onShareTimeline() { return timelineShare('pages/schedule-import/schedule-import', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
   data: {
+    guestEditing: false,
     parsing: false,
     saving: false,
     saveError: '',
@@ -91,7 +99,7 @@ Page({
     stageOptions: TERM_OPTIONS,
     stageChoice: '',
     stageChoiceLabel: '',
-    sourceForStage: '' as '' | 'spreadsheet' | 'image' | 'reassign',
+    sourceForStage: '' as '' | 'spreadsheet' | 'image' | 'manual' | 'reassign',
     stageHint: '正在读取入学年份…',
     fileName: '',
     importId: '',
@@ -127,9 +135,14 @@ Page({
   latestGeneration: 0,
   importGeneration: 0,
   onLoad(options: Record<string, string | undefined>) {
+    if (!getSavedAuthResult()) {
+      this.setData({ guestEditing: true, viewMode: 'manage', stageHint: '可先手动填写课程；保存或上传前需要登录。' })
+      return
+    }
     authorizePage('pages/schedule-import/schedule-import', options, () => this.initializeSchedule(options))
   },
   onShow() {
+    enableNativeShare('pages/schedule-import/schedule-import', this);
     const owner = getSavedAuthResult()?.user.id || ''
     let identityChanged = false
     if (this.editorOwner && this.editorOwner !== owner) {
@@ -148,6 +161,8 @@ Page({
       void this.loadLatestSchedule()
     }
     this.editorOwner = owner
+    if (owner && this.data.guestEditing) this.setData({ guestEditing: false,
+      stageHint: '临时填写的课程仍在当前页面；请核对后再次点击保存。' })
     if (identityChanged) return
     // A page kept in the navigation stack can be shown after another edit.
     // Do not replace an in-progress import or unsaved local correction.
@@ -287,7 +302,8 @@ Page({
 
   onChooseSpreadsheet() { this.openStageSelection('spreadsheet') },
   onChooseImage() { this.openStageSelection('image') },
-  openStageSelection(source: 'spreadsheet' | 'image') {
+  onStartManualSchedule() { this.openStageSelection('manual') },
+  openStageSelection(source: 'spreadsheet' | 'image' | 'manual') {
     if (this.data.saving || this.data.courseSaving || this.data.parsing) return
     this.setData({ showStagePicker: true, sourceForStage: source, stageChoice: '', stageChoiceLabel: '' })
   },
@@ -314,6 +330,19 @@ Page({
     if(source==='reassign') {
       const schedule=this.data.schedule
       if(schedule) void this.persistSchedule({...schedule,stageCode:this.data.stageChoice})
+      return
+    }
+    if (source === 'manual') {
+      const schedule: ParsedSchedule = { sourceType: 'manual', stageCode: this.data.stageChoice,
+        courses: [], warnings: [], termStartDate: null }
+      this.setData({ schedule, importId: '', fileName: '手动课表（未保存）',
+        viewMode: 'manage', stageChoiceLabel: TERM_OPTIONS.find(item => item.code === this.data.stageChoice)?.label || '' })
+      this.refreshVisibleCourses()
+      return
+    }
+    if (!getSavedAuthResult()) {
+      wx.showToast({ title: '登录后可上传课表', icon: 'none' })
+      loginFor('pages/schedule-import/schedule-import', {}, true, null)
       return
     }
     if (source === 'spreadsheet') this.chooseSpreadsheetFile()
@@ -426,9 +455,27 @@ Page({
 
   async persistSchedule(schedule: ParsedSchedule) {
     if (this.data.saving) return false
-    if (!this.data.importId) {
-      wx.showToast({ title: '请先导入一个课表', icon: 'none' })
+    if (!getSavedAuthResult()) {
+      wx.showToast({ title: '登录后可保存课表', icon: 'none' })
+      loginFor('pages/schedule-import/schedule-import', {}, true, null)
       return false
+    }
+    if (!this.data.importId) {
+      if (schedule.sourceType !== 'manual' || !TERM_OPTIONS.some(stage => stage.code === schedule.stageCode)) {
+        wx.showToast({ title: '请先选择课表归属学期', icon: 'none' })
+        return false
+      }
+      try {
+        this.setData({ saving: true, saveError: '' })
+        const result = await createManualScheduleImport(schedule.stageCode!, schedule)
+        this.setData({ importId: result.importId, schedule: result.schedule,
+          fileName: '手动课表', termStartDate: result.schedule.termStartDate || '' })
+        this.refreshVisibleCourses()
+        return true
+      } catch (error) {
+        this.setData({ saveError: friendlyRequestError(error, '课表暂时未能保存，请重试') })
+        return false
+      } finally { this.setData({ saving: false }) }
     }
     if (!TERM_OPTIONS.some(stage => stage.code === schedule.stageCode)) {
       this.onReassignStage()
@@ -473,7 +520,14 @@ Page({
   },
 
   async saveTermStartDate(date: string) {
-    if (this.data.saving || !this.data.importId || !this.data.schedule) return
+    if (this.data.saving || !this.data.schedule) return
+    if (!this.data.importId && this.data.schedule.sourceType === 'manual') {
+      this.setData({ schedule: { ...this.data.schedule, termStartDate: date }, termStartDate: date })
+      this.refreshVisibleCourses()
+      wx.showToast({ title: '日期暂存在当前页面', icon: 'none' })
+      return
+    }
+    if (!this.data.importId) return
     const id = this.data.importId
     const owner = getSavedAuthResult()?.user.id || ''
     ++this.latestGeneration
@@ -689,6 +743,11 @@ Page({
   async onSaveCourse() {
     const schedule = this.data.schedule
     if (!schedule || this.data.courseSaving) return
+    if (!getSavedAuthResult()) {
+      wx.showToast({ title: '登录后可保存课程', icon: 'none' })
+      loginFor('pages/schedule-import/schedule-import', {}, true, null)
+      return
+    }
 
     const draft = this.data.courseDraft
     if (!draft.name.trim() || !draft.slot.trim()) {
@@ -717,7 +776,7 @@ Page({
     }
 
     const owner = getSavedAuthResult()?.user.id || ''
-    const importId = this.data.importId
+    let importId = this.data.importId
     const factDraft = { ...this.data.factDraft }
     const factTouched = this.data.factTouched
     const savedIndex = this.data.editingIndex >= 0 ? this.data.editingIndex : schedule.courses.length
@@ -753,6 +812,7 @@ Page({
           })
         } : undefined,
       )
+      if (!importId && result.status !== 'schedule-failed') importId = this.data.importId
       if (owner !== (getSavedAuthResult()?.user.id || '') || this.data.importId !== importId || result.status === 'schedule-failed') return
       if (result.status === 'key-missing') {
         this.setData({ courseSaveError: '课表已保存，但课程关联键未读回；成绩未提交，请稍后重试。' })
@@ -789,11 +849,18 @@ Page({
 
     wx.showModal({
       title: '删除课程',
-      content: `确定删除“${course.name}”吗？删除后将立即更新你的课表。`,
+      content: !this.data.importId && schedule.sourceType === 'manual'
+        ? `确定从当前临时课表删除“${course.name}”吗？`
+        : `确定删除“${course.name}”吗？删除后将立即更新你的课表。`,
       confirmColor: '#c2413d',
       success: async (result) => {
         if (!result.confirm) return
         const courses = schedule.courses.filter((_, itemIndex) => itemIndex !== index)
+        if (!this.data.importId && schedule.sourceType === 'manual') {
+          this.setData({ schedule: { ...schedule, courses } })
+          this.refreshVisibleCourses()
+          return
+        }
         const ok = await this.persistSchedule({ ...schedule, courses })
         if (ok) wx.showToast({ title: '课程已删除', icon: 'none' })
       },

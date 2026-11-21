@@ -1,7 +1,7 @@
 <view class="agreement-page">
   <view class="agreement-head">
     <text class="agreement-title">九辰保研小程序用户协议</text>
-    <text class="agreement-meta">版本：2026-10-06 · 生效日期：2026-10-06</text>
+    <text class="agreement-meta">版本：2026-11-15 · 生效日期：2026-11-15</text>
   </view>
 
   <view class="agreement-section">
@@ -17,6 +17,7 @@
   <view class="agreement-section">
     <text class="section-title">三、AI 评估与建议</text>
     <text class="section-body">AI 保研评估用于整理你提交的背景资料、结合九辰已有案例与知识资料生成辅助分析。AI 输出不构成录取承诺、院校官方意见、法律意见或绝对结果预测。保研政策、院校要求、报名条件和截止时间可能变化，重要决定应以院校、教育主管部门等官方最新信息及人工老师核实结果为准。</text>
+    <text class="section-body">AI 评估报告由人工智能生成。报告页面使用「AI生成」标签；报告文本、复制内容以及 Word、Markdown、图片和 PDF 导出均保留 AI 生成标识。用户不得擅自删除、篡改或隐匿生成标识。</text>
   </view>
 
   <view class="agreement-section">
@@ -41,7 +42,7 @@
 
   <view class="agreement-section">
     <text class="section-title">八、付费服务</text>
-    <text class="section-body">如后续上线 AI 评估额度、充值或其他付费服务，具体价格、可获得的服务内容、次数和有效规则以付款前页面实际展示并由用户确认的信息为准。未正式展示并确认的价格或免费次数不构成承诺。</text>
+    <text class="section-body">小程序已提供通过微信虚拟支付购买 AI 评估次数的服务。当前商品配置中，¥1.90 对应购买 1 次 AI 评估，¥16.90 对应购买 10 次 AI 评估。具体可购买商品、价格、次数及有效规则以付款前页面实际展示并由用户确认的信息为准。未正式展示并确认的价格或免费次数不构成承诺。</text>
   </view>
 
   <view class="agreement-section">

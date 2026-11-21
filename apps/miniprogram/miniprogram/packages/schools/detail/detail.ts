@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../../utils/native-share'
 import { getSchoolById, MOE_985_SOURCE, MOE_211_SOURCE, C9_SOURCE,
   DOUBLE_FIRST_CLASS_2022_SOURCE, SCHOOL_AFFILIATIONS, type School } from '../data'
 import { getMyAcademicProfile } from '../../../utils/request'
@@ -6,6 +7,12 @@ import { SCHOOL_CAMPUS_POINTS, type SchoolCampusPoint } from '../campus-points'
 import { copyConsultationAndOpen } from '../../../utils/customer-service'
 import { buildSchoolConsultation } from '../../../utils/consultation-payload'
 Page({
+  onShareAppMessage() { return friendShare('packages/schools/detail/detail', this) },
+  onShareTimeline() { return timelineShare('packages/schools/detail/detail', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('packages/schools/detail/detail', this); },
   data: {
     school: null as School | null,
     heroLabel: '',

@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult } from '../../utils/auth'
 import { authorizePage, openPage, safeBack } from '../../utils/navigation'
 import { filterInternalIds, internalIdView, ID_FILTERS } from '../../utils/admin-id-view'
@@ -146,6 +147,9 @@ const ID_TYPES = [
 ] as const
 
 Page({
+  onShareAppMessage() { return friendShare('pages/admin/admin', this) },
+  onShareTimeline() { return timelineShare('pages/admin/admin', this) },
+
   data: {
     section: 'admin-users' as Section,
     analyticsPeriod: 'week' as AdminAnalyticsPeriod,
@@ -252,12 +256,13 @@ Page({
     authorizePage('pages/admin/admin', options, () => this.initializeAdmin(options))
   },
   officialFreshTimer:0 as ReturnType<typeof setInterval>|0,
-  onShow(){
+  onShow() {
+    enableNativeShare('pages/admin/admin', this);
     this.expireOfficialBalance()
     if(this.officialFreshTimer)clearInterval(this.officialFreshTimer)
     this.officialFreshTimer=setInterval(()=>this.expireOfficialBalance(),15000)
   },
-  onUnload(){if(this.officialFreshTimer)clearInterval(this.officialFreshTimer)},
+  onUnload() { disableNativeShare(this);if(this.officialFreshTimer)clearInterval(this.officialFreshTimer)},
   expireOfficialBalance(now=Date.now()){
     const current=this.data.officialBalance
     if(!current)return
@@ -793,7 +798,7 @@ Page({
   },
   analyticsGeneration:0,
   balanceGeneration: 0,
-  onHide() {
+  onHide() { disableNativeShare(this);
     if(this.officialFreshTimer){clearInterval(this.officialFreshTimer);this.officialFreshTimer=0}
     ++this.balanceGeneration
     this.setData({ balanceAccounts: [], balanceAccountIndex: -1, balanceLedger: null, balanceLedgerError: '', officialBalance:null,officialBalanceError:'',showManualBalance:false,balanceAmount: '', balanceThreshold: '', balanceNote: '', balanceObservedDate: '', balanceObservedTime: '' })

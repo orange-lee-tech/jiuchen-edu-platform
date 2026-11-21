@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult } from '../../utils/auth'
 import { authorizePage } from '../../utils/navigation'
 import {isReadOnly} from '../../utils/read-only-context'
@@ -41,6 +42,9 @@ function formatDate(value: string) {
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/assessment-history/assessment-history', this) },
+  onShareTimeline() { return timelineShare('pages/assessment-history/assessment-history', this) },
+
   data: {
     loading: true,
     loadError: '',
@@ -49,6 +53,7 @@ Page({
   },
 
   onShow() {
+    enableNativeShare('pages/assessment-history/assessment-history', this);
     pageVisible = true
     clearRefreshTimer()
     authorizePage('pages/assessment-history/assessment-history', {}, () => {
@@ -58,12 +63,12 @@ Page({
     })
   },
 
-  onHide() {
+  onHide() { disableNativeShare(this);
     pageVisible = false
     clearRefreshTimer()
   },
 
-  onUnload() {
+  onUnload() { disableNativeShare(this);
     pageVisible = false
     clearRefreshTimer()
   },

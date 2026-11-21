@@ -7,11 +7,11 @@ export type StageResolution = { stage: string | null; suggested: string | null; 
 /** The server supplies the suggestion; old and manually selected stages are never silently overwritten. */
 export async function resolveCurrentStage(): Promise<StageResolution> {
   const auth = getSavedAuthResult()
-  if (!auth || auth.user.role !== 'student' || isReadOnly()) throw new ApiRequestError(403, 'stage_read_only')
+  if (!auth || !['user', 'student'].includes(auth.user.role) || isReadOnly()) throw new ApiRequestError(403, 'stage_read_only')
   const owner = auth.user.id
   const checkOwner = () => {
     const current = getSavedAuthResult()
-    if (!current || current.user.id !== owner || current.user.role !== 'student' || isReadOnly()) throw new ApiRequestError(409, 'session_changed')
+    if (!current || current.user.id !== owner || !['user', 'student'].includes(current.user.role) || isReadOnly()) throw new ApiRequestError(409, 'session_changed')
   }
   for (let attempt = 0; attempt < 2; attempt++) {
     const value = await getCurrentStageSuggestion()

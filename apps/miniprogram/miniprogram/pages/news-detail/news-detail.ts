@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { ApiRequestError, getNewsPost, getMyNewsFavorites, saveNewsFavorite, removeNewsFavorite, type NewsPostDetail } from '../../utils/request'
 import {openOfficialArticle} from '../../utils/official-article'
 import { articleReaderNodes, type ArticleNode } from '../../utils/article-reader'
@@ -8,6 +9,11 @@ import {getSavedAuthResult} from '../../utils/auth'
 import { newsTagScopeNote } from '../../utils/teacher-news-tags'
 
 Page({
+  onShareAppMessage() { return friendShare('pages/news-detail/news-detail', this) },
+  onShareTimeline() { return timelineShare('pages/news-detail/news-detail', this) },
+
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('pages/news-detail/news-detail', this); },
   data: {
     loading: true,
     error: '',
@@ -26,7 +32,7 @@ Page({
 
   postId: '',
   generation:0,
-  onUnload(){this.generation++},
+  onUnload() { disableNativeShare(this);this.generation++},
   onLoad(options: Record<string, string | undefined>) {
     const id = validateIntent('pages/news-detail/news-detail', options)?.params.id || ''
     if (!id) {

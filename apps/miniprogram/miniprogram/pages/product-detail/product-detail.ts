@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getProduct } from '../../utils/request'
 import { openVerifiedWechatCustomerService } from '../../utils/customer-service'
 
@@ -147,6 +148,12 @@ function serviceDetails(value: AnyRecord): string[] {
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/product-detail/product-detail', this) },
+  onShareTimeline() { return timelineShare('pages/product-detail/product-detail', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('pages/product-detail/product-detail', this); },
   data: {
     loading: true,
     error: '',
@@ -240,12 +247,14 @@ Page({
     void openVerifiedWechatCustomerService('服务方案咨询：'+(this.data.view?.name||'九辰服务'))
   },
 
+  documentKey: '',
   onLoad(options: { documentKey?: string }) {
     const documentKey = decodeURIComponent(options.documentKey || '')
     if (!documentKey) {
       this.setData({ loading: false, error: '缺少产品标识。' })
       return
     }
+    this.documentKey = documentKey
     void this.loadProduct(documentKey)
   },
 

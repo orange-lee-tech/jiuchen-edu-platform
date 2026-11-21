@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildCreditBalance, CommercialStateError, persistAssessmentFailureAndReleaseCredit,
+import { buildCreditBalance, CommercialStateError, grantFreeCredits, persistAssessmentFailureAndReleaseCredit,
   persistAssessmentSuccessAndConsumeCredit } from './credit-ledger.js'
 
 test('available credit subtracts held reservations from settled ledger balance', () => {
@@ -77,4 +77,27 @@ test('terminal persistence consumes once, while failed assessment releases its h
   assert.equal(state.status, 'failed')
   assert.equal(state.reservation, 'released')
   assert.equal(state.debitInserts, 1)
+})
+
+test('unbound lifetime grant respects legacy free success and cannot be reissued', async () => {
+  const state = { legacySuccess: true, grant: false, inserts: 0 }
+  const connection = {
+    async beginTransaction() {}, async commit() {}, async rollback() {}, release() {},
+    async query(sql: string) {
+      if (sql.startsWith('SELECT id FROM users')) return [[{ id: 'user-1' }]]
+      if (sql.includes('WHERE idempotency_key =')) return [state.grant ? [{ id: 'grant-1' }] : []]
+      if (sql.includes("type = 'free_grant'")) return [state.grant ? [{ idempotencyKey: 'free-assessment:unbound-lifetime-v1:user-1' }] : []]
+      if (sql.includes('FROM assessments')) return [state.legacySuccess ? [{ id: 'legacy-assessment' }] : []]
+      if (sql.includes('INSERT INTO credit_ledger_entries')) { state.grant = true; state.inserts += 1 }
+      return [[]]
+    },
+  }
+  const database = { configured: true, pool: { getConnection: async () => connection } } as any
+  const input = { database, userId: 'user-1', grant: { version: 'unbound-lifetime-v1', amount: 1 } }
+  assert.equal((await grantFreeCredits(input)).granted, false)
+  assert.equal(state.inserts, 0)
+  state.legacySuccess = false
+  assert.equal((await grantFreeCredits(input)).granted, true)
+  assert.equal((await grantFreeCredits(input)).granted, false)
+  assert.equal(state.inserts, 1)
 })

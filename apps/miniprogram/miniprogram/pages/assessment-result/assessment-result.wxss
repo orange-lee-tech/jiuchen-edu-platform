@@ -6,6 +6,45 @@
   color: #243444;
 }
 
+.ai-generated-badge {
+  display: inline-block;
+  margin-top: 12rpx;
+  padding: 5rpx 13rpx;
+  border-radius: 6rpx;
+  background: #fff0ce;
+  color: #715219;
+  font-size: 20rpx;
+  font-weight: 800;
+}
+
+.ai-generated-notice {
+  margin-top: 22rpx;
+  margin-bottom: 18rpx;
+  padding: 22rpx 24rpx;
+  border: 2rpx solid #d8af5b;
+  border-left: 8rpx solid #b8872d;
+  border-radius: 8rpx;
+  background: #fff8e7;
+}
+
+.ai-generated-title,
+.ai-generated-description {
+  display: block;
+}
+
+.ai-generated-title {
+  color: #173e67;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.ai-generated-description {
+  margin-top: 8rpx;
+  color: #444e5a;
+  font-size: 23rpx;
+  line-height: 1.6;
+}
+
 .report-hero {
   padding: 18rpx 2rpx 30rpx;
 }

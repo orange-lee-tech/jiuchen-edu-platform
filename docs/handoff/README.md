@@ -2,10 +2,15 @@
 
 ## 当前状态
 
-- **最新状态（2026-11-08）：** [Batch A/B/C 合并、CI 与 ECS 发布门禁](STATUS-2026-11-08-batch-abc-release.md)（优先阅读）
-- **本轮分支整理：** [可删除分支与 checkpoint 归档清单](github-branch-prune-2026-11-08.md)（含精确 SHA 与安全删除条件）
-- **历史状态（2026-11-01）：** [生产发布与 GitHub 台面收尾](STATUS-2026-11-01-release-and-github.md)（优先阅读）
-- **历史长交接：** [CURRENT.md](CURRENT.md)（2026-10-29 等历史记录；新状态以最新状态页及现场回执为准）
+- **用户端统一化与个人工作区改造（2026-11-18）：** [产品需求与 Codex 施工交接](unified-personal-workspace-2026-11-18.md)（Guest / Unbound / Bound Student 统一 UI；账号级规划、任务、阶段和课表归属；绑定/解绑无损要求；本轮禁止生产迁移与部署）。
+
+- **当前工作区收束（2026-11-17）：** [收束与历史资产归档记录](workspace-consolidation-closeout-2026-11-17.md)（六文件 Diff 已裁决；NEW 为唯一施工基准；本地归档、七份 API 归档 SHA 核验及清理仍待现场执行）。
+- **原始工作区审计：** [本地工作区整合审计](workspace-consolidation-audit-2026-11-17.md)（48 路径/96 条时间戳记录、分支、Stash、Worktree 与未跟踪资产原始证据）。
+- **当前小程序代码候选（2026-11-16）：** `1b2a33f0aeeb804b300c9d4e4c7149e8175b2fb7`，分支 `codex/ux-consolidation-20261116`；尚未合并 main、未部署 ECS、未上传或发布微信小程序。
+- **历史状态（2026-11-08）：** [Batch A/B/C 合并、CI 与 ECS 发布门禁](STATUS-2026-11-08-batch-abc-release.md)（历史工程快照，不覆盖本轮收束状态）。
+- **本轮分支整理历史：** [可删除分支与 checkpoint 归档清单](github-branch-prune-2026-11-08.md)（仅作历史参考；当前本地 worktree、stash 和未跟踪资产以本轮审计为准）。
+- **历史状态（2026-11-01）：** [生产发布与 GitHub 台面收尾](STATUS-2026-11-01-release-and-github.md)。
+- **历史长交接：** [CURRENT.md](CURRENT.md)（保留 2026-10-29 等历史记录；不得当作当前代码或生产状态）。
 - **GitHub 工作台规整回执：** [github-workbench-cleanup-2026-10-27.md](github-workbench-cleanup-2026-10-27.md)
 - **历史分支清理记录：** [github-branch-prune-2026-10-19.md](github-branch-prune-2026-10-19.md)（历史快照；不得直接照搬其中旧 SHA 或旧分支数量）
 - **项目规则：** 根目录 [CONSTITUTION.md](../../CONSTITUTION.md)、[AGENTS.md](../../AGENTS.md)
@@ -29,7 +34,7 @@
 
 ## 阅读规则
 
-1. 开始任何工作先读 `STATUS-2026-11-08-batch-abc-release.md`；11-01 状态页及历史 `CURRENT.md` 仅按发生时的事实追溯。
+1. 开始本轮本地收束工作先读 `workspace-consolidation-audit-2026-11-17.md`；`STATUS-2026-11-08-batch-abc-release.md`、11-01 状态页及历史 `CURRENT.md` 仅按发生时的事实追溯。
 2. 日期化故障、验收和交接文件用于追溯当时事实，不自动代表当前代码、生产 release 或发布状态。
 3. CI 通过只证明对应 SHA 的仓库检查通过，不等于生产部署、DDL、真实支付或微信发布完成。
 4. 生产状态以最新 ECS 只读回执、生产数据库证据与用户明确授权为准。

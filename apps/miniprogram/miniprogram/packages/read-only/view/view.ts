@@ -1,12 +1,19 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../../utils/native-share'
 import {getSavedAuthResult} from '../../../utils/auth'
 import {request,friendlyRequestError} from '../../../utils/request'
 import {setReadOnlyContext,clearReadOnlyContext,type ReadOnlyContext} from '../../../utils/read-only-context'
 
 // Legacy lazy route remains an authorized entry, then uses the actual native four tabs.
 Page({
+  onShareAppMessage() { return friendShare('packages/read-only/view/view', this) },
+  onShareTimeline() { return timelineShare('packages/read-only/view/view', this) },
+
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('packages/read-only/view/view', this); },
  data:{loading:true,error:'',kind:'student' as 'student'|'teacher',id:''},
  generation:0,
  onLoad(options:Record<string,string>){
+  if(!options.id){wx.switchTab({url:'/pages/index/index'});return}
   const kind=options.kind==='teacher'?'teacher':'student',id=String(options.id||'')
   const auth=getSavedAuthResult()
   if(!auth||!['admin','teacher'].includes(auth.user.role)||kind==='teacher'&&auth.user.role!=='admin'){
@@ -15,7 +22,7 @@ Page({
   if(!/^[0-9a-f-]{36}$/i.test(id)){this.setData({loading:false,error:'查看对象参数无效'});return}
   this.setData({kind,id});void this.onRetry()
  },
- onUnload(){this.generation++},
+ onUnload() { disableNativeShare(this);this.generation++},
  async onRetry(){
   const owner=getSavedAuthResult()?.user.id,serial=++this.generation
   this.setData({loading:true,error:''})

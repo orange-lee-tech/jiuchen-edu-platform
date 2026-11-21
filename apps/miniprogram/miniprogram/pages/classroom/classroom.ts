@@ -1,7 +1,8 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult } from '../../utils/auth'
 import {getReadOnlyContext,isReadOnly} from '../../utils/read-only-context'
 import { INITIAL_SHELL, loginFor, observeSlot, openPage, shellView } from '../../utils/navigation'
-import { weeklyScheduleView, courseTimeLabel } from '../../utils/schedule-view'
+import { currentWeekFromStart, teachingWeekDays } from '../../utils/schedule-view'
 import { initialPlanView, type PlanNavigationIntent } from '../../utils/plan-navigation-intent'
 import { normalizePlanDraft } from '../../utils/plan-editor-form'
 import { resolveCurrentStage } from '../../utils/current-stage'
@@ -14,12 +15,14 @@ import {
   getCurrentStageSuggestion,
   setCurrentClassroomStage,
   saveMyClassroomPlan,
+  deleteMyClassroomPlan,
   type ClassroomCoachingRecord,
   type ClassroomMentor,
   type ClassroomPlan,
   type ClassroomPlanType,
   type ClassroomStage,
   type PlanEditorItem,
+  type ParsedSchedule,
 } from '../../utils/request'
 
 function stageErrorMessage(error: unknown) {
@@ -46,13 +49,15 @@ function logStageFailure(operation: 'load' | 'suggest' | 'save' | 'verify', erro
 }
 
 type PlanCard = {
+  id: string | null
   type: ClassroomPlanType
   title: string
   progress: string
   revisionStatus: 'none' | 'pending' | 'approved'
   items: Array<{ id: string; name: string; target: string | null; dueDate: string | null; status: PlanEditorItem['status'] }>
+  sources: Array<{ id: string; source: 'personal' | 'formal'; title: string; items: PlanCard['items'] }>
 }
-type InlinePlanDraft = { owner: string; stageCode: string; type: ClassroomPlanType; title: string; items: PlanEditorItem[]; revisionStatus: PlanCard['revisionStatus'] }
+type InlinePlanDraft = { owner: string; stageCode: string; type: ClassroomPlanType; title: string; items: PlanEditorItem[]; revisionStatus: PlanCard['revisionStatus']; sourcePlanId?: string; sourceKind?: 'personal' | 'formal' }
 
 const PLAN_CARDS: Record<ClassroomPlanType, Pick<PlanCard, 'type' | 'title'>> = {
   gpa: { type: 'gpa', title: '课程成绩计划' },
@@ -99,26 +104,36 @@ function stageLabels(stages: ClassroomStage[]) {
 }
 function toPlanCard(plan: ClassroomPlan): PlanCard {
   const template = PLAN_CARDS[plan.type]
-  const completed = plan.items.filter((item) => item.status === 'done').length
+  const allItems = plan.sources?.length ? plan.sources.flatMap(source => source.items) : plan.items
+  const completed = allItems.filter((item) => item.status === 'done').length
   return {
     ...template,
+    id: plan.id,
     title: plan.title,
-    progress: plan.items.length ? `${completed} / ${plan.items.length}` : '',
+    progress: allItems.length ? `${completed} / ${allItems.length}` : '',
     revisionStatus: plan.revisionStatus || (plan.id ? 'approved' : 'none'),
     items: plan.items.map(item => ({ id: item.id, name: item.name, target: item.target, dueDate: item.dueDate ?? null, status: item.status })),
+    sources: (plan.sources || []).map(source => ({ id: source.id, source: source.source, title: source.title,
+      items: source.items.map(item => ({ id: item.id, name: item.name, target: item.target, dueDate: item.dueDate ?? null, status: item.status })) })),
   }
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/classroom/classroom', this) },
+  onShareTimeline() { return timelineShare('pages/classroom/classroom', this) },
+
   data: {
     ...INITIAL_SHELL,
     mode: 'guest' as 'guest' | 'unbound' | 'student' | 'teacher',
     loading: false,
     loadError: '',
     studentName: '',
-    selectedView: 'stage',
+    weekExpanded: false,
     weekLoading: false, weekError: '', weekState: 'missing', weekLabel: '',
-    weekCourses: [] as Array<{ name: string; day: string; slot: string; location: string | null; teacher: string | null }>,
+    currentTeachingWeek: 0, selectedTeachingWeek: 0,
+    weekOptions: Array.from({ length: 20 }, (_, index) => ({ week: index + 1, label: `第${index + 1}周` })),
+    weekScrollTarget: '',
+    weekDays: [] as ReturnType<typeof teachingWeekDays>,
     stages: stageLabels(FALLBACK_STAGES),
     stageScrollTarget: 'semester-freshman-fall', actualStageLabel: '待确认',
     actualStageCode: '', actualStageKnown: false, stageMode: null as 'auto' | 'manual' | null, stageModeKnown: false, stageNotice: '', stageScheduleSafe: false,
@@ -139,20 +154,25 @@ Page({
   viewGeneration: 0,
   selectedOwner: '',
   weekRequest: 0,
+  weekSchedule: null as ParsedSchedule | null,
+  guestReturnPending: false,
+  guestStagePending: '' as string,
   onShow() {
+    enableNativeShare('pages/classroom/classroom', this);
     this.stopShell?.()
+    this.setData({ weekExpanded: false })
     this.stopShell = observeSlot('plan', (state) => {
       this.setData(shellView(state))
       if (state.phase === 'ready') void this.initializeClassroom()
-      else { this.viewGeneration += 1; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
+      else { this.viewGeneration += 1; this.weekRequest += 1; this.weekSchedule = null; this.setData({ plans: [], mentors: [], records: [], studentName: '', actualStageCode: '' }) }
     })
   },
-  onHide() {
+  onHide() { disableNativeShare(this);
     const inlinePlanNeedsResume = this.data.inlinePlanNeedsResume || Boolean(this.data.inlinePlanDraft && !this.data.inlinePlanSaving && this.inlinePlanDirty())
-    this.stopShell?.(); this.viewGeneration += 1
+    this.stopShell?.(); this.viewGeneration += 1; this.weekRequest += 1; this.weekSchedule = null
     this.setData({ shellPhase: 'loading', stageCalibrationMode: false, semesterSettingsOpen: false, stageSuggestion: null, inlinePlanNeedsResume })
   },
-  onUnload() { this.stopShell?.() },
+  onUnload() { disableNativeShare(this); this.stopShell?.() },
 
   async initializeClassroom() {
     const generation = ++this.viewGeneration
@@ -161,9 +181,24 @@ Page({
     const auth = getSavedAuthResult()
     const role=getReadOnlyContext()?.role||auth?.user.role
     const currentOwner = getReadOnlyContext()?.id || auth?.user.id || ''
-    this.separateInlineDraftForIdentity(currentOwner, !auth || role !== 'student' || isReadOnly())
+    const resumedGuestStage = auth && this.guestReturnPending
+      ? (this.data.inlinePlanDraft?.owner === 'guest' ? this.data.inlinePlanDraft.stageCode : this.guestStagePending) : undefined
+    if (auth && this.guestReturnPending && this.data.inlinePlanDraft?.owner === 'guest') {
+      this.setData({ inlinePlanDraft: { ...this.data.inlinePlanDraft, owner: currentOwner }, inlinePlanNeedsResume: true })
+      this.guestReturnPending = false
+    }
+    if (auth && this.guestReturnPending) this.guestReturnPending = false
+    this.separateInlineDraftForIdentity(currentOwner || 'guest', isReadOnly())
     if (!auth) {
-      this.setData({ mode: 'guest', plans: [], mentors: [], records: [], actualStageCode: '', actualStageKnown: false, stageMode: null, stageModeKnown: false })
+      const stage = FALLBACK_STAGES[0]
+      this.selectedOwner = 'guest'
+      this.setData({ ...emptyStageView(stage, 0), mode: 'guest', studentName: '我的规划', actualStageCode: stage.code,
+        actualStageLabel: stage.label, actualStageKnown: true, stageMode: null, stageModeKnown: false,
+        stageScheduleSafe: false, showGuidance: false, mentors: [], records: [],
+        weekState: 'missing', weekLabel: '', weekDays: [], currentTeachingWeek: 0, selectedTeachingWeek: 0,
+        plans: [...stage.planTypes, 'custom' as ClassroomPlanType].map(type => toPlanCard({
+          id: null, type, title: PLAN_CARDS[type].title, items: [], sources: [],
+        })) })
       return
     }
 
@@ -172,10 +207,7 @@ Page({
       return
     }
 
-    if (role !== 'student') {
-      this.setData({ mode: 'unbound', plans: [], mentors: [], records: [], actualStageCode: '', actualStageKnown: false, stageMode: null, stageModeKnown: false })
-      return
-    }
+    if (role !== 'student' && role !== 'user') return
     const owner=getReadOnlyContext()?.id||auth.user.id
     let navigationIntent: PlanNavigationIntent | undefined
     try {
@@ -184,10 +216,13 @@ Page({
     } catch { /* Ignore stale or unavailable navigation state. */ }
     const sameOwner = this.selectedOwner === owner
     this.selectedOwner = owner
-    const initialView = initialPlanView(owner, navigationIntent)
-    if (initialView === 'week' || !sameOwner) this.setData({ selectedView: initialView })
+    const weekExpanded = initialPlanView(owner, navigationIntent) === 'week' || (sameOwner && this.data.weekExpanded)
+    this.weekRequest += 1; this.weekSchedule = null
+    this.setData({ weekExpanded, currentTeachingWeek: 0, selectedTeachingWeek: 0,
+      weekOptions: Array.from({ length: 20 }, (_, index) => ({ week: index + 1, label: `第${index + 1}周` })),
+      weekScrollTarget: '', weekState: 'missing', weekLabel: '', weekDays: [] })
 
-    this.setData({ mode: 'student', loading: true, loadError: '', studentName: '', actualStageKnown: false, stageModeKnown: false, plans: [], mentors: [], records: [] })
+    this.setData({ mode: role === 'student' ? 'student' : 'unbound', loading: true, loadError: '', studentName: '', actualStageKnown: false, stageModeKnown: false, plans: [], mentors: [], records: [] })
     let stageSuggestionError = ''
     try {
       const [stages, resolution] = await Promise.all([
@@ -200,9 +235,9 @@ Page({
       ])
       if (generation !== this.viewGeneration) return
       const browsingAnotherStage = sameOwner && this.data.currentStageCode !== this.data.actualStageCode
-      const initial = await getMyClassroom(browsingAnotherStage ? this.data.currentStageCode : resolution?.stage || undefined)
+      const initial = await getMyClassroom(resumedGuestStage || (browsingAnotherStage ? this.data.currentStageCode : resolution?.stage || undefined))
       if (generation !== this.viewGeneration) return
-      const stageChanged = Boolean(resolution && initial.student.currentStage !== resolution.stage)
+      const stageChanged = Boolean(resolution && (initial.currentStage ?? initial.student?.currentStage) !== resolution.stage)
       const index = Math.max(
         0,
         stages.findIndex((stage) => stage.code === initial.stage.code),
@@ -211,15 +246,15 @@ Page({
       this.setData({
         stages: stageLabels(stages),
         stageScrollTarget: `semester-${stage.code}`,
-        actualStageLabel: stages.find(item => item.code === initial.student.currentStage)?.label || '未设置',
-        actualStageCode: initial.student.currentStage || '',
+        actualStageLabel: stages.find(item => item.code === (initial.currentStage ?? initial.student?.currentStage))?.label || '未设置',
+        actualStageCode: initial.currentStage ?? initial.student?.currentStage ?? '',
         actualStageKnown: true,
         stageMode: resolution?.mode ?? null,
         stageModeKnown: Boolean(resolution),
         stageNotice: isReadOnly() ? '只读查看档案中保存的阶段。' : stageChanged ? '档案阶段已变化，请重新读取后核对。' : resolution?.notice || (resolution ? '' : stageSuggestionError),
         stageScheduleSafe: isReadOnly() || Boolean(resolution?.scheduleSafe && !stageChanged),
         ...emptyStageView(stage, index),
-        studentName: initial.student.name,
+        studentName: initial.student?.name || '我的规划',
         plans: initial.plans.map((plan) => toPlanCard(plan)),
         showGuidance: initial.showGuidance,
         guidanceRecordsReady: initial.guidanceRecordsReady,
@@ -229,14 +264,11 @@ Page({
           dateLabel: this.formatRecordDate(record.occurredAt),
         })),
         stageSaveError: '',
-      })
+      }, () => { if (weekExpanded) wx.pageScrollTo({ selector: '.week-card', duration: 0 }) })
       const detachedDraft = !isReadOnly() ? this.data.detachedPlanDrafts.find(item => item.owner === owner && item.stageCode === stage.code) : undefined
       if (detachedDraft) this.setData({ inlinePlanDraft: detachedDraft, inlinePlanNeedsResume: true, expandedPlanType: detachedDraft.type,
         detachedPlanDrafts: this.data.detachedPlanDrafts.filter(item => item !== detachedDraft) })
-      if (this.data.selectedView === 'week') {
-        void this.loadCurrentWeek()
-        wx.pageScrollTo({ selector: '.current-week-link', duration: 0 })
-      }
+      void this.loadCurrentWeek()
     } catch (error) {
       if (generation !== this.viewGeneration) return
       logStageFailure('load', error)
@@ -251,7 +283,7 @@ Page({
     const result = await getMyClassroom(stageCode)
     if (this.data.currentStageCode !== stageCode || generation !== this.viewGeneration) return
     this.setData({
-      studentName: result.student.name,
+      studentName: result.student?.name || '我的规划',
       plans: result.plans.map((plan) => toPlanCard(plan)),
       showGuidance: result.showGuidance,
       guidanceRecordsReady: result.guidanceRecordsReady,
@@ -285,7 +317,7 @@ Page({
       void this.saveCurrentStage(stage.code, expected, 'manual', expectedMode)
       return
     }
-    this.setData({ ...emptyStageView(stage, index), selectedView: 'stage', stageCalibrationMode: false, stageScrollTarget: `semester-${stage.code}` })
+    this.setData({ ...emptyStageView(stage, index), stageCalibrationMode: false, stageScrollTarget: `semester-${stage.code}` })
     void this.reloadStage(stage.code)
   },
   onToggleStageCalibration() {
@@ -341,6 +373,7 @@ Page({
       success: outcome => { if (outcome.confirm && generation === this.viewGeneration && owner === this.selectedOwner) void this.saveCurrentStage(code, code, 'manual', mode) } })
   },
   async saveCurrentStage(code: string, expected: string | null | undefined, mode: 'auto' | 'manual' = 'manual', expectedMode?: 'auto' | 'manual' | null) {
+    if (!getSavedAuthResult()) { this.guestReturnPending = true; this.guestStagePending = code; wx.showToast({ title: '登录后可保存当前阶段', icon: 'none' }); loginFor('pages/classroom/classroom', {}, true, null); return }
     if (this.data.stageChangeBusy || this.data.inlinePlanSaving || isReadOnly()) return
     if (this.data.inlinePlanDraft && this.inlinePlanDirty()) {
       this.confirmDiscardInlinePlan(() => void this.saveCurrentStage(code, expected, mode, expectedMode))
@@ -361,7 +394,7 @@ Page({
       if (!confirmed.ok || confirmed.currentStage !== code || confirmed.mode !== mode) throw new ApiRequestError(409, 'current_stage_changed')
       const index = (this.data.stages as ClassroomStage[]).findIndex(item => item.code === confirmed.currentStage)
       if (index < 0) throw new ApiRequestError(409, 'stage_save_response_invalid')
-      this.setData({ ...emptyStageView(this.data.stages[index], index), selectedView: 'stage', stageScrollTarget: `semester-${this.data.stages[index].code}`, stageCalibrationMode: false, semesterSettingsOpen: false })
+      this.setData({ ...emptyStageView(this.data.stages[index], index), stageScrollTarget: `semester-${this.data.stages[index].code}`, stageCalibrationMode: false, semesterSettingsOpen: false })
       const refreshedGeneration = this.viewGeneration + 1
       await this.initializeClassroom()
       if (owner !== this.selectedOwner || refreshedGeneration !== this.viewGeneration) return
@@ -382,6 +415,12 @@ Page({
   },
   onReloadCurrentStage() { if (!this.data.stageChangeBusy) void this.initializeClassroom() },
   async reloadStage(stageCode: string) {
+    if (!getSavedAuthResult()) {
+      const stage = FALLBACK_STAGES.find(item => item.code === stageCode)
+      if (stage) this.setData({ ...emptyStageView(stage, FALLBACK_STAGES.indexOf(stage)), plans: [...stage.planTypes, 'custom' as ClassroomPlanType]
+        .map(type => toPlanCard({ id: null, type, title: PLAN_CARDS[type].title, items: [], sources: [] })) })
+      return
+    }
     const generation = this.viewGeneration
     this.setData({ loading: true, loadError: '' })
     try { await this.hydratePlanData(stageCode) }
@@ -408,13 +447,25 @@ Page({
     if (this.data.inlinePlanDraft && this.inlinePlanDirty()) this.confirmDiscardInlinePlan(open)
     else open()
   },
-  openInlinePlan(type: string) {
+  onPlanSourceTap(event: WechatMiniprogram.BaseEvent) {
+    const type = String(event.currentTarget.dataset.type || '')
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!type || !id) return
+    if (this.data.inlinePlanDraft?.type === type && this.data.inlinePlanDraft.sourcePlanId === id) return
+    const open = () => this.openInlinePlan(type, id)
+    if (this.data.inlinePlanDraft && this.inlinePlanDirty()) this.confirmDiscardInlinePlan(open)
+    else open()
+  },
+  openInlinePlan(type: string, sourcePlanId?: string) {
     const plan = (this.data.plans as PlanCard[]).find(item => item.type === type)
     if (!plan || isReadOnly()) return
+    const source = sourcePlanId ? plan.sources?.find(item => item.id === sourcePlanId) : undefined
     this.setData({ inlinePlanDraft: {
-      owner: this.selectedOwner, stageCode: this.data.currentStageCode, type: plan.type, title: plan.title,
+      owner: this.selectedOwner, stageCode: this.data.currentStageCode, type: plan.type, title: source?.title || plan.title,
       revisionStatus: plan.revisionStatus,
-      items: plan.items.map(item => ({ name: item.name, target: item.target, dueDate: item.dueDate, status: item.status })),
+      sourcePlanId: source?.id || plan.id || undefined,
+      sourceKind: source?.source || plan.sources?.[0]?.source,
+      items: (source?.items || plan.items).map(item => ({ name: item.name, target: item.target, dueDate: item.dueDate, status: item.status })),
     }, inlinePlanNeedsResume: false, expandedPlanType: type, inlinePlanError: '' })
   },
   inlinePlanDirty() {
@@ -422,8 +473,9 @@ Page({
     if (!draft) return false
     const original = (this.data.plans as PlanCard[]).find(item => item.type === draft.type)
     if (!original) return true
+    const source = original.sources?.find(item => item.id === draft.sourcePlanId)
     const simplify = (items: PlanEditorItem[]) => items.map(item => ({ name: item.name, target: item.target || null, dueDate: item.dueDate || null, status: item.status }))
-    return draft.title !== original.title || JSON.stringify(simplify(draft.items)) !== JSON.stringify(simplify(original.items))
+    return draft.title !== (source?.title || original.title) || JSON.stringify(simplify(draft.items)) !== JSON.stringify(simplify(source?.items || original.items))
   },
   separateInlineDraftForIdentity(owner: string, forceSeparate = false) {
     const activeDraft = this.data.inlinePlanDraft
@@ -496,6 +548,7 @@ Page({
   async onSaveInlinePlan() {
     const draft = this.data.inlinePlanDraft
     if (!draft || isReadOnly() || this.data.inlinePlanSaving) return
+    if (!getSavedAuthResult()) { this.guestReturnPending = true; wx.showToast({ title: '登录后可保存计划', icon: 'none' }); loginFor('pages/classroom/classroom', {}, true, null); return }
     if (draft.owner !== this.selectedOwner || draft.stageCode !== this.data.currentStageCode) {
       this.setData({ inlinePlanDraft: null, inlinePlanNeedsResume: false, expandedPlanType: '', inlinePlanError: '身份或学期已变化，请重新打开计划。' }); return
     }
@@ -505,7 +558,7 @@ Page({
     let saved = false
     this.setData({ inlinePlanSaving: true, inlinePlanError: '' })
     try {
-      await saveMyClassroomPlan(stage, draft.type, normalized.value)
+      await saveMyClassroomPlan(stage, draft.type, { ...normalized.value, sourcePlanId: draft.sourcePlanId })
       saved = true
       if (generation !== this.viewGeneration || owner !== this.selectedOwner || stage !== this.data.currentStageCode || isReadOnly()) return
       await this.hydratePlanData(stage)
@@ -521,14 +574,55 @@ Page({
     }
   },
 
+  onDeleteInlinePlan() {
+    const draft = this.data.inlinePlanDraft
+    if (!draft?.sourcePlanId || draft.sourceKind !== 'personal' || isReadOnly() || this.data.inlinePlanSaving) return
+    wx.showModal({ title: '删除个人计划？', content: '这份计划及其中任务将删除。正式学员计划和其他来源不会改变。',
+      confirmText: '删除', success: result => {
+        if (!result.confirm || this.data.inlinePlanDraft !== draft) return
+        void this.deleteInlinePlan(draft)
+      } })
+  },
+  async deleteInlinePlan(draft: InlinePlanDraft) {
+    if (!draft.sourcePlanId) return
+    const generation = this.viewGeneration
+    this.setData({ inlinePlanSaving: true, inlinePlanError: '' })
+    try {
+      await deleteMyClassroomPlan(draft.stageCode, draft.type, draft.sourcePlanId)
+      if (generation !== this.viewGeneration || this.data.inlinePlanDraft !== draft) return
+      await this.hydratePlanData(draft.stageCode)
+      this.setData({ inlinePlanDraft: null, expandedPlanType: '', inlinePlanNeedsResume: false })
+      wx.showToast({ title: '个人计划已删除', icon: 'success' })
+    } catch (error) {
+      if (generation === this.viewGeneration && this.data.inlinePlanDraft === draft)
+        this.setData({ inlinePlanError: friendlyRequestError(error, '删除失败，请重试') })
+    } finally {
+      if (generation === this.viewGeneration) this.setData({ inlinePlanSaving: false })
+    }
+  },
+
   onCurrentWeekSchedule() {
-    const selectedView = this.data.selectedView === 'week' ? 'stage' : 'week'
-    this.setData({ selectedView })
-    if (selectedView === 'week') void this.loadCurrentWeek()
+    this.setData({ weekExpanded: !this.data.weekExpanded })
+  },
+  onTeachingWeekChange(event: WechatMiniprogram.BaseEvent) {
+    const week = Number(event.currentTarget.dataset.week)
+    if (!Number.isInteger(week) || week < 1 || week > this.data.weekOptions.length) return
+    this.updateWeekSelection(week)
+  },
+  updateWeekSelection(week: number) {
+    const schedule = this.weekSchedule
+    const weekDays = teachingWeekDays(schedule, week)
+    const hasCourses = weekDays.some(day => day.courses.length > 0)
+    const canShow = Boolean(schedule && this.data.stageScheduleSafe && this.data.currentTeachingWeek)
+    this.setData({ selectedTeachingWeek: week,
+      weekScrollTarget: `teaching-week-${week}`,
+      weekState: canShow ? (hasCourses ? 'ready' : 'empty') : this.data.weekState,
+      weekDays: canShow ? weekDays : [] })
   },
   async loadCurrentWeek() {
     const generation = this.viewGeneration, request = ++this.weekRequest
-    this.setData({ weekLoading: true, weekError: '', weekCourses: [] })
+    this.weekSchedule = null
+    this.setData({ weekLoading: true, weekError: '', weekDays: [], currentTeachingWeek: 0, selectedTeachingWeek: 0 })
     try {
       // The current-week panel follows the student's actual stage, not the viewed stage.
       const stageCode = this.data.actualStageCode
@@ -550,10 +644,19 @@ Page({
         this.setData({ weekError: '课表阶段与档案当前阶段不一致，请核对课表' })
         return
       }
-      const view = weeklyScheduleView(latest?.schedule || null)
+      const schedule = latest?.schedule || null
+      const currentWeek = currentWeekFromStart(schedule?.termStartDate)
       const ownerStage = (this.data.stages as ClassroomStage[]).find(stage => stage.code === stageCode)
-      const weekLabel = ownerStage ? `${ownerStage.label} · ${view.currentWeekLabel}` : view.currentWeekLabel
-      this.setData({ weekState: view.state, weekLabel, weekCourses: view.visibleCourses.map(c => ({ ...c, slot: courseTimeLabel(c) })) })
+      const today = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 10)
+      const state = !schedule ? 'missing' : !currentWeek ? schedule.termStartDate && schedule.termStartDate > today ? 'before' : 'date' : 'empty'
+      const weekLabel = currentWeek ? `${ownerStage?.label || '当前学期'} · 当前教学周：第 ${currentWeek} 周`
+        : state === 'missing' ? '尚未导入课表' : state === 'before' ? '课表学期尚未开始' : '当前教学周待确认'
+      const weekOptions = Array.from({ length: Math.max(20, currentWeek) }, (_, index) => ({ week: index + 1, label: `第${index + 1}周` }))
+      const selectedWeek = currentWeek || 0
+      this.weekSchedule = schedule
+      this.setData({ weekState: state, weekLabel, currentTeachingWeek: currentWeek, weekOptions,
+        selectedTeachingWeek: selectedWeek, weekScrollTarget: selectedWeek ? `teaching-week-${selectedWeek}` : '' })
+      if (selectedWeek) this.updateWeekSelection(selectedWeek)
     } catch {
       if (generation === this.viewGeneration && request === this.weekRequest) this.setData({ weekError: '本周课表读取失败，请重试。' })
     } finally { if (generation === this.viewGeneration && request === this.weekRequest) this.setData({ weekLoading: false }) }

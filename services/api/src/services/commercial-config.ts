@@ -110,7 +110,8 @@ export function findCreditSku(
 }
 
 export function freeGrantsForRole(config: Pick<CommercialConfig, 'freeGrant' | 'studentBonusGrant'>, role: UserRole): FreeGrant[] {
-  if (role !== 'user' && role !== 'student') return []
+  if (role === 'user') return [{ version: 'unbound-lifetime-v1', amount: GUEST_FREE_COUNT }]
+  if (role !== 'student') return []
   return [config.freeGrant, role === 'student' ? config.studentBonusGrant : null]
     .filter((grant): grant is FreeGrant => grant !== null)
 }

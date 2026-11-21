@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { authorizePage } from '../../utils/navigation'
 import {isReadOnly} from '../../utils/read-only-context'
 import { normalizePlanDraft } from '../../utils/plan-editor-form'
@@ -28,6 +29,12 @@ const STATUS_OPTIONS = [
 ] as const
 
 Page({
+  onShareAppMessage() { return friendShare('pages/plan-editor/plan-editor', this) },
+  onShareTimeline() { return timelineShare('pages/plan-editor/plan-editor', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('pages/plan-editor/plan-editor', this); },
   data: {
     loading: true,
     loadError: '',
@@ -48,6 +55,7 @@ Page({
   },
 
   onLoad(options: Record<string, string>) {
+    if (!options.stage || !options.type) { wx.switchTab({ url: '/pages/classroom/classroom' }); return }
     authorizePage('pages/plan-editor/plan-editor', options, () => this.initializePlanEditor(options))
   },
   initializePlanEditor(options: Record<string, string>) {
@@ -84,7 +92,7 @@ Page({
         status: item.status,
       }))
       this.setData({
-        studentName: this.data.studentName || classroom.student.name,
+        studentName: this.data.studentName || classroom.student?.name || '',
         title: plan.title,
         items,
         revisionStatus,

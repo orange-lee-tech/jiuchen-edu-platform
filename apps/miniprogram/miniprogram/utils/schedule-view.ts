@@ -26,6 +26,17 @@ export function weeklyScheduleView(schedule: ParsedSchedule | null, today = new 
   const state = !schedule ? 'missing' : !currentWeek ? 'date' : !courses.length ? 'empty' : 'ready'
   return { currentWeek, visibleCourses, state, currentWeekLabel: currentWeek ? `第 ${currentWeek} 周` : !schedule ? '尚未导入课表' : '请设置本学期第一周周一' }
 }
+export function teachingWeekDays(schedule: ParsedSchedule | null, week: number) {
+  const labels = '一二三四五六日'
+  return Array.from({ length: 7 }, (_, index) => {
+    const dayIndex = index + 1
+    const courses = (schedule?.courses || [])
+      .filter(course => course.dayIndex === dayIndex && weekMatches(course.weeks, week))
+      .sort((a, b) => (a.startSection ?? 99) - (b.startSection ?? 99))
+      .map(course => ({ ...course, slot: courseTimeLabel(course) }))
+    return { dayIndex, label: `星期${labels[index]}`, courses }
+  })
+}
 
 /** The timetable uses China local calendar days, regardless of the phone's timezone. */
 function scheduleViewForChinaDay(schedule: ParsedSchedule | null, chinaDay: number) {

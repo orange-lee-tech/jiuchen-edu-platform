@@ -19,7 +19,7 @@ export type ParsedScheduleCourse = {
 }
 
 export type ParsedSchedule = {
-  sourceType: 'spreadsheet' | 'image'
+  sourceType: 'spreadsheet' | 'image' | 'manual'
   courses: ParsedScheduleCourse[]
   warnings: string[]
   stageCode?: string | null
@@ -74,7 +74,7 @@ export function isScheduleFirstMonday(value: unknown): value is string {
 
 export const editableScheduleSchema = z
   .object({
-    sourceType: z.enum(['spreadsheet', 'image']),
+    sourceType: z.enum(['spreadsheet', 'image', 'manual']),
     stageCode: z.string().regex(/^(freshman|sophomore|junior|senior)-(fall|spring)$/).nullable().optional(),
     courses: z.array(parsedScheduleCourseSchema).max(MAX_SCHEDULE_COURSES),
     warnings: z.array(z.string().trim().min(1).max(300)).max(20).default([]),

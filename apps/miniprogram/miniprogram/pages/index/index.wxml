@@ -7,7 +7,7 @@
         <text class="home-title">{{loggedIn ? greeting + '，' + userName : '今天'}}</text>
         <text class="eyebrow">{{todayLabel}}{{planState === 'ready' ? ' · ' + (stageConfirmed ? planStageLabel : '学期待校准') : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
         <button wx:if="{{!loggedIn}}" class="home-primary" bindtap="onPrimary">进入我的规划 ›</button>
-        <text wx:if="{{readOnly || !assessmentReady}}" class="home-caption">{{readOnly ? '只读模式 · 无编辑和评估权限' : loggedIn ? '学业资料待完善' : '登录后查看个人数据'}}</text>
+        <text wx:if="{{readOnly || !assessmentReady}}" class="home-caption">{{readOnly ? '只读模式 · 无编辑和评估权限' : loggedIn ? '学业资料待完善' : '可以先浏览和填写，保存时登录'}}</text>
         <text wx:if="{{!assessmentReady && !readOnly}}" class="home-minor-link" bindtap="onCompleteProfile">{{loggedIn ? '补全学业资料 ›' : '登录并建立档案 ›'}}</text>
       </view>
     </view>
@@ -25,7 +25,7 @@
       <text class="home-schedule-meta">{{scheduleDateLabel}}{{scheduleStage ? ' · 档案阶段：' + scheduleStage : ''}}{{scheduleLabel ? ' · ' + scheduleLabel : ''}}</text>
       <text wx:if="{{scheduleLoading}}" class="home-state">正在读取课表…</text>
       <view wx:elif="{{scheduleError}}" class="home-state"><text>{{scheduleError}}</text><text class="home-state-link" bindtap="onPlanning">进入规划页校准 ›</text></view>
-      <text wx:elif="{{!loggedIn}}" class="home-state">登录后查看个人课表</text>
+      <text wx:elif="{{!loggedIn}}" class="home-state">暂无课程；登录后可保存课表</text>
       <view wx:elif="{{scheduleState !== 'ready'}}" class="home-state"><text>{{scheduleState === 'holiday' ? '当前阶段没有学期课表' : scheduleState === 'missing' ? '尚未导入本学期课表' : scheduleState === 'before' ? '课表学期尚未开始' : scheduleState === 'date' ? '需设置本学期第一周周一' : '当天没有匹配课程'}}</text><text class="home-state-link" bindtap="onPlanning">{{scheduleState === 'empty' || scheduleState === 'holiday' ? '查看阶段规划 ›' : '前往课表管理 ›'}}</text></view>
       <block wx:else><view wx:for="{{scheduleCourses}}" wx:key="index" class="home-schedule-course {{item.next ? 'next-course' : ''}}">
         <view class="home-course-when"><text class="home-course-time">{{item.time}}</text><text wx:if="{{item.next}}" class="next-label">下一节</text></view>
@@ -66,7 +66,6 @@
       <view class="home-card-head"><text class="section-heading">近期任务</text><text class="upcoming-hint">今天至后天</text></view>
       <text wx:if="{{upcomingLoading}}" class="home-state">正在读取近期任务…</text>
       <view wx:elif="{{upcomingError}}" class="home-state"><text>{{upcomingError}}</text><text class="home-state-link" bindtap="onUpcomingRetry">重新读取 ›</text></view>
-      <view wx:elif="{{planState === 'unbound'}}" class="home-state"><text>绑定学员档案后查看近期任务</text><text class="home-state-link" bindtap="onPlanning">前往规划 ›</text></view>
       <view wx:elif="{{!upcomingTasks.length}}" class="home-state"><text>未来三天暂无截止任务</text><text class="home-state-link" bindtap="onPlanning">前往规划设置截止日期 ›</text></view>
       <view wx:for="{{upcomingTasks}}" wx:key="id" class="upcoming-task" data-id="{{item.id}}" bindtap="onUpcomingTask" hover-class="action-pressed">
         <view class="upcoming-task-main"><text class="upcoming-task-name">{{item.name}}</text><text class="upcoming-task-meta">{{item.stageLabel}} · {{item.typeLabel}} · {{item.planTitle}}</text></view>
@@ -79,7 +78,6 @@
       <text wx:if="{{stageNeedsEnrollmentYear && !readOnly}}" class="home-state-link" bindtap="onCompleteProfile">补充入学年份（用于自动建议）›</text>
       <text wx:if="{{planLoading}}" class="home-state">正在读取阶段规划…</text>
       <text wx:elif="{{planError}}" class="home-state">{{planError}}</text>
-      <text wx:elif="{{planState === 'unbound'}}" class="home-state">绑定学员身份后，即可查看和编辑自己的阶段规划。</text>
       <block wx:else><text class="home-plan-stage">档案阶段：{{planStageLabel}}{{stageConfirmed ? '' : ' · 待校准'}}</text><view wx:for="{{planPreview}}" wx:key="title" class="home-plan-row"><text class="home-plan-name">{{item.title}}</text><text class="home-plan-status">{{item.status}}</text></view><text wx:if="{{!planPreview.length}}" class="home-state">本阶段暂无计划，进入规划页查看可用内容。</text></block>
     </view>
   </block>

@@ -440,6 +440,36 @@ test('bounded candidate scan reaches a later job when first batch is held', asyn
   await next?.releaseLease?.()
 })
 
+test('unbound reservation is consumed even when optional student commercial enforcement is off', async () => {
+  const state = { status: 'running', consumed: false, reservation: 'held', debit: false }
+  const connection = {
+    async beginTransaction() {}, async commit() {}, async rollback() {}, release() {},
+    async query(sql: string) {
+      if (sql.startsWith('SELECT id FROM users')) return [[{ id: 'user-1' }]]
+      if (sql.includes('SELECT id, status, credit_consumed AS'))
+        return [[{ id: 'assessment-1', status: state.status, creditConsumed: state.consumed }]]
+      if (sql.includes('FROM credit_reservations'))
+        return [[{ id: 'reservation-1', status: state.reservation, amount: 1 }]]
+      if (sql.includes('FROM credit_ledger_entries')) return [[]]
+      if (sql.includes("SET status = 'succeeded'")) { state.status = 'succeeded'; state.consumed = true }
+      if (sql.includes('INSERT INTO credit_ledger_entries')) state.debit = true
+      if (sql.includes("SET status = 'consumed'")) state.reservation = 'consumed'
+      return [[]]
+    },
+  }
+  const database = { configured: true, pool: {
+    async query() { return [[{ id: 'reservation-1' }]] },
+    async getConnection() { return connection },
+  } } as any
+  const store = createConfiguredStore(database, { creditEnforcementEnabled: false, freeGrant: null })
+  await store.persistSuccess({ id: 'assessment-1', userId: 'user-1', inputJson: {} }, {
+    provider: 'synthetic', model: 'synthetic', knowledgeVersion: 'v1', evidence: [], output: {},
+  } as any, new Date())
+  assert.equal(state.status, 'succeeded')
+  assert.equal(state.reservation, 'consumed')
+  assert.equal(state.debit, true)
+})
+
 function workerDatabase(ids: string[], failPersistId?: string) {
   const fixture = leaseFixture()
   fixture.state.inputJson = { ...assessmentInput,
@@ -454,7 +484,9 @@ function workerDatabase(ids: string[], failPersistId?: string) {
         .slice(value, value + 32).map(id => ({ id }))
     },
   }
-  const database = { configured: true, pool: fixture.pool,
+  const database = { configured: true, pool: { ...fixture.pool,
+    async query() { return [[]] },
+  },
     db: {
       select() { return query },
       update() { return { set(values: { status: string }) { return {

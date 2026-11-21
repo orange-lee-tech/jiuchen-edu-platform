@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import {
   bootstrapPhoneUser,
   bootstrapWechatUser,
@@ -16,11 +17,16 @@ async function finishLogin(result: BootstrapResult) {
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/login/login', this) },
+  onShareTimeline() { return timelineShare('pages/login/login', this) },
+
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('pages/login/login', this); },
   data: {
     agreed: false,
     loading: false,
   },
-  onUnload() { clearLoginIntent() },
+  onUnload() { disableNativeShare(this); clearLoginIntent() },
 
   onAgreementChange(event: WechatMiniprogram.CustomEvent<{ value: string[] }>) {
     this.setData({ agreed: event.detail.value.includes('accepted') })

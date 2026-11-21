@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import {
   getNewsPosts,
   getProducts,
@@ -44,6 +45,12 @@ function newsItem(post: NewsPost): LibraryItem {
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/library/library', this) },
+  onShareTimeline() { return timelineShare('pages/library/library', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('pages/library/library', this); },
   data: {
     query: '',
     loading: true,

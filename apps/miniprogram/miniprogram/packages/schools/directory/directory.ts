@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../../utils/native-share'
 import {
   SCHOOLS, SCHOOL_GROUPS, SCHOOL_AFFILIATIONS, SCHOOL_REGIONS, findSchools,
   type School, type SchoolTier, type SchoolGroupKey, type SchoolAffiliationKey,
@@ -18,6 +19,12 @@ function cards(schools: School[]): SchoolCard[] {
   }))
 }
 Page({
+  onShareAppMessage() { return friendShare('packages/schools/directory/directory', this) },
+  onShareTimeline() { return timelineShare('packages/schools/directory/directory', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('packages/schools/directory/directory', this); },
   data: {
     query:'',level:'all' as SchoolTier,region:'全部地区',
     group:'all' as SchoolGroupKey | 'all',
