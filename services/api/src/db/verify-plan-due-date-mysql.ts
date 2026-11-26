@@ -25,6 +25,7 @@ try {
   assert.match(String(version[0]?.version), /^8\./)
   const [tables] = await db.query<mysql.RowDataPacket[]>('SHOW TABLES')
   assert.equal(tables.length, 0, 'fixture_database_must_be_empty')
+  // Mirror the schema fields read by the live /me/classroom route in this disposable fixture.
   for (const ddl of [
     "CREATE TABLE users (id VARCHAR(36) PRIMARY KEY, role VARCHAR(16), status VARCHAR(16) DEFAULT 'active', display_name VARCHAR(80))",
     'CREATE TABLE user_profiles (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL UNIQUE, current_stage VARCHAR(32), current_stage_mode ENUM(\'auto\',\'manual\') NULL)',
@@ -86,7 +87,7 @@ try {
   assert.equal((await put('u1', url, items)).statusCode, 200)
   assert.equal((await put('u2', url, [{ name: '他人任务', dueDate: window.from }])).statusCode, 200)
   const read = await app.inject({ url: '/me/classroom?stage=sophomore-fall', headers: headers('u1') })
-  assert.equal(read.statusCode, 200)
+  assert.equal(read.statusCode, 200, JSON.stringify(read.json()))
   const stored = read.json().plans.find((p: { type: string }) => p.type === 'english')
   assert.equal(stored.items[1].dueDate, window.from)
   assert.equal(stored.items[1].target, '自由文本保持不变')
