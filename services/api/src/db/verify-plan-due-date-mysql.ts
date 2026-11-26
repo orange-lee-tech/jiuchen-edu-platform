@@ -103,7 +103,9 @@ try {
   assert.equal((await put('u2', '/me/teacher/students/s1/plans/sophomore-fall/english', [])).statusCode, 403)
   assert.equal((await app.inject({ method: 'PUT', url, headers: { ...headers('u1'), 'x-jiuchen-read-only-target': 'student:s1' }, payload: { title: '禁止', items: [] } })).statusCode, 403)
   assert.equal((await put('t1', '/me/teacher/students/s1/plans/sophomore-fall/english', [{ name: '老师更新', dueDate: null }])).statusCode, 200)
-  assert.equal((await app.inject({ url: '/me/classroom/upcoming-tasks', headers: headers('u1') })).json().tasks.length, 0)
+  const afterTeacherUpdate = await app.inject({ url: '/me/classroom/upcoming-tasks', headers: headers('u1') })
+  assert.deepEqual(afterTeacherUpdate.json().tasks.map((t: { name: string }) => t.name), ['今天', '明天', '后天'],
+    'teacher_formal_plan_update_preserves_student_personal_tasks')
   assert.equal((await put('u1', url, [{ name: '日期清除', target: '保留说明', dueDate: window.from }])).statusCode, 200)
   assert.equal((await put('u1', url, [{ name: '日期清除', target: '保留说明', dueDate: null }])).statusCode, 200)
   const clearedClassroom = await app.inject({ url: '/me/classroom?stage=sophomore-fall', headers: headers('u1') })
