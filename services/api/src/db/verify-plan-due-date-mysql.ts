@@ -43,7 +43,7 @@ try {
     await db.query('INSERT INTO user_sessions(id,user_id,token_hash,expires_at) VALUES (?,?,?,?)',
       [userId, userId, createHash('sha256').update(`synthetic-${userId}`).digest('hex'), new Date(Date.now() + 3600000)])
   }
-  await db.query("INSERT INTO students VALUES ('s1','u1','合成甲',NULL,NULL,'freshman-fall'),('s2','u2','合成乙',NULL,NULL,'senior-fall')")
+  await db.query("INSERT INTO students (id,user_id,name,university,major,current_stage) VALUES ('s1','u1','合成甲',NULL,NULL,'freshman-fall'),('s2','u2','合成乙',NULL,NULL,'senior-fall')")
   await db.query("INSERT INTO teachers(id,user_id,name) VALUES ('t1','t1','合成导师'),('t2','t2','合成导师乙')")
   await db.query("INSERT INTO student_teacher_assignments(id,teacher_id,student_id) VALUES ('a1','t1','s1')")
   await db.query("INSERT INTO student_plans(id,student_id,stage_code,type,title) VALUES ('legacy','s1','freshman-fall','gpa','历史计划')")
