@@ -68,6 +68,11 @@ jobs:
         env:
           DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_plan_due_date_ci
         run: node dist/db/verify-plan-due-date-mysql.js
+      - name: Verify personal workspace migration and identity unbind on disposable MySQL 8
+        working-directory: services/api
+        env:
+          DATABASE_URL: mysql://root:local_test_only@127.0.0.1:3306/jiuchen_personal_workspace_ci
+        run: node dist/db/verify-personal-workspace-mysql.js
       - name: Prepare disposable MySQL fixture for commercial migrations
         working-directory: services/api
         env:
