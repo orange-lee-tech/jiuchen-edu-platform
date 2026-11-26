@@ -70,6 +70,52 @@ json.loads(Path(".runner").read_text(encoding="utf-8-sig"))
 
 后续恢复前先检查 WSL 的 PID 1、`systemctl is-system-running` 与 `/etc/wsl.conf`。若 systemd 可用，再安装现有 Runner 的服务并设置开机启用；若 systemd 不可用，先评估 WSL systemd 启用方案。不得删除 `.runner`、重新注册 Runner 或创建重复 Runner 来绕过本次问题。
 
+## 2026-11-26 恢复结果：Runner systemd 服务已安装并接收 CI
+
+用户在 Ubuntu-24.04 中执行了以下操作：
+
+```bash
+cd ~/actions-runner
+sudo ./svc.sh install orangelee-tech
+sudo ./svc.sh start
+sudo ./svc.sh status
+```
+
+执行成功，输出确认：
+
+| 项目 | 实际结果 |
+|---|---|
+| PID 1 | `systemd` |
+| `/etc/wsl.conf` | `[boot] systemd=true` |
+| systemd unit | `actions.runner.orange-lee-tech-jiuchen-edu-platform.orangeleetech-wsl-local.service` |
+| Loaded | `loaded` |
+| Enablement | `enabled`，已链接到 `multi-user.target.wants` |
+| Active | `active (running)` |
+| 运行用户 | `orangelee-tech`，UID 1000 |
+| Runner listener | PID 23913 |
+| Runner service wrapper | PID 23903 |
+| 注册身份 | 原有 `orangeleetech-wsl-local` |
+
+### GitHub 端接收任务的验证
+
+恢复后重新读取 PR #16 的 CI Run：
+
+- Run：`44864254570`
+- Job：`139643869165`（`verify`）
+- 固定候选 SHA：`d93ba079b75f6b48697497668035acf5f223c597`
+- Run 状态：`in_progress`
+- Job 状态：`in_progress`
+- 已完成：Set up job、Initialize containers、Checkout、Setup Node.js。
+- 正在执行：Install and typecheck miniprogram。
+
+这证明 Runner 已经重新接收该 CI 任务，且至少完成了任务初始化、容器初始化、代码检出和 Node.js 设置。**CI 全部步骤尚未完成，不能记录为 CI PASS。**
+
+### 恢复结论与剩余边界
+
+- 已确认：Runner 原有注册被保留；systemd 服务安装成功、启用成功、当前运行；GitHub Actions 任务已从 queued 进入 in_progress。
+- 尚未确认：Windows 开机后是否自动启动 WSL 发行版；Windows 重启后的端到端自动唤醒；Runner 异常退出后的自动恢复实测。
+- 后续：检查 Windows Task Scheduler 是否需要增加 WSL 启动任务；完成 Windows 重启验收；继续监控当前 CI 的最终结论。
+
 ## 当前结论与未确认事项
 
 **已证实：** 检查时 WSL 发行版仍在运行，但 Runner.Listener / Runner.Worker 均未运行，GitHub Job 因而没有被该 Runner 接收。
