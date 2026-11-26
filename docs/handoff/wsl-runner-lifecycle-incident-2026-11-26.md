@@ -155,6 +155,23 @@ TimeoutStopSec=5min
 
 CI 整体尚未完成，不记录为 PASS。
 
+## CI 最终结果：Runner 恢复有效，候选 CI 暴露独立测试失败
+
+2026-11-26，原 Runner systemd 服务启动后，GitHub Run `44864254570` / Job `139643869165` 成功从 queued 进入 in_progress，并实际执行至工作流结束。目标 SHA：`d93ba079b75f6b48697497668035acf5f223c597`。
+
+最终 Run 结论为 `failure`。日志证据显示：
+
+- 小程序安装与 TypeScript 检查：通过。
+- 导航、真实数据与导出回归：通过。
+- Admin 安装、测试与构建：通过。
+- API 安装、测试与构建：通过。
+- `upgrade-plan-item-due-date` 迁移第一次执行：通过。
+- `upgrade-plan-item-due-date` 迁移第二次执行：通过。
+- 随后的 Classroom API 集成验证失败：`GET /me/classroom?stage=sophomore-fall` 预期 HTTP 200，实际 HTTP 500；断言位于 `services/api/src/db/verify-plan-due-date-mysql.ts:88`。
+- 失败发生在应用集成验证，不是 Runner 调度或服务启动失败。测试进程清理了临时 MySQL 容器和 GitHub Actions 网络。
+
+**对 Runner 事件的意义：** GitHub 能够将 job 分配给恢复后的 Runner，Runner 完成了整段 CI 执行并返回结果。Runner 服务恢复得到实际 job 证明；但 PR #16 的候选版本 CI 仍为失败，不得记为 PASS。下一步应独立诊断 Classroom API 返回 500 的原因，不通过盲目重跑或放宽断言绕过。
+
 ## 当前结论与未确认事项
 
 **已证实：** 检查时 WSL 发行版仍在运行，但 Runner.Listener / Runner.Worker 均未运行，GitHub Job 因而没有被该 Runner 接收。
