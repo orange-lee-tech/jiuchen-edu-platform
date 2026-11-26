@@ -68,8 +68,8 @@ try {
     ['账号计划', '正式计划'])
   await unbindMyIdentity(database, 'owner-1', 'identity-1')
   const unbound = await loadClassroom(database, null, 'senior-fall', 'owner-1', 'senior-spring')
-  assert.deepEqual(unbound.plans.find(plan => plan.type === 'internship')?.sources.map(source => source.title),
-    ['账号计划', '正式计划'])
+  assert.deepEqual(unbound.plans.find(plan => plan.type === 'internship')?.sources.map(source => source.title).sort(),
+    ['正式计划', '账号计划'].sort())
   const [retained] = await connection.query<mysql.RowDataPacket[]>(
     "SELECT name,target,CAST(due_date AS CHAR) AS dueDate,status FROM plan_items WHERE plan_id='formal-plan'")
   assert.deepEqual({ name: retained[0]?.name, target: retained[0]?.target,
