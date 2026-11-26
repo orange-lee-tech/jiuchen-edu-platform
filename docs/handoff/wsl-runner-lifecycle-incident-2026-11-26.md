@@ -45,6 +45,31 @@ json.loads(Path(".runner").read_text(encoding="utf-8-sig"))
 
 并且只输出 Runner 名称、标签和工作目录等非秘密字段，不输出凭据或认证内容。
 
+## 2026-11-26 后续核验：服务未安装
+
+用户补充执行了只读检查，进一步确认：
+
+| 检查项 | 后续结果 | 结论 |
+|---|---|---|
+| `.runner` 中的名称 | `orangeleetech-wsl-local` | 与本机注册配置名称一致 |
+| `.runner` 中的标签字段 | 未读取到 `labels` 字段，脚本显示空数组 | 该文件不是 GitHub 端标签状态的权威来源，不能据此认定标签为空 |
+| 工作目录 | `_work` | 本机配置值 |
+| `.service` | 不存在 | 未发现 Runner 服务元数据 |
+| `sudo ./svc.sh status` | `not installed` | Runner 服务未安装 |
+| systemd unit files | 无 Runner 匹配项 | 未发现已安装的 Runner unit |
+| systemd loaded units | 无 Runner 匹配项 | 未发现已加载的 Runner unit |
+
+随后核对 GitHub Actions 实际任务：
+
+- Workflow：`.github/workflows/ci.yml`，当前 main 中 `verify` job 使用 `[self-hosted, Linux, X64, orangeleetec-local-linux]`。
+- Run：`44864254570`；Job：`139643869165`；目标 SHA：`d93ba079b75f6b48697497668035acf5f223c597`。
+- Job 状态：`queued`；GitHub 返回的 `runner_id=0`、`runner_name=""`，表示该 job 尚未分配给 Runner。
+- GitHub 任务要求的自定义标签为 `orangeleetec-local-linux`。Runner 注册名称 `orangeleetech-wsl-local` 与自定义标签是不同字段；本机 `.runner` 文件未提供权威标签清单，仍需在仓库 Settings → Actions → Runners 核验 GitHub 端标签。
+
+**更新后的结论：** 当前已确认本机 Runner 服务未安装，且检查时没有 Runner 进程；因此没有自动启动与服务级故障恢复机制。WSL 发行版当时显示 Running，不足以保证 Runner 在线。GitHub job 仍未分配。尚未确认 systemd 是否作为 WSL 的 PID 1 启动，也尚未确认 GitHub 端 Runner 标签是否匹配。
+
+后续恢复前先检查 WSL 的 PID 1、`systemctl is-system-running` 与 `/etc/wsl.conf`。若 systemd 可用，再安装现有 Runner 的服务并设置开机启用；若 systemd 不可用，先评估 WSL systemd 启用方案。不得删除 `.runner`、重新注册 Runner 或创建重复 Runner 来绕过本次问题。
+
 ## 当前结论与未确认事项
 
 **已证实：** 检查时 WSL 发行版仍在运行，但 Runner.Listener / Runner.Worker 均未运行，GitHub Job 因而没有被该 Runner 接收。
