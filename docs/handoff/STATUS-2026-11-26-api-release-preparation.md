@@ -7,11 +7,12 @@
 | 项目 | 当前证据 | 状态 |
 |---|---|---|
 | 生产 API | 最后有明确发布回执的 SHA：`cfb0f85c39b44b8a8a2726c26108e465da6f9a45`（2026-11-08） | 历史已发布；11-26 未重新 SSH 核实 |
-| 当前代码分支 | `codex/ux-consolidation-20261116` | PR #16，OPEN |
-| 当前候选 | `01864846a2f0e000555abde27cf50001535491d5` | 未合并、未部署 |
+| 当前代码分支 | `codex/ux-consolidation-20261116`；后续提交仅更新交接 Markdown | PR #16，OPEN；精确 HEAD 以 PR 实时 ref 为准 |
+| 应用代码候选 | `01864846a2f0e000555abde27cf50001535491d5` | 未合并、未部署；后续提交仅更新 Markdown |
 | PR 基线 | `main`：`d179ea8db76b2796f0bb9c929ec2c467fa45c87a` | PR #16 base |
 | 生产祖先关系 | 候选相对最后记录生产 SHA `cfb0f85`：40 commits ahead、0 behind | Git 历史关系 PASS；不代表现场 current 未变化 |
-| 最新候选 CI | Run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494) | FAILURE |
+| 最新 PR CI | Run [45778331694](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45778331694) | FAILURE：小程序回归 PASS；管理端 npm install 被取消；API/MySQL skipped |
+| 应用代码候选 CI | Run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494) | FAILURE：API 367/368，身份解绑测试 1 项失败 |
 | 最新完整绿色 CI | Run [45758876276](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45758876276)，SHA `b2c7ea99251f8c829f1159d90c09b93ca01dd966` | PASS；不是当前 HEAD |
 | 真实备份迁移演练 | 2026-11-21 数据库备份组件，2026-11-26 执行隔离迁移 | PASS |
 | ECS staging / promote | 当前候选尚无新鲜现场回执 | PENDING |
@@ -28,12 +29,13 @@
 - 工作分支：`codex/ux-consolidation-20261116`
 - PR：[ #16 — 当前用户端统一化与 API 候选](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/16)
 - PR 状态：OPEN，`merged=false`
-- 当前 HEAD：`01864846a2f0e000555abde27cf50001535491d5`
+- 当前 PR HEAD：以 GitHub PR #16 实时 ref 为准；后续提交仅更新交接 Markdown
+- 应用代码候选：`01864846a2f0e000555abde27cf50001535491d5`
 - Base：`main`，`d179ea8db76b2796f0bb9c929ec2c467fa45c87a`
 - 最后记录生产 API：`cfb0f85c39b44b8a8a2726c26108e465da6f9a45`
 - GitHub compare：当前候选相对 `cfb0f85` 领先 40 个提交、落后 0 个提交。当前候选包含该生产提交的历史，不等于已在 ECS 运行。
 
-### 1.2 当前 HEAD 的 CI
+### 1.2 当前 PR HEAD 与应用代码候选的 CI
 
 Run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494)，固定 SHA `01864846a2f0e000555abde27cf50001535491d5`：
 
@@ -49,6 +51,8 @@ Run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/action
 | 后续 disposable MySQL 迁移门禁 | 未执行到，不能记 PASS |
 
 该失败与身份解绑新增的实体归属校验处于同一测试范围。当前证据只定位到失败测试和错误码；具体测试夹具或业务逻辑根因仍须修复后重新验证，不把推断写成结论。
+
+PR HEAD 最新 run [45778331694](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45778331694) 已成功初始化容器并完成 checkout；小程序类型检查与 174 项导航/真实数据/导出回归 PASS。随后管理端 `npm install` 收到 `The operation was canceled`，该步骤结论为 cancelled；API 与后续 disposable MySQL 门禁 skipped。日志未给出取消根因，故不能将其归类为管理端代码失败，也不能把整轮 CI 记为 PASS。
 
 最近一次完整 CI PASS 是 SHA `b2c7ea99251f8c829f1159d90c09b93ca01dd966` 的 run [45758876276](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45758876276)。该次完整执行了 due-date、personal-workspace、teacher todos、AI balance、commercial、control-box、object migration、virtual-payment 等 disposable MySQL 8 门禁。它只证明该 SHA，不覆盖之后的身份校验和计划来源修复。
 

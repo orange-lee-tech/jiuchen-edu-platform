@@ -6,7 +6,7 @@
 
 > 本文描述九辰后端的真实职责边界、已知架构和运维规则。日期化的 SHA、资源容量和现场状态均为快照。执行部署、迁移或恢复前，必须重新读取 GitHub 当前分支、ECS 现场和数据库结构；不得把历史记录当成实时状态。
 >
-> **2026-11-26 状态入口：** 当前候选 `01864846a2f0e000555abde27cf50001535491d5` 位于 PR #16，尚未合并或部署；最新 CI 有 1 项 API 测试失败。11-26 真实备份数据库组件的 personal-workspace 迁移演练 PASS，但不代表生产 DDL 或七组件全量恢复通过。详见 [当前交接](../handoff/STATUS-2026-11-26-api-release-preparation.md)。
+> **2026-11-26 状态入口：** PR #16 尚未合并或部署；应用代码候选 `01864846a2f0e000555abde27cf50001535491d5` 之后的提交仅更新 Markdown。候选 CI 有 1 项 API 身份解绑测试失败；PR 最新 CI 在管理端 npm install 阶段被取消，API/MySQL 门禁未执行。11-26 真实备份数据库组件的 personal-workspace 迁移演练 PASS，但不代表生产 DDL 或七组件全量恢复通过。详见 [当前交接](../handoff/STATUS-2026-11-26-api-release-preparation.md)。
 
 ## 1. 一页理解：系统由什么组成
 

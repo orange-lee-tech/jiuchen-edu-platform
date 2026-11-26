@@ -2,11 +2,11 @@
 
 > **当前唯一状态入口。** 具体证据、固定 SHA、CI、真实备份迁移演练和生产发布门槛见 [2026-11-26 API 发布准备与备份演练状态](STATUS-2026-11-26-api-release-preparation.md)。
 >
-> **GitHub：** `orange-lee-tech/jiuchen-edu-platform`；当前分支 `codex/ux-consolidation-20261116`；PR [#16](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/16) OPEN；分支 HEAD `73ab8e2f2bf72259c0be8eb0549dd0bf9a17facd`（本次仅文档更新）；应用代码候选 `01864846a2f0e000555abde27cf50001535491d5`。尚未合并 main、未部署 ECS。
+> **GitHub：** `orange-lee-tech/jiuchen-edu-platform`；当前分支 `codex/ux-consolidation-20261116`；PR [#16](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/16) OPEN；分支后续提交为交接文档专用更新；应用代码候选 `01864846a2f0e000555abde27cf50001535491d5`。最新分支 SHA 以 PR 实时页面为准。尚未合并 main、未部署 ECS。
 >
 > **生产 API：** 最后有明确发布回执的 SHA 为 `cfb0f85c39b44b8a8a2726c26108e465da6f9a45`（2026-11-08）。2026-11-26 尚无新的 ECS 只读回执；切流前必须重读现场 current/previous/approved-release。
 >
-> **CI：** 代码候选 `01864846` 的 run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494) FAILURE，API 367/368 测试通过，1 项身份解绑测试失败；文档更新后的分支 HEAD `73ab8e2` 的 run [45777130602](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45777130602) 在 Docker Hub 拉取 MySQL 镜像时网络超时，未进入 checkout/代码测试。完整绿色 run [45758876276](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45758876276) 对应旧 SHA `b2c7ea99251f8c829f1159d90c09b93ca01dd966`，不得覆盖当前失败。
+> **CI：** 代码候选 `01864846` 的 run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494) FAILURE，API 367/368 测试通过，1 项身份解绑测试失败；当前 PR 分支最新已完成 CI run [45778331694](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45778331694) 中，小程序检查及 174 项导航/真实数据/导出回归通过；管理端 `npm install` 被取消，API 与 MySQL 门禁未执行，日志未给出取消根因。此前 run [45777130602](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45777130602) 在 Docker Hub 拉取 MySQL 镜像时网络超时。完整绿色 run [45758876276](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45758876276) 对应旧 SHA `b2c7ea99251f8c829f1159d90c09b93ca01dd966`，不得覆盖当前失败。
 >
 > **备份：** 2026-11-26 已使用真实备份目录 `20261121-050720-63f7e5` 完成隔离 personal-workspace migration 演练，56 表前后不变、重复执行 PASS、关键业务行摘要不变、无生产写入。演练范围是数据库组件，不代表七组件全部完成恢复验收。
 >
@@ -14,7 +14,7 @@
 
 ## 当前唯一下一步
 
-1. 修复当前 HEAD 的 API 身份解绑失败测试，并运行最新 SHA 完整 CI。
+1. 修复应用代码候选 `01864846` 的 API 身份解绑失败测试；代码变更后对 PR 最新 HEAD 运行完整 CI，确认管理端、API 与 MySQL 门禁全部完成。
 2. 对 ECS 做新鲜只读预检，核实实际 active/previous 与服务健康。
 3. 更新旧候选专用打包/ staging 脚本，生成精确候选归档与哈希。
 4. 完成 staging、迁移差异复核与独立审批后，才进入生产切流。
