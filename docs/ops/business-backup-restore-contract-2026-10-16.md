@@ -32,3 +32,12 @@ CloudBase 持久外部对象、官网附属数据库、外部 nginx include/证�
 - 工具 [README](../../tools/maintenance/README.md) 的12项本地合成测试 PASS；没有实际 MySQL导出、隔离恢复或生产覆盖验收。productionBackupRestored=false，fullBusinessCoverage=false。
 
 备份功能在 [正式发布业务排序](../handoff/p1-release-open-items-2026-10-17.md) 最后；Profile/News/商业表任何生产 DDL 前仍须最小可恢复点。工期中的业务功能可并行施工和有限体验版验证，不把安全门槛伪装为已经通过。
+
+
+---
+
+## 2026-11-26 真实数据库备份迁移演练更新
+
+本合同中的 2026-10-16 结构、路径与流程约束仍作为历史业务恢复边界；最新数据库组件演练结果见 [自主备份规范第 11 节](manual-backup-and-selective-restore.md#11-2026-11-26-真实备份迁移演练回执) 与 [当前发布准备状态](../handoff/STATUS-2026-11-26-api-release-preparation.md)。
+
+最新演练使用备份 `20261121-050720-63f7e5` 的 `database.jcb`，56 表前后不变，personal-workspace migration 连续两次 PASS，八张关键表行数/摘要不变，`productionWrites=false`。本次只证明数据库组件的隔离迁移恢复，不代表七组件全部恢复验收或生产写入批准。旧 `20261108-055750-dac461` 为独立历史备份。

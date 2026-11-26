@@ -1,5 +1,7 @@
 # 用户端统一化与个人工作区改造｜产品需求及 Codex 施工交接
 
+> **产品需求合同快照：2026-11-18。** 本文定义产品规则，不代表当前实现、生产迁移或真机已通过。实际实现、真实备份迁移与当前 CI 状态见 [2026-11-26 当前交接](STATUS-2026-11-26-api-release-preparation.md) 和 [实施审计](unified-personal-workspace-implementation-audit-2026-11-18.md)。
+
 **日期：2026-11-18**  
 **仓库：** `orange-lee-tech/jiuchen-edu-platform`  
 **施工分支：** `codex/ux-consolidation-20261116`  

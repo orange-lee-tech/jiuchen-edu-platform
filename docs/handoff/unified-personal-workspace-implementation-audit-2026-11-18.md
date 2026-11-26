@@ -42,3 +42,18 @@
 显式迁移脚本为 `services/api/src/db/upgrade-personal-workspace.ts`，逐项检测字段、索引、外键和来源枚举，重复执行不重复 DDL，旧 student 阶段只填补账号空值。脚本**未在生产执行**。隔离 MySQL 8 演练脚本已写入 `services/api/src/db/verify-personal-workspace-mysql.ts`，仅接受本机回环地址且固定空白测试库；本机未检出 MySQL/Docker 或测试库连接，因此真实数据库演练**未执行**。现有自动化测试只覆盖模拟数据库与路由行为，不等同于迁移实测。
 
 Unbound 免费额度固定为账号账本幂等版本 `unbound-lifetime-v1` 的一次发放；既有免费发放和历史无扣费成功评估会阻止再次发放。评估开始预留、成功扣减、失败释放均在服务端完成；普通账号的预留即使商业开关关闭也由后台结算。正式学员额度配置保留。Guest 规划、评估、手动课表使用页面内存暂存；登录采用保留页面栈的回跳，登录后再次主动保存。最终 CODE/TEST 状态以本轮提交和交付报告为准，DEVICE 与 PROD 均未验收。
+
+
+## 2026-11-26 真实备份演练与当前代码状态
+
+### 真实备份演练
+
+2026-11-26 使用真实备份 `20261121-050720-63f7e5` 的数据库组件完成隔离恢复和 personal-workspace migration 演练。备份组件 SHA-256：`2d3971e0a95cacc924f552d84209b9129783994d2c4bc056cbfc52e4c8a18f68`；迁移源 `d93ba079b75f6b48697497668035acf5f223c597`；迁移文件 SHA-256：`4741148f3632107a86c2e2ee37264398cf824266f9fb85be483310408274a647`。
+
+MySQL 8 隔离环境 56 表前后不变，迁移命令连续执行两次 PASS，`db:verify:personal-workspace` PASS。八张关键业务表（users 14、students 14、user_profiles 7、student_plans 7、plan_items 9、schedule_imports 14、plan_revisions 1、growth_records 0）行数与内容摘要均未变化。Docker network none、无端口映射、768 MiB、1 CPU、256 PID；容器和临时文件已清理，`productionWrites=false`。
+
+本轮仅演练数据库组件，不宣称七组件逐项恢复通过；生产 DDL 仍未执行。
+
+### 当前代码与 CI
+
+当前 PR #16 分支 `codex/ux-consolidation-20261116` HEAD 为 `01864846a2f0e000555abde27cf50001535491d5`，未合并、未部署。当前 CI run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494) 在 API 身份解绑测试 367/368 处失败，MySQL 迁移门禁未执行到。完整绿色 run [45758876276](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45758876276) 对应旧 SHA `b2c7ea99251f8c829f1159d90c09b93ca01dd966`，不能覆盖当前 HEAD。

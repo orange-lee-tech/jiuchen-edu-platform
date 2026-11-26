@@ -1,4 +1,6 @@
 # 2026-11-08 远端分支精确整理清单
+> **历史分支盘点快照：2026-11-08。** 此后创建了 PR #16，当前施工分支为 `codex/ux-consolidation-20261116`，不能沿用本清单中的“无开放 PR”、分支数量或旧 SHA 作删除依据。当前状态见 [2026-11-26 当前交接](STATUS-2026-11-26-api-release-preparation.md)。
+
 
 > **2026-11-08 已完成回执**：管理员执行本页脚本成功。远端仅 `main`（执行时 `32e03b3bd16efeb3f55a22d669cd1552049ac945`）；归档标签解引用为 `81d9de7827d5d96c6508acf1103ed8e7f720adaa`；两条功能分支均删除。本地未提交 `apps/miniprogram/project.config.json` 与四个 stash。**不使用 reset、clean、强推 main、删除本地工作分支或重写历史。**
 

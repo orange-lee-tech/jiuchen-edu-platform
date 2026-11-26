@@ -1,5 +1,7 @@
 # 九辰教育小程序｜本地工作区整合审计
 
+> **历史本地快照：2026-11-17。** 本文件记录当日 NEW/OLD 工作区、stash、worktree 和本机路径事实。GitHub 当前远端分支 HEAD 已推进至 `01864846a2f0e000555abde27cf50001535491d5`，PR #16 OPEN；本机资产归档/清理是否完成无法由 GitHub 证明。当前远端与发布状态见 [2026-11-26 当前交接](STATUS-2026-11-26-api-release-preparation.md)。
+
 **审计日期：** 2026-11-17  
 **仓库：** `orange-lee-tech/jiuchen-edu-platform`  
 **唯一目标工作区：** `C:\Users\yulia\Desktop\04_项目开发与代码\jiuchen-edu-platform`  

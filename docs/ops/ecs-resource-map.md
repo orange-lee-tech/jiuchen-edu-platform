@@ -1,6 +1,6 @@
-# 九辰 ECS 资源与基础设施地图 V1.0（2026-10-13）
+# 九辰 ECS 资源与基础设施地图 V1.0（原始盘点 2026-10-13；状态指针更新 2026-11-26）
 
-**性质：只读盘点及治理台账，不授权删除、停服、生产 DDL 或发布。** 数据源为用户 2026-10-12 23:59 至 2026-10-13 00:14 CST 的 ECS 终端回执；数值为当时快照，不是实时监控。修改前重新核实。重大变更以 `docs/handoff/CURRENT.md` 和 `CONSTITUTION.md` 为准。
+**性质：历史只读盘点及治理台账，不授权删除、停服、生产 DDL 或发布。** 原始资源数值来自用户 2026-10-12 23:59 至 2026-10-13 00:14 CST 的 ECS 终端回执，不是实时监控。\n>\n> **2026-11-26 状态更正：** 本图中的旧 API SHA、CPU/内存、端口、timer 和磁盘数字均不作为当前现场事实。最后记录的生产 API 发布 SHA 为 `cfb0f85c39b44b8a8a2726c26108e465da6f9a45`（2026-11-08）；11-26 尚未取得新 ECS 只读回执。发布前重新核验 `current`、`previous`、approved-release、服务和资源。当前候选/CI/备份状态见 [2026-11-26 当前交接](../handoff/STATUS-2026-11-26-api-release-preparation.md)。
 
 ## 1. 资源容量与生产基线
 
@@ -66,6 +66,6 @@
 
 ## 6. 近期施工 Gate
 
-- **Release A**：代码候选 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`；Windows 与 ECS 发布包 SHA-256 `8aa28262294d647ca3bd27ed782e77e941e28c904be95051576d547a6ada633f` PASS，已上传；**未执行 staging 构建、无数据库 smoke、promote**。修订脚本审查见 `docs/handoff/release-a-staging-review-2026-10-13.md`。
+- **Release A（历史记录）**：代码候选 `8cc4bb85ffdf3e86e7a13a89d119f1b110491e48`；该候选不是当前生产 SHA。后续 2026-11-08 发布回执记录 active API 为 `cfb0f85c39b44b8a8a2726c26108e465da6f9a45`。
 - 这轮 ECS 只读资产盘点已经收口，无需再要求用户重复执行前述命令。未授权任何清理或 timer 修改。
 - 后续先完成受控 staging；官网保护、Harbor、配置/私有案例与正式 API 一律不随动；生产上线需要新一轮明示审批。
