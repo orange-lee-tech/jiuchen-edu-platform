@@ -27,9 +27,10 @@ try {
   assert.equal(tables.length, 0, 'fixture_database_must_be_empty')
   for (const ddl of [
     "CREATE TABLE users (id VARCHAR(36) PRIMARY KEY, role VARCHAR(16), status VARCHAR(16) DEFAULT 'active', display_name VARCHAR(80))",
+    'CREATE TABLE user_profiles (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL UNIQUE, current_stage VARCHAR(32), current_stage_mode ENUM(\'auto\',\'manual\') NULL)',,
     'CREATE TABLE user_sessions (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), token_hash VARCHAR(64), expires_at TIMESTAMP, revoked_at TIMESTAMP NULL)',
     'CREATE TABLE internal_ids (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), type VARCHAR(16), status VARCHAR(16))',
-    'CREATE TABLE students (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), name VARCHAR(80), university VARCHAR(160), major VARCHAR(160), current_stage VARCHAR(32))',
+    'CREATE TABLE students (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), name VARCHAR(80), university VARCHAR(160), major VARCHAR(160), current_stage VARCHAR(32), current_stage_mode ENUM(\'auto\',\'manual\') NULL)',
     "CREATE TABLE teachers (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), name VARCHAR(80) NOT NULL, title VARCHAR(120), bio VARCHAR(500), status ENUM('active','inactive') NOT NULL DEFAULT 'active')",
     'CREATE TABLE student_teacher_assignments (id VARCHAR(36) PRIMARY KEY, teacher_id VARCHAR(36), student_id VARCHAR(36), relationship VARCHAR(16), stage_code VARCHAR(32), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
     'CREATE TABLE coaching_records (id VARCHAR(36) PRIMARY KEY, student_id VARCHAR(36), teacher_id VARCHAR(36), stage_code VARCHAR(32), title VARCHAR(160), content TEXT, occurred_at TIMESTAMP)',
