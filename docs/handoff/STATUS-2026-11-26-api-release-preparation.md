@@ -178,7 +178,7 @@ Run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/action
 
 ## 5. 文档审计结论
 
-截至本轮审计，仓库有 169 份 Markdown，其中 `docs/handoff` 目录 98 份。
+截至本轮审计，仓库有 170 份 Markdown，其中 `docs/handoff` 目录 99 份。
 
 - `CURRENT.md`、`README.md` 是当前入口，必须指向本页。
 - 2026-11-08 生产发布状态页和 2026-11-01 状态页保留历史事实，不再作为当前状态。

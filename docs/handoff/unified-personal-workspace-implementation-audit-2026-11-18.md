@@ -56,4 +56,4 @@ MySQL 8 隔离环境 56 表前后不变，迁移命令连续执行两次 PASS，
 
 ### 当前代码与 CI
 
-当前 PR #16 分支 `codex/ux-consolidation-20261116` HEAD 为 `01864846a2f0e000555abde27cf50001535491d5`，未合并、未部署。当前 CI run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494) 在 API 身份解绑测试 367/368 处失败，MySQL 迁移门禁未执行到。完整绿色 run [45758876276](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45758876276) 对应旧 SHA `b2c7ea99251f8c829f1159d90c09b93ca01dd966`，不能覆盖当前 HEAD。
+当前 PR #16 分支 `codex/ux-consolidation-20261116` HEAD 为 `73ab8e2f2bf72259c0be8eb0549dd0bf9a17facd`（文档更新提交）；应用代码候选为 `01864846a2f0e000555abde27cf50001535491d5`，未合并、未部署。应用代码候选 CI run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494) 在 API 身份解绑测试 367/368 处失败，MySQL 迁移门禁未执行到。文档更新后的 PR HEAD run [45777130602](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45777130602) 则在 Docker Hub 拉取 `mysql:8.0` 时超时，代码步骤未开始。完整绿色 run [45758876276](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45758876276) 对应旧 SHA `b2c7ea99251f8c829f1159d90c09b93ca01dd966`，不能覆盖当前 HEAD。

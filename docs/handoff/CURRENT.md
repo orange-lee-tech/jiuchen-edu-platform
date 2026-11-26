@@ -2,11 +2,11 @@
 
 > **当前唯一状态入口。** 具体证据、固定 SHA、CI、真实备份迁移演练和生产发布门槛见 [2026-11-26 API 发布准备与备份演练状态](STATUS-2026-11-26-api-release-preparation.md)。
 >
-> **GitHub：** `orange-lee-tech/jiuchen-edu-platform`；当前分支 `codex/ux-consolidation-20261116`；PR [#16](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/16) OPEN；当前 HEAD `01864846a2f0e000555abde27cf50001535491d5`。尚未合并 main、未部署 ECS。
+> **GitHub：** `orange-lee-tech/jiuchen-edu-platform`；当前分支 `codex/ux-consolidation-20261116`；PR [#16](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/16) OPEN；分支 HEAD `73ab8e2f2bf72259c0be8eb0549dd0bf9a17facd`（本次仅文档更新）；应用代码候选 `01864846a2f0e000555abde27cf50001535491d5`。尚未合并 main、未部署 ECS。
 >
 > **生产 API：** 最后有明确发布回执的 SHA 为 `cfb0f85c39b44b8a8a2726c26108e465da6f9a45`（2026-11-08）。2026-11-26 尚无新的 ECS 只读回执；切流前必须重读现场 current/previous/approved-release。
 >
-> **CI：** 当前 HEAD 的 run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494) FAILURE，API 367/368 测试通过，1 项身份解绑测试失败。完整绿色 run [45758876276](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45758876276) 对应旧 SHA `b2c7ea99251f8c829f1159d90c09b93ca01dd966`，不得覆盖当前失败。
+> **CI：** 代码候选 `01864846` 的 run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494) FAILURE，API 367/368 测试通过，1 项身份解绑测试失败；文档更新后的分支 HEAD `73ab8e2` 的 run [45777130602](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45777130602) 在 Docker Hub 拉取 MySQL 镜像时网络超时，未进入 checkout/代码测试。完整绿色 run [45758876276](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45758876276) 对应旧 SHA `b2c7ea99251f8c829f1159d90c09b93ca01dd966`，不得覆盖当前失败。
 >
 > **备份：** 2026-11-26 已使用真实备份目录 `20261121-050720-63f7e5` 完成隔离 personal-workspace migration 演练，56 表前后不变、重复执行 PASS、关键业务行摘要不变、无生产写入。演练范围是数据库组件，不代表七组件全部完成恢复验收。
 >

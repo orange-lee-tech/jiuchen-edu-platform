@@ -1,6 +1,8 @@
 # 九辰 ECS 资源与基础设施地图 V1.0（原始盘点 2026-10-13；状态指针更新 2026-11-26）
 
-**性质：历史只读盘点及治理台账，不授权删除、停服、生产 DDL 或发布。** 原始资源数值来自用户 2026-10-12 23:59 至 2026-10-13 00:14 CST 的 ECS 终端回执，不是实时监控。\n>\n> **2026-11-26 状态更正：** 本图中的旧 API SHA、CPU/内存、端口、timer 和磁盘数字均不作为当前现场事实。最后记录的生产 API 发布 SHA 为 `cfb0f85c39b44b8a8a2726c26108e465da6f9a45`（2026-11-08）；11-26 尚未取得新 ECS 只读回执。发布前重新核验 `current`、`previous`、approved-release、服务和资源。当前候选/CI/备份状态见 [2026-11-26 当前交接](../handoff/STATUS-2026-11-26-api-release-preparation.md)。
+**性质：历史只读盘点及治理台账，不授权删除、停服、生产 DDL 或发布。** 原始资源数值来自用户 2026-10-12 23:59 至 2026-10-13 00:14 CST 的 ECS 终端回执，不是实时监控。
+>
+> **2026-11-26 状态更正：** 本图中的旧 API SHA、CPU/内存、端口、timer 和磁盘数字均不作为当前现场事实。最后记录的生产 API 发布 SHA 为 `cfb0f85c39b44b8a8a2726c26108e465da6f9a45`（2026-11-08）；11-26 尚未取得新 ECS 只读回执。发布前重新核验 `current`、`previous`、approved-release、服务和资源。当前候选/CI/备份状态见 [2026-11-26 当前交接](../handoff/STATUS-2026-11-26-api-release-preparation.md)。
 
 ## 1. 资源容量与生产基线
 
@@ -11,7 +13,7 @@
 | Swap | 2 GiB，已用约 168 MiB | 不应将 Swap 作为生产稳定内存 |
 | 磁盘 | ext4 `/dev/vda3`，40G / 已用18G / 可用20G，49% | 空间尚充足 |
 | inode | 已用21% | 暂无 inode 紧张 |
-| 生产 API | active `b150d2c5c8720aac8d48fbd0395d8db9c408bc63`；previous `ea8c971008a9efd042ec43fdc62398e136262259` | 10-13 回执；未经新核对不得视为永久不变 |
+| 生产 API（10-13 历史快照） | active `b150d2c5c8720aac8d48fbd0395d8db9c408bc63`；previous `ea8c971008a9efd042ec43fdc62398e136262259` | 仅代表 10-13；11-08 最后记录 active 为 `cfb0f85c39b44b8a8a2726c26108e465da6f9a45`，11-26 未重新核实 |
 | API 约束 | `jiuchen-api.service` User=jiuchen-api；MemoryMax=256MiB；CPUQuota=50%；TasksMax=64 | 禁止绕过 release 管理 |
 | 健康 | 公开 `/health/live` HTTP 200，服务 active | 健康不代替业务验收 |
 
