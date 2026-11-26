@@ -551,6 +551,52 @@ test('plan editor imports courses only from the selected semester and blocks sav
   assert.equal(failed.requests.length,beforeSave,'failed read must not submit a stale plan')
 })
 
+test('today task deep link loads and saves the exact formal plan source', async () => {
+  const h = harness(); h.auth.saveAuthResult(authFixture('student'))
+  const home = h.page('pages/index/index')
+  home.currentHomeStudentId = id
+  home.setData({ shellPhase: 'ready', upcomingTasks: [
+    { id: 'formal-task', planId: 'formal-plan', stageCode: 'senior-fall', type: 'internship' },
+  ] })
+  home.onUpcomingTask({ currentTarget: { dataset: { id: 'formal-task' } } })
+  assert.match(h.navigations.at(-1).url, /planId=formal-plan/)
+
+  const page = h.page('pages/plan-editor/plan-editor')
+  page.onLoad({ stage: 'senior-fall', type: 'internship', planId: 'formal-plan', taskId: 'formal-task' })
+  h.respond(0, { ok: true, user: authFixture('student').user, businessIdentity: null })
+  await settle()
+  const classroom = h.requests.findIndex(item => item.url.includes('/me/classroom?stage=senior-fall'))
+  assert.ok(classroom >= 0)
+  h.respond(classroom, { ok: true, student: { name: '测试学员' }, stage: { code: 'senior-fall' },
+    plans: [{
+      id: 'personal-plan', type: 'internship', title: '个人实习规划', revisionStatus: 'approved',
+      items: [{ id: 'personal-task', sortOrder: 0, name: '个人任务', target: null, dueDate: '2026-12-01', status: 'pending' }],
+      sources: [
+        { id: 'personal-plan', source: 'personal', title: '个人实习规划',
+          items: [{ id: 'personal-task', sortOrder: 0, name: '个人任务', target: null, dueDate: '2026-12-01', status: 'pending' }] },
+        { id: 'formal-plan', source: 'formal', title: '正式实习规划',
+          items: [{ id: 'formal-task', sortOrder: 0, name: '正式任务', target: null, dueDate: '2026-12-02', status: 'done' }] },
+      ],
+    }], mentors: [], records: [] })
+  await settle()
+  const versions = h.requests.findIndex(item => item.url.includes('/versions'))
+  if (versions >= 0) h.respond(versions, { ok: true, revisions: [] })
+  await settle()
+  assert.equal(page.data.sourcePlanId, 'formal-plan')
+  assert.equal(page.data.title, '正式实习规划')
+  assert.equal(page.data.items[0].name, '正式任务')
+  assert.equal(page.data.focusTaskIndex, 0)
+
+  page.loadPlan = async () => {}
+  const saving = page.onSave()
+  await settle()
+  const save = h.requests.findIndex(item => item.url.includes('/me/classroom/plans/senior-fall/internship'))
+  assert.ok(save >= 0)
+  assert.equal(h.requests[save].data.sourcePlanId, 'formal-plan')
+  h.respond(save, { ok: true, plan: { id: 'formal-plan', status: 'saved' } })
+  await saving
+})
+
 test('opportunity and mine clear account-owned lists when hidden', () => {
   const h = harness()
   const news = h.page('pages/news/news')

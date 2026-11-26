@@ -279,7 +279,7 @@ Page({
   onUpcomingTask(event: WechatMiniprogram.BaseEvent) {
     const task = this.data.upcomingTasks.find(item => item.id === event.currentTarget.dataset.id)
     if (!task || !this.currentHomeStudentId || this.data.shellPhase !== 'ready') return
-    openPage(`/pages/plan-editor/plan-editor?stage=${encodeURIComponent(task.stageCode)}&type=${encodeURIComponent(task.type)}&taskId=${encodeURIComponent(task.id)}`)
+    openPage(`/pages/plan-editor/plan-editor?stage=${encodeURIComponent(task.stageCode)}&type=${encodeURIComponent(task.type)}&planId=${encodeURIComponent(task.planId)}&taskId=${encodeURIComponent(task.id)}`)
   },
 
   renderScheduleDay() {

@@ -80,6 +80,21 @@ try {
   assert.deepEqual({ name: snapshot[0]?.name, target: snapshot[0]?.target,
     dueDate: snapshot[0]?.dueDate, status: snapshot[0]?.status },
   { name: '正式任务', target: '正式目标', dueDate: '2026-12-02', status: 'done' })
+  await connection.query("INSERT INTO students(id,user_id,name,current_stage,current_stage_mode) VALUES ('foreign-student','other-1','他人学员','freshman-fall','manual')")
+  await connection.query("INSERT INTO student_plans(id,student_id,stage_code,type,title) VALUES ('foreign-plan','foreign-student','freshman-fall','gpa','他人正式规划')")
+  await connection.query("INSERT INTO plan_items(id,plan_id,name,target,due_date,status) VALUES ('foreign-task','foreign-plan','他人任务','不可复制','2026-12-03','pending')")
+  await connection.query("INSERT INTO internal_ids(id,business_id,type,status,user_id,entity_id,claim_mode) VALUES ('identity-foreign','JC002','student','claimed','owner-1','foreign-student','self')")
+  await assert.rejects(unbindMyIdentity(database, 'owner-1', 'identity-foreign'), /identity_entity_not_owned/)
+  const [foreignStudent] = await connection.query<mysql.RowDataPacket[]>(
+    "SELECT user_id FROM students WHERE id='foreign-student'")
+  assert.equal(foreignStudent[0]?.user_id, 'other-1', 'foreign student remains linked to its real owner')
+  const [foreignIdentity] = await connection.query<mysql.RowDataPacket[]>(
+    "SELECT user_id,status FROM internal_ids WHERE id='identity-foreign'")
+  assert.deepEqual({ userId: foreignIdentity[0]?.user_id, status: foreignIdentity[0]?.status },
+    { userId: 'owner-1', status: 'claimed' }, 'failed unbind rolls back the inconsistent identity unchanged')
+  const [foreignCopies] = await connection.query<mysql.RowDataPacket[]>(
+    "SELECT id FROM student_plans WHERE owner_user_id='owner-1' AND title='他人正式规划'")
+  assert.equal(foreignCopies.length, 0, 'foreign formal plan is never copied into the account')
   console.log('PERSONAL_WORKSPACE_MYSQL_PASS')
 } finally {
   if (database?.configured) await database.pool.end()
