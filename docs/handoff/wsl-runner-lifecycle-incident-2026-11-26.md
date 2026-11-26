@@ -116,6 +116,45 @@ sudo ./svc.sh status
 - 尚未确认：Windows 开机后是否自动启动 WSL 发行版；Windows 重启后的端到端自动唤醒；Runner 异常退出后的自动恢复实测。
 - 后续：检查 Windows Task Scheduler 是否需要增加 WSL 启动任务；完成 Windows 重启验收；继续监控当前 CI 的最终结论。
 
+## 2026-11-26 服务重启策略核验
+
+用户只读检查 systemd unit，得到：
+
+```ini
+[Service]
+ExecStart=/home/orangelee-tech/actions-runner/runsvc.sh
+User=orangelee-tech
+WorkingDirectory=/home/orangelee-tech/actions-runner
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=5min
+```
+
+`systemctl show` 返回：
+
+- `Restart=no`
+- `RestartUSec=100ms`
+- `User=orangelee-tech`
+- `ActiveState=active`
+- `SubState=running`
+- `UnitFileState=enabled`
+
+**结论：** Runner 服务已设置为 WSL Ubuntu 启动时自动启动，但当前 unit 未配置异常退出自动重启（`Restart=no`）。这解释了为什么服务进程意外退出后不会由 systemd 自动拉起。不能将 `enabled` 误认为具备进程异常自愈能力。
+
+**操作约束：** PR #16 CI 仍在执行期间，不修改、不重启、不停止 Runner 服务。待当前 CI 完成后，再使用 systemd drop-in 为服务增加经过审查的失败重启策略（建议初始方案 `Restart=on-failure`、`RestartSec=10s`），通过 `systemctl show` 核验生效配置；不要直接编辑由 `svc.sh` 生成的主 unit 文件。重启行为测试安排在 CI 空闲窗口，避免中断真实 job。
+
+## CI 进度补充
+
+再次查询 Run `44864254570` / Job `139643869165`，目标 SHA 仍为 `d93ba079b75f6b48697497668035acf5f223c597`：
+
+- Run / Job：`in_progress`
+- 小程序安装与类型检查：success
+- 导航、真实数据及导出回归：success
+- Admin 安装、测试与构建：in_progress
+- API 构建及后续 MySQL 迁移测试：pending
+
+CI 整体尚未完成，不记录为 PASS。
+
 ## 当前结论与未确认事项
 
 **已证实：** 检查时 WSL 发行版仍在运行，但 Runner.Listener / Runner.Worker 均未运行，GitHub Job 因而没有被该 Runner 接收。
