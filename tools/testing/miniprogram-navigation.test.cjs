@@ -553,36 +553,40 @@ test('plan editor imports courses only from the selected semester and blocks sav
 
 test('today task deep link loads and saves the exact formal plan source', async () => {
   const h = harness(); h.auth.saveAuthResult(authFixture('student'))
+  const formalPlanId = '00000000-0000-4000-8000-000000000003'
+  const personalPlanId = '00000000-0000-4000-8000-000000000004'
+  const formalTaskId = '00000000-0000-4000-8000-000000000005'
+  const personalTaskId = '00000000-0000-4000-8000-000000000006'
   const home = h.page('pages/index/index')
   home.currentHomeStudentId = id
   home.setData({ shellPhase: 'ready', upcomingTasks: [
-    { id: 'formal-task', planId: 'formal-plan', stageCode: 'senior-fall', type: 'internship' },
+    { id: formalTaskId, planId: formalPlanId, stageCode: 'senior-fall', type: 'internship' },
   ] })
-  home.onUpcomingTask({ currentTarget: { dataset: { id: 'formal-task' } } })
-  assert.match(h.navigations.at(-1).url, /planId=formal-plan/)
+  home.onUpcomingTask({ currentTarget: { dataset: { id: formalTaskId } } })
+  assert.ok(h.navigations.at(-1).url.includes(`planId=${formalPlanId}`))
 
   const page = h.page('pages/plan-editor/plan-editor')
-  page.onLoad({ stage: 'senior-fall', type: 'internship', planId: 'formal-plan', taskId: 'formal-task' })
+  page.onLoad({ stage: 'senior-fall', type: 'internship', planId: formalPlanId, taskId: formalTaskId })
   h.respond(0, { ok: true, user: authFixture('student').user, businessIdentity: null })
   await settle()
   const classroom = h.requests.findIndex(item => item.url.includes('/me/classroom?stage=senior-fall'))
   assert.ok(classroom >= 0)
   h.respond(classroom, { ok: true, student: { name: '测试学员' }, stage: { code: 'senior-fall' },
     plans: [{
-      id: 'personal-plan', type: 'internship', title: '个人实习规划', revisionStatus: 'approved',
-      items: [{ id: 'personal-task', sortOrder: 0, name: '个人任务', target: null, dueDate: '2026-12-01', status: 'pending' }],
+      id: personalPlanId, type: 'internship', title: '个人实习规划', revisionStatus: 'approved',
+      items: [{ id: personalTaskId, sortOrder: 0, name: '个人任务', target: null, dueDate: '2026-12-01', status: 'pending' }],
       sources: [
-        { id: 'personal-plan', source: 'personal', title: '个人实习规划',
-          items: [{ id: 'personal-task', sortOrder: 0, name: '个人任务', target: null, dueDate: '2026-12-01', status: 'pending' }] },
-        { id: 'formal-plan', source: 'formal', title: '正式实习规划',
-          items: [{ id: 'formal-task', sortOrder: 0, name: '正式任务', target: null, dueDate: '2026-12-02', status: 'done' }] },
+        { id: personalPlanId, source: 'personal', title: '个人实习规划',
+          items: [{ id: personalTaskId, sortOrder: 0, name: '个人任务', target: null, dueDate: '2026-12-01', status: 'pending' }] },
+        { id: formalPlanId, source: 'formal', title: '正式实习规划',
+          items: [{ id: formalTaskId, sortOrder: 0, name: '正式任务', target: null, dueDate: '2026-12-02', status: 'done' }] },
       ],
     }], mentors: [], records: [] })
   await settle()
   const versions = h.requests.findIndex(item => item.url.includes('/versions'))
   if (versions >= 0) h.respond(versions, { ok: true, revisions: [] })
   await settle()
-  assert.equal(page.data.sourcePlanId, 'formal-plan')
+  assert.equal(page.data.sourcePlanId, formalPlanId)
   assert.equal(page.data.title, '正式实习规划')
   assert.equal(page.data.items[0].name, '正式任务')
   assert.equal(page.data.focusTaskIndex, 0)
@@ -592,8 +596,8 @@ test('today task deep link loads and saves the exact formal plan source', async 
   await settle()
   const save = h.requests.findIndex(item => item.url.includes('/me/classroom/plans/senior-fall/internship'))
   assert.ok(save >= 0)
-  assert.equal(h.requests[save].data.sourcePlanId, 'formal-plan')
-  h.respond(save, { ok: true, plan: { id: 'formal-plan', status: 'saved' } })
+  assert.equal(h.requests[save].data.sourcePlanId, formalPlanId)
+  h.respond(save, { ok: true, plan: { id: formalPlanId, status: 'saved' } })
   await saving
 })
 
