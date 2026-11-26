@@ -84,6 +84,7 @@ const envSchema = z.object({
   ASSESSMENT_AI_API_KEY: optionalNonEmptyString,
   ASSESSMENT_AI_MODEL: optionalNonEmptyString,
   ASSESSMENT_AI_TEMPERATURE: optionalNumber(0, 2),
+  ASSESSMENT_AI_TIMEOUT_MS: optionalPositiveInteger,
   ASSESSMENT_AI_JSON_MODE: optionalBoolean,
   ASSESSMENT_AI_RESPONSE_FORMAT: z.enum(['json_object', 'json_schema']).optional(),
   ASSESSMENT_AI_EXTRA_BODY_JSON: optionalNonEmptyString,

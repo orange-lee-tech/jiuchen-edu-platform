@@ -337,12 +337,17 @@ function parseExtraBodyJson(value?: string) {
   return parsed as Record<string, unknown>
 }
 
+// deepseek-v4-pro 生成完整保研评估 JSON 报告通常需要 60-90 秒，
+// 原 60 秒默认会在模型仍在输出时切断；单独设 120 秒兜底。
+export const ASSESSMENT_AI_DEFAULT_TIMEOUT_MS = 120_000
+
 export function createAssessmentAIProvider(env: AppEnv, transport?: JsonModelProviderConfig['transport']) {
   return createJsonModelProvider({
     provider: env.ASSESSMENT_AI_PROVIDER ?? 'assessment-openai-compatible',
     baseUrl: env.ASSESSMENT_AI_BASE_URL,
     apiKey: env.ASSESSMENT_AI_API_KEY,
     model: env.ASSESSMENT_AI_MODEL,
+    timeoutMs: env.ASSESSMENT_AI_TIMEOUT_MS ?? ASSESSMENT_AI_DEFAULT_TIMEOUT_MS,
     temperature: env.ASSESSMENT_AI_TEMPERATURE ?? 0,
     sendTemperature: assessmentModelSupportsTemperature(env.ASSESSMENT_AI_PROVIDER),
     jsonMode: env.ASSESSMENT_AI_PROVIDER === 'deepseek' ? true :

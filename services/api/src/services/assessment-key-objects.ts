@@ -6,7 +6,7 @@ import type mysql from 'mysql2/promise'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
 import { ControlError, pinDigest, sealKey, sixDigitPin, unsealKey, verifyPin } from './admin-control-boxes.js'
-import { assessmentModelSupportsTemperature, createJsonModelProvider } from './ai-provider.js'
+import { ASSESSMENT_AI_DEFAULT_TIMEOUT_MS, assessmentModelSupportsTemperature, createJsonModelProvider } from './ai-provider.js'
 import { classifyAssessmentFailure, type AssessmentFailureCategory } from './assessment-failure.js'
 import { validateAssessmentOutput } from '../domain/assessment.js'
 
@@ -479,7 +479,7 @@ export async function testAssessmentKey(input: {
     else {
       await validateAssessmentApiUrl(baseUrl)
       const provider = createJsonModelProvider({
-        ...config, timeoutMs: 60000, jsonMode: config.provider === 'deepseek', temperature: 0,
+        ...config, timeoutMs: input.env.ASSESSMENT_AI_TIMEOUT_MS ?? ASSESSMENT_AI_DEFAULT_TIMEOUT_MS, jsonMode: config.provider === 'deepseek', temperature: 0,
         sendTemperature: assessmentModelSupportsTemperature(config.provider),
         transport: secureAssessmentModelFetch,
       })
