@@ -122,7 +122,8 @@ try {
   }
   // Fixed cross-year boundary verifies SQL DATE comparison independently of host timezone.
   assert.equal((await put('u1', url, [{ name: '跨年一', dueDate: '2026-12-31' }, { name: '跨年二', dueDate: '2027-01-02' }, { name: '越界', dueDate: '2027-01-03' }])).statusCode, 200)
-  const boundary = await loadUpcomingTasks(database, 's1', new Date('2026-12-30T16:00:00Z'))
+  // Match the live route: include both the student's formal plans and this account's personal plans.
+  const boundary = await loadUpcomingTasks(database, 's1', new Date('2026-12-30T16:00:00Z'), 'u1')
   assert.deepEqual(boundary.tasks.map(t => t.name), ['跨年一', '跨年二'])
   const [legacy] = await db.query<mysql.RowDataPacket[]>("SELECT target, due_date FROM plan_items WHERE id='legacy'")
   assert.equal(legacy[0]?.target, '2026-10-29 仅为自由文本'); assert.equal(legacy[0]?.due_date, null)
