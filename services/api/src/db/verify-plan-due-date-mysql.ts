@@ -27,7 +27,7 @@ try {
   assert.equal(tables.length, 0, 'fixture_database_must_be_empty')
   for (const ddl of [
     "CREATE TABLE users (id VARCHAR(36) PRIMARY KEY, role VARCHAR(16), status VARCHAR(16) DEFAULT 'active', display_name VARCHAR(80))",
-    'CREATE TABLE user_profiles (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL UNIQUE, current_stage VARCHAR(32), current_stage_mode ENUM(\'auto\',\'manual\') NULL)',,
+    'CREATE TABLE user_profiles (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL UNIQUE, current_stage VARCHAR(32), current_stage_mode ENUM(\'auto\',\'manual\') NULL)',
     'CREATE TABLE user_sessions (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), token_hash VARCHAR(64), expires_at TIMESTAMP, revoked_at TIMESTAMP NULL)',
     'CREATE TABLE internal_ids (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), type VARCHAR(16), status VARCHAR(16))',
     'CREATE TABLE students (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), name VARCHAR(80), university VARCHAR(160), major VARCHAR(160), current_stage VARCHAR(32), current_stage_mode ENUM(\'auto\',\'manual\') NULL)',
