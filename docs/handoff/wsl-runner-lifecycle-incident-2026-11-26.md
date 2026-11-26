@@ -172,6 +172,36 @@ CI 整体尚未完成，不记录为 PASS。
 
 **对 Runner 事件的意义：** GitHub 能够将 job 分配给恢复后的 Runner，Runner 完成了整段 CI 执行并返回结果。Runner 服务恢复得到实际 job 证明；但 PR #16 的候选版本 CI 仍为失败，不得记为 PASS。下一步应独立诊断 Classroom API 返回 500 的原因，不通过盲目重跑或放宽断言绕过。
 
+## 2026-11-26 systemd 异常重启策略配置已生效
+
+用户使用 systemd drop-in 方式写入配置（未修改 `svc.sh` 生成的主 unit）：
+
+文件：
+
+`/etc/systemd/system/actions.runner.orange-lee-tech-jiuchen-edu-platform.orangeleetech-wsl-local.service.d/override.conf`
+
+内容：
+
+```ini
+[Service]
+Restart=on-failure
+RestartSec=10s
+```
+
+随后执行 `systemctl daemon-reload`，只读核验结果：
+
+```text
+Restart=on-failure
+RestartUSec=10s
+ActiveState=active
+SubState=running
+UnitFileState=enabled
+```
+
+`systemctl cat` 已同时显示主 unit 和上述 drop-in，证明 override 文件存在且 systemd 已加载。当前 Runner 服务仍处于 active/running。
+
+**结论：** 服务开机启用和进程异常失败后的自动重启策略均已配置。未通过人为杀进程验证 on-failure 路径，避免破坏 CI 工作；不将配置读取成功描述成故障注入测试通过。Windows 启动/登录后自动唤醒 WSL、Windows 重启后的端到端恢复仍未验收。
+
 ## 当前结论与未确认事项
 
 **已证实：** 检查时 WSL 发行版仍在运行，但 Runner.Listener / Runner.Worker 均未运行，GitHub Job 因而没有被该 Runner 接收。
