@@ -594,7 +594,7 @@ test('today task deep link loads and saves the exact formal plan source', async 
   page.loadPlan = async () => {}
   const saving = page.onSave()
   await settle()
-  const save = h.requests.findIndex(item => item.url.includes('/me/classroom/plans/senior-fall/internship'))
+  const save = h.requests.findIndex(item => item.method === 'PUT' && item.url.includes('/me/classroom/plans/senior-fall/internship'))
   assert.ok(save >= 0)
   assert.equal(h.requests[save].data.sourcePlanId, formalPlanId)
   h.respond(save, { ok: true, plan: { id: formalPlanId, status: 'saved' } })
