@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, asc, desc, eq, gte, lte, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, isNull, lte, ne, or, sql } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { AppEnv } from '../config/env.js'
@@ -12,6 +12,7 @@ import {
   studentPlans,
   students,
   userProfiles,
+  users,
   studentTeacherAssignments,
   teachers,
 } from '../db/schema.js'
@@ -49,6 +50,7 @@ const itemSchema = z.object({
 const planSchema = z.object({
   title: z.string().trim().min(1).max(160),
   items: z.array(itemSchema).max(50),
+  sourcePlanId: z.string().uuid().optional(),
 })
 
 export const scheduleTermStageSchema = z.enum([
@@ -102,6 +104,7 @@ async function resolveStudentByUser(
       university: students.university,
       major: students.major,
       currentStage: students.currentStage,
+      currentStageMode: students.currentStageMode,
     })
     .from(students)
     .where(eq(students.userId, userId))
@@ -147,6 +150,7 @@ export async function applyApprovedPlan(
   items: PlanItemPayload[],
   editorUserId: string,
   teacherUserId?: string,
+  sourcePlanId?: string,
 ) {
   return database.db.transaction(async (tx) => {
     // Serialize edits to this student's plans without changing the existing schema.
@@ -160,8 +164,10 @@ export async function applyApprovedPlan(
       if (!(result[0] as unknown as unknown[])?.length) throw new Error('teacher_student_forbidden')
     }
     const [existing] = await tx.select({ id: studentPlans.id }).from(studentPlans)
-      .where(and(eq(studentPlans.studentId, studentId), eq(studentPlans.stageCode, stageCode), eq(studentPlans.type, type)))
+      .where(and(eq(studentPlans.studentId, studentId), eq(studentPlans.stageCode, stageCode), eq(studentPlans.type, type),
+        sourcePlanId ? eq(studentPlans.id, sourcePlanId) : undefined))
       .limit(1)
+    if (sourcePlanId && !existing) throw new Error('formal_plan_not_found')
     const planId = existing?.id ?? randomUUID()
     if (existing) {
       await tx.update(studentPlans).set({ title }).where(eq(studentPlans.id, planId))
@@ -193,22 +199,26 @@ export async function loadClassroom(
     university: string | null
     major: string | null
     currentStage: string | null
-  },
+  } | null,
   stageCode: string | null | undefined,
+  ownerUserId?: string,
+  accountStage?: string | null,
 ) {
-  const stage = getStageDefinition(stageCode ?? student.currentStage)
+  const stage = getStageDefinition(stageCode ?? accountStage ?? student?.currentStage ?? 'freshman-fall')
   if (!stage) throw new Error('invalid_stage')
 
   const storedPlans = await database.db
     .select({
       id: studentPlans.id,
+      studentId: studentPlans.studentId,
       type: studentPlans.type,
       title: studentPlans.title,
     })
     .from(studentPlans)
     .where(
       and(
-        eq(studentPlans.studentId, student.id),
+        ownerUserId ? or(eq(studentPlans.ownerUserId, ownerUserId), student ? eq(studentPlans.studentId, student.id) : undefined)
+          : eq(studentPlans.studentId, student!.id),
         eq(studentPlans.stageCode, stage.code),
       ),
     )
@@ -216,8 +226,8 @@ export async function loadClassroom(
   const visibleTypes: PlanType[] = [...stage.planTypes, 'custom']
   const plans = await Promise.all(
     visibleTypes.map(async (type) => {
-      const stored = storedPlans.find((plan) => plan.type === type)
-      if (!stored) {
+      const matching = storedPlans.filter((plan) => plan.type === type)
+      if (!matching.length) {
         return {
           id: null,
           type,
@@ -225,32 +235,29 @@ export async function loadClassroom(
           items: [],
           revisionStatus: 'none' as const,
           revisionId: null,
+          sources: [],
         }
       }
-
-      const items = await database.db
-        .select({
-          id: planItems.id,
-          sortOrder: planItems.sortOrder,
-          name: planItems.name,
-          target: planItems.target,
-          dueDate: planItems.dueDate,
-          status: planItems.status,
-        })
-        .from(planItems)
-        .where(eq(planItems.planId, stored.id))
-        .orderBy(asc(planItems.sortOrder))
-
-      return {
+      const sources = await Promise.all(matching.map(async (stored) => ({
         ...stored,
-        items,
+        source: stored.studentId ? 'formal' as const : 'personal' as const,
+        items: await database.db.select({
+          id: planItems.id, sortOrder: planItems.sortOrder, name: planItems.name,
+          target: planItems.target, dueDate: planItems.dueDate, status: planItems.status,
+        }).from(planItems).where(eq(planItems.planId, stored.id)).orderBy(asc(planItems.sortOrder)),
+      })))
+      sources.sort((a, b) => Number(a.source === 'formal') - Number(b.source === 'formal'))
+      const stored = sources[0]
+      return {
+        id: stored.id, type, title: stored.title, items: stored.items,
         revisionStatus: 'approved' as const,
         revisionId: null,
+        sources,
       }
     }),
   )
 
-  const showGuidance = isGuidanceAllowed(stage.code)
+  const showGuidance = Boolean(student && isGuidanceAllowed(stage.code))
 
   const mentors = showGuidance
     ? await database.db
@@ -264,7 +271,7 @@ export async function loadClassroom(
         })
         .from(studentTeacherAssignments)
         .innerJoin(teachers, eq(studentTeacherAssignments.teacherId, teachers.id))
-        .where(eq(studentTeacherAssignments.studentId, student.id))
+        .where(eq(studentTeacherAssignments.studentId, student!.id))
         .orderBy(asc(studentTeacherAssignments.createdAt))
     : []
 
@@ -295,7 +302,7 @@ export async function loadClassroom(
         .leftJoin(teachers, eq(coachingRecords.teacherId, teachers.id))
         .where(
           and(
-            eq(coachingRecords.studentId, student.id),
+            eq(coachingRecords.studentId, student!.id),
             eq(coachingRecords.stageCode, stage.code),
           ),
         )
@@ -310,6 +317,7 @@ export async function loadClassroom(
   return {
     ok: true as const,
     student,
+    currentStage: accountStage ?? student?.currentStage ?? null,
     stage,
     showGuidance,
     mentors,
@@ -322,16 +330,41 @@ export async function loadClassroom(
   }
 }
 
-export async function loadUpcomingTasks(database: Extract<DatabaseContext, { configured: true }>, studentId: string, now = new Date()) {
+export async function loadUpcomingTasks(database: Extract<DatabaseContext, { configured: true }>, studentId: string, now = new Date(), ownerUserId?: string) {
   const window = upcomingTaskWindow(now)
   const rows = await database.db.select({
     id: planItems.id, name: planItems.name, dueDate: planItems.dueDate, status: planItems.status,
     planId: studentPlans.id, planTitle: studentPlans.title, stageCode: studentPlans.stageCode, type: studentPlans.type,
   }).from(planItems).innerJoin(studentPlans, eq(planItems.planId, studentPlans.id))
-    .where(and(eq(studentPlans.studentId, studentId), ne(planItems.status, 'done'),
+    .where(and(ownerUserId ? or(eq(studentPlans.ownerUserId, ownerUserId), eq(studentPlans.studentId, studentId)) : eq(studentPlans.studentId, studentId), ne(planItems.status, 'done'),
       gte(planItems.dueDate, window.from), lte(planItems.dueDate, window.to)))
     .orderBy(asc(planItems.dueDate), asc(studentPlans.stageCode), asc(studentPlans.type), asc(planItems.sortOrder), asc(planItems.id))
   return { ...window, tasks: rows.filter(item => isPlanTypeAllowed(item.stageCode, item.type)) }
+}
+
+export async function applyPersonalPlan(database: Extract<DatabaseContext, { configured: true }>, userId: string,
+  stageCode: string, type: PlanType, title: string, items: PlanItemPayload[], sourcePlanId?: string) {
+  return database.db.transaction(async tx => {
+    await tx.execute(sql`SELECT id FROM users WHERE id=${userId} FOR UPDATE`)
+    const [existing] = sourcePlanId
+      ? await tx.select({ id: studentPlans.id }).from(studentPlans)
+        .where(and(eq(studentPlans.id, sourcePlanId), eq(studentPlans.ownerUserId, userId),
+          isNull(studentPlans.studentId), eq(studentPlans.stageCode, stageCode), eq(studentPlans.type, type))).limit(1)
+      : await tx.select({ id: studentPlans.id }).from(studentPlans)
+        .where(and(eq(studentPlans.ownerUserId, userId), eq(studentPlans.stageCode, stageCode),
+          isNull(studentPlans.studentId), eq(studentPlans.type, type))).limit(1)
+    if (sourcePlanId && !existing) throw new Error('personal_plan_not_owned')
+    const planId = existing?.id ?? randomUUID()
+    if (existing) {
+      await tx.update(studentPlans).set({ title }).where(eq(studentPlans.id, planId))
+      await tx.delete(planItems).where(eq(planItems.planId, planId))
+    } else await tx.insert(studentPlans).values({ id: planId, studentId: null, ownerUserId: userId, stageCode, type, title })
+    if (items.length) await tx.insert(planItems).values(items.map((item, index) => ({
+      id: randomUUID(), planId, sortOrder: index, name: item.name,
+      target: item.target ?? null, dueDate: item.dueDate ?? null, status: item.status,
+    })))
+    return planId
+  })
 }
 
 export function registerClassroomWorkspaceRoutes(
@@ -346,25 +379,21 @@ export function registerClassroomWorkspaceRoutes(
     if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
     const session = await resolveSessionUser(request, database)
     if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
-    if (session.role !== 'student') return reply.code(403).send({ ok: false, error: 'student_tasks_forbidden' })
-    const student = await resolveStudentByUser(database, session.userId)
-    if (!student) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
-    return { ok: true, ...await loadUpcomingTasks(database, student.id) }
+    if (session.role !== 'student' && session.role !== 'user') return reply.code(403).send({ ok: false, error: 'student_tasks_forbidden' })
+    const student = session.role === 'student' ? await resolveStudentByUser(database, session.userId) : null
+    return { ok: true, ...await loadUpcomingTasks(database, student?.id ?? '', new Date(), session.userId) }
   })
 
   app.get('/me/classroom/stage-suggestion', async (request, reply) => {
     if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
     const session = await resolveSessionUser(request, database)
     if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
-    if (session.role !== 'student' || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_stage_edit_forbidden' })
-    const student = await resolveStudentByUser(database, session.userId)
-    if (!student) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
-    const [stageSettings] = await database.db.select({ mode: students.currentStageMode, currentStage: students.currentStage })
-      .from(students).where(eq(students.userId, session.userId)).limit(1)
-    if (!stageSettings) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
-    const [profile] = await database.db.select({ enrollmentYear: userProfiles.enrollmentYear, currentGrade: userProfiles.currentGrade })
+    if (!['student', 'user'].includes(session.role) || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_stage_edit_forbidden' })
+    const student = session.role === 'student' ? await resolveStudentByUser(database, session.userId) : null
+    const [profile] = await database.db.select({ enrollmentYear: userProfiles.enrollmentYear, currentGrade: userProfiles.currentGrade,
+      currentStage: userProfiles.currentStage, mode: userProfiles.currentStageMode })
       .from(userProfiles).where(eq(userProfiles.userId, session.userId)).limit(1)
-    return { ok: true, currentStage: stageSettings?.currentStage ?? null, mode: stageSettings?.mode ?? null,
+    return { ok: true, currentStage: profile?.currentStage ?? student?.currentStage ?? null, mode: profile?.mode ?? student?.currentStageMode ?? null,
       suggestedStage: suggestAcademicStage(profile?.enrollmentYear ?? null, new Date(), profile?.currentGrade ?? null) }
   })
 
@@ -372,34 +401,41 @@ export function registerClassroomWorkspaceRoutes(
     if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
     const session = await resolveSessionUser(request, database)
     if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
-    if (session.role !== 'student' || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_stage_edit_forbidden' })
+    if (!['student', 'user'].includes(session.role) || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_stage_edit_forbidden' })
     const parsed = z.object({ stageCode: z.string(), expectedCurrentStage: z.string().nullable().optional(),
       mode: z.enum(['auto', 'manual']).optional(), expectedMode: z.enum(['auto', 'manual']).nullable().optional(),
       confirmAuto: z.boolean().optional() }).strict().safeParse(request.body)
     if (!parsed.success || !getStageDefinition(parsed.data.stageCode)) return reply.code(400).send({ ok: false, error: 'invalid_stage' })
     if ((parsed.data.mode ?? 'manual') === 'auto' && parsed.data.expectedCurrentStage === undefined) return reply.code(400).send({ ok: false, error: 'expected_stage_required' })
     const result = await database.db.transaction(async (tx) => {
-      const rows = await tx.execute(sql`SELECT id, current_stage AS currentStage, current_stage_mode AS mode FROM students WHERE user_id = ${session.userId} FOR UPDATE`)
-      const student = (rows[0] as unknown as Array<{ id: string; currentStage: string | null; mode: 'auto' | 'manual' | null }>)[0]
-      if (!student) return 'missing' as const
-      if (parsed.data.expectedCurrentStage !== undefined && student.currentStage !== parsed.data.expectedCurrentStage) return 'changed' as const
-      if (parsed.data.expectedMode !== undefined && student.mode !== parsed.data.expectedMode) return 'changed' as const
+      await tx.execute(sql`SELECT id FROM users WHERE id=${session.userId} FOR UPDATE`)
+      const rows = await tx.execute(sql`SELECT current_stage AS currentStage, current_stage_mode AS mode FROM user_profiles WHERE user_id = ${session.userId} FOR UPDATE`)
+      const profileStage = (rows[0] as unknown as Array<{ currentStage: string | null; mode: 'auto' | 'manual' | null }>)[0]
+      const student = session.role === 'student' ? await resolveStudentByUser(database, session.userId) : null
+      const oldStage = profileStage?.currentStage ?? student?.currentStage ?? null
+      const oldMode = profileStage?.mode ?? student?.currentStageMode ?? null
+      if (parsed.data.expectedCurrentStage !== undefined && oldStage !== parsed.data.expectedCurrentStage) return 'changed' as const
+      if (parsed.data.expectedMode !== undefined && oldMode !== parsed.data.expectedMode) return 'changed' as const
       const mode = parsed.data.mode ?? 'manual'
       if (mode === 'auto') {
-        if (student.mode !== 'auto' && student.currentStage !== null && !(student.mode === null && student.currentStage === parsed.data.stageCode) && !parsed.data.confirmAuto) return 'confirmation' as const
+        if (oldMode !== 'auto' && oldStage !== null && !(oldMode === null && oldStage === parsed.data.stageCode) && !parsed.data.confirmAuto) return 'confirmation' as const
         const profileRows = await tx.execute(sql`SELECT enrollment_year AS enrollmentYear, current_grade AS currentGrade FROM user_profiles WHERE user_id = ${session.userId} FOR UPDATE`)
         const profile = (profileRows[0] as unknown as Array<{ enrollmentYear: number | null; currentGrade: string | null }>)[0]
         if (suggestAcademicStage(profile?.enrollmentYear ?? null, new Date(), profile?.currentGrade ?? null) !== parsed.data.stageCode) return 'invalidSuggestion' as const
       }
-      await tx.update(students).set({ currentStage: parsed.data.stageCode, currentStageMode: mode }).where(eq(students.id, student.id))
+      if (profileStage) await tx.update(userProfiles).set({ currentStage: parsed.data.stageCode, currentStageMode: mode })
+        .where(eq(userProfiles.userId, session.userId))
+      else await tx.insert(userProfiles).values({ id: randomUUID(), userId: session.userId,
+        currentStage: parsed.data.stageCode, currentStageMode: mode })
+      if (student) await tx.update(students).set({ currentStage: parsed.data.stageCode, currentStageMode: mode })
+        .where(and(eq(students.id, student.id), eq(students.userId, session.userId)))
       return 'saved' as const
     })
-    if (result === 'missing') return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
     if (result === 'changed') return reply.code(409).send({ ok: false, error: 'current_stage_changed' })
     if (result === 'confirmation') return reply.code(409).send({ ok: false, error: 'stage_auto_confirmation_required' })
     if (result === 'invalidSuggestion') return reply.code(409).send({ ok: false, error: 'stage_suggestion_changed' })
-    const [confirmed] = await database.db.select({ currentStage: students.currentStage, mode: students.currentStageMode })
-      .from(students).where(eq(students.userId, session.userId)).limit(1)
+    const [confirmed] = await database.db.select({ currentStage: userProfiles.currentStage, mode: userProfiles.currentStageMode })
+      .from(userProfiles).where(eq(userProfiles.userId, session.userId)).limit(1)
     if (!confirmed || confirmed.currentStage !== parsed.data.stageCode || confirmed.mode !== (parsed.data.mode ?? 'manual')) return reply.code(409).send({ ok: false, error: 'current_stage_changed' })
     return { ok: true, currentStage: confirmed.currentStage, mode: confirmed.mode }
   })
@@ -408,11 +444,13 @@ export function registerClassroomWorkspaceRoutes(
     if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
     const session = await resolveSessionUser(request, database)
     if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
-    const student = await resolveStudentByUser(database, session.userId)
-    if (!student) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
+    const student = session.role === 'student' ? await resolveStudentByUser(database, session.userId) : null
+    if (!['user', 'student'].includes(session.role)) return reply.code(403).send({ ok: false, error: 'classroom_forbidden' })
+    const [profile] = await database.db.select({ currentStage: userProfiles.currentStage })
+      .from(userProfiles).where(eq(userProfiles.userId, session.userId)).limit(1)
 
     try {
-      return await loadClassroom(database, student, request.query.stage)
+      return await loadClassroom(database, student, request.query.stage, session.userId, profile?.currentStage)
     } catch (error) {
       if (error instanceof Error && error.message === 'invalid_stage') {
         return reply.code(400).send({ ok: false, error: 'invalid_stage' })
@@ -427,10 +465,9 @@ export function registerClassroomWorkspaceRoutes(
       if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
       const session = await resolveSessionUser(request, database)
       if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
-      if (session.role !== 'student') return reply.code(403).send({ ok: false, error: 'student_plan_edit_forbidden' })
+      if (!['user', 'student'].includes(session.role) || ('readOnly' in session && session.readOnly)) return reply.code(403).send({ ok: false, error: 'student_plan_edit_forbidden' })
 
-      const student = await resolveStudentByUser(database, session.userId)
-      if (!student) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
+      const student = session.role === 'student' ? await resolveStudentByUser(database, session.userId) : null
 
       const type = request.params.type as PlanType
       if (!PLAN_TYPES.includes(type) || !isPlanTypeAllowed(request.params.stage, type)) {
@@ -440,9 +477,48 @@ export function registerClassroomWorkspaceRoutes(
       const parsed = planSchema.safeParse(request.body)
       if (!parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_plan_payload', issues: parsed.error.issues })
 
-      const planId = await applyApprovedPlan(database, student.id, request.params.stage,
-        type, parsed.data.title, parsed.data.items, session.userId)
+      const [formal] = parsed.data.sourcePlanId && student ? await database.db.select({ id: studentPlans.id })
+        .from(studentPlans).where(and(eq(studentPlans.id, parsed.data.sourcePlanId), eq(studentPlans.studentId, student.id),
+          eq(studentPlans.stageCode, request.params.stage), eq(studentPlans.type, type))).limit(1) : []
+      let planId: string
+      try {
+        planId = formal ? await applyApprovedPlan(database, student!.id, request.params.stage,
+          type, parsed.data.title, parsed.data.items, session.userId, undefined, formal.id)
+          : await applyPersonalPlan(database, session.userId, request.params.stage, type,
+            parsed.data.title, parsed.data.items, parsed.data.sourcePlanId)
+      } catch (error) {
+        if (error instanceof Error && ['personal_plan_not_owned', 'formal_plan_not_found'].includes(error.message))
+          return reply.code(404).send({ ok: false, error: 'plan_not_found' })
+        throw error
+      }
       return { ok: true, plan: { id: planId, status: 'saved' } }
+    },
+  )
+
+  app.delete<{ Params: { stage: string; type: string; planId: string } }>(
+    '/me/classroom/plans/:stage/:type/:planId', async (request, reply) => {
+      if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
+      const session = await resolveSessionUser(request, database)
+      if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
+      if (!['user', 'student'].includes(session.role) || ('readOnly' in session && session.readOnly))
+        return reply.code(403).send({ ok: false, error: 'student_plan_edit_forbidden' })
+      const { stage, type, planId } = request.params
+      if (!z.string().uuid().safeParse(planId).success || !PLAN_TYPES.includes(type as PlanType) ||
+          !isPlanTypeAllowed(stage, type as PlanType))
+        return reply.code(400).send({ ok: false, error: 'invalid_plan_target' })
+      const removed = await database.db.transaction(async tx => {
+        await tx.execute(sql`SELECT id FROM users WHERE id=${session.userId} FOR UPDATE`)
+        const [owned] = await tx.select({ id: studentPlans.id }).from(studentPlans)
+          .where(and(eq(studentPlans.id, planId), eq(studentPlans.ownerUserId, session.userId),
+            eq(studentPlans.stageCode, stage), eq(studentPlans.type, type as PlanType),
+            isNull(studentPlans.studentId))).limit(1)
+        if (!owned) return false
+        await tx.delete(planItems).where(eq(planItems.planId, owned.id))
+        await tx.delete(studentPlans).where(eq(studentPlans.id, owned.id))
+        return true
+      })
+      if (!removed) return reply.code(404).send({ ok: false, error: 'plan_not_found' })
+      return { ok: true, deletedPlanId: planId }
     },
   )
 
@@ -452,7 +528,7 @@ export function registerClassroomWorkspaceRoutes(
       if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
       const session = await resolveSessionUser(request, database)
       if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
-      const student = await resolveStudentByUser(database, session.userId)
+      const student = session.role === 'student' ? await resolveStudentByUser(database, session.userId) : null
       if (!student) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
 
       const revisions = await database.db
@@ -572,8 +648,9 @@ export function registerClassroomWorkspaceRoutes(
     if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
     const session = await resolveSessionUser(request, database)
     if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
-    const student = await resolveStudentByUser(database, session.userId)
-    if (!student) return reply.code(404).send({ ok: false, error: 'student_profile_not_bound' })
+    if (!['user', 'student'].includes(session.role) || ('readOnly' in session && session.readOnly))
+      return reply.code(403).send({ ok: false, error: 'schedule_import_forbidden' })
+    const student = session.role === 'student' ? await resolveStudentByUser(database, session.userId) : null
 
     const parsed = scheduleImportSchema.safeParse(request.body)
     if (!parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_schedule_import_payload' })
@@ -589,7 +666,7 @@ export function registerClassroomWorkspaceRoutes(
     await database.db.insert(scheduleImports).values({
       id: importId,
       userId: session.userId,
-      studentId: student.id,
+      studentId: student?.id ?? null,
       sourceType: parsed.data.sourceType,
       fileId: parsed.data.fileID,
       fileName: parsed.data.fileName,
@@ -655,6 +732,38 @@ export function registerClassroomWorkspaceRoutes(
         )
       }
     }
+  })
+
+  app.post('/me/classroom/schedule-imports/manual', async (request, reply) => {
+    if (!database.configured) return reply.code(503).send({ ok: false, error: 'database_not_configured' })
+    const session = await resolveSessionUser(request, database)
+    if (!session) return reply.code(401).send({ ok: false, error: 'unauthorized' })
+    if (!['user', 'student'].includes(session.role) || ('readOnly' in session && session.readOnly))
+      return reply.code(403).send({ ok: false, error: 'schedule_import_forbidden' })
+    const parsed = z.object({ stageCode: scheduleTermStageSchema, schedule: z.record(z.string(), z.unknown()) })
+      .strict().safeParse(request.body)
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: 'invalid_schedule_edit_payload' })
+    if (parsed.data.schedule.termStartDate != null &&
+      !isScheduleFirstMonday(parsed.data.schedule.termStartDate))
+      return reply.code(400).send({ ok: false, error: 'schedule_first_monday_required' })
+    let schedule
+    try {
+      schedule = assignCourseKeysOnSave(normalizeEditableSchedule({
+        ...parsed.data.schedule, stageCode: parsed.data.stageCode,
+        sourceType: 'manual', editedAt: new Date().toISOString(),
+      }))
+    } catch (error) {
+      const fields = error instanceof z.ZodError
+        ? [...new Set(error.issues.map(issue => issue.path.join('.')))].slice(0, 8) : []
+      return reply.code(400).send({ ok: false, error: 'invalid_schedule_edit_payload', fields })
+    }
+    const student = session.role === 'student' ? await resolveStudentByUser(database, session.userId) : null
+    const importId = randomUUID()
+    await database.db.insert(scheduleImports).values({
+      id: importId, userId: session.userId, studentId: student?.id ?? null,
+      sourceType: 'manual', fileId: '', fileName: '手动课表', status: 'parsed', parsedJson: schedule,
+    })
+    return { ok: true, importId, schedule }
   })
 
   app.get<{ Querystring: { stageCode?: string } }>('/me/classroom/schedule-imports/latest', async (request, reply) => {

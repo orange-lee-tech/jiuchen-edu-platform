@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare } from '../../utils/native-share'
 import { getBrandContent } from '../../utils/request'
 
 type AnyRecord = Record<string, unknown>
@@ -45,6 +46,17 @@ function serviceItems(value: unknown): Array<{
 }
 
 Page({
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
+  onShow() {
+    enableNativeShare('pages/brand/brand', this);
+  },
+  onShareAppMessage() {
+    return { title: '关于九辰教育｜保研规划与成长陪伴', path: '/pages/brand/brand', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
+  },
+  onShareTimeline() {
+    return { title: '关于九辰教育｜保研规划与成长陪伴', imageUrl: '/assets/jiuchen-visual-v1/banners/today-campus-hero.png' }
+  },
   data: {
     loading: true,
     error: '',

@@ -45,3 +45,70 @@ test('last administrator identity remains protected after binding a student iden
   assert.equal(state.role, 'admin')
   assert.deepEqual(state.updates, [])
 })
+
+test('student unbind snapshots formal plans and tasks before unlinking without deleting originals', async () => {
+  const statements: string[] = []
+  const connection = {
+    async beginTransaction() { statements.push('BEGIN') }, async commit() { statements.push('COMMIT') },
+    async rollback() { statements.push('ROLLBACK') }, release() {},
+    async query(sql: string) {
+      statements.push(sql)
+      if (sql.startsWith('SELECT id,role,status FROM users')) return [[{ id: 'owner', role: 'student', status: 'active' }]]
+      if (sql.startsWith('SELECT * FROM internal_ids')) return [[{ id: 'student-id', type: 'student', entity_id: 'student-1', user_id: 'owner', status: 'claimed' }]]
+      if (sql.startsWith('SELECT id FROM students WHERE id=? AND user_id=? FOR UPDATE')) return [[{ id: 'student-1' }]]
+      if (sql.startsWith('SELECT id,stage_code AS')) return [[{ id: 'formal-plan', stageCode: 'junior-fall', type: 'gpa', title: '正式规划', createdAt: new Date(), updatedAt: new Date() }]]
+      return [[]]
+    },
+  }
+  const db = { configured: true, pool: { getConnection: async () => connection } } as any
+  assert.deepEqual(await unbindMyIdentity(db, 'owner', 'student-id'), { activeRole: 'user' })
+  const copyPlan = statements.findIndex(sql => sql.includes('INSERT INTO student_plans'))
+  const copyItems = statements.findIndex(sql => sql.includes('INSERT INTO plan_items'))
+  const unlink = statements.findIndex(sql => sql.startsWith('UPDATE students SET user_id=NULL'))
+  assert.ok(copyPlan >= 0 && copyItems > copyPlan && unlink > copyItems)
+  assert.equal(statements.at(-1), 'COMMIT')
+  assert.equal(statements.some(sql => /DELETE\s+FROM\s+(student_plans|plan_items|plan_revisions)/i.test(sql)), false)
+})
+
+test('student unbind refuses a mismatched identity-to-entity owner before copying', async () => {
+  const statements: string[] = []
+  const connection = {
+    async beginTransaction() { statements.push('BEGIN') }, async commit() { statements.push('COMMIT') },
+    async rollback() { statements.push('ROLLBACK') }, release() {},
+    async query(sql: string) {
+      statements.push(sql)
+      if (sql.startsWith('SELECT id,role,status FROM users')) return [[{ id: 'owner', role: 'student', status: 'active' }]]
+      if (sql.startsWith('SELECT * FROM internal_ids')) return [[{ id: 'student-id', type: 'student', entity_id: 'foreign-student', user_id: 'owner', status: 'claimed' }]]
+      if (sql.startsWith('SELECT id FROM students WHERE id=? AND user_id=? FOR UPDATE')) return [[]]
+      return [[]]
+    },
+  }
+  const db = { configured: true, pool: { getConnection: async () => connection } } as any
+  await assert.rejects(unbindMyIdentity(db, 'owner', 'student-id'),
+    (error: unknown) => error instanceof IdentityRoleError && error.code === 'identity_entity_not_owned')
+  assert.equal(statements.at(-1), 'ROLLBACK')
+  assert.equal(statements.some(sql => sql.includes('INSERT INTO student_plans')), false)
+  assert.equal(statements.some(sql => sql.startsWith('UPDATE students SET user_id=NULL')), false)
+  assert.equal(statements.some(sql => sql.startsWith('UPDATE internal_ids SET user_id=NULL')), false)
+})
+
+test('failed snapshot copy rolls back before student unlink', async () => {
+  const statements: string[] = []
+  const connection = {
+    async beginTransaction() { statements.push('BEGIN') }, async commit() { statements.push('COMMIT') },
+    async rollback() { statements.push('ROLLBACK') }, release() {},
+    async query(sql: string) {
+      statements.push(sql)
+      if (sql.startsWith('SELECT id,role,status FROM users')) return [[{ id: 'owner', role: 'student', status: 'active' }]]
+      if (sql.startsWith('SELECT * FROM internal_ids')) return [[{ id: 'student-id', type: 'student', entity_id: 'student-1', user_id: 'owner', status: 'claimed' }]]
+      if (sql.startsWith('SELECT id FROM students WHERE id=? AND user_id=? FOR UPDATE')) return [[{ id: 'student-1' }]]
+      if (sql.startsWith('SELECT id,stage_code AS')) return [[{ id: 'formal-plan', stageCode: 'junior-fall', type: 'gpa', title: '正式规划', createdAt: new Date(), updatedAt: new Date() }]]
+      if (sql.includes('INSERT INTO plan_items')) throw new Error('synthetic_copy_failure')
+      return [[]]
+    },
+  }
+  const db = { configured: true, pool: { getConnection: async () => connection } } as any
+  await assert.rejects(unbindMyIdentity(db, 'owner', 'student-id'), /synthetic_copy_failure/)
+  assert.equal(statements.at(-1), 'ROLLBACK')
+  assert.equal(statements.some(sql => sql.startsWith('UPDATE students SET user_id=NULL')), false)
+})

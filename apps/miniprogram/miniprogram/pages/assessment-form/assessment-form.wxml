@@ -1,4 +1,4 @@
-<auth-gate />
+<auth-gate wx:if="{{!guestEditing}}" />
 <view class="assessment-page">
   <view class="hero">
     <text class="title">了解自己的优势与下一步方向</text>
@@ -114,9 +114,8 @@
       </view>
       <text wx:else class="empty">请选择目标院校，最多5所；也可直接填写院校名称。</text>
       <view class="target-school-input-row">
-        <input class="input" maxlength="160" value="{{schoolQuery}}" placeholder="搜索院校名称 / 手动填写" bindinput="onSchoolQueryInput" />
+        <input class="input" maxlength="160" value="{{schoolQuery}}" placeholder="搜索院校名称 / 手动填写" bindfocus="onSchoolInputFocus" bindinput="onSchoolQueryInput" />
         <view class="target-school-add" bindtap="onAddManualSchool" aria-role="button">添加</view>
-        <view class="target-school-trigger" bindtap="onToggleSchoolPicker" aria-role="button">{{schoolPickerOpen ? '收起' : '选择'}}</view>
       </view>
       <scroll-view wx:if="{{schoolPickerOpen}}" class="target-school-suggestions" scroll-y="{{true}}">
         <view wx:for="{{schoolOptions}}" wx:key="name" class="target-school-option {{item.selected ? 'selected' : ''}}" data-name="{{item.name}}" bindtap="onToggleSchoolChoice" aria-role="checkbox" aria-checked="{{item.selected}}">
@@ -139,8 +138,8 @@
         <view class="context-copy"><text class="context-title">导入我的规划</text><text class="context-hint">默认开启。提炼本人已保存的阶段计划、任务进展和课表；没有内容则自动跳过。</text></view>
         <switch checked="{{includePlanning}}" color="#173e67" bindchange="onIncludePlanning" />
       </view>
-      <view class="context-choice">
-        <view class="context-copy"><text class="context-title">考虑历史评估记录</text><text class="context-hint">默认开启。仅参考本人最近最多 3 次成功评估的精简摘要，去除重复；不会重新调用历史评估或收费。</text></view>
+      <view class="context-choice history-choice">
+        <view class="context-copy"><text class="context-title">考虑历史评估记录</text><text class="context-hint">默认开启。仅参考本人最近最多 3 次成功评估的精简摘要，去除重复；不会重新调用历史评估或收费。</text><text class="context-history-link" bindtap="onViewHistory" aria-role="link">查看历史 ›</text></view>
         <switch checked="{{includeRecentAssessments}}" color="#173e67" bindchange="onIncludeHistory" />
       </view>
       <text class="context-disclaimer">两个选项保存到当前草稿，仅影响新评估。原始个人记录由服务端按登录账号查取，不接收他人数据。</text>

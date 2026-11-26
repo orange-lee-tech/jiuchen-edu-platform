@@ -1,10 +1,12 @@
 # 九辰管理员备份工具
 
+> **最新现场证据更新：2026-11-26。** 真实备份目录 `20261121-050720-63f7e5` 的数据库组件已完成隔离解密、MySQL 8 恢复、personal-workspace 迁移双次执行和关键业务表不变性核验；56 表前后不变，`productionWrites=false`。该回执不等于七组件逐项恢复 PASS，也不等于生产 DDL。详见 `docs/ops/manual-backup-and-selective-restore.md` 与 `docs/handoff/STATUS-2026-11-26-api-release-preparation.md`。
+
 ## 当前验收边界
 
 已实现：组件化加密下载、下载后逐项解密比对、资料分类说明、只读故障诊断、选择性恢复计划、选择性上传到 ECS 私有隔离目录、WSL 独立 MySQL 恢复演练接口。
 
-**2026-10-18 现场最小库恢复点通过；没有生产覆盖命令。** 已知七组件加密下载校验成功，管理员 WSL 独立 MySQL8 导入数据库 SQL 后检查出 17 张表，回执 `ISOLATED_SQL_IMPORT_AND_CHECK_PASS`。当前接口不切换 current、不导入生产数据库、不修改网站、NPM、环境变量或定时任务。全资产覆盖、生产级恢复与候选迁移兼容性仍待验。
+**2026-10-18 现场最小库恢复点（17 表）为历史回执。2026-11-26 新增真实备份数据库迁移演练：56 表前后不变、personal-workspace 迁移双次 PASS、关键表行数/摘要不变。** 当前工具仍不切换 current、不导入生产数据库、不修改网站、NPM、环境变量或定时任务。全七组件逐项恢复、生产级恢复与生产 DDL 仍独立验收。
 
 本地 17 项测试覆盖加密往返、错误密码/篡改、归档安全、断点续传、客户端选项与演练故障定位等。管理员 WSL 的真实加密下载与隔离库导入已按下述回执完成；生产写入、全资产恢复及候选迁移仍未发生。
 
@@ -130,3 +132,18 @@ bash start.sh rehearse-db --backup <上一条打印的完整备份目录>
 管理员 v3 db-check：DB_CLIENT_BACKEND=local-mysql8，REMOTE_CONFIG_READ 与 SSH_TUNNEL_CREATE 已执行；MYSQL_CONNECT_AND_ENGINE_CHECK 失败 MYSQL_ERROR_2026。官方 MySQL 错误码为 SSL connection error，尚不能据此判定具体 TLS 协议、证书、代理或网络根因。数据库组件未导出，先前六组件保留PARTIAL；隔离恢复及生产覆盖尚未运行。
 
 备份建设在正式发布业务排序中列末位；生产 DDL 前仍须最小可恢复点。此段为 2026-10-17 的历史决策；2026-10-18 已增设仅限 ECS 本机数据库地址的条件通道，不重跑整代备份。对应发布待办见docs/handoff/p1-release-open-items-2026-10-17.md。
+
+
+## 2026-11-26 真实备份迁移演练
+
+- 备份：`/home/orangelee-tech/jiuchen-backups/20261121-050720-63f7e5`
+- receipt / SHA-256 / PIN / partial 检查：PASS（`receiptVerified=true`、`sha256Verified=true`、`pinned=true`、`partial=false`）
+- 本轮实际演练组件：`database.jcb`；SHA-256 `2d3971e0a95cacc924f552d84209b9129783994d2c4bc056cbfc52e4c8a18f68`
+- 真实数据库迁移：`db:upgrade:personal-workspace` 连续两次 PASS；`db:verify:personal-workspace` PASS
+- 数据库表数：56 → 56；八张关键业务表的行数与内容摘要迁移前后相同
+- 隔离：Docker MySQL 8，network none，无 TCP 映射，768 MiB、1 CPU、256 PID，事件调度关闭
+- 清理：容器已删除、临时文件已清理；`productionWrites=false`
+- 迁移源提交：`d93ba079b75f6b48697497668035acf5f223c597`；migration SHA-256 `4741148f3632107a86c2e2ee37264398cf824266f9fb85be483310408274a647`
+- 结果：`REAL_BACKUP_MIGRATION_AUDIT=PASS`
+
+该演练只覆盖数据库组件和 personal-workspace migration。不要将其解释为七组件完整恢复、due-date 真实备份迁移演练或生产数据库写入。

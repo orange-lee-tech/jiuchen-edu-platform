@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { authorizePage } from '../../utils/navigation'
 import {isReadOnly} from '../../utils/read-only-context'
 import { normalizePlanDraft } from '../../utils/plan-editor-form'
@@ -28,6 +29,12 @@ const STATUS_OPTIONS = [
 ] as const
 
 Page({
+  onShareAppMessage() { return friendShare('pages/plan-editor/plan-editor', this) },
+  onShareTimeline() { return timelineShare('pages/plan-editor/plan-editor', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('pages/plan-editor/plan-editor', this); },
   data: {
     loading: true,
     loadError: '',
@@ -43,11 +50,13 @@ Page({
     versions: [] as PlanRevision[],
     revisionStatus: 'none' as 'none' | 'pending' | 'approved',
     schedulePrefillCount: 0,
+    sourcePlanId: '',
     focusTaskId: '', focusTaskIndex: -1,
     statusOptions: STATUS_OPTIONS,
   },
 
   onLoad(options: Record<string, string>) {
+    if (!options.stage || !options.type) { wx.switchTab({ url: '/pages/classroom/classroom' }); return }
     authorizePage('pages/plan-editor/plan-editor', options, () => this.initializePlanEditor(options))
   },
   initializePlanEditor(options: Record<string, string>) {
@@ -61,6 +70,7 @@ Page({
       studentId,
       teacherMode: Boolean(studentId),
       studentName: decodeURIComponent(options.studentName || ''),
+      sourcePlanId: decodeURIComponent(options.planId || ''),
       focusTaskId: decodeURIComponent(options.taskId || ''),
     })
     void this.loadPlan()
@@ -75,17 +85,24 @@ Page({
       const plan = classroom.plans.find((item) => item.type === this.data.type)
       if (!plan) throw new Error('当前阶段没有该计划')
 
+      const source = this.data.sourcePlanId
+        ? plan.sources?.find(item => item.id === this.data.sourcePlanId)
+        : undefined
+      if (this.data.sourcePlanId && !source) throw new Error('所选计划来源已变化，请返回规划页刷新后重试')
+      const sourcePlanId = source?.id || plan.id || ''
+      const sourceItems = source?.items || plan.items
       const revisionStatus = plan.revisionStatus || (plan.id ? 'approved' : 'none')
-      const focusTaskIndex = this.data.focusTaskId ? plan.items.findIndex(item => item.id === this.data.focusTaskId) : -1
-      const items = plan.items.map((item) => ({
+      const focusTaskIndex = this.data.focusTaskId ? sourceItems.findIndex(item => item.id === this.data.focusTaskId) : -1
+      const items = sourceItems.map((item) => ({
         name: item.name,
         target: item.target,
         dueDate: item.dueDate ?? null,
         status: item.status,
       }))
       this.setData({
-        studentName: this.data.studentName || classroom.student.name,
-        title: plan.title,
+        studentName: this.data.studentName || classroom.student?.name || '',
+        sourcePlanId,
+        title: source?.title || plan.title,
         items,
         revisionStatus,
         schedulePrefillCount: 0,
@@ -218,7 +235,7 @@ Page({
         )
         wx.showToast({ title: '已保存为正式版', icon: 'success' })
       } else {
-        await saveMyClassroomPlan(this.data.stageCode, this.data.type, { title, items })
+        await saveMyClassroomPlan(this.data.stageCode, this.data.type, { title, items, sourcePlanId: this.data.sourcePlanId || undefined })
         wx.showToast({ title: '计划已保存', icon: 'success' })
       }
       await this.loadPlan()

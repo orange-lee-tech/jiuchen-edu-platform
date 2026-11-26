@@ -74,8 +74,8 @@ export function routeAllowed(route: string, role: UserRole | undefined, options:
   if (route === 'pages/staff-profile/staff-profile') return (role === 'teacher' || role === 'admin') && !isReadOnly()
   if (route === 'pages/teacher-news-tags/teacher-news-tags') return role === 'teacher' && !isReadOnly()
   if (route === 'pages/teacher-students/teacher-students') return role === 'teacher' || role === 'staff' || role === 'admin'
-  if (route === 'pages/plan-editor/plan-editor') return options.studentId ? role === 'teacher' || role === 'staff' || role === 'admin' : role === 'student'
-  if (route === 'pages/schedule-import/schedule-import') return role === 'student'
+  if (route === 'pages/plan-editor/plan-editor') return options.studentId ? role === 'teacher' || role === 'staff' || role === 'admin' : role === 'student' || role === 'user'
+  if (route === 'pages/schedule-import/schedule-import') return !role || role === 'student' || role === 'user'
   if (route === 'pages/assessment-form/assessment-form') return Boolean(role && STUDENT_ROLES.includes(role))
   // Historical reports belong to the account even after an internal identity change.
   if (route === 'pages/assessment-history/assessment-history' || route === 'pages/assessment-result/assessment-result') return Boolean(role)
@@ -96,7 +96,7 @@ export function validateIntent(route: string, params: Record<string, string | un
     'pages/staff-profile/staff-profile': {},
     'pages/admin-credits/admin-credits': {},
     'pages/teacher-news-tags/teacher-news-tags': {},
-    'pages/plan-editor/plan-editor': { stage: (v) => STAGE.test(v), type: (v) => ['gpa', 'english', 'competition', 'research', 'internship', 'custom'].includes(v), studentId: (v) => UUID.test(v), taskId: (v) => UUID.test(v), studentName: (v) => v.length <= 80 && !/[\x00-\x1f]/.test(v) },
+    'pages/plan-editor/plan-editor': { stage: (v) => STAGE.test(v), type: (v) => ['gpa', 'english', 'competition', 'research', 'internship', 'custom'].includes(v), studentId: (v) => UUID.test(v), planId: (v) => UUID.test(v), taskId: (v) => UUID.test(v), studentName: (v) => v.length <= 80 && !/[\x00-\x1f]/.test(v) },
     'pages/admin/admin': { section: (v) => ['admin-users', 'admin-assignments', 'admin-news','admin-analytics','admin-readonly','admin-controls'].includes(v) },
     'pages/schedule-import/schedule-import': { view: (v) => ['current', 'manage', 'all', 'auto'].includes(v) },
     'pages/product-detail/product-detail': { documentKey: (v) => v.length > 0 && v.length <= 160 && !/[/?#\x00-\x1f]/.test(v) },
@@ -133,7 +133,7 @@ export function finishLoginNavigation(auth: BootstrapResult) {
   }
   const pages = getCurrentPages()
   const previous = pages[pages.length - 2]
-  if (intent.retained && intent.owner === auth.user.id && previous?.route === intent.route) {
+  if (intent.retained && (!intent.owner || intent.owner === auth.user.id) && previous?.route === intent.route) {
     wx.navigateBack({ fail: () => openSlot('mine') })
     return
   }

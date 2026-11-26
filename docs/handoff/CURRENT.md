@@ -1,18 +1,23 @@
-# CURRENT — 九辰教育产品收口施工（2026-10-30）
+# CURRENT — 九辰教育当前工程状态（2026-11-26）
 
-> 2026-11-07 Batch B 本地施工完成，尚待微信开发者工具与真机验收。B1 `0f1f288`：定位页五组学业资料原位编辑；B2 `96898d1`：英语、科研、竞赛成长记录原位查看与编辑；B3 `9417f6c`：共享额度钱包迁至“我的”；B4 `e1a1a0e`：评估页紧凑钱包与不足额继续购买。账号切换钱包状态修正 `dd5c9a0`，评估表单回程草稿保护 `8f1e6de`。各段小程序 typecheck 退出码 0；B1 5/5、B2 6/6、B3 4/4、B4 最终 7/7 定向测试 PASS；`git diff --check` 退出码 0。以上均为本地工程证据，未运行云端 CI、真机支付、推送、合并或生产部署。
-
-> 2026-11-07 本地分支状态更新：`codex/ux-batch-a-20261106` 的 Batch A 已获人类真机验收 PASS；本地工程及验收边界见 [Batch A 收官快照](batch-a-acceptance-2026-11-07.md)。Batch B（定位资料原位编辑、商业区迁移）开始本地施工。此索引不代表 GitHub 推送、生产部署或正式发布；下方 2026-10-30 记录保留其当时状态。
-
-> 最新状态：用户要求停止新增、进入收口审查，并因额度限制及时交接。本轮未提交、未推送、未部署，HEAD 仍是施工起点 d3dcfe4。以 [收口审查报告](product-closeout-scope-audit-2026-10-30.md) 的缺口和逐条判定为准；此前交付草稿不构成全部完成结论。
+> **当前唯一状态入口。** 具体证据、固定 SHA、CI、真实备份迁移演练和生产发布门槛见 [2026-11-26 API 发布准备与备份演练状态](STATUS-2026-11-26-api-release-preparation.md)。
 >
-> 最后自动检查：API typecheck、344/344 tests、build 及小程序 typecheck PASS。已发现的审核机制、Web custom 读取、草稿误计使用次数、单次成本读模型及版本语义等缺口尚未修复。备份恢复、数据库实际迁移、微信工具、真机及生产验收未通过本轮验证。
+> **GitHub：** `orange-lee-tech/jiuchen-edu-platform`；当前分支 `codex/ux-consolidation-20261116`；PR [#16](https://github.com/orange-lee-tech/jiuchen-edu-platform/pull/16) OPEN；分支后续提交为交接文档专用更新；应用代码候选 `01864846a2f0e000555abde27cf50001535491d5`。最新分支 SHA 以 PR 实时页面为准。尚未合并 main、未部署 ECS。
+>
+> **生产 API：** 最后有明确发布回执的 SHA 为 `cfb0f85c39b44b8a8a2726c26108e465da6f9a45`（2026-11-08）。2026-11-26 尚无新的 ECS 只读回执；切流前必须重读现场 current/previous/approved-release。
+>
+> **CI：** 代码候选 `01864846` 的 run [45771861494](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45771861494) FAILURE，API 367/368 测试通过，1 项身份解绑测试失败；当前 PR 分支最新已完成 CI run [45778331694](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45778331694) 中，小程序检查及 174 项导航/真实数据/导出回归通过；管理端 `npm install` 被取消，API 与 MySQL 门禁未执行，日志未给出取消根因。此前 run [45777130602](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45777130602) 在 Docker Hub 拉取 MySQL 镜像时网络超时。完整绿色 run [45758876276](https://github.com/orange-lee-tech/jiuchen-edu-platform/actions/runs/45758876276) 对应旧 SHA `b2c7ea99251f8c829f1159d90c09b93ca01dd966`，不得覆盖当前失败。
+>
+> **备份：** 2026-11-26 已使用真实备份目录 `20261121-050720-63f7e5` 完成隔离 personal-workspace migration 演练，56 表前后不变、重复执行 PASS、关键业务行摘要不变、无生产写入。演练范围是数据库组件，不代表七组件全部完成恢复验收。
+>
+> **生产边界：** 当前未执行生产 DDL、API 切流、微信体验版上传、提审或正式发布。不得把备份 PASS、CI 旧 SHA PASS 或本地代码完成写成生产/真机 PASS。
 
-- 当前施工分支：`codex/product-closeout-build-20261030`；独立 Worktree 从用户指定 `d3dcfe4eb1bed3cb511aebeaf6bc9f56837e34b1` 创建，未切换原工作区、未合并 main 或文档分支。
-- A—O 施工、迁移清单、自动检查及本机验收步骤见 [本轮交付](product-closeout-build-2026-10-30.md)；原资产保护及分类见 [隔离记录](product-closeout-build-isolation-2026-10-30.md)。
-- 用户最新要求：人工在本机验收，不重复备份流程。本轮备份/恢复演练已取消；不执行微信工具或真机验收，不把代码检查当作这些项目 PASS。
-- 新 API 和新结构尚未发布。开发者工具需明确切到本地 API，后端使用独立测试库及本轮迁移；指向现役 ECS 不能验证新写入接口。
-- 本轮无生产 DDL、部署、生产数据操作、真实付费模型或微信上传/发布。未来生产更新仍按固定 SHA 独立审批。
+## 当前唯一下一步
+
+1. 修复应用代码候选 `01864846` 的 API 身份解绑失败测试；代码变更后对 PR 最新 HEAD 运行完整 CI，确认管理端、API 与 MySQL 门禁全部完成。
+2. 对 ECS 做新鲜只读预检，核实实际 active/previous 与服务健康。
+3. 更新旧候选专用打包/ staging 脚本，生成精确候选归档与哈希。
+4. 完成 staging、迁移差异复核与独立审批后，才进入生产切流。
 
 ---
 

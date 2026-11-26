@@ -26,6 +26,7 @@ import {
   grantFreeCredits,
 } from '../services/credit-ledger.js'
 import { resolveSessionUser } from '../services/session.js'
+import { freeGrantsForRole } from '../services/commercial-config.js'
 import {
   createUnconfiguredAssessmentImportService,
   isOwnedAssessmentImportFile,
@@ -784,11 +785,11 @@ export function registerAssessmentRoutes(
       const startedAt = new Date()
 
       const activeCommercial = typeof commercial === 'function' ? await commercial() : commercial
-      if (activeCommercial.creditEnforcementEnabled) {
+      if (activeCommercial.creditEnforcementEnabled || user.role === 'user') {
         try {
-          for (const grant of [activeCommercial.freeGrant, user.role === 'student' ? activeCommercial.studentBonusGrant : null]) {
-            if (grant) await grantFreeCredits({ database, userId: user.userId, grant })
-          }
+          for (const grant of freeGrantsForRole({ freeGrant: activeCommercial.freeGrant,
+            studentBonusGrant: activeCommercial.studentBonusGrant ?? null }, user.role))
+            await grantFreeCredits({ database, userId: user.userId, grant })
           await beginAssessmentRunWithCredit({
             database,
             userId: user.userId,

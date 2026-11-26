@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult, refreshAuthResult } from '../../utils/auth'
 import { authorizePage } from '../../utils/navigation'
 import {
@@ -150,6 +151,11 @@ function buildResultView(
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/assessment-result/assessment-result', this) },
+  onShareTimeline() { return timelineShare('pages/assessment-result/assessment-result', this) },
+
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('pages/assessment-result/assessment-result', this); },
   data: {
     loading: true,
     exporting: false,
@@ -168,11 +174,12 @@ Page({
   },
 
   onLoad(query: Record<string, string | undefined>) {
+    if (!query.id) { wx.redirectTo({ url: '/pages/assessment-history/assessment-history' }); return }
     cleanupExpiredAssessmentExports()
     authorizePage('pages/assessment-result/assessment-result', query, () => this.initializeResult(query))
   },
   unloaded:false,
-  onUnload(){this.unloaded=true},
+  onUnload() { disableNativeShare(this);this.unloaded=true},
   initializeResult(query: Record<string, string | undefined>) {
     const auth = getSavedAuthResult()
     if (!auth) {
@@ -218,7 +225,7 @@ Page({
       const output = buildResultView(assessment.output, references)
       let displayName=''
       if((getReadOnlyContext()?.role||getSavedAuthResult()?.user.role)==='student'){
-        try{displayName=(await getMyClassroom()).student.name||''}catch{/* A nickname is never a real-name fallback. */}
+        try{displayName=(await getMyClassroom()).student?.name||''}catch{/* A nickname is never a real-name fallback. */}
       }
       if(getSavedAuthResult()?.user.id!==owner)return
 

@@ -25,15 +25,17 @@ try {
   assert.match(String(version[0]?.version), /^8\./)
   const [tables] = await db.query<mysql.RowDataPacket[]>('SHOW TABLES')
   assert.equal(tables.length, 0, 'fixture_database_must_be_empty')
+  // Mirror the schema fields read by the live /me/classroom route in this disposable fixture.
   for (const ddl of [
     "CREATE TABLE users (id VARCHAR(36) PRIMARY KEY, role VARCHAR(16), status VARCHAR(16) DEFAULT 'active', display_name VARCHAR(80))",
+    'CREATE TABLE user_profiles (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36) NOT NULL UNIQUE, current_stage VARCHAR(32), current_stage_mode ENUM(\'auto\',\'manual\') NULL)',
     'CREATE TABLE user_sessions (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), token_hash VARCHAR(64), expires_at TIMESTAMP, revoked_at TIMESTAMP NULL)',
     'CREATE TABLE internal_ids (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), type VARCHAR(16), status VARCHAR(16))',
-    'CREATE TABLE students (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), name VARCHAR(80), university VARCHAR(160), major VARCHAR(160), current_stage VARCHAR(32))',
+    'CREATE TABLE students (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), name VARCHAR(80), university VARCHAR(160), major VARCHAR(160), current_stage VARCHAR(32), current_stage_mode ENUM(\'auto\',\'manual\') NULL)',
     "CREATE TABLE teachers (id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), name VARCHAR(80) NOT NULL, title VARCHAR(120), bio VARCHAR(500), status ENUM('active','inactive') NOT NULL DEFAULT 'active')",
     'CREATE TABLE student_teacher_assignments (id VARCHAR(36) PRIMARY KEY, teacher_id VARCHAR(36), student_id VARCHAR(36), relationship VARCHAR(16), stage_code VARCHAR(32), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
     'CREATE TABLE coaching_records (id VARCHAR(36) PRIMARY KEY, student_id VARCHAR(36), teacher_id VARCHAR(36), stage_code VARCHAR(32), title VARCHAR(160), content TEXT, occurred_at TIMESTAMP)',
-    "CREATE TABLE student_plans (id VARCHAR(36) PRIMARY KEY, student_id VARCHAR(36), stage_code VARCHAR(32), type ENUM('gpa','english','competition','research','internship','custom'), title VARCHAR(160), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (student_id) REFERENCES students(id))",
+    "CREATE TABLE student_plans (id VARCHAR(36) PRIMARY KEY, student_id VARCHAR(36), owner_user_id VARCHAR(36), stage_code VARCHAR(32), type ENUM('gpa','english','competition','research','internship','custom'), title VARCHAR(160), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (student_id) REFERENCES students(id))",
     "CREATE TABLE plan_items (id VARCHAR(36) PRIMARY KEY, plan_id VARCHAR(36), sort_order INT DEFAULT 0, name VARCHAR(160), target VARCHAR(255), status ENUM('pending','in_progress','done') NOT NULL DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, FOREIGN KEY (plan_id) REFERENCES student_plans(id))",
     "CREATE TABLE plan_revisions (id VARCHAR(36) PRIMARY KEY, student_id VARCHAR(36), stage_code VARCHAR(32), type VARCHAR(32), title VARCHAR(160), status VARCHAR(16), review_note VARCHAR(500), reviewed_by_user_id VARCHAR(36), reviewed_at TIMESTAMP NULL)",
   ]) await db.query(ddl)
@@ -42,7 +44,7 @@ try {
     await db.query('INSERT INTO user_sessions(id,user_id,token_hash,expires_at) VALUES (?,?,?,?)',
       [userId, userId, createHash('sha256').update(`synthetic-${userId}`).digest('hex'), new Date(Date.now() + 3600000)])
   }
-  await db.query("INSERT INTO students VALUES ('s1','u1','合成甲',NULL,NULL,'freshman-fall'),('s2','u2','合成乙',NULL,NULL,'senior-fall')")
+  await db.query("INSERT INTO students (id,user_id,name,university,major,current_stage) VALUES ('s1','u1','合成甲',NULL,NULL,'freshman-fall'),('s2','u2','合成乙',NULL,NULL,'senior-fall')")
   await db.query("INSERT INTO teachers(id,user_id,name) VALUES ('t1','t1','合成导师'),('t2','t2','合成导师乙')")
   await db.query("INSERT INTO student_teacher_assignments(id,teacher_id,student_id) VALUES ('a1','t1','s1')")
   await db.query("INSERT INTO student_plans(id,student_id,stage_code,type,title) VALUES ('legacy','s1','freshman-fall','gpa','历史计划')")
@@ -85,7 +87,7 @@ try {
   assert.equal((await put('u1', url, items)).statusCode, 200)
   assert.equal((await put('u2', url, [{ name: '他人任务', dueDate: window.from }])).statusCode, 200)
   const read = await app.inject({ url: '/me/classroom?stage=sophomore-fall', headers: headers('u1') })
-  assert.equal(read.statusCode, 200)
+  assert.equal(read.statusCode, 200, JSON.stringify(read.json()))
   const stored = read.json().plans.find((p: { type: string }) => p.type === 'english')
   assert.equal(stored.items[1].dueDate, window.from)
   assert.equal(stored.items[1].target, '自由文本保持不变')
@@ -101,7 +103,9 @@ try {
   assert.equal((await put('u2', '/me/teacher/students/s1/plans/sophomore-fall/english', [])).statusCode, 403)
   assert.equal((await app.inject({ method: 'PUT', url, headers: { ...headers('u1'), 'x-jiuchen-read-only-target': 'student:s1' }, payload: { title: '禁止', items: [] } })).statusCode, 403)
   assert.equal((await put('t1', '/me/teacher/students/s1/plans/sophomore-fall/english', [{ name: '老师更新', dueDate: null }])).statusCode, 200)
-  assert.equal((await app.inject({ url: '/me/classroom/upcoming-tasks', headers: headers('u1') })).json().tasks.length, 0)
+  const afterTeacherUpdate = await app.inject({ url: '/me/classroom/upcoming-tasks', headers: headers('u1') })
+  assert.deepEqual(afterTeacherUpdate.json().tasks.map((t: { name: string }) => t.name), ['今天', '明天', '后天'],
+    'teacher_formal_plan_update_preserves_student_personal_tasks')
   assert.equal((await put('u1', url, [{ name: '日期清除', target: '保留说明', dueDate: window.from }])).statusCode, 200)
   assert.equal((await put('u1', url, [{ name: '日期清除', target: '保留说明', dueDate: null }])).statusCode, 200)
   const clearedClassroom = await app.inject({ url: '/me/classroom?stage=sophomore-fall', headers: headers('u1') })
@@ -118,7 +122,8 @@ try {
   }
   // Fixed cross-year boundary verifies SQL DATE comparison independently of host timezone.
   assert.equal((await put('u1', url, [{ name: '跨年一', dueDate: '2026-12-31' }, { name: '跨年二', dueDate: '2027-01-02' }, { name: '越界', dueDate: '2027-01-03' }])).statusCode, 200)
-  const boundary = await loadUpcomingTasks(database, 's1', new Date('2026-12-30T16:00:00Z'))
+  // Match the live route: include both the student's formal plans and this account's personal plans.
+  const boundary = await loadUpcomingTasks(database, 's1', new Date('2026-12-30T16:00:00Z'), 'u1')
   assert.deepEqual(boundary.tasks.map(t => t.name), ['跨年一', '跨年二'])
   const [legacy] = await db.query<mysql.RowDataPacket[]>("SELECT target, due_date FROM plan_items WHERE id='legacy'")
   assert.equal(legacy[0]?.target, '2026-10-29 仅为自由文本'); assert.equal(legacy[0]?.due_date, null)

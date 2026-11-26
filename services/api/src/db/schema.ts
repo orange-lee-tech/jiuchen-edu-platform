@@ -41,6 +41,8 @@ export const userProfiles = mysqlTable('user_profiles', {
   major: varchar('major', { length: 160 }),
   currentGrade: varchar('current_grade', { length: 40 }),
   enrollmentYear: int('enrollment_year'),
+  currentStage: varchar('current_stage', { length: 32 }),
+  currentStageMode: mysqlEnum('current_stage_mode', ['auto', 'manual']),
   gpaText: varchar('gpa_text', { length: 80 }),
   rankText: varchar('rank_text', { length: 80 }),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -464,8 +466,8 @@ export const growthRecords = mysqlTable('growth_records', {
 export const studentPlans = mysqlTable('student_plans', {
   id: varchar('id', { length: 36 }).primaryKey(),
   studentId: varchar('student_id', { length: 36 })
-    .notNull()
     .references(() => students.id),
+  ownerUserId: varchar('owner_user_id', { length: 36 }).references(() => users.id),
   stageCode: varchar('stage_code', { length: 32 }).notNull(),
   type: mysqlEnum('type', ['gpa', 'english', 'competition', 'research', 'internship', 'custom']).notNull(),
   title: varchar('title', { length: 160 }).notNull(),
@@ -517,7 +519,7 @@ export const scheduleImports = mysqlTable('schedule_imports', {
     .notNull()
     .references(() => users.id),
   studentId: varchar('student_id', { length: 36 }).references(() => students.id),
-  sourceType: mysqlEnum('source_type', ['spreadsheet', 'image']).notNull(),
+  sourceType: mysqlEnum('source_type', ['spreadsheet', 'image', 'manual']).notNull(),
   fileId: varchar('file_id', { length: 1000 }).notNull(),
   fileName: varchar('file_name', { length: 255 }).notNull(),
   status: mysqlEnum('status', ['uploaded', 'parsing', 'parsed', 'failed'])

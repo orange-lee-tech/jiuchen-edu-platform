@@ -1,4 +1,4 @@
-<auth-gate />
+<auth-gate wx:if="{{!guestEditing}}" />
 <view class="page-shell">
   <view class="import-head">
     <text class="page-title">我的课表</text>
@@ -20,6 +20,9 @@
   </view>
 
   <view wx:if="{{viewMode === 'manage'}}" class="import-actions">
+    <button class="import-card surface" bindtap="onStartManualSchedule">
+      <text class="import-icon">笔</text><text class="import-title">手动填写课表</text>
+    </button>
     <button class="import-card surface" bindtap="onChooseSpreadsheet" loading="{{parsing}}" disabled="{{parsing}}">
       <text class="import-icon">表</text>
       <text class="import-title">微信文件 / Excel / CSV</text>

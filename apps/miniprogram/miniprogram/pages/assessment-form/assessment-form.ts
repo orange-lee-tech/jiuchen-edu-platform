@@ -1,11 +1,13 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { getSavedAuthResult } from '../../utils/auth'
-import { authorizePage, safeBack } from '../../utils/navigation'
+import { authorizePage, loginFor, safeBack } from '../../utils/navigation'
 import {
   createAssessmentDraft,
   ApiRequestError,
   friendlyRequestError,
   getAssessmentMeta,
   getMyAcademicProfile,
+  updateMyAcademicProfile,
   getMyAssessment,
   importAssessmentProfileMaterial,
   runMyAssessment,
@@ -229,7 +231,13 @@ function mergeUnique<T>(
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/assessment-form/assessment-form', this) },
+  onShareTimeline() { return timelineShare('pages/assessment-form/assessment-form', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
   data: {
+    guestEditing: false,
     loading: true,
     saving: false,
     profileReady: false,
@@ -263,10 +271,32 @@ Page({
   },
 
   onLoad(query: Record<string, string | undefined>) {
+    if (!getSavedAuthResult()) { this.setData({ guestEditing: true, loading: false, profileReady: true, providerConfigured: true }); return }
     authorizePage('pages/assessment-form/assessment-form', query, () => { void this.initializeForm(query) })
   },
   academicProfileSnapshot: null as Record<'university' | 'major' | 'currentGrade' | 'gpaText' | 'rankText', string> | null,
+  guestAcademicReviewRequired: false,
+  guestAcademicReviewBusy: false,
   onShow() {
+    enableNativeShare('pages/assessment-form/assessment-form', this);
+    if (this.data.guestEditing && getSavedAuthResult()) {
+      const owner = getSavedAuthResult()!.user.id
+      this.setData({ guestEditing: false, providerConfigured: false })
+      this.guestAcademicReviewRequired = true
+      void Promise.all([getMyAcademicProfile(), getAssessmentMeta()]).then(([profile, meta]) => {
+        const current = getSavedAuthResult()
+        if (current?.user.id !== owner) return
+        this.academicProfileSnapshot = { university: profile.university || '', major: profile.major || '', currentGrade: profile.currentGrade || '',
+          gpaText: profile.gpaText || '', rankText: profile.rankText || '' }
+        const restored: Record<string, string | boolean> = { providerConfigured: meta.providerConfigured,
+          materialImportConfigured: meta.materialImport.enabled }
+        for (const field of ['university', 'major', 'currentGrade', 'gpaText', 'rankText'] as const)
+          if (!this.data.profile[field]) restored[`profile.${field}`] = this.academicProfileSnapshot[field]
+        this.setData(restored)
+      }).catch(() => wx.showToast({ title: '资料读取失败，请稍后重试', icon: 'none' }))
+      return
+    }
+    if (this.data.guestEditing) return
     // Refresh canonical fields that the student has not changed in this assessment draft.
     if (!this.data.profileReady || this.data.loading) return
     const owner = getSavedAuthResult()?.user.id
@@ -368,6 +398,7 @@ Page({
   },
 
   onImportMaterial() {
+    if (!getSavedAuthResult()) { wx.showToast({ title: '登录后可导入材料', icon: 'none' }); loginFor('pages/assessment-form/assessment-form', {}, true, null); return }
     if (!this.data.materialImportConfigured) {
       wx.showModal({
         title: '材料导入暂不可用',
@@ -740,10 +771,8 @@ Page({
     const names = new Set(selectedTargets.map(item => (item.schoolName || '').trim()).filter(Boolean))
     return filterAssessmentSchools(query).map(name => ({ name, selected: names.has(name) }))
   },
-  onToggleSchoolPicker() {
-    const open = !this.data.schoolPickerOpen
-    this.setData({ schoolPickerOpen: open,
-      schoolOptions: open ? this.schoolOptionsFor(this.data.schoolQuery) : [] })
+  onSchoolInputFocus() {
+    this.setData({ schoolPickerOpen: true, schoolOptions: this.schoolOptionsFor(this.data.schoolQuery) })
   },
   onSchoolQueryInput(event: WechatMiniprogram.Input) {
     const query = event.detail.value
@@ -772,7 +801,7 @@ Page({
     }
     if (targets.length >= 5) { wx.showToast({ title: '最多选择5所目标院校', icon: 'none' }); return }
     targets.push({ schoolName: name, programName: '', researchDirection: '', note: '' })
-    this.setData({ targets, schoolQuery: '', schoolPickerOpen: false, schoolOptions: [] })
+    this.setData({ targets, schoolQuery: '', schoolPickerOpen: true, schoolOptions: this.schoolOptionsFor('', targets) })
   },
   onRemoveTarget(event: WechatMiniprogram.BaseEvent) {
     const index = Number(event.currentTarget.dataset.index)
@@ -793,6 +822,9 @@ Page({
   },
   onIncludeHistory(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     this.setData({ includeRecentAssessments: Boolean(event.detail.value) })
+  },
+  onViewHistory() {
+    wx.navigateTo({ url: '/pages/assessment-history/assessment-history' })
   },
   buildInput() {
     const profile = this.data.profile
@@ -884,8 +916,50 @@ Page({
         note: this.data.targetNote || '' } }
   },
 
+  async reviewGuestAcademicProfile() {
+    if (!this.guestAcademicReviewRequired) return true
+    if (this.guestAcademicReviewBusy) return false
+    const owner = getSavedAuthResult()?.user.id
+    if (!owner) return false
+    this.guestAcademicReviewBusy = true
+    try {
+      const profile = await getMyAcademicProfile()
+      if (getSavedAuthResult()?.user.id !== owner) { this.guestAcademicReviewBusy = false; return false }
+      const canonical = { university: profile.university || '', major: profile.major || '',
+        currentGrade: profile.currentGrade || '', gpaText: profile.gpaText || '', rankText: profile.rankText || '' }
+      this.academicProfileSnapshot = canonical
+      const changed = (Object.keys(canonical) as Array<keyof typeof canonical>)
+        .some(field => this.data.profile[field].trim() !== canonical[field])
+      if (!changed) { this.guestAcademicReviewRequired = false; this.guestAcademicReviewBusy = false; return true }
+      wx.showModal({ title: '同步评估学业资料',
+        content: '登录前填写的学业字段与账号档案不同。确认后将表单中的学校、专业、年级、GPA 和排名保存到账号资料；请再次点击保存或提交评估。',
+        confirmText: '同步资料', success: result => {
+          if (!result.confirm || getSavedAuthResult()?.user.id !== owner) { this.guestAcademicReviewBusy = false; return }
+          void updateMyAcademicProfile({ university: this.data.profile.university.trim() || null,
+            major: this.data.profile.major.trim() || null, currentGrade: this.data.profile.currentGrade.trim() || null,
+            gpaText: this.data.profile.gpaText.trim() || null, rankText: this.data.profile.rankText.trim() || null })
+            .then(saved => {
+              if (getSavedAuthResult()?.user.id !== owner) return
+              this.academicProfileSnapshot = { university: saved.university || '', major: saved.major || '',
+                currentGrade: saved.currentGrade || '', gpaText: saved.gpaText || '', rankText: saved.rankText || '' }
+              this.guestAcademicReviewRequired = (Object.keys(this.academicProfileSnapshot) as Array<keyof typeof canonical>)
+                .some(field => this.data.profile[field].trim() !== this.academicProfileSnapshot![field])
+              wx.showToast({ title: this.guestAcademicReviewRequired ? '表单有新修改，请再次核对' : '资料已同步，请再次提交', icon: 'none' })
+            }).catch(error => wx.showToast({ title: friendlyRequestError(error, '资料同步失败，请重试'), icon: 'none' }))
+            .finally(() => { this.guestAcademicReviewBusy = false })
+        }, fail: () => { this.guestAcademicReviewBusy = false } })
+      return false
+    } catch (error) {
+      this.guestAcademicReviewBusy = false
+      wx.showToast({ title: friendlyRequestError(error, '资料读取失败，请重试'), icon: 'none' })
+      return false
+    }
+  },
+
   async onSaveDraft() {
     if (this.data.saving) return
+    if (!getSavedAuthResult()) { wx.showToast({ title: '登录后可保存评估草稿', icon: 'none' }); loginFor('pages/assessment-form/assessment-form', {}, true, null); return }
+    if (!(await this.reviewGuestAcademicProfile())) return
     try {
       this.setData({ saving: true })
       const input = this.buildDraftInput()
@@ -907,6 +981,8 @@ Page({
 
   async onRunAssessment() {
     if (this.data.saving) return
+    if (!getSavedAuthResult()) { wx.showToast({ title: '登录后可提交评估', icon: 'none' }); loginFor('pages/assessment-form/assessment-form', {}, true, null); return }
+    if (!(await this.reviewGuestAcademicProfile())) return
     if (!this.data.providerConfigured) {
       wx.showModal({
         title: 'AI 模型尚未接入',

@@ -1,6 +1,6 @@
 # 九辰教育自主手动备份与选择性恢复规范
 
-**文档日期：2026-10-29**  
+**创建日期：2026-10-29；最近证据更新：2026-11-26**  
 **适用范围：九辰教育微信小程序后端、公司官网及共享入口**  
 **性质：运维合同、操作流程与验收边界；不包含密码或密钥。**
 
@@ -344,3 +344,39 @@ API 健康失败不一定需要恢复数据库；官网外网打不开也不一�
 - [当前工程交接](../handoff/CURRENT.md)
 
 **最终规则：备份是管理员可控、可验证、可恢复的业务资产，不是一个“文件下载成功”的状态。任何生产覆盖都必须经过组件级计划、隔离恢复和独立授权。**
+
+
+---
+
+## 11. 2026-11-26 真实备份迁移演练回执
+
+### 11.1 固定备份与验收对象
+
+- 备份目录：`/home/orangelee-tech/jiuchen-backups/20261121-050720-63f7e5`
+- 备份预检：`receiptVerified=true`、`sha256Verified=true`、`pinned=true`、`partial=false`，状态 PASS。
+- 实际演练对象：`database.jcb`，SHA-256 `2d3971e0a95cacc924f552d84209b9129783994d2c4bc056cbfc52e4c8a18f68`。
+- **范围说明：** 本轮验证数据库组件的解密、恢复与迁移。不要把本轮结果扩写成七组件逐项恢复 PASS；其他组件仍按每代 receipt 与组件级恢复证据判定。
+
+### 11.2 迁移源与执行
+
+| 项目 | 结果 |
+|---|---|
+| 迁移源码提交 | `d93ba079b75f6b48697497668035acf5f223c597` |
+| `upgrade-personal-workspace.ts` SHA-256 | `4741148f3632107a86c2e2ee37264398cf824266f9fb85be483310408274a647` |
+| 本地一次性演练脚本 SHA-256 | `66ce1dd9f5d6dccf42e307e06f6006004de3052d84f18008d7df502d547d1d3a` |
+| 迁移执行 | `db:upgrade:personal-workspace` 连续两次 PASS |
+| 迁移验证 | `db:verify:personal-workspace` PASS |
+| 表数 | 56 → 56 |
+| 幂等性 | PASS |
+
+### 11.3 隔离与数据不变性
+
+Docker MySQL 8 演练使用 `--network none`、无 TCP 端口映射、768 MiB 内存、1 CPU、256 PID 限额，事件调度关闭。容器和临时文件均已清理；`productionWrites=false`。
+
+八张关键表迁移前后行数和内容摘要保持一致：`users=14`、`students=14`、`user_profiles=7`、`student_plans=7`、`plan_items=9`、`schedule_imports=14`、`plan_revisions=1`、`growth_records=0`。该核验不替代其他表的业务验收。
+
+旧备份 `20261108-055750-dac461` 是另一代恢复点，曾完成 56 表 SQL 导入/表数检查；它不是本次 11-21 备份，也没有本次迁移重复执行与关键行摘要证据。
+
+### 11.4 结论
+
+`REAL_BACKUP_MIGRATION_AUDIT=PASS`。真实数据库备份迁移演练已完成；生产 DDL、API 切流和业务验收仍需各自审批与回执。

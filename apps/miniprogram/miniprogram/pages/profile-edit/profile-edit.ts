@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import {
   getSavedAuthResult,
   refreshAuthResult,
@@ -46,6 +47,12 @@ function normalizeInternalId(value: string) {
 }
 
 Page({
+  onShareAppMessage() { return friendShare('pages/profile-edit/profile-edit', this) },
+  onShareTimeline() { return timelineShare('pages/profile-edit/profile-edit', this) },
+
+  onUnload() { disableNativeShare(this) },
+  onHide() { disableNativeShare(this) },
+  onShow() { enableNativeShare('pages/profile-edit/profile-edit', this); },
   data: {
     loading: true,
     loadError: '',

@@ -10,6 +10,7 @@ export function paginateAssessmentLayout(layout:ReportLayout):ReportLayout[]{
     pages.push({...layout,height:1060,lines:[
       {text:'九辰教育 AI评估报告',y:30,size:26,heading:true},
       ...layout.lines.filter(line=>line.y<150&&line.text.includes('用户ID')).map((line,index)=>({...line,y:70+index*34,size:20,heading:false})),
+      {text:'AI生成内容',y:112,size:23,heading:true},
       ...lines,{text:`第 ${pages.length+1} 页 · 导出日期：${layout.date}`,y:1000,size:20,heading:false},
     ]})
     lines=[];y=150

@@ -17,6 +17,16 @@ function load(relative, mocks = {}) {
     exports: {}, Component(value) { definition = value }, Page(value) { definition = value },
     require(target) {
       if (target.endsWith('read-only-context')) return { isReadOnly: () => false }
+      if (target.endsWith('teacher-plan-apply')) return {
+        buildTeacherPlanPayload: (stageCode, type, title, items) => ({ ok: true, value: { stageCode, type, title, items } }),
+        remainingTeacherApplyTargets: (ids, completed) => ids.filter(id => !completed.includes(id)),
+        presentTeacherApplyResults: (results, ids, students) => {
+          if (!Array.isArray(results) || results.length !== ids.length) return null
+          const rows = results.map(result => ({ ...result, name: students.find(item => item.studentId === result.studentId)?.name || '',
+            message: result.ok ? '已保存独立规划' : '分配关系已失效，未保存' }))
+          return { rows, successCount: rows.filter(row => row.ok).length, failedCount: rows.filter(row => !row.ok).length }
+        },
+      }
       if (target.endsWith('request')) return { request: async (...args) => { calls.push(args); return { results: [{studentId:'a',ok:true},{studentId:'b',ok:false,error:'student_not_assigned'}] } }, ...mocks }
       if (target.endsWith('navigation')) return { INITIAL_SHELL: {} }
       return mocks
@@ -27,17 +37,17 @@ function load(relative, mocks = {}) {
   return { instance, modals, calls }
 }
 
-test('classroom full-week handler expands, folds and repeatedly toggles without changing the selected semester', () => {
+test('classroom full-week handler expands and folds without changing the selected semester', () => {
   const { instance } = load('pages/classroom/classroom.ts')
   let reads = 0
   instance.loadCurrentWeek = () => { reads++ }
   Object.assign(instance.data, { selectedView: 'stage', currentStageCode: 'junior-fall', actualStageCode: 'senior-fall' })
   instance.onCurrentWeekSchedule()
-  assert.equal(instance.data.selectedView, 'week'); assert.equal(reads, 1)
+  assert.equal(instance.data.weekExpanded, true); assert.equal(reads, 0)
   instance.onCurrentWeekSchedule()
-  assert.equal(instance.data.selectedView, 'stage'); assert.equal(reads, 1)
+  assert.equal(instance.data.weekExpanded, false); assert.equal(reads, 0)
   instance.onCurrentWeekSchedule(); instance.onCurrentWeekSchedule()
-  assert.equal(instance.data.selectedView, 'stage'); assert.equal(reads, 2)
+  assert.equal(instance.data.weekExpanded, false); assert.equal(reads, 0)
   assert.equal(instance.data.currentStageCode, 'junior-fall'); assert.equal(instance.data.actualStageCode, 'senior-fall')
 })
 

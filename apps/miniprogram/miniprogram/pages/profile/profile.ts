@@ -1,3 +1,4 @@
+import { enableNativeShare, disableNativeShare, friendShare, timelineShare } from '../../utils/native-share'
 import { deleteCurrentAccount, getSavedAuthResult, logoutWechatUser, refreshAuthResult, type UserRole } from '../../utils/auth'
 import { bindMyAdditionalIdentity, friendlyRequestError, getMyIdentities, getMyClassroom,
   getMyNewsFavorites, switchMyIdentityRole, unbindMyIdentityId,
@@ -31,6 +32,9 @@ const ADMIN_MENUS = [
   { key: 'service', title: '联系运营', desc: '咨询账号与服务支持' },
 ]
 Page({
+  onShareAppMessage() { return friendShare('pages/profile/profile', this) },
+  onShareTimeline() { return timelineShare('pages/profile/profile', this) },
+
   data: {
     ...INITIAL_SHELL, loggedIn: false, role: '' as UserRole | '', roleLabel: '未登录',
     businessId: '', walletOwner: '', userName: '', profileStageLabel: '', mentorName: '', menus: PERSONAL_MENUS, loggingOut: false, deleting: false,
@@ -40,6 +44,7 @@ Page({
   stopShell: undefined as (() => void) | undefined,
   profileViewEpoch: 0,
   onShow() {
+    enableNativeShare('pages/profile/profile', this);
     this.stopShell?.()
     const epoch = ++this.profileViewEpoch
     this.setData({favoritesVisible:false,favorites:[],favoritesError:'',identityDetailsOpen:false})
@@ -52,16 +57,17 @@ Page({
         userName: auth?.user.displayName || (role === 'staff' ? '九辰内部员工' : role === 'teacher' ? '九辰辅导老师' : role === 'admin' ? '九辰管理员' : role === 'student' ? '九辰学员' : '我的保研档案'), profileStageLabel: '', mentorName: '',
         menus: role === 'admin' ? ADMIN_MENUS : role === 'teacher' || role === 'staff' ? TEACHER_MENUS : PERSONAL_MENUS,
       })
-      if (state.phase === 'ready' && role === 'student' && auth && !isReadOnly()) {
+      if (state.phase === 'ready' && (role === 'student' || role === 'user') && auth && !isReadOnly()) {
         const owner = auth.user.id
         void (async () => {
           const resolution = await resolveCurrentStage().catch(() => null)
           if (epoch !== this.profileViewEpoch || isReadOnly() || getSavedAuthResult()?.user.id !== owner) return
           const view = await getMyClassroom(resolution?.stage || undefined).catch(() => null)
-          if (epoch === this.profileViewEpoch && !isReadOnly() && getSavedAuthResult()?.user.id === owner && getSavedAuthResult()?.user.role === 'student') {
+          if (epoch === this.profileViewEpoch && !isReadOnly() && getSavedAuthResult()?.user.id === owner &&
+            ['student', 'user'].includes(getSavedAuthResult()?.user.role || '')) {
             this.setData({
-              profileStageLabel: resolution?.stage && resolution.scheduleSafe && view?.student.currentStage === resolution.stage ? view.stage.label : '学期待核对',
-              mentorName: view?.mentors?.[0]?.name || '',
+              profileStageLabel: resolution?.stage && resolution.scheduleSafe && view?.currentStage === resolution.stage ? view.stage.label : '学期待核对',
+              mentorName: role === 'student' ? view?.mentors?.[0]?.name || '' : '',
             })
           }
         })().catch(() => { if (epoch === this.profileViewEpoch && !isReadOnly() && getSavedAuthResult()?.user.id === owner) this.setData({ profileStageLabel: '学期待核对', mentorName: '' }) })
@@ -132,11 +138,11 @@ Page({
     } catch (error) { wx.showToast({ title: friendlyRequestError(error, '解除身份失败'), icon: 'none' }) }
     finally { this.setData({ identityBusy: false }) }
   },
-  onHide() { this.profileViewEpoch += 1; this.stopShell?.(); this.setData({ shellPhase: 'loading', identities: [], profileStageLabel: '',
+  onHide() { disableNativeShare(this); this.profileViewEpoch += 1; this.stopShell?.(); this.setData({ shellPhase: 'loading', identities: [], profileStageLabel: '',
     favorites: [], favoritesVisible: false, identityInput: '', identityDetailsOpen: false, mentorName: '' }) },
-  onUnload() { this.profileViewEpoch += 1; this.stopShell?.() },
+  onUnload() { disableNativeShare(this); this.profileViewEpoch += 1; this.stopShell?.() },
   onScheduleImport() {
-    if (!this.data.loggedIn || this.data.role !== 'student' || isReadOnly()) return
+    if ((this.data.loggedIn && !['user', 'student'].includes(this.data.role)) || isReadOnly()) return
     openPage('/pages/schedule-import/schedule-import?view=auto')
   },
   onCustomerServiceTap() { void openVerifiedWechatCustomerService('账号及运营支持') },

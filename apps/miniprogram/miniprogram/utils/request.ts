@@ -57,6 +57,7 @@ export type ClassroomPlan = {
     dueDate?: string | null
     status: 'pending' | 'in_progress' | 'done'
   }>
+  sources?: Array<{ id: string; source: 'personal' | 'formal'; title: string; items: ClassroomPlan['items'] }>
 }
 
 export type ClassroomMentor = {
@@ -80,7 +81,8 @@ export type ClassroomCoachingRecord = {
 
 export type ClassroomView = {
   ok: true
-  student: StudentSummary
+  student: StudentSummary | null
+  currentStage?: string | null
   stage: ClassroomStage
   showGuidance: boolean
   guidanceRecordsReady: boolean
@@ -460,7 +462,7 @@ export function recordAiBalance(payload: { objectId: string; currency: 'CNY' | '
 export async function saveMyClassroomPlan(
   stageCode: string,
   type: ClassroomPlanType,
-  payload: { title: string; items: PlanEditorItem[] },
+  payload: { title: string; items: PlanEditorItem[]; sourcePlanId?: string },
 ): Promise<{ id: string; status: 'saved' }> {
   const result = await request<{
     ok: true
@@ -474,6 +476,13 @@ export async function saveMyClassroomPlan(
     throw new ApiRequestError(409, 'plan_direct_save_unavailable')
   }
   return result.plan
+}
+
+export async function deleteMyClassroomPlan(stageCode: string, type: ClassroomPlanType, planId: string) {
+  return request<{ ok: true; deletedPlanId: string }>(
+    `/me/classroom/plans/${encodeURIComponent(stageCode)}/${encodeURIComponent(type)}/${encodeURIComponent(planId)}`,
+    'DELETE',
+  )
 }
 
 export type PlanRevision = {
@@ -563,7 +572,7 @@ export type ParsedScheduleCourse = {
 }
 
 export type ParsedSchedule = {
-  sourceType: 'spreadsheet' | 'image'
+  sourceType: 'spreadsheet' | 'image' | 'manual'
   courses: ParsedScheduleCourse[]
   warnings: string[]
   termStartDate?: string | null
@@ -573,7 +582,7 @@ export type ParsedSchedule = {
 
 export type ScheduleImportView = {
   id: string
-  sourceType: 'spreadsheet' | 'image'
+  sourceType: 'spreadsheet' | 'image' | 'manual'
   fileName: string
   status: 'parsed'
   errorCode: string | null
@@ -602,6 +611,13 @@ export async function createScheduleImport(payload: {
     schedule: result.schedule,
     fallbackReason: result.fallbackReason,
   }
+}
+
+export async function createManualScheduleImport(stageCode: string, schedule: ParsedSchedule) {
+  return request<{ ok: true; importId: string; schedule: ParsedSchedule }>(
+    '/me/classroom/schedule-imports/manual', 'POST',
+    { stageCode, schedule } as unknown as WechatMiniprogram.IAnyObject,
+  )
 }
 
 export async function getLatestScheduleImport(stageCode?: string): Promise<ScheduleImportView | null> {

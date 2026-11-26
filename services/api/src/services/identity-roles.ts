@@ -104,9 +104,41 @@ export async function unbindMyIdentity(database: Db, userId: string, identityId:
     }
     const remaining = bindings.filter((row) => row.id !== target.id)
     const nextRole: Role = user.role === target.type ? (remaining[0]?.type ?? 'user') : user.role
-    if (target.type === 'teacher' || target.type === 'student') {
-      const table = target.type === 'teacher' ? 'teachers' : 'students'
-      await connection.query(`UPDATE ${table} SET user_id=NULL WHERE id=? AND user_id=?`, [target.entity_id, userId])
+    const entityTable = target.type === 'teacher' ? 'teachers' : target.type === 'student' ? 'students' : null
+    if (entityTable) {
+      if (!target.entity_id) throw new IdentityRoleError('identity_entity_not_owned')
+      const [entities] = await connection.query<mysql.RowDataPacket[]>(
+        `SELECT id FROM ${entityTable} WHERE id=? AND user_id=? FOR UPDATE`, [target.entity_id, userId])
+      if (entities.length !== 1) throw new IdentityRoleError('identity_entity_not_owned')
+    }
+    if (target.type === 'student') {
+      // Snapshot only the student record locked and verified as owned above.
+      // Copy and unlink remain in the same transaction.
+      await connection.query(`INSERT INTO user_profiles (id,user_id,current_stage,current_stage_mode)
+        SELECT UUID(),?,s.current_stage,s.current_stage_mode FROM students s
+        WHERE s.id=? AND s.user_id=?
+        ON DUPLICATE KEY UPDATE current_stage=COALESCE(user_profiles.current_stage,VALUES(current_stage)),
+          current_stage_mode=COALESCE(user_profiles.current_stage_mode,VALUES(current_stage_mode))`,
+        [userId, target.entity_id, userId])
+      const [plans] = await connection.query<mysql.RowDataPacket[]>(
+        'SELECT id,stage_code AS stageCode,type,title,created_at AS createdAt,updated_at AS updatedAt FROM student_plans WHERE student_id=? FOR UPDATE',
+        [target.entity_id])
+      for (const plan of plans) {
+        const copyId = randomUUID()
+        await connection.query(`INSERT INTO student_plans
+          (id,student_id,owner_user_id,stage_code,type,title,created_at,updated_at)
+          VALUES (?,NULL,?,?,?,?,?,?)`,
+          [copyId,userId,plan.stageCode,plan.type,plan.title,plan.createdAt,plan.updatedAt])
+        await connection.query(`INSERT INTO plan_items
+          (id,plan_id,sort_order,name,target,due_date,status,created_at,updated_at)
+          SELECT UUID(),?,sort_order,name,target,due_date,status,created_at,updated_at
+          FROM plan_items WHERE plan_id=?`, [copyId,plan.id])
+      }
+    }
+    if (entityTable) {
+      const [unlinked] = await connection.query<mysql.ResultSetHeader>(
+        `UPDATE ${entityTable} SET user_id=NULL WHERE id=? AND user_id=?`, [target.entity_id, userId])
+      if (unlinked.affectedRows !== 1) throw new IdentityRoleError('identity_entity_not_owned')
     }
     await connection.query(
       `UPDATE internal_ids SET user_id=NULL,status='disabled' WHERE id=? AND user_id=?`,

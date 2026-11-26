@@ -16,6 +16,7 @@ globalThis.wx = { showToast() {}, showModal(options) { purchaseModal = options }
 Module._load = function (id, parent, isMain) {
   if (id.endsWith('/auth')) return { getSavedAuthResult: () => ({ user: { id: 'student-a', role: 'student' } }) }
   if (id.endsWith('/assessment-school-names')) return { filterAssessmentSchools: query => ['北京大学', '清华大学'].filter(n => n.includes(query)) }
+  if (id.endsWith('/native-share')) return { enableNativeShare() {}, disableNativeShare() {}, friendShare() {}, timelineShare() {} }
   if (id.endsWith('/navigation')) return { authorizePage() {}, safeBack() {} }
   if (id.endsWith('/cloud-upload')) return { uploadAuthenticatedCloudFile() {} }
   if (id.endsWith('/request')) return {
@@ -96,4 +97,28 @@ test('name-only school multi-select caps five and requires shared research direc
   assert.equal(input.targets.length, 4)
   assert.ok(input.targets.every(t => t.researchDirection === '电力系统'))
   assert.equal(input.preferences.researchDirection, '电力系统')
+})
+
+test('school input opens full list, filters live and permits five selected schools', () => {
+  const page = { ...definition, data: structuredClone(definition.data),
+    setData(patch) { Object.assign(this.data, patch) } }
+  page.onSchoolInputFocus()
+  assert.equal(page.data.schoolPickerOpen, true)
+  assert.deepEqual(page.data.schoolOptions.map(item => item.name), ['北京大学', '清华大学'])
+  page.onSchoolQueryInput({ detail: { value: '北京' } })
+  assert.deepEqual(page.data.schoolOptions.map(item => item.name), ['北京大学'])
+  page.onToggleSchoolChoice({ currentTarget: { dataset: { name: '北京大学' } } })
+  assert.equal(page.data.targets.length, 1)
+  assert.equal(page.data.schoolOptions[0].selected, true)
+  for (const name of ['甲大学', '乙大学', '丙大学', '丁大学']) {
+    page.data.schoolQuery = name
+    page.onAddManualSchool()
+  }
+  page.onToggleSchoolChoice({ currentTarget: { dataset: { name: '清华大学' } } })
+  assert.equal(page.data.targets.length, 5)
+  page.onRemoveTarget({ currentTarget: { dataset: { index: 0 } } })
+  assert.equal(page.data.targets.length, 4)
+  page.onSchoolInputFocus()
+  page.onToggleSchoolChoice({ currentTarget: { dataset: { name: '清华大学' } } })
+  assert.equal(page.data.targets.length, 5)
 })

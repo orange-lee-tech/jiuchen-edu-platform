@@ -21,6 +21,9 @@ export type AssessmentReportExportContext = {
   references: AssessmentReportReference[]
 }
 
+export const AI_GENERATED_TITLE = 'AI生成内容'
+export const AI_GENERATED_DESCRIPTION = '本报告由人工智能生成，仅供保研规划参考。请结合个人实际情况核验，重要决策请以学校官方信息及专业判断为准。'
+
 const CHINESE_NUMBERS = [
   '一',
   '二',
@@ -162,6 +165,7 @@ export function buildAssessmentReportPlainText(
 
   const lines: string[] = [
     '九辰保研评估报告',
+    'AI生成',
     assessmentExportIdentity(context),
     `姓名：${safeDisplayName(context.displayName)}`,
     `评估日期：${formatAssessmentDate(assessment.completedAt || assessment.updatedAt)}`,
@@ -253,6 +257,7 @@ export function buildAssessmentReportPlainText(
   })
   if (output.uncertainties.length) lines.push('七、不确定性及说明', ...output.uncertainties, '')
   if (output.disclaimer) lines.push('免责声明', output.disclaimer)
+  lines.push('', AI_GENERATED_TITLE, AI_GENERATED_DESCRIPTION)
 
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
@@ -265,7 +270,7 @@ export function buildAssessmentReportMarkdown(
   if (!text) return ''
   return text.split('\n').map((line,index)=> {
     if(index===0)return '# '+line
-    if(/^[一二三四五六七八九十]+、|^学业背景与评估概要$|^免责声明$/.test(line))return '## '+line
+    if(/^[一二三四五六七八九十]+、|^学业背景与评估概要$|^免责声明$|^AI生成内容$/.test(line))return '## '+line
     if(/^（[一二三四五六七八九十]+）/.test(line))return '### '+line
     return line
   }).join('\n\n')
@@ -423,6 +428,7 @@ function xmlEscape(value: string) {
 
 function paragraphStyle(line: string, index: number) {
   if (index === 0) return 'Title'
+  if (line === AI_GENERATED_TITLE) return 'Heading1'
   if (/^[一二三四五六七八九十]+、/.test(line)) return 'Heading1'
   if (/^（[一二三四五六七八九十]+）/.test(line)) return 'Heading2'
   return 'Normal'
