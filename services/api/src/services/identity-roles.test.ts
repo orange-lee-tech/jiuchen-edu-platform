@@ -57,6 +57,7 @@ test('student unbind snapshots formal plans and tasks before unlinking without d
       if (sql.startsWith('SELECT * FROM internal_ids')) return [[{ id: 'student-id', type: 'student', entity_id: 'student-1', user_id: 'owner', status: 'claimed' }]]
       if (sql.startsWith('SELECT id FROM students WHERE id=? AND user_id=? FOR UPDATE')) return [[{ id: 'student-1' }]]
       if (sql.startsWith('SELECT id,stage_code AS')) return [[{ id: 'formal-plan', stageCode: 'junior-fall', type: 'gpa', title: '正式规划', createdAt: new Date(), updatedAt: new Date() }]]
+      if (sql.startsWith('UPDATE')) return [{ affectedRows: 1 }]
       return [[]]
     },
   }
