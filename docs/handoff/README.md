@@ -14,6 +14,8 @@
 
 ## 运维、备份与架构地图
 
+- **[WSL 自托管 Runner 停止运行与唤醒机制复盘（2026-11-26）](wsl-runner-lifecycle-incident-2026-11-26.md)**：记录 WSL 发行版运行但 Runner 进程缺席的现场证据、诊断边界，以及未来 Linux / WSL2 客户部署的常驻、自动唤醒、重启与监控验收要求。
+
 - **[自主手动备份与选择性恢复规范](../ops/manual-backup-and-selective-restore.md)**：管理员 WSL 手动备份、七个加密组件、选择性恢复、隔离 MySQL 演练、三代保留目标与当前覆盖缺口。
 - **[小程序后端工程地图与部署架构](../ops/miniprogram-backend-engineering-map.md)**：小程序、ECS API、CloudBase MySQL、AI Provider、微信支付、官网入口、发布回滚和生产保护边界。
 - [ECS 资源地图](../ops/ecs-resource-map.md)：ECS 资源盘点与基础设施保护。
